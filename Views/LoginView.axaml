@@ -1,0 +1,107 @@
+<controls:Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AHON_TRACK.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:contents="clr-namespace:ShadUI.Contents;assembly=ShadUI"
+        xmlns:controls="clr-namespace:ShadUI.Controls;assembly=ShadUI"
+        xmlns:converters="clr-namespace:ShadUI.Demo.Converters"
+		xmlns:dialogs="clr-namespace:ShadUI.Dialogs;assembly=ShadUI"
+        xmlns:extensions="clr-namespace:ShadUI.Extensions;assembly=ShadUI"
+		xmlns:toasts="clr-namespace:ShadUI.Toasts;assembly=ShadUI"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+        x:Class="AHON_TRACK.Views.MainWindow"
+        x:DataType="vm:LoginViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        WindowStartupLocation="CenterScreen"
+		CanResize="False"
+        Background="White"
+		Width="1000"
+		Height="700"
+        Title="AHON TRACK">
+
+
+	<Window.Resources>
+		<SolidColorBrush x:Key="Foreground" Color="#09090B"/>
+	</Window.Resources>
+
+	<Design.DataContext>
+		<!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+		<vm:LoginViewModel/>
+	</Design.DataContext>
+
+
+	<Grid>
+		<StackPanel HorizontalAlignment="Left" Margin="95,110,10,10">
+			<TextBlock
+				Text="The future of"
+				Foreground="{StaticResource Foreground}"
+				FontSize="35"
+				FontFamily="Inter"
+				FontWeight="Regular"
+			/>
+			
+			<TextBlock
+				Text="Gym"
+				Foreground="{StaticResource Foreground}"
+				FontSize="65"
+				FontFamily="Inter"
+				FontWeight="Bold"
+				Margin="0,0"
+			/>
+		
+			<TextBlock
+				Text="Management"
+				Foreground="{StaticResource Foreground}"
+				FontSize="65"
+				FontFamily="Inter"
+				FontWeight="Bold"
+			/>
+		
+			<TextBlock
+				Text="at your fingertips"
+				Foreground="{StaticResource Foreground}"
+				FontSize="35"
+				FontFamily="Inter"
+				FontWeight="Regular"
+				Margin="0,10"
+			/>
+
+		
+			<TextBlock
+				Text="Making it easier for staff to manage, oversee, "
+				Foreground="{StaticResource Foreground}"
+				FontSize="23"
+				FontFamily="Inter"
+				FontWeight="Light"
+				Margin="0,10"
+			/>
+
+			<TextBlock
+				Text="and engage with knowledge"
+				Foreground="{StaticResource Foreground}"
+				FontSize="23"
+				FontFamily="Inter"
+				FontWeight="Light"
+				Margin="0,-10"
+			/>
+
+			<Button
+				Classes="Secondary"
+				Content="About Us"
+				HorizontalAlignment="Left"
+				Margin="50,60" 
+				Padding="35,0,35,0"
+				FontSize="17"
+			/>
+
+		</StackPanel>
+
+		<StackPanel HorizontalAlignment="Right">
+			
+		</StackPanel>
+	</Grid>
+
+
+</controls:Window>
