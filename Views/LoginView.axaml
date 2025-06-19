@@ -1,4 +1,4 @@
-<controls:Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AHON_TRACK.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -20,6 +20,12 @@
 		Height="700"
         Title="AHON TRACK">
 
+	<controls:Window.Hosts>
+		<dialogs:DialogHost 
+			Manager="{Binding DialogManager}"
+			Owner="{Binding RelativeSource={RelativeSource AncestorType=controls:Window}}" 
+		/>
+	</controls:Window.Hosts>
 
 	<Window.Resources>
 		<SolidColorBrush x:Key="Foreground" Color="#09090B"/>
@@ -33,8 +39,8 @@
 		<vm:LoginViewModel/>
 	</Design.DataContext>
 
-
 	<Grid>
+		<toasts:ToastHost Manager="{Binding ToastManager}"/>
 		<StackPanel HorizontalAlignment="Left" Margin="45,110,10,10">
 			<TextBlock
 				Text="The future of"
@@ -137,4 +143,4 @@
 	</Grid>
 
 
-</controls:Window>
+</Window>
