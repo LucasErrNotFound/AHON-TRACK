@@ -30,7 +30,6 @@
 	<Window.Resources>
 		<SolidColorBrush x:Key="Foreground" Color="#09090B"/>
 		<SolidColorBrush x:Key="Background" Color="#FFFFFF"/>
-		<!-- <SolidColorBrush x:Key="CardBackgroundColor" Color="#FFF7F7F7"/> -->
 	</Window.Resources>
 
 	<Design.DataContext>
