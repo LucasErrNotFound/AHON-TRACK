@@ -23,6 +23,8 @@
 
 	<Window.Resources>
 		<SolidColorBrush x:Key="Foreground" Color="#09090B"/>
+		<SolidColorBrush x:Key="Background" Color="#FFFFFF"/>
+		<!-- <SolidColorBrush x:Key="CardBackgroundColor" Color="#FFF7F7F7"/> -->
 	</Window.Resources>
 
 	<Design.DataContext>
@@ -33,7 +35,7 @@
 
 
 	<Grid>
-		<StackPanel HorizontalAlignment="Left" Margin="95,110,10,10">
+		<StackPanel HorizontalAlignment="Left" Margin="45,110,10,10">
 			<TextBlock
 				Text="The future of"
 				Foreground="{StaticResource Foreground}"
@@ -88,7 +90,7 @@
 			/>
 
 			<Button
-				Classes="Secondary"
+				Classes="Primary"
 				Content="About Us"
 				HorizontalAlignment="Left"
 				Margin="50,60" 
@@ -99,7 +101,38 @@
 		</StackPanel>
 
 		<StackPanel HorizontalAlignment="Right">
-			
+			<controls:Card HorizontalAlignment="Right" Width="445" Height="580" Margin="30,50" >
+				<controls:Card.Header>
+					<StackPanel Spacing="5">
+						<controls:CardTitle FontFamily="Inter" FontSize="35" FontWeight="Bold">Sign In</controls:CardTitle>
+						<controls:CardDescription FontFamily="Inter" FontSize="18">Enter your credentials</controls:CardDescription>
+					</StackPanel>
+				</controls:Card.Header>
+				<StackPanel Spacing="30">
+					<TextBox
+						Classes="Clearable"
+						extensions:ControlAssist.Label="Username"
+						extensions:ControlAssist.Height="40"
+						Watermark="Username"
+						FontSize="17"
+						Text="{Binding Username, Mode=TwoWay}"
+					/>
+					<TextBox
+						Classes="PasswordReveal"
+						extensions:ControlAssist.Label="Password"
+						extensions:ControlAssist.Height="40"
+						PasswordChar="•"
+						Watermark="Enter your password"
+						FontSize="17"
+						Text="{Binding Password, Mode=TwoWay}"
+					/>
+				</StackPanel>
+				<controls:Card.Footer>
+					<Button Classes="Primary" FontSize="20" Padding="0,0" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}">
+						Sign In
+					</Button>
+				</controls:Card.Footer>
+			</controls:Card>
 		</StackPanel>
 	</Grid>
 
