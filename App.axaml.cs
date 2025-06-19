@@ -1,4 +1,3 @@
-using System.Linq;
 using AHON_TRACK.ViewModels;
 using AHON_TRACK.Views;
 using Avalonia;
@@ -6,6 +5,9 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using ShadUI.Dialogs;
+using ShadUI.Toasts;
+using System.Linq;
 
 namespace AHON_TRACK
 {
@@ -20,12 +22,16 @@ namespace AHON_TRACK
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
+                // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
+
+                var dialogManager = new DialogManager();
+                var toastManager = new ToastManager();
+
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = new LoginViewModel(),
+                    DataContext = new LoginViewModel(dialogManager, toastManager),
                 };
             }
 
