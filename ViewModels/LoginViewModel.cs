@@ -1,11 +1,32 @@
-﻿using CommunityToolkit.Mvvm.Input;
+﻿using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
 using ShadUI.Dialogs;
+using ShadUI.Toasts;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace AHON_TRACK.ViewModels
 {
     public partial class LoginViewModel : ViewModelBase
     {
+        public ToastManager ToastManager { get; }
+        public DialogManager DialogManager { get; }
+
+        public LoginViewModel(DialogManager dialogManager, ToastManager toastManager)
+        {
+            ToastManager = toastManager;
+            DialogManager = dialogManager;
+        }
+
+        public LoginViewModel()
+        {
+            if (Design.IsDesignMode)
+            {
+                ToastManager = new ToastManager();
+                DialogManager = new DialogManager();
+            }
+        }
+
         private string _username = string.Empty;
 
         [Required(ErrorMessage = "Email is required")]
@@ -44,7 +65,19 @@ namespace AHON_TRACK.ViewModels
             ClearAllErrors();
             ValidateAllProperties();
 
-            if (HasErrors) return;
+            if (HasErrors)
+            {
+                ToastManager.CreateToast("Wrong Credetials! Try Again")
+                    .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                    .WithDelay(8)
+                    .ShowError();
+                return;
+            }
+
+            ToastManager.CreateToast("You have signed in! Welcome back!")
+                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                .WithDelay(8)
+                .ShowSuccess();
         }
     }
 }
