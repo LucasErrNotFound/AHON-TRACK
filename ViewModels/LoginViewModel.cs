@@ -1,9 +1,12 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Input;
 using ShadUI.Dialogs;
 using ShadUI.Toasts;
 using System;
 using System.ComponentModel.DataAnnotations;
+using AHON_TRACK.Views;
+using Avalonia;
 
 namespace AHON_TRACK.ViewModels
 {
@@ -78,6 +81,31 @@ namespace AHON_TRACK.ViewModels
                 .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                 .WithDelay(6)
                 .ShowSuccess();
+
+            SwitchToMainWindow();
+        }
+
+        private void SwitchToMainWindow()
+        {
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                var currentWindow = desktop.MainWindow; // Keep reference to LoginView
+                var dialogManager = new DialogManager();
+                // var toastManager = new ToastManager();
+
+
+                // Create and show the MainWindow
+                var mainWindow = new MainWindow
+                {
+                    DataContext = new MainWindowViewModel(dialogManager)
+                };
+
+                desktop.MainWindow = mainWindow;
+                mainWindow.Show();
+
+                // Close the LoginView after MainWindow is shown
+                currentWindow?.Close();
+            }
         }
     }
 }
