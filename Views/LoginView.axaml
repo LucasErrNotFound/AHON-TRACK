@@ -12,10 +12,9 @@
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="AHON_TRACK.Views.MainWindow"
         x:DataType="vm:LoginViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/AHON-Track-Window.ico"
         WindowStartupLocation="CenterScreen"
 		CanResize="False"
-        Background="White"
 		Width="1000"
 		Height="700"
         Title="AHON TRACK">
@@ -28,8 +27,8 @@
 	</controls:Window.Hosts>
 
 	<Window.Resources>
-		<SolidColorBrush x:Key="Foreground" Color="#09090B"/>
-		<SolidColorBrush x:Key="Background" Color="#FFFFFF"/>
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="ObjectBackground" Color="#2C2F36"/>
 	</Window.Resources>
 
 	<Design.DataContext>
@@ -39,11 +38,20 @@
 	</Design.DataContext>
 
 	<Grid>
-		<toasts:ToastHost Manager="{Binding ToastManager}"/>
-		<StackPanel HorizontalAlignment="Left" Margin="45,110,10,10">
+		<toasts:ToastHost Manager="{Binding ToastManager}" ZIndex="1"/>
+			<Image
+				Source="/Assets/LoginView/AHON-Track-Secondary-Logo.png"
+				Width="160"
+				Height="95"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Top"
+				Margin="45,5"
+			/>
+		<StackPanel HorizontalAlignment="Left" Margin="60,110,10,10">
+
 			<TextBlock
 				Text="The future of"
-				Foreground="{StaticResource Foreground}"
+				Foreground="{StaticResource FontForeground}"
 				FontSize="35"
 				FontFamily="Inter"
 				FontWeight="Regular"
@@ -51,7 +59,7 @@
 			
 			<TextBlock
 				Text="Gym"
-				Foreground="{StaticResource Foreground}"
+				Foreground="{StaticResource FontForeground}"
 				FontSize="65"
 				FontFamily="Inter"
 				FontWeight="Bold"
@@ -60,7 +68,7 @@
 		
 			<TextBlock
 				Text="Management"
-				Foreground="{StaticResource Foreground}"
+				Foreground="{StaticResource FontForeground}"
 				FontSize="65"
 				FontFamily="Inter"
 				FontWeight="Bold"
@@ -68,7 +76,7 @@
 		
 			<TextBlock
 				Text="at your fingertips"
-				Foreground="{StaticResource Foreground}"
+				Foreground="{StaticResource FontForeground}"
 				FontSize="35"
 				FontFamily="Inter"
 				FontWeight="Regular"
@@ -78,7 +86,7 @@
 		
 			<TextBlock
 				Text="Making it easier for staff to manage, oversee, "
-				Foreground="{StaticResource Foreground}"
+				Foreground="{StaticResource FontForeground}"
 				FontSize="23"
 				FontFamily="Inter"
 				FontWeight="Light"
@@ -87,7 +95,7 @@
 
 			<TextBlock
 				Text="and engage with knowledge"
-				Foreground="{StaticResource Foreground}"
+				Foreground="{StaticResource FontForeground}"
 				FontSize="23"
 				FontFamily="Inter"
 				FontWeight="Light"
@@ -97,20 +105,30 @@
 			<Button
 				Classes="Primary"
 				Content="About Us"
+				Background="{StaticResource ObjectBackground}"
 				HorizontalAlignment="Left"
-				Margin="50,60" 
+				Margin="80,60" 
 				Padding="35,0,35,0"
 				FontSize="17"
+			/>
+
+			<Image
+				Source="/Assets/LoginView/DumbellCurl-2.png"
+				Margin="-149,-510"
+				Width="300"
+				Height="300"
+				HorizontalAlignment="Left"
+				ZIndex="-1"
 			/>
 
 		</StackPanel>
 
 		<StackPanel HorizontalAlignment="Right">
-			<controls:Card HorizontalAlignment="Right" Width="445" Height="580" Margin="30,50" >
+			<controls:Card HorizontalAlignment="Right" Width="445" Height="565" Margin="30,50" >
 				<controls:Card.Header>
 					<StackPanel Spacing="5">
-						<controls:CardTitle FontFamily="Inter" FontSize="35" FontWeight="Bold">Sign In</controls:CardTitle>
-						<controls:CardDescription FontFamily="Inter" FontSize="18">Enter your credentials</controls:CardDescription>
+						<controls:CardTitle FontFamily="Inter" FontSize="35" FontWeight="Bold" Foreground="{StaticResource FontForeground}">Sign In</controls:CardTitle>
+						<controls:CardDescription FontFamily="Inter" Foreground="{StaticResource FontForeground}" Opacity="0.6" FontSize="18">Enter your credentials</controls:CardDescription>
 					</StackPanel>
 				</controls:Card.Header>
 				<StackPanel Spacing="30">
@@ -118,6 +136,7 @@
 						Classes="Clearable"
 						extensions:ControlAssist.Label="Username"
 						extensions:ControlAssist.Height="40"
+						Foreground="{StaticResource Foreground}"
 						Watermark="Username"
 						FontSize="17"
 						Text="{Binding Username, Mode=TwoWay}"
@@ -126,6 +145,7 @@
 						Classes="PasswordReveal"
 						extensions:ControlAssist.Label="Password"
 						extensions:ControlAssist.Height="40"
+						Foreground="{StaticResource Foreground}"
 						PasswordChar="•"
 						Watermark="Enter your password"
 						FontSize="17"
@@ -133,7 +153,7 @@
 					/>
 				</StackPanel>
 				<controls:Card.Footer>
-					<Button Classes="Primary" FontSize="20" Padding="0,0" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}">
+					<Button Classes="Primary" FontSize="20" Padding="0,0" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}" Background="{StaticResource ObjectBackground}">
 						Sign In
 					</Button>
 				</controls:Card.Footer>
