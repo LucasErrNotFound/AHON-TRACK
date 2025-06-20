@@ -29,7 +29,7 @@ namespace AHON_TRACK.ViewModels
 
         private string _username = string.Empty;
 
-        [Required(ErrorMessage = "Email is required")]
+        [Required(ErrorMessage = "Username is required")]
         public string Username 
         {
             get => _username;
@@ -67,7 +67,7 @@ namespace AHON_TRACK.ViewModels
 
             if (HasErrors)
             {
-                ToastManager.CreateToast("Wrong Credetials! Try Again")
+                ToastManager.CreateToast("Wrong Credentials! Try Again")
                     .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                     .WithDelay(8)
                     .ShowError();
@@ -76,7 +76,7 @@ namespace AHON_TRACK.ViewModels
 
             ToastManager.CreateToast("You have signed in! Welcome back!")
                 .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
-                .WithDelay(8)
+                .WithDelay(6)
                 .ShowSuccess();
         }
     }
