@@ -22,19 +22,16 @@ namespace AHON_TRACK
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
-                // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
-
                 var dialogManager = new DialogManager();
                 var toastManager = new ToastManager();
 
-                desktop.MainWindow = new MainWindow
+                // Show LoginView first
+                desktop.MainWindow = new LoginView
                 {
                     DataContext = new LoginViewModel(dialogManager, toastManager),
                 };
             }
-
             base.OnFrameworkInitializationCompleted();
         }
 
