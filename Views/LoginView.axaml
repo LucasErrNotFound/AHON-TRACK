@@ -27,8 +27,8 @@
 	</controls:Window.Hosts>
 
 	<Window.Resources>
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
 		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
-		<SolidColorBrush x:Key="ObjectBackground" Color="#2C2F36"/>
 	</Window.Resources>
 
 	<Design.DataContext>
@@ -48,7 +48,6 @@
 				Margin="45,5"
 			/>
 		<StackPanel HorizontalAlignment="Left" Margin="60,110,10,10">
-
 			<TextBlock
 				Text="The future of"
 				Foreground="{StaticResource FontForeground}"
@@ -56,7 +55,6 @@
 				FontFamily="Inter"
 				FontWeight="Regular"
 			/>
-			
 			<TextBlock
 				Text="Gym"
 				Foreground="{StaticResource FontForeground}"
@@ -65,7 +63,6 @@
 				FontWeight="Bold"
 				Margin="0,0"
 			/>
-		
 			<TextBlock
 				Text="Management"
 				Foreground="{StaticResource FontForeground}"
@@ -73,7 +70,6 @@
 				FontFamily="Inter"
 				FontWeight="Bold"
 			/>
-		
 			<TextBlock
 				Text="at your fingertips"
 				Foreground="{StaticResource FontForeground}"
@@ -82,8 +78,6 @@
 				FontWeight="Regular"
 				Margin="0,10"
 			/>
-
-		
 			<TextBlock
 				Text="Making it easier for staff to manage, oversee, "
 				Foreground="{StaticResource FontForeground}"
@@ -92,7 +86,6 @@
 				FontWeight="Light"
 				Margin="0,10"
 			/>
-
 			<TextBlock
 				Text="and engage with knowledge"
 				Foreground="{StaticResource FontForeground}"
@@ -101,17 +94,14 @@
 				FontWeight="Light"
 				Margin="0,-10"
 			/>
-
 			<Button
 				Classes="Primary"
 				Content="About Us"
-				Background="{StaticResource ObjectBackground}"
 				HorizontalAlignment="Left"
 				Margin="80,60" 
 				Padding="35,0,35,0"
 				FontSize="17"
 			/>
-
 			<Image
 				Source="/Assets/LoginView/DumbellCurl-2.png"
 				Margin="-149,-510"
@@ -120,9 +110,7 @@
 				HorizontalAlignment="Left"
 				ZIndex="-1"
 			/>
-
 		</StackPanel>
-
 		<StackPanel HorizontalAlignment="Right">
 			<controls:Card HorizontalAlignment="Right" Width="445" Height="565" Margin="30,50" >
 				<controls:Card.Header>
@@ -153,13 +141,11 @@
 					/>
 				</StackPanel>
 				<controls:Card.Footer>
-					<Button Classes="Primary" FontSize="20" Padding="0,0" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}" Background="{StaticResource ObjectBackground}">
+					<Button Classes="Primary" FontSize="20" Padding="0,0" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}" >
 						Sign In
 					</Button>
 				</controls:Card.Footer>
 			</controls:Card>
 		</StackPanel>
 	</Grid>
-
-
 </Window>
