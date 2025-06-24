@@ -1,0 +1,115 @@
+﻿<UserControl
+  x:Class="AHON_TRACK.Views.DashboardView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:breakpoints="clr-namespace:ShadUI.Breakpoints;assembly=ShadUI"
+  xmlns:controls="clr-namespace:ShadUI.Controls;assembly=ShadUI"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:extensions="clr-namespace:ShadUI.Extensions;assembly=ShadUI"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:system="clr-namespace:System;assembly=System.Runtime"
+  xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+  xmlns:dashboard="clr-namespace:AHON_TRACK.Components.Dashboard"
+  xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
+  d:DesignHeight="1080"
+  d:DesignWidth="1666"
+  x:DataType="viewModels:DashboardViewModel"
+  mc:Ignorable="d">
+
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36"/>
+
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75"/>
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
+	</UserControl.Resources>
+
+	<DockPanel>
+		<StackPanel
+            MaxWidth="{StaticResource PageMaxWidth}"
+            Margin="{StaticResource PageMargin}"
+            DockPanel.Dock="Top">
+			<TextBlock
+				FontSize="30"
+				FontWeight="SemiBold"
+				FontFamily="Inter"
+				Text="Dashboard"
+				Margin="90,30"
+			/>
+			<ScrollViewer>
+				<StackPanel
+					MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
+					<StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
+
+					</StackPanel>
+				</StackPanel>
+			</ScrollViewer>
+			<TabControl Margin="97,50">
+				<TabControl.Items>
+					<TabItem Header="Overview">
+						<breakpoints:View Breakpoint="MdAndUp">
+							<UniformGrid Margin="-6,0" Columns="4">
+								<dashboard:OverviewCard
+                                                Title="Total Revenue"
+												FontWeight="SemiBold"
+                                                Hint="+96% from last month"
+                                                Value="₱20,911.69">
+									<dashboard:OverviewCard.Icon>
+										<Svg
+											Width="23"
+											Height="23"
+											Path="/Assets/DashboardView/philippine-peso-icon.svg"
+											Opacity="0.5"
+										/>
+									</dashboard:OverviewCard.Icon>
+								</dashboard:OverviewCard>
+								<dashboard:OverviewCard
+									Title="Member Subscriptions"
+									Hint="+16% from last month"
+									Value="+18">
+									<dashboard:OverviewCard.Icon>
+										<Svg
+											Width="23"
+											Height="23"
+											Path="/Assets/DashboardView/member-subscriptions-icon.svg"
+										/>
+									</dashboard:OverviewCard.Icon>
+								</dashboard:OverviewCard>
+								<dashboard:OverviewCard
+									Title="Sales"
+									Hint="+16% from last month"
+									Value="+69">
+									<dashboard:OverviewCard.Icon>
+										<Svg
+											Width="23"
+											Height="23"
+											Path="/Assets/DashboardView/sales-icon.svg"
+										/>
+									</dashboard:OverviewCard.Icon>
+								</dashboard:OverviewCard>
+								<dashboard:OverviewCard
+									Title="Active Now"
+									Hint="+26 since last hour"
+									Value="+9">
+									<dashboard:OverviewCard.Icon>
+										<Svg
+											Width="23"
+											Height="23"
+											Path="/Assets/DashboardView/active-now-icon.svg"
+										/>
+									</dashboard:OverviewCard.Icon>
+								</dashboard:OverviewCard>
+							</UniformGrid>
+						</breakpoints:View>
+					</TabItem>
+					<TabItem Header="Analytics"/>
+					<TabItem Header="Reports"/>
+					<TabItem Header="Notifications"/>
+				</TabControl.Items>
+			</TabControl>
+		</StackPanel>
+	</DockPanel>
+</UserControl>

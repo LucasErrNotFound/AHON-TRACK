@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AHON_TRACK.ViewModels"
+		xmlns:views="using:AHON_TRACK.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:contents="clr-namespace:ShadUI.Contents;assembly=ShadUI"
@@ -10,14 +11,15 @@
         xmlns:extensions="clr-namespace:ShadUI.Extensions;assembly=ShadUI"
 		xmlns:toasts="clr-namespace:ShadUI.Toasts;assembly=ShadUI"
 		xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
+		xmlns:func="clr-namespace:Functionalities"
         mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
         x:Class="AHON_TRACK.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/AHON-Track-Window.ico"
         WindowStartupLocation="CenterScreen"
         CanResize="True"
         WindowState="Maximized"
         Title="AHON TRACK">
-
 
 	<controls:Window.LogoContent>
 		<Svg
@@ -36,8 +38,14 @@
 	</controls:Window.Hosts>
 
 	<Window.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
 		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
-		<SolidColorBrush x:Key="ObjectBackground" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36"/>
+
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75"/>
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
 	</Window.Resources>
 
 	<Design.DataContext>
@@ -45,6 +53,461 @@
              to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
 		<vm:MainWindowViewModel/>
 	</Design.DataContext>
+	<Panel>
+		<controls:SidebarMenu OpenPaneLength="270">
+			<controls:SidebarMenu.Styles>
+				<Style Selector="controls|SidebarMenuItem">
+					<Setter Property="ToolTip.Placement" Value="Top"/>
+					<Setter Property="ToolTip.VerticalOffset" Value="-5"/>
+				</Style>
+			</controls:SidebarMenu.Styles>
+			<controls:SidebarMenu.BodyContent>
+				<TransitioningContentControl Content="{Binding SelectedPage}"/>
+			</controls:SidebarMenu.BodyContent>
+			<controls:SidebarMenu.HeaderContent>
+				<StackPanel>
+					<controls:Avatar
+						Source="/Assets/MainWindowView/user-admin.png"
+						Width="100"
+						Height="100"
+						Margin="30,10,30,30"
+					/>
+					<TextBlock
+						Text="Admin"
+						FontFamily="Inter"
+						FontSize="18"
+						Foreground="{StaticResource FontForeground}"
+						FontWeight="SemiBold"
+						HorizontalAlignment="Center"
+						Margin="0,-25,0,2"/>
+					<TextBlock
+						Text="Mardie Dela Cruz"
+						FontFamily="Inter"
+						FontSize="14"
+						Foreground="{StaticResource PrimaryColor75}"
+						HorizontalAlignment="Center"
+						Margin="0,0,0,30"/>
+				</StackPanel>
+			</controls:SidebarMenu.HeaderContent>
 
+			<controls:SidebarMenu.Items>
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenDashboardCommand}"
+					Header="Dashboard"
+					FontFamily="Inter"
+					FontWeight="Medium"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Dashboard'}">
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/dashboard-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
 
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenManageEmployeesCommand}"
+					Header="Manage Employees"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Manage Employees'}">
+					>
+							
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/manage-employees-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+
+				<Separator/>
+
+				<controls:SidebarMenuItem Classes="Header" IsVisible="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}}" IsEnabled="False" FontSize="15" Margin="-25,0" Foreground="{DynamicResource DestructiveColor}">
+					<TextBlock
+						Text="Members &amp; Access"
+						FontWeight="SemiBold"
+						Classes="SectionHeader"
+					/>
+				</controls:SidebarMenuItem>
+
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenMemberCheckInOutCommand}"
+					Header="Member Check-in/Check-out"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Member Check-in/Check-out'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/member-check-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenManageMembershipCommand}"
+					Header="Manage Membership"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Manage Membership'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/manage-membership-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenWalkInRegistrationCommand}"
+					Header="Walk-in Registration"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Walk-in Registration'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/walk-in-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenMemberDirectoryCommand}"
+					Header="Member Directory"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Member Directory'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/member-directory-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+
+				<Separator/>
+
+				<controls:SidebarMenuItem Classes="Header" IsVisible="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}}" IsEnabled="False" FontSize="15" Margin="-25,0" Foreground="{DynamicResource DestructiveColor}">
+					<TextBlock
+						Text="Scheduling &amp; Classes"
+						FontWeight="SemiBold"
+						Classes="SectionHeader"
+					/>
+				</controls:SidebarMenuItem>
+
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenTrainingSchedulesCommand}"
+					Header="Training Schedules"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Training Schedules'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/training-schedules-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenRoomEquipmentBookingCommand}"
+					Header="Room/Equipment Booking"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Room/Equipment Booking'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/room-equipment-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+
+				<Separator/>
+
+				<controls:SidebarMenuItem Classes="Header" IsVisible="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}}" IsEnabled="False" FontSize="15" Margin="-25,0" Foreground="{DynamicResource DestructiveColor}">
+					<TextBlock
+						Text="Payments &amp; Billing"
+						FontWeight="SemiBold"
+						Classes="SectionHeader"
+					/>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenPaymentOverviewCommand}"
+					Header="Payment Overview"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Payment Overview'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/payment-oversight-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenOutstandingBalancesCommand}"
+					Header="Oustanding Balances"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Outstanding Balances'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/outstanding-balances-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+			
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenPaymentHistoryCommand}"
+					Header="Payment History"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Payment History'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/payment-history-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenManageBillingCommand}"
+					Header="Manage Billing"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Manage Billing'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/manage-billing-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+
+				<Separator/>
+
+				<controls:SidebarMenuItem Classes="Header" IsVisible="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}}" IsEnabled="False" FontSize="15" Margin="-25,0" Foreground="{DynamicResource DestructiveColor}">
+					<TextBlock
+						Text="Manage Inventory"
+						FontWeight="SemiBold"
+						Classes="SectionHeader"
+					/>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenEquipmentInventoryCommand}"
+					Header="Equipment Inventory"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Equipment Inventory'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/equipment-inventory-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenProductSupplementStockViewModelCommand}"
+					Header="Product/Supplement Stock"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Product/Supplement Stock'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/product-supplement-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenSupplierManagementCommand}"
+					Header="Supplier Management"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Supplier Management'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/supplier-management-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+
+				<Separator/>
+
+				<controls:SidebarMenuItem Classes="Header" IsVisible="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}}" IsEnabled="False" FontSize="15" Margin="-25,0" Foreground="{DynamicResource DestructiveColor}">
+					<TextBlock
+						Text="Reports &amp; Analytics"
+						FontWeight="SemiBold"
+						Classes="SectionHeader"
+					/>
+				</controls:SidebarMenuItem>
+			
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenFinancialReportsCommand}"
+					Header="Financial Reports"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Financial Reports'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/financial-reports-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenGymDemographicsCommand}"
+					Header="Gym Demographics"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Gym Demographics'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/gym-demographics-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenEquipmentUsageReportsCommand}"
+					Header="Equipment Usage Reports"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Equipment Usage Reports'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/equipment-usage-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+				
+				<controls:SidebarMenuItem
+					Classes="Compact"
+					Command="{Binding OpenClassAttendanceReportsCommand}"
+					Header="Class Attendance Reports"
+					FontFamily="Inter"
+					FontSize="16"
+					ToolTip.Tip="{Binding IsMenuExpanded, RelativeSource={RelativeSource AncestorType=controls:SidebarMenu}, Converter={x:Static func:BooleanToNullOrStringConverter.Instance}, ConverterParameter='Class Attendance Reports'}">
+					>
+					<controls:SidebarMenuItem.Icon>
+						<Svg
+							Width="23"
+							Height="23"
+							Path="/Assets/MainWindowView/class-attendance-icon.svg"
+						/>
+					</controls:SidebarMenuItem.Icon>
+				</controls:SidebarMenuItem>
+			</controls:SidebarMenu.Items>
+
+			<controls:SidebarMenu.FooterContent>
+				<StackPanel
+					HorizontalAlignment="Center"
+					Orientation="Horizontal"
+					Spacing="16">
+					<StackPanel.Styles>
+						<Style Selector="Button">
+							<Setter Property="ToolTip.Placement" Value="Top"/>
+							<Setter Property="ToolTip.VerticalOffset" Value="-5"/>
+						</Style>
+						<Style Selector="PathIcon">
+							<Setter Property="Height" Value="16"/>
+						</Style>
+					</StackPanel.Styles>
+					<Button
+						Width="36"
+						Height="36"
+						CommandParameter=""
+						ToolTip.Tip="Log Out">
+						<extensions:ButtonAssist.Icon>
+							<Svg
+								Width="20"
+								Height="20"
+								Path="/Assets/MainWindowView/logout-icon.svg"
+							/>
+						</extensions:ButtonAssist.Icon>
+					</Button>
+					<Button
+						Width="36"
+						Height="36"
+						CommandParameter=""
+						ToolTip.Tip="Log Out">
+						<extensions:ButtonAssist.Icon>
+							<Svg
+								Width="20"
+								Height="20"
+								Path="/Assets/MainWindowView/setting-icon.svg"
+							/>
+						</extensions:ButtonAssist.Icon>
+					</Button>
+				</StackPanel>
+			</controls:SidebarMenu.FooterContent>
+		</controls:SidebarMenu>
+	</Panel>
 </Window>
