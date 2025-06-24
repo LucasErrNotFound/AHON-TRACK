@@ -91,17 +91,45 @@ namespace AHON_TRACK.ViewModels
             {
                 var currentWindow = desktop.MainWindow; // Keep reference to LoginView
                 var dialogManager = new DialogManager();
-                // var toastManager = new ToastManager();
+                var toastManager = new ToastManager();
+                var dashboardViewModel = new DashboardViewModel();
+                var manageEmployeesViewModel = new ManageEmployeesViewModel();
+                var memberCheckInOutViewModel = new MemberCheckInOutViewModel();
+                var manageMembershipViewModel = new ManageMembershipViewModel();
+                var walkInRegistration = new WalkInRegistrationViewModel();
+                var memberDirectoryViewModel = new MemberDirectoryViewModel();
+                var trainingSchedulesViewModel = new TrainingSchedulesViewModel();
+                var roomEquipmentBookingViewModel = new RoomEquipmentBookingViewModel();
+                var paymentOverviewViewModel = new PaymentOverviewViewModel();
+                var outstandingBalancesViewModel = new OutstandingBalancesViewModel();
+                var paymentHistoryViewModel = new PaymentHistoryViewModel();
+                var manageBillingViewModel = new ManageBillingViewModel();
+                var equipmentInventoryViewModel = new EquipmentInventoryViewModel();
+                var productSupplementStockViewModel = new ProductSupplementStockViewModel();
+                var supplierManagementViewModel = new SupplierManagementViewModel();
+                var financialReportsViewModel = new FinancialReportsViewModel();
+                var gymdemographicsViewModel = new GymDemographicsViewModel();
+                var equipmentUsageReportsViewModel = new EquipmentUsageReportsViewModel();
+                var classAttendanceReportsViewModel = new ClassAttendanceReportsViewModel();
 
 
                 // Create and show the MainWindow
+                var mainWindowViewModel = new MainWindowViewModel(
+                        dialogManager, toastManager, dashboardViewModel, manageEmployeesViewModel, memberCheckInOutViewModel,
+                        manageMembershipViewModel, walkInRegistration, memberDirectoryViewModel, trainingSchedulesViewModel,
+                        roomEquipmentBookingViewModel, paymentOverviewViewModel, outstandingBalancesViewModel, paymentHistoryViewModel,
+                        manageBillingViewModel, equipmentInventoryViewModel, productSupplementStockViewModel, supplierManagementViewModel,
+                        financialReportsViewModel, gymdemographicsViewModel, equipmentUsageReportsViewModel, classAttendanceReportsViewModel);
+
                 var mainWindow = new MainWindow
                 {
-                    DataContext = new MainWindowViewModel(dialogManager)
+                    DataContext = mainWindowViewModel
                 };
 
                 desktop.MainWindow = mainWindow;
                 mainWindow.Show();
+                mainWindowViewModel.Initialize();
+
 
                 // Close the LoginView after MainWindow is shown
                 currentWindow?.Close();
