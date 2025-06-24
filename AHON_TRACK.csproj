@@ -9,8 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="Assets\DashboardView\" />
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaXaml Remove="Components\Dashboard\OverviewCard.axaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Components\Dashboard\OverviewCard.axaml" />
   </ItemGroup>
 
   <ItemGroup>
