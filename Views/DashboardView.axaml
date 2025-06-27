@@ -7,11 +7,13 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:extensions="clr-namespace:ShadUI.Extensions;assembly=ShadUI"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
   xmlns:system="clr-namespace:System;assembly=System.Runtime"
   xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
   xmlns:dashboard="clr-namespace:AHON_TRACK.Components.Dashboard"
+  xmlns:func="using:AHON_TRACK.Functionalities"
   xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
-  d:DesignHeight="1080"
+  d:DesignHeight="2080"
   d:DesignWidth="1666"
   x:DataType="viewModels:DashboardViewModel"
   mc:Ignorable="d">
@@ -39,77 +41,394 @@
 				Text="Dashboard"
 				Margin="90,30"
 			/>
-			<ScrollViewer>
-				<StackPanel
-					MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
-					<StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
-
-					</StackPanel>
-				</StackPanel>
-			</ScrollViewer>
-			<TabControl Margin="97,50">
-				<TabControl.Items>
-					<TabItem Header="Overview">
-						<breakpoints:View Breakpoint="MdAndUp">
-							<UniformGrid Margin="-6,0" Columns="4">
-								<dashboard:OverviewCard
-                                                Title="Total Revenue"
-												FontWeight="SemiBold"
-                                                Hint="+96% from last month"
-                                                Value="₱20,911.69">
-									<dashboard:OverviewCard.Icon>
-										<Svg
-											Width="23"
-											Height="23"
-											Path="/Assets/DashboardView/philippine-peso-icon.svg"
-											Opacity="0.5"
-										/>
-									</dashboard:OverviewCard.Icon>
-								</dashboard:OverviewCard>
-								<dashboard:OverviewCard
-									Title="Member Subscriptions"
-									Hint="+16% from last month"
-									Value="+18">
-									<dashboard:OverviewCard.Icon>
-										<Svg
-											Width="23"
-											Height="23"
-											Path="/Assets/DashboardView/member-subscriptions-icon.svg"
-										/>
-									</dashboard:OverviewCard.Icon>
-								</dashboard:OverviewCard>
-								<dashboard:OverviewCard
-									Title="Sales"
-									Hint="+16% from last month"
-									Value="+69">
-									<dashboard:OverviewCard.Icon>
-										<Svg
-											Width="23"
-											Height="23"
-											Path="/Assets/DashboardView/sales-icon.svg"
-										/>
-									</dashboard:OverviewCard.Icon>
-								</dashboard:OverviewCard>
-								<dashboard:OverviewCard
-									Title="Active Now"
-									Hint="+26 since last hour"
-									Value="+9">
-									<dashboard:OverviewCard.Icon>
-										<Svg
-											Width="23"
-											Height="23"
-											Path="/Assets/DashboardView/active-now-icon.svg"
-										/>
-									</dashboard:OverviewCard.Icon>
-								</dashboard:OverviewCard>
-							</UniformGrid>
-						</breakpoints:View>
-					</TabItem>
-					<TabItem Header="Analytics"/>
-					<TabItem Header="Reports"/>
-					<TabItem Header="Notifications"/>
-				</TabControl.Items>
-			</TabControl>
 		</StackPanel>
+		<ScrollViewer>
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
+				<TabControl Margin="45,50">
+					<TabControl.Items>
+						<TabItem Header="Overview">
+							<StackPanel>
+								<breakpoints:ViewPort>
+									<breakpoints:View Breakpoint="MdAndUp">
+										<UniformGrid Margin="-6,0" Columns="4">
+											<dashboard:OverviewCard
+															Title="Total Revenue"
+															FontWeight="SemiBold"
+															Hint="+96% from last month"
+															Value="₱20,911.69">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/philippine-peso-icon.svg"
+														Opacity="0.5"
+												/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Member Subscriptions"
+												Hint="+16% from last month"
+												Value="+18">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/member-subscriptions-icon.svg"
+												/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Sales"
+												Hint="+16% from last month"
+												Value="+69">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/sales-icon.svg"
+												/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Active Now"
+												Hint="+26 since last hour"
+												Value="+9">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/active-now-icon.svg"
+												/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+										</UniformGrid>
+									</breakpoints:View>
+								</breakpoints:ViewPort>
+								<breakpoints:ViewPort>
+									<breakpoints:View Breakpoint="MdAndUp">
+										<Grid Margin="-8,20" ColumnDefinitions="3* 2*">
+											<Border
+												Margin="8"
+												Background="{DynamicResource CardBackgroundColor}"
+												BorderBrush="{DynamicResource BorderColor}"
+												BorderThickness="1"
+												BoxShadow="{DynamicResource Shadow}"
+												CornerRadius="{DynamicResource 2XlCornerRadius}">
+												<DockPanel>
+													<TextBlock
+														Margin="24,24,24,12"
+														DockPanel.Dock="Top"
+														FontSize="17"
+														FontWeight="Bold"
+														Text="2025 Sales Overview"
+												/>
+													<ComboBox
+														Margin="20,-35,30,0"
+														HorizontalAlignment="Right"
+														HorizontalContentAlignment="Center"
+														Width="100"
+														DockPanel.Dock="Top"
+														ItemsSource="{Binding AvailableYears}"
+														SelectedIndex="{Binding SelectedYearIndex}">
+														<ComboBoxItem>2025</ComboBoxItem>
+														<ComboBoxItem>2026</ComboBoxItem>
+														<ComboBoxItem>2027</ComboBoxItem>
+														<ComboBoxItem>2028</ComboBoxItem>
+														<ComboBoxItem>2029</ComboBoxItem>
+														<ComboBoxItem>2030</ComboBoxItem>
+													</ComboBox>
+													<avalonia:CartesianChart
+														Height="445"
+														Name="CartesianChart1"
+														Margin="12,0,12,12"
+														Series="{Binding Series}"
+														XAxes="{Binding XAxes}"
+														YAxes="{Binding YAxes}"
+														TooltipTextSize="14"
+												/>
+												</DockPanel>
+
+											</Border>
+											<Border
+												Grid.Column="1"
+												Margin="8"
+												Background="{DynamicResource CardBackgroundColor}"
+												BorderBrush="{DynamicResource BorderColor}"
+												BorderThickness="1"
+												BoxShadow="{DynamicResource Shadow}"
+												CornerRadius="{DynamicResource 2XlCornerRadius}">
+												<DockPanel x:Name="RecentSalesCard" Height="500">
+													<DockPanel.Resources>
+														<func:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+													</DockPanel.Resources>
+													<StackPanel
+														Margin="40,25"
+														DockPanel.Dock="Top"
+														Spacing="8">
+														<TextBlock
+																FontSize="17"
+																FontWeight="Bold"
+																Text="Recent Sales" />
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{Binding SalesSummary}" />
+													</StackPanel>
+													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{Binding RecentSales}">
+
+															<!-- Define the item container style -->
+															<ItemsControl.ItemsPanel>
+																<ItemsPanelTemplate>
+																	<StackPanel Spacing="24" />
+																</ItemsPanelTemplate>
+															</ItemsControl.ItemsPanel>
+
+															<!-- Define the template for each item -->
+															<ItemsControl.ItemTemplate>
+																<DataTemplate>
+																	<Grid ColumnDefinitions="230 * 100">
+																		<!-- Customer Info Column -->
+																		<StackPanel
+																			Grid.Column="0"
+																			Orientation="Horizontal"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left">
+																			<controls:Avatar
+																				Width="36"
+																				Height="36"
+																				VerticalAlignment="Center"
+																				Source="{Binding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																			<StackPanel Margin="15,0">
+																				<TextBlock
+																					Classes="Small"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{Binding CustomerName}"/>
+																				<TextBlock
+																					Classes="Caption Muted"
+																					FontSize="13"
+																					Text="{Binding CustomerType}"/>
+																			</StackPanel>
+																		</StackPanel>
+
+																		<!-- Product Name Column -->
+																		<TextBlock
+																			Grid.Column="1"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left"
+																			FontSize="15"
+																			FontWeight="SemiBold"
+																			Text="{Binding ProductName}"/>
+
+																		<!-- Amount Column -->
+																		<TextBlock
+																			Grid.Column="2"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Right"
+																			FontSize="15"
+																			FontWeight="Bold"
+																			Foreground="{DynamicResource SuccessColor}"
+																			Text="{Binding FormattedAmount}"/>
+																	</Grid>
+																</DataTemplate>
+															</ItemsControl.ItemTemplate>
+														</ItemsControl>
+													</ScrollViewer>
+												</DockPanel>
+											</Border>
+										</Grid>
+									</breakpoints:View>
+								</breakpoints:ViewPort>
+								<breakpoints:ViewPort>
+									<breakpoints:View Breakpoint="MdAndUp">
+										<Grid Margin="-8,0" ColumnDefinitions="4.7* 2*">
+											<Border
+												Grid.Column="0"
+												Margin="8"
+												Background="{DynamicResource CardBackgroundColor}"
+												BorderBrush="{DynamicResource BorderColor}"
+												BorderThickness="1"
+												BoxShadow="{DynamicResource Shadow}"
+												CornerRadius="{DynamicResource 2XlCornerRadius}">
+												<DockPanel Height="500">
+													<DockPanel.Resources>
+														<func:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+													</DockPanel.Resources>
+													<StackPanel
+														Margin="40,25"
+														DockPanel.Dock="Top"
+														Spacing="8">
+														<TextBlock
+																FontSize="17"
+																FontWeight="Bold"
+																Text="Upcoming Training Sessions" />
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{Binding TrainingSessionsSummary}" />
+													</StackPanel>
+													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{Binding UpcomingTrainingSessions}">
+															<ItemsControl.ItemsPanel>
+																<ItemsPanelTemplate>
+																	<StackPanel Spacing="24"/>
+																</ItemsPanelTemplate>
+															</ItemsControl.ItemsPanel>
+															<ItemsControl.ItemTemplate>
+																<DataTemplate>
+																	<Grid ColumnDefinitions="250 200 170 150 150">
+																		<!-- Client Information Column -->
+																		<StackPanel
+																			Grid.Column="0"
+																			Orientation="Horizontal"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left">
+																			<controls:Avatar
+																				Width="36"
+																				Height="36"
+																				VerticalAlignment="Center"
+																				Source="{Binding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																			<StackPanel Margin="15,0">
+																				<TextBlock
+																					Classes="Small"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{Binding ClientName}"/>
+																				<TextBlock
+																					Classes="Caption Muted"
+																					FontSize="13"
+																					Text="{Binding MembershipType}"/>
+																			</StackPanel>
+																		</StackPanel>
+
+																		<!-- Training Type Column -->
+																		<TextBlock
+																			Grid.Column="1"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left"
+																			FontSize="15"
+																			FontWeight="SemiBold"
+																			Text="{Binding TrainingType}"/>
+
+																		<!-- Location Column -->
+																		<TextBlock
+																			Grid.Column="2"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left"
+																			FontSize="15"
+																			FontWeight="SemiBold"
+																			Text="{Binding Location}"/>
+
+																		<!-- Time Slot Column -->
+																		<TextBlock
+																			Grid.Column="3"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left"
+																			FontSize="15"
+																			FontWeight="Bold"
+																			Text="{Binding TimeSlot}"/>
+
+																		<!-- Date Column -->
+																		<TextBlock
+																			Grid.Column="4"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Right"
+																			FontSize="15"
+																			FontWeight="Bold"
+																			Foreground="{DynamicResource SuccessColor}"
+																			Text="{Binding FormattedDate}"/>
+																	</Grid>
+																</DataTemplate>
+															</ItemsControl.ItemTemplate>
+														</ItemsControl>
+													</ScrollViewer>
+												</DockPanel>
+											</Border>
+											<Border
+												Grid.Column="1"
+												Margin="8"
+												Background="{DynamicResource CardBackgroundColor}"
+												BorderBrush="{DynamicResource BorderColor}"
+												BorderThickness="1"
+												BoxShadow="{DynamicResource Shadow}"
+												CornerRadius="{DynamicResource 2XlCornerRadius}">
+												<DockPanel x:Name="RecentLogs" Height="500">
+													<DockPanel.Resources>
+														<func:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+													</DockPanel.Resources>
+													<StackPanel
+														Margin="40,25"
+														DockPanel.Dock="Top"
+														Spacing="8">
+														<TextBlock
+																FontSize="17"
+																FontWeight="Bold"
+																Text="Recent Logs" />
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{Binding RecentLogsSummary}" />
+													</StackPanel>
+													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{Binding RecentLogs}">
+
+															<!-- Define the item container style -->
+															<ItemsControl.ItemsPanel>
+																<ItemsPanelTemplate>
+																	<StackPanel Spacing="24" />
+																</ItemsPanelTemplate>
+															</ItemsControl.ItemsPanel>
+
+															<!-- Define the template for each item -->
+															<ItemsControl.ItemTemplate>
+																<DataTemplate>
+																	<Grid ColumnDefinitions="Auto * Auto">
+																		<!-- Staff/Admin Info Column -->
+																		<StackPanel
+																			Grid.Column="0"
+																			Orientation="Horizontal"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left">
+																			<controls:Avatar
+																				Width="36"
+																				Height="36"
+																				VerticalAlignment="Center"
+																				Source="{Binding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																			<StackPanel Margin="15,0">
+																				<TextBlock
+																					Classes="Small"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{Binding Username}"/>
+																				<TextBlock
+																					Classes="Caption Muted"
+																					FontSize="13"
+																					Text="{Binding UserType}"/>
+																			</StackPanel>
+																		</StackPanel>
+
+																		<!-- Action Log Column -->
+																		<TextBlock
+																			Grid.Column="1"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Right"
+																			FontSize="13"
+																			FontWeight="SemiBold"
+																			TextWrapping="Wrap"
+																			TextAlignment="Right"
+																			Width="150"
+																			Foreground="{DynamicResource SuccessColor}"
+																			Text="{Binding ActionLogName}"/>
+																	</Grid>
+																</DataTemplate>
+															</ItemsControl.ItemTemplate>
+														</ItemsControl>
+													</ScrollViewer>
+												</DockPanel>
+											</Border>
+										</Grid>
+									</breakpoints:View>
+								</breakpoints:ViewPort>
+							</StackPanel>
+						</TabItem>
+						<TabItem Header="Analytics"/>
+						<TabItem Header="Reports"/>
+						<TabItem Header="Notifications"/>
+					</TabControl.Items>
+				</TabControl>
+			</StackPanel>
+		</ScrollViewer>
 	</DockPanel>
 </UserControl>
