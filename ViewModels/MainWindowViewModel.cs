@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using AHON_TRACK.Views;
 using AHON_TRACK.ViewModels;
 using System.ComponentModel.Design;
+using ShadUI.Themes;
+using Avalonia;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -87,6 +89,7 @@ public sealed partial class MainWindowViewModel(
             .Show();
     }
 
+    // I'll probably refactor this to make it shorter
     [RelayCommand]
     private async Task OpenDashboard()
     {

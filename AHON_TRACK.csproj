@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <Folder Include="Assets\DashboardView\" />
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
@@ -33,9 +32,11 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5.4" />
     <PackageReference Include="ShadUI" Version="0.0.6" />
     <PackageReference Include="Svg.Controls.Skia.Avalonia" Version="11.3.0.1" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.4" />
+	<PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All" Publish="True" />
   </ItemGroup>
 
   <ItemGroup>
