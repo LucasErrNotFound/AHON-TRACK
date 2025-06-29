@@ -7,6 +7,9 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using AHON_TRACK.Views;
 using Avalonia;
+using System.Text;
+using System.Security.Cryptography;
+using Microsoft.Data.SqlClient;
 
 namespace AHON_TRACK.ViewModels
 {
@@ -30,6 +33,10 @@ namespace AHON_TRACK.ViewModels
             }
         }
 
+        // Connection string to your SSMS database
+        private string ConnectionString =>
+            "Data Source=localhost;Initial Catalog=AHON_DB;Integrated Security=True";
+
         private string _username = string.Empty;
 
         [Required(ErrorMessage = "Username is required")]
@@ -49,10 +56,7 @@ namespace AHON_TRACK.ViewModels
             set => SetProperty(ref _password, value, true);
         }
 
-        private bool CanSignIn()
-        {
-            return !HasErrors;
-        }
+        private bool CanSignIn() => !HasErrors;
 
         public void Initialize()
         {
@@ -68,7 +72,7 @@ namespace AHON_TRACK.ViewModels
             ClearAllErrors();
             ValidateAllProperties();
 
-            if (HasErrors)
+            if (HasErrors) // the condition here will change and will implement the CheckCredentials Method.
             {
                 ToastManager.CreateToast("Wrong Credentials! Try Again")
                     .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
@@ -83,6 +87,81 @@ namespace AHON_TRACK.ViewModels
                 .ShowSuccess();
 
             SwitchToMainWindow();
+        }
+
+        // Authentication Logic
+        private bool CheckCredentials(string username, string password, out string role)
+        {
+            role = "Unknown";
+
+            try
+            {
+                using var conn = new SqlConnection(ConnectionString);
+                conn.Open();
+
+                // Try Admins
+                string adminQuery = "SELECT AdminId FROM Admins WHERE Username = @user AND Password = @pass";
+                using (var adminCmd = new SqlCommand(adminQuery, conn))
+                {
+                    adminCmd.Parameters.AddWithValue("@user", username);
+                    adminCmd.Parameters.AddWithValue("@pass", password);
+
+                    var adminId = adminCmd.ExecuteScalar();
+                    if (adminId != null)
+                    {
+                        // Increment Admin login count
+                        var update = new SqlCommand("UPDATE Admins SET LoginCount = LoginCount + 1 WHERE AdminId = @id", conn);
+                        update.Parameters.AddWithValue("@id", adminId);
+                        update.ExecuteNonQuery();
+
+                        role = "Admin";
+                        LogAttempt(conn, username, role, true);
+                        return true;
+                    }
+                }
+
+                // Try Staffs
+                string staffQuery = "SELECT StaffId FROM Staffs WHERE Username = @user AND Password = @pass";
+                using (var staffCmd = new SqlCommand(staffQuery, conn))
+                {
+                    staffCmd.Parameters.AddWithValue("@user", username);
+                    staffCmd.Parameters.AddWithValue("@pass", password);
+
+                    var staffId = staffCmd.ExecuteScalar();
+                    if (staffId != null)
+                    {
+                        var update = new SqlCommand("UPDATE Staffs SET LoginCount = LoginCount + 1 WHERE StaffId = @id", conn);
+                        update.Parameters.AddWithValue("@id", staffId);
+                        update.ExecuteNonQuery();
+
+                        role = "Staff";
+                        LogAttempt(conn, username, role, true);
+                        return true;
+                    }
+                }
+
+                // ❌ If we reach here, both failed
+                LogAttempt(conn, username, "Unknown", false);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                ToastManager.CreateToast("Database Error")
+                    .WithContent(ex.Message)
+                    .WithDelay(10)
+                    .ShowError();
+                return false;
+            }
+        }
+
+        private void LogAttempt(SqlConnection conn, string username, string role, bool success)
+        {
+            var logCmd = new SqlCommand(
+                "INSERT INTO LoginLogs (Username, Role, IsSuccessful) VALUES (@username, @role, @success)", conn);
+            logCmd.Parameters.AddWithValue("@username", username);
+            logCmd.Parameters.AddWithValue("@role", role);
+            logCmd.Parameters.AddWithValue("@success", success);
+            logCmd.ExecuteNonQuery();
         }
 
         private void SwitchToMainWindow()

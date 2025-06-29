@@ -35,6 +35,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
     <PackageReference Include="ShadUI" Version="0.0.6" />
     <PackageReference Include="Svg.Controls.Skia.Avalonia" Version="11.3.0.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.4" />
   </ItemGroup>
 
   <ItemGroup>
