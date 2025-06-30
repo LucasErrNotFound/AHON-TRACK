@@ -62,10 +62,10 @@ public sealed partial class MainWindowViewModel(
         ) { }
 
     [ObservableProperty]
-    private DialogManager _dialogManager = dialogManager;
+    private DialogManager dialogManager = dialogManager;
 
     [ObservableProperty]
-    private ToastManager _toastManager = toastManager;
+    private ToastManager toastManager = toastManager;
 
     [ObservableProperty]
     private object? _selectedPage;
