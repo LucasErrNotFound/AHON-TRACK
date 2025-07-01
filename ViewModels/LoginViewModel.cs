@@ -93,7 +93,7 @@ namespace AHON_TRACK.ViewModels
                 var dialogManager = new DialogManager();
                 var toastManager = new ToastManager();
                 var dashboardViewModel = new DashboardViewModel();
-                var manageEmployeesViewModel = new ManageEmployeesViewModel();
+                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager);
                 var memberCheckInOutViewModel = new MemberCheckInOutViewModel();
                 var manageMembershipViewModel = new ManageMembershipViewModel();
                 var walkInRegistration = new WalkInRegistrationViewModel();
