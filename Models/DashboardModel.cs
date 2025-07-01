@@ -274,10 +274,7 @@ namespace AHON_TRACK.Models
             return new List<RecentLog>();
         }
 
-        public string GenerateRecentLogsSummary(int logCount)
-        {
-            return $"You have {logCount} recent action logs today";
-        }
+        public string GenerateRecentLogsSummary(int logCount) => $"You have {logCount} recent action logs today";
 
         #endregion
 
@@ -299,7 +296,7 @@ namespace AHON_TRACK.Models
 
         public int[] GetDataForYear(int year)
         {
-            return _yearlyData.TryGetValue(year, out int[] data) ? data : new int[12];
+            return _yearlyData.TryGetValue(year, out var data) ? data : new int[12];
         }
 
         public void AddYearData(int year)
@@ -326,7 +323,7 @@ namespace AHON_TRACK.Models
             var baseValues = new[] { 12000, 15125, 14200, 20000, 14000, 13500, 15000, 19000, 10000, 19930, 13000, 26000 };
             var yearMultiplier = 1 + (year - START_YEAR) * 0.1; // 10% increase per year
 
-            return baseValues.Select(value => (int)(value * yearMultiplier)).ToArray();
+            return [.. baseValues.Select(value => (int)(value * yearMultiplier))];
         }
         #endregion
     }
