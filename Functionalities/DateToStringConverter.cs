@@ -6,7 +6,7 @@ namespace AHON_TRACK.Functionalities;
 
 public class DateToStringConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is DateTime date)
         {
@@ -15,7 +15,7 @@ public class DateToStringConverter : IValueConverter
         return string.Empty;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is string dateString && !string.IsNullOrWhiteSpace(dateString))
         {
