@@ -14,20 +14,22 @@ using AHON_TRACK.Models;
 
 namespace AHON_TRACK.ViewModels
 {
-    public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged
+    public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, INavigable
     {
         #region Private Fields
 
+        private readonly PageManager _pageManager;
         private readonly DashboardModel _dashboardModel;
         private int _selectedYearIndex = 0;
-        private ISeries[] _series;
-        private ObservableCollection<int> _availableYears;
-        private ObservableCollection<SalesItem> _recentSales;
-        private ObservableCollection<TrainingSession> _upcomingTrainingSessions;
-        private ObservableCollection<RecentLog> _recentLogs;
+        private ISeries[] _series = [];
+        private ObservableCollection<int> _availableYears = [];
+        private ObservableCollection<SalesItem> _recentSales = [];
+        private ObservableCollection<TrainingSession> _upcomingTrainingSessions = [];
+        private ObservableCollection<RecentLog> _recentLogs = [];
         private string _salesSummary = "You made 0 sales this month.";
         private string _trainingSessionsSummary = "You have 0 upcoming training schedules this week";
         private string _recentLogsSummary = "You have 0 recent action logs today";
+        public string Route => "dashboard";
 
         #endregion
 
@@ -130,8 +132,8 @@ namespace AHON_TRACK.ViewModels
             }
         }
 
-        public Axis[] XAxes { get; set; }
-        public Axis[] YAxes { get; set; }
+        public Axis[] XAxes { get; set; } = [];
+        public Axis[] YAxes { get; set; } = [];
 
         #endregion
 
@@ -139,14 +141,24 @@ namespace AHON_TRACK.ViewModels
 
         public DashboardViewModel()
         {
+            _pageManager = new PageManager(new ServiceProvider());
             _dashboardModel = new DashboardModel();
             InitializeViewModel();
         }
 
         // Constructor for dependency injection (if needed)
-        public DashboardViewModel(DashboardModel dashboardModel)
+        public DashboardViewModel(DashboardModel dashboardModel, PageManager pageManager)
         {
+            _pageManager = pageManager;
             _dashboardModel = dashboardModel ?? throw new ArgumentNullException(nameof(dashboardModel));
+            InitializeViewModel();
+        }
+
+        // Constructor for dependency injection without DashboardModel (if DashboardModel is not registered)
+        public DashboardViewModel(PageManager pageManager)
+        {
+            _pageManager = pageManager;
+            _dashboardModel = new DashboardModel();
             InitializeViewModel();
         }
 
@@ -412,7 +424,7 @@ namespace AHON_TRACK.ViewModels
         {
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
+        public new event PropertyChangedEventHandler? PropertyChanged;
 
         protected new virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 

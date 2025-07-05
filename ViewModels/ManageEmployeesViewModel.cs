@@ -5,8 +5,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
-using ShadUI.Dialogs;
-using ShadUI.Toasts;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
-public partial class ManageEmployeesViewModel : ViewModelBase
+public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
     private List<ManageEmployeesItem> originalEmployeeData = new();
@@ -77,18 +76,28 @@ public partial class ManageEmployeesViewModel : ViewModelBase
 
     private const string DEFAULT_AVATAR_SOURCE = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
+    private readonly PageManager _pageManager;
+
     public DialogManager DialogManager { get; }
     public ToastManager ToastManager { get; }
+    public string Route => "manageEmployees";
 
-    public ManageEmployeesViewModel(DialogManager dialogManager, ToastManager toastManager)
+    public ManageEmployeesViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
+        _pageManager = pageManager;
         DialogManager = dialogManager;
         ToastManager = toastManager;
         LoadSampleData();
         UpdateCounts();
+
     }
 
-    public ManageEmployeesViewModel() { }
+    public ManageEmployeesViewModel()
+    {
+        ToastManager = new ToastManager();
+        DialogManager = new DialogManager();
+        _pageManager = new PageManager(new ServiceProvider());
+    }
 
     [AvaloniaHotReload]
     public void Initialize()

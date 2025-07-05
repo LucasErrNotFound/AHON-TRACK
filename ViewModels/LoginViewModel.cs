@@ -1,12 +1,11 @@
-﻿using Avalonia.Controls;
+﻿using AHON_TRACK.Views;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Input;
-using ShadUI.Dialogs;
-using ShadUI.Toasts;
+using ShadUI;
 using System;
 using System.ComponentModel.DataAnnotations;
-using AHON_TRACK.Views;
-using Avalonia;
 
 namespace AHON_TRACK.ViewModels
 {
@@ -14,6 +13,9 @@ namespace AHON_TRACK.ViewModels
     {
         public ToastManager ToastManager { get; }
         public DialogManager DialogManager { get; }
+
+        private bool _shouldShowSuccessToast = false;
+        // private bool _shouldShowErrorToast = false; will be used in the future if needed
 
         public LoginViewModel(DialogManager dialogManager, ToastManager toastManager)
         {
@@ -23,17 +25,14 @@ namespace AHON_TRACK.ViewModels
 
         public LoginViewModel()
         {
-            if (Design.IsDesignMode)
-            {
-                ToastManager = new ToastManager();
-                DialogManager = new DialogManager();
-            }
+            ToastManager = new ToastManager();
+            DialogManager = new DialogManager();
         }
 
         private string _username = string.Empty;
 
         [Required(ErrorMessage = "Username is required")]
-        public string Username 
+        public string Username
         {
             get => _username;
             set => SetProperty(ref _username, value, true);
@@ -58,6 +57,8 @@ namespace AHON_TRACK.ViewModels
         {
             Username = string.Empty;
             Password = string.Empty;
+            _shouldShowSuccessToast = false;
+            // _shouldShowErrorToast = false; will be used in the future if needed
 
             ClearAllErrors();
         }
@@ -70,18 +71,16 @@ namespace AHON_TRACK.ViewModels
 
             if (HasErrors)
             {
+                // _shouldShowErrorToast = true; will be used in the future if needed
+                _shouldShowSuccessToast = false;
                 ToastManager.CreateToast("Wrong Credentials! Try Again")
                     .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                     .WithDelay(8)
                     .ShowError();
                 return;
             }
-
-            ToastManager.CreateToast("You have signed in! Welcome back!")
-                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
-                .WithDelay(6)
-                .ShowSuccess();
-
+            _shouldShowSuccessToast = true;
+            // _shouldShowErrorToast = false; will be used in the future if needed
             SwitchToMainWindow();
         }
 
@@ -90,10 +89,12 @@ namespace AHON_TRACK.ViewModels
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 var currentWindow = desktop.MainWindow; // Keep reference to LoginView
+                var serviceProvider = new ServiceProvider();
+                var pageManager = new PageManager(serviceProvider);
                 var dialogManager = new DialogManager();
                 var toastManager = new ToastManager();
                 var dashboardViewModel = new DashboardViewModel();
-                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager);
+                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager, pageManager);
                 var memberCheckInOutViewModel = new MemberCheckInOutViewModel();
                 var manageMembershipViewModel = new ManageMembershipViewModel();
                 var walkInRegistration = new WalkInRegistrationViewModel();
@@ -114,7 +115,7 @@ namespace AHON_TRACK.ViewModels
 
 
                 // Create and show the MainWindow
-                var mainWindowViewModel = new MainWindowViewModel(
+                var mainWindowViewModel = new MainWindowViewModel(pageManager,
                         dialogManager, toastManager, dashboardViewModel, manageEmployeesViewModel, memberCheckInOutViewModel,
                         manageMembershipViewModel, walkInRegistration, memberDirectoryViewModel, trainingSchedulesViewModel,
                         roomEquipmentBookingViewModel, paymentOverviewViewModel, outstandingBalancesViewModel, paymentHistoryViewModel,
@@ -128,6 +129,7 @@ namespace AHON_TRACK.ViewModels
 
                 desktop.MainWindow = mainWindow;
                 mainWindow.Show();
+                mainWindowViewModel.SetInitialToastState(_shouldShowSuccessToast);
                 mainWindowViewModel.Initialize();
 
 

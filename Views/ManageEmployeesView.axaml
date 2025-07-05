@@ -2,15 +2,11 @@
   x:Class="AHON_TRACK.Views.ManageEmployeesView"
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:breakpoints="clr-namespace:ShadUI.Breakpoints;assembly=ShadUI"
-  xmlns:controls="clr-namespace:ShadUI.Controls;assembly=ShadUI"
+  xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-  xmlns:extensions="clr-namespace:ShadUI.Extensions;assembly=ShadUI"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
   xmlns:system="clr-namespace:System;assembly=System.Runtime"
-  xmlns:dialogs="clr-namespace:ShadUI.Dialogs;assembly=ShadUI"
-  xmlns:toasts="clr-namespace:ShadUI.Toasts;assembly=ShadUI"
   xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
   xmlns:func="clr-namespace:AHON_TRACK.Functionalities"
   xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
@@ -74,8 +70,8 @@
 									Grid.Column="0"
 									Width="400"
 									HorizontalAlignment="Left"
-									extensions:ControlAssist.ShowProgress="{Binding IsSearchingEmployee}"
-									extensions:ControlAssist.Height="40"
+									shadui:ControlAssist.ShowProgress="{Binding IsSearchingEmployee}"
+									shadui:ControlAssist.Height="40"
 									Classes="Clearable"
 									Text="{Binding SearchStringResult, Mode=TwoWay}"
 									FontSize="15"
@@ -129,12 +125,12 @@
 									Height="40"
 									Padding="20,0,20,0">
 									<!-- Bugged icon || Moving Icon to the left makes it smaller
-										<extensions:ButtonAssist.Icon>
+										<shadui:ButtonAssist.Icon>
 											<Svg
 												Width="20"
 												Height="20"
 												Path="/Assets/ManageEmployeesView/add-new-employee-icon.svg"/>
-										</extensions:ButtonAssist.Icon>
+										</shadui:ButtonAssist.Icon>
 												-->
 								</Button>
 							</Grid>
@@ -189,7 +185,7 @@
 										Width="100">
 										<DataGridTemplateColumn.CellTemplate>
 											<DataTemplate DataType="viewModels:ManageEmployeesItem">
-												<controls:Avatar
+												<shadui:Avatar
 													Width="36"
 													Height="36"
 													VerticalAlignment="Center"
@@ -286,16 +282,16 @@
 														HorizontalAlignment="Center" 
 														VerticalAlignment="Center"
 														Classes="Icon Grid"
-														extensions:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+														shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
 														<MenuItem.Header>
 															<Svg
 																Width="24"
 																Height="24"
 																Path="/Assets/ManageEmployeesView/three-dots-icon.svg"/>
 														</MenuItem.Header>
-														<extensions:MenuItemAssist.Label>
+														<shadui:MenuItemAssist.Label>
 															<TextBlock Text="Actions" FontSize="15" FontWeight="Regular" Foreground="{DynamicResource MutedColor}"/>
-														</extensions:MenuItemAssist.Label>
+														</shadui:MenuItemAssist.Label>
 
 														<MenuItem Header="View Employee"/>
 														<MenuItem Header="Copy">

@@ -3,12 +3,7 @@
         xmlns:vm="using:AHON_TRACK.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:contents="clr-namespace:ShadUI.Contents;assembly=ShadUI"
-        xmlns:controls="clr-namespace:ShadUI.Controls;assembly=ShadUI"
-        xmlns:converters="clr-namespace:ShadUI.Converters;assembly=ShadUI"
-		xmlns:dialogs="clr-namespace:ShadUI.Dialogs;assembly=ShadUI"
-        xmlns:extensions="clr-namespace:ShadUI.Extensions;assembly=ShadUI"
-		xmlns:toasts="clr-namespace:ShadUI.Toasts;assembly=ShadUI"
+		xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="AHON_TRACK.Views.LoginView"
         x:DataType="vm:LoginViewModel"
@@ -19,12 +14,11 @@
 		Height="700"
         Title="AHON TRACK">
 
-	<controls:Window.Hosts>
-		<dialogs:DialogHost 
+	<shadui:Window.Hosts>
+		<shadui:DialogHost 
 			Manager="{Binding DialogManager}"
-			Owner="{Binding RelativeSource={RelativeSource AncestorType=controls:Window}}" 
-		/>
-	</controls:Window.Hosts>
+			Owner="{Binding RelativeSource={RelativeSource AncestorType=shadui:Window}}" />
+	</shadui:Window.Hosts>
 
 	<Window.Resources>
 		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
@@ -38,7 +32,7 @@
 	</Design.DataContext>
 
 	<Grid>
-		<toasts:ToastHost Manager="{Binding ToastManager}" ZIndex="1"/>
+		<shadui:ToastHost Manager="{Binding ToastManager}"/>
 			<Image
 				Source="/Assets/LoginView/AHON-Track-Secondary-Logo.png"
 				Width="160"
@@ -112,18 +106,18 @@
 			/>
 		</StackPanel>
 		<StackPanel HorizontalAlignment="Right">
-			<controls:Card HorizontalAlignment="Right" Width="445" Height="565" Margin="30,50" >
-				<controls:Card.Header>
+			<shadui:Card HorizontalAlignment="Right" Width="400" Height="490" Margin="65,100" >
+				<shadui:Card.Header>
 					<StackPanel Spacing="5">
-						<controls:CardTitle FontFamily="Inter" FontSize="35" FontWeight="Bold" Foreground="{StaticResource FontForeground}">Sign In</controls:CardTitle>
-						<controls:CardDescription FontFamily="Inter" Foreground="{StaticResource FontForeground}" Opacity="0.6" FontSize="18">Enter your credentials</controls:CardDescription>
+						<shadui:CardTitle FontFamily="Inter" FontSize="35" FontWeight="Bold" Foreground="{StaticResource FontForeground}">Sign In</shadui:CardTitle>
+						<shadui:CardDescription FontFamily="Inter" Foreground="{StaticResource FontForeground}" Opacity="0.6" FontSize="18">Enter your credentials</shadui:CardDescription>
 					</StackPanel>
-				</controls:Card.Header>
+				</shadui:Card.Header>
 				<StackPanel Spacing="30">
 					<TextBox
 						Classes="Clearable"
-						extensions:ControlAssist.Label="Username"
-						extensions:ControlAssist.Height="40"
+						shadui:ControlAssist.Label="Username"
+						shadui:ControlAssist.Height="40"
 						Foreground="{StaticResource Foreground}"
 						Watermark="Username"
 						FontSize="17"
@@ -131,8 +125,8 @@
 					/>
 					<TextBox
 						Classes="PasswordReveal"
-						extensions:ControlAssist.Label="Password"
-						extensions:ControlAssist.Height="40"
+						shadui:ControlAssist.Label="Password"
+						shadui:ControlAssist.Height="40"
 						Foreground="{StaticResource Foreground}"
 						PasswordChar="•"
 						Watermark="Enter your password"
@@ -140,12 +134,12 @@
 						Text="{Binding Password, Mode=TwoWay}"
 					/>
 				</StackPanel>
-				<controls:Card.Footer>
+				<shadui:Card.Footer>
 					<Button Classes="Primary" FontSize="20" Padding="0,0" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}" >
 						Sign In
 					</Button>
-				</controls:Card.Footer>
-			</controls:Card>
+				</shadui:Card.Footer>
+			</shadui:Card>
 		</StackPanel>
 	</Grid>
 </Window>

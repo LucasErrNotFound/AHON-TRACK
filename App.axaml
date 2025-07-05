@@ -1,5 +1,5 @@
 <Application xmlns="https://github.com/avaloniaui"
-			 xmlns:themes="clr-namespace:ShadUI.Themes;assembly=ShadUI"
+			 xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AHON_TRACK.App"
              xmlns:local="using:AHON_TRACK"
@@ -20,6 +20,6 @@
     </Application.DataTemplates>
   
     <Application.Styles>
-		<themes:ShadTheme />
+		<shadui:ShadTheme />
 	</Application.Styles>
 </Application>

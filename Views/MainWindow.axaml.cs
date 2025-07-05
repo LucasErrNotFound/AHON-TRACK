@@ -1,7 +1,7 @@
 using AHON_TRACK.ViewModels;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Window = ShadUI.Controls.Window;
+using Window = ShadUI.Window;
 
 namespace AHON_TRACK.Views;
 
