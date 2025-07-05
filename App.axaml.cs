@@ -2,17 +2,16 @@ using AHON_TRACK.ViewModels;
 using AHON_TRACK.Views;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
-using ShadUI.Dialogs;
-using ShadUI.Toasts;
 using System.Linq;
 
 namespace AHON_TRACK
 {
     public partial class App : Application
     {
+        private ServiceProvider? _serviceProvider;
+
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
@@ -23,13 +22,17 @@ namespace AHON_TRACK
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 DisableAvaloniaDataAnnotationValidation();
-                var dialogManager = new DialogManager();
-                var toastManager = new ToastManager();
+
+                // Initialize the service provider
+                _serviceProvider = new ServiceProvider();
+                
+                // Get LoginViewModel from DI container
+                var loginViewModel = _serviceProvider.GetService<LoginViewModel>();
 
                 // Show LoginView first
                 desktop.MainWindow = new LoginView
                 {
-                    DataContext = new LoginViewModel(dialogManager, toastManager),
+                    DataContext = loginViewModel,
                 };
             }
             base.OnFrameworkInitializationCompleted();
@@ -47,5 +50,8 @@ namespace AHON_TRACK
                 BindingPlugins.DataValidators.Remove(plugin);
             }
         }
+
+        // Make ServiceProvider accessible to other parts of the application
+        public static ServiceProvider? GetServiceProvider() => (Current as App)?._serviceProvider;
     }
 }
