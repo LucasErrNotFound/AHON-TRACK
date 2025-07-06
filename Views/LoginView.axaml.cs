@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using System;
+using Window = ShadUI.Window;
 
 namespace AHON_TRACK.Views
 {
