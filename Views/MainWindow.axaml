@@ -22,8 +22,7 @@
 			Width="25"
 			Height="25"
 			Margin="10,8,0,8"
-			Path="/Assets/MainWindowView/Primary-Logo.svg"
-		/>
+			Path="/Assets/MainWindowView/Primary-Logo.svg"/>
 	</shadui:Window.LogoContent>
 
 	<shadui:Window.Hosts>
@@ -64,6 +63,7 @@
 				</shadui:Sidebar.ExpandEasing>
 				<shadui:Sidebar.Header>
 					<ToggleButton
+						IsChecked="True"
                         Name="Toggler"
                         Width="32"
                         Height="32"
