@@ -1,5 +1,7 @@
 using AHON_TRACK.ViewModels;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
 using Window = ShadUI.Window;
 
@@ -28,6 +30,11 @@ public partial class MainWindow : Window
 
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            if (desktop.MainWindow != this) return;
+        }
+
         e.Cancel = true;
 
         if (DataContext is MainWindowViewModel viewModel)
