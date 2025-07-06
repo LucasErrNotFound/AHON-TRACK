@@ -40,7 +40,7 @@
 	</Design.DataContext>
 
 	<Grid>
-		<shadui:ToastHost Manager="{Binding ToastManager}"/>
+		<shadui:ToastHost Manager="{Binding ToastManager}" ZIndex="1000"/>
 			<Image
 				Source="/Assets/LoginView/AHON-Track-Secondary-Logo.png"
 				Width="160"
