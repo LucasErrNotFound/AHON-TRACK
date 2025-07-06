@@ -14,6 +14,14 @@
 		Height="700"
         Title="AHON TRACK">
 
+	<shadui:Window.LogoContent>
+		<Svg
+			Width="25"
+			Height="25"
+			Margin="10,8,0,8"
+			Path="/Assets/MainWindowView/Primary-Logo.svg"/>
+	</shadui:Window.LogoContent>
+
 	<shadui:Window.Hosts>
 		<shadui:DialogHost 
 			Manager="{Binding DialogManager}"
