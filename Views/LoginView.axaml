@@ -47,103 +47,96 @@
 				Height="95"
 				HorizontalAlignment="Left"
 				VerticalAlignment="Top"
-				Margin="45,5"
-			/>
+				Margin="45,5"/>
 		<StackPanel HorizontalAlignment="Left" Margin="60,110,10,10">
 			<TextBlock
 				Text="The future of"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="35"
 				FontFamily="Inter"
-				FontWeight="Regular"
-			/>
+				FontWeight="Regular"/>
 			<TextBlock
 				Text="Gym"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="65"
 				FontFamily="Inter"
 				FontWeight="Bold"
-				Margin="0,0"
-			/>
+				Margin="0,0"/>
 			<TextBlock
 				Text="Management"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="65"
 				FontFamily="Inter"
-				FontWeight="Bold"
-			/>
+				FontWeight="Bold"/>
 			<TextBlock
 				Text="at your fingertips"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="35"
 				FontFamily="Inter"
 				FontWeight="Regular"
-				Margin="0,10"
-			/>
+				Margin="0,10"/>
 			<TextBlock
 				Text="Making it easier for staff to manage, oversee, "
 				Foreground="{StaticResource FontForeground}"
 				FontSize="23"
 				FontFamily="Inter"
 				FontWeight="Light"
-				Margin="0,10"
-			/>
+				Margin="0,10"/>
 			<TextBlock
 				Text="and engage with knowledge"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="23"
 				FontFamily="Inter"
 				FontWeight="Light"
-				Margin="0,-10"
-			/>
+				Margin="0,-10"/>
 			<Button
 				Classes="Primary"
 				Content="About Us"
 				HorizontalAlignment="Left"
 				Margin="80,60" 
 				Padding="35,0,35,0"
-				FontSize="17"
-			/>
+				FontSize="17"/>
 			<Image
 				Source="/Assets/LoginView/DumbellCurl-2.png"
 				Margin="-149,-510"
 				Width="300"
 				Height="300"
 				HorizontalAlignment="Left"
-				ZIndex="-1"
-			/>
+				ZIndex="-1"/>
 		</StackPanel>
 		<StackPanel HorizontalAlignment="Right">
-			<shadui:Card HorizontalAlignment="Right" Width="400" Height="490" Margin="65,100" >
+			<shadui:Card HorizontalAlignment="Right" Width="400" Height="490" Margin="65,100" ScrollViewer.VerticalScrollBarVisibility="Disabled">
 				<shadui:Card.Header>
 					<StackPanel Spacing="5">
 						<shadui:CardTitle FontFamily="Inter" FontSize="35" FontWeight="Bold" Foreground="{StaticResource FontForeground}">Sign In</shadui:CardTitle>
 						<shadui:CardDescription FontFamily="Inter" Foreground="{StaticResource FontForeground}" Opacity="0.6" FontSize="18">Enter your credentials</shadui:CardDescription>
 					</StackPanel>
 				</shadui:Card.Header>
-				<StackPanel Spacing="30">
-					<TextBox
-						Classes="Clearable"
-						shadui:ControlAssist.Label="Username"
-						shadui:ControlAssist.Height="40"
-						Foreground="{StaticResource Foreground}"
-						Watermark="Username"
-						FontSize="17"
-						Text="{Binding Username, Mode=TwoWay}"
-					/>
-					<TextBox
-						Classes="PasswordReveal"
-						shadui:ControlAssist.Label="Password"
-						shadui:ControlAssist.Height="40"
-						Foreground="{StaticResource Foreground}"
-						PasswordChar="•"
-						Watermark="Enter your password"
-						FontSize="17"
-						Text="{Binding Password, Mode=TwoWay}"
-					/>
-				</StackPanel>
+				<Panel>
+					<StackPanel Margin="0,5">
+						<TextBox
+							Classes="Clearable"
+							shadui:ControlAssist.Label="Username"
+							shadui:ControlAssist.Height="40"
+							Foreground="{StaticResource Foreground}"
+							Watermark="Username"
+							FontSize="17"
+							Text="{Binding Username, Mode=TwoWay}"/>
+					</StackPanel>
+					<StackPanel Margin="0,120">
+						<TextBox
+							Classes="PasswordReveal"
+							shadui:ControlAssist.Label="Password"
+							shadui:ControlAssist.Height="40"
+							Foreground="{StaticResource Foreground}"
+							PasswordChar="•"
+							Watermark="Enter your password"
+							FontSize="17"
+							Text="{Binding Password, Mode=TwoWay}"/>
+					</StackPanel>
+				</Panel>
 				<shadui:Card.Footer>
-					<Button Classes="Primary" FontSize="20" Padding="0,0" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}" >
+					<Button Classes="Primary" FontSize="20" Padding="0,0,0,5" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}" >
 						Sign In
 					</Button>
 				</shadui:Card.Footer>
