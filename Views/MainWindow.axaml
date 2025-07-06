@@ -59,7 +59,7 @@
 				CurrentRoute="{Binding CurrentRoute}"
                 Expanded="{Binding #Toggler.IsChecked}">
 				<shadui:Sidebar.ExpandEasing>
-					<shadui:EaseInOutBack BounceIntensity="Strong" />
+					<shadui:EaseInOutBack BounceIntensity="Soft" />
 				</shadui:Sidebar.ExpandEasing>
 				<shadui:Sidebar.Header>
 					<ToggleButton
