@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using ShadUI;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels
 {
@@ -13,14 +14,16 @@ namespace AHON_TRACK.ViewModels
     {
         public ToastManager ToastManager { get; }
         public DialogManager DialogManager { get; }
+        public PageManager PageManager { get; } = new PageManager(new ServiceProvider());
 
-        private bool _shouldShowSuccessToast = false;
+        private bool _shouldShowSuccessLogInToast = false;
         // private bool _shouldShowErrorToast = false; will be used in the future if needed
 
-        public LoginViewModel(DialogManager dialogManager, ToastManager toastManager)
+        public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
         {
             ToastManager = toastManager;
             DialogManager = dialogManager;
+            PageManager = pageManager;
         }
 
         public LoginViewModel()
@@ -57,7 +60,7 @@ namespace AHON_TRACK.ViewModels
         {
             Username = string.Empty;
             Password = string.Empty;
-            _shouldShowSuccessToast = false;
+            _shouldShowSuccessLogInToast = false;
             // _shouldShowErrorToast = false; will be used in the future if needed
 
             ClearAllErrors();
@@ -72,16 +75,28 @@ namespace AHON_TRACK.ViewModels
             if (HasErrors)
             {
                 // _shouldShowErrorToast = true; will be used in the future if needed
-                _shouldShowSuccessToast = false;
+                _shouldShowSuccessLogInToast = false;
                 ToastManager.CreateToast("Wrong Credentials! Try Again")
                     .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
-                    .WithDelay(8)
+                    .WithDelay(5)
                     .ShowError();
                 return;
             }
-            _shouldShowSuccessToast = true;
+            _shouldShowSuccessLogInToast = true;
             // _shouldShowErrorToast = false; will be used in the future if needed
             SwitchToMainWindow();
+        }
+        public void SetInitialLogOutToastState(bool showLogOutSuccess)
+        {
+            if (!showLogOutSuccess) return;
+
+            Task.Delay(350).ContinueWith(_ =>
+            {
+                ToastManager.CreateToast("You have successfully logged out of your account!")
+                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                    .WithDelay(5)
+                    .ShowSuccess();
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         private void SwitchToMainWindow()
@@ -113,8 +128,6 @@ namespace AHON_TRACK.ViewModels
                 var equipmentUsageReportsViewModel = new EquipmentUsageReportsViewModel();
                 var classAttendanceReportsViewModel = new ClassAttendanceReportsViewModel();
 
-
-                // Create and show the MainWindow
                 var mainWindowViewModel = new MainWindowViewModel(pageManager,
                         dialogManager, toastManager, dashboardViewModel, manageEmployeesViewModel, memberCheckInOutViewModel,
                         manageMembershipViewModel, walkInRegistration, memberDirectoryViewModel, trainingSchedulesViewModel,
@@ -128,12 +141,9 @@ namespace AHON_TRACK.ViewModels
                 };
 
                 desktop.MainWindow = mainWindow;
-                mainWindow.Show();
-                mainWindowViewModel.SetInitialToastState(_shouldShowSuccessToast);
+                mainWindowViewModel.SetInitialLogInToastState(_shouldShowSuccessLogInToast);
                 mainWindowViewModel.Initialize();
-
-
-                // Close the LoginView after MainWindow is shown
+                mainWindow.Show();
                 currentWindow?.Close();
             }
         }

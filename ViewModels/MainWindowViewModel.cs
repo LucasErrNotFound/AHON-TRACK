@@ -1,8 +1,12 @@
-﻿using Avalonia.Controls;
+﻿using AHON_TRACK.Views;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShadUI;
 using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -122,6 +126,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentRoute = "dashboard";
 
+    private ServiceProvider? _serviceProvider;
+    private bool _shouldShowSuccessLogOutToast = false;
+
     private void SwitchPage(INavigable page, string route = "")
     {
         var pageType = page.GetType();
@@ -148,10 +155,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private void TryLogout()
     {
         DialogManager.CreateDialog("Logout", "Do you really want to log out of your account?")
-            .WithPrimaryButton("Yes, log me out", OnAcceptExit, DialogButtonStyle.Destructive)
+            .WithPrimaryButton("Yes, log me out", SwitchToLoginWindow, DialogButtonStyle.Destructive)
             .WithCancelButton("No")
             .WithMinWidth(300)
             .Show();
+        // SwitchToLoginWindow();
     }
 
     [RelayCommand]
@@ -213,11 +221,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     private void OnAcceptExit() => Environment.Exit(0);
 
-    public void Initialize() => SwitchPage(_dashboardViewModel);
-
-    public void SetInitialToastState(bool showSuccess)
+    public void Initialize()
     {
-        if (!showSuccess) return;
+        _shouldShowSuccessLogOutToast = false;
+        SwitchPage(_dashboardViewModel);
+    }
+
+    public void SetInitialLogInToastState(bool showLogInSuccess)
+    {
+        if (!showLogInSuccess) return;
 
         Task.Delay(900).ContinueWith(_ =>
         {
@@ -226,5 +238,27 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 .WithDelay(8)
                 .ShowSuccess();
         }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    private void SwitchToLoginWindow()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            _serviceProvider = new ServiceProvider();
+            _shouldShowSuccessLogOutToast = true;
+
+            var currentWindow = desktop.MainWindow; // Keep reference to MainWindow
+            var loginWindowViewModel = _serviceProvider.GetService<LoginViewModel>();
+            var loginWindow = new LoginView 
+            {
+                DataContext = loginWindowViewModel
+            };
+
+            desktop.MainWindow = loginWindow;
+            loginWindowViewModel.SetInitialLogOutToastState(_shouldShowSuccessLogOutToast);
+            loginWindowViewModel.Initialize();
+            loginWindow.Show();
+            currentWindow?.Close();
+        }
     }
 }
