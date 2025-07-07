@@ -315,7 +315,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     _toastManager.CreateToast("Adding new employee cancelled")
                         .WithContent("Add a new employee to continue")
                         .DismissOnClick()
-                        .ShowWarning())
+                        .ShowWarning()).WithMaxWidth(950)
                 .Show();
             Debug.WriteLine("Dialog opened successfully.");
         }
