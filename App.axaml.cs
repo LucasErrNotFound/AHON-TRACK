@@ -10,8 +10,6 @@ namespace AHON_TRACK
 {
     public partial class App : Application
     {
-        private ServiceProvider? _serviceProvider;
-
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
@@ -24,10 +22,10 @@ namespace AHON_TRACK
                 DisableAvaloniaDataAnnotationValidation();
 
                 // Initialize the service provider
-                _serviceProvider = new ServiceProvider();
+                var serviceProvider = new ServiceProvider();
                 
                 // Get LoginViewModel from DI container
-                var loginViewModel = _serviceProvider.GetService<LoginViewModel>();
+                var loginViewModel = serviceProvider.GetService<LoginViewModel>();
 
                 // Show LoginView first
                 desktop.MainWindow = new LoginView
@@ -50,8 +48,5 @@ namespace AHON_TRACK
                 BindingPlugins.DataValidators.Remove(plugin);
             }
         }
-
-        // Make ServiceProvider accessible to other parts of the application
-        public static ServiceProvider? GetServiceProvider() => (Current as App)?._serviceProvider;
     }
 }
