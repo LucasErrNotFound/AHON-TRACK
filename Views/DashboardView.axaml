@@ -2,11 +2,9 @@
   x:Class="AHON_TRACK.Views.DashboardView"
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:breakpoints="clr-namespace:ShadUI.Breakpoints;assembly=ShadUI"
-  xmlns:controls="clr-namespace:ShadUI.Controls;assembly=ShadUI"
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-  xmlns:extensions="clr-namespace:ShadUI.Extensions;assembly=ShadUI"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
   xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
   xmlns:system="clr-namespace:System;assembly=System.Runtime"
   xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
@@ -29,7 +27,7 @@
 		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
 	</UserControl.Resources>
 
-	<DockPanel>
+	<DockPanel LastChildFill="True">
 		<StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
             Margin="{StaticResource PageMargin}"
@@ -48,8 +46,8 @@
 					<TabControl.Items>
 						<TabItem Header="Overview">
 							<StackPanel>
-								<breakpoints:ViewPort>
-									<breakpoints:View Breakpoint="MdAndUp">
+								<shadui:BreakpointViewPort>
+									<shadui:BreakpointView Breakpoint="MdAndUp">
 										<UniformGrid Margin="-6,0" Columns="4">
 											<dashboard:OverviewCard
 															Title="Total Revenue"
@@ -102,10 +100,10 @@
 												</dashboard:OverviewCard.Icon>
 											</dashboard:OverviewCard>
 										</UniformGrid>
-									</breakpoints:View>
-								</breakpoints:ViewPort>
-								<breakpoints:ViewPort>
-									<breakpoints:View Breakpoint="MdAndUp">
+									</shadui:BreakpointView>
+								</shadui:BreakpointViewPort>
+								<shadui:BreakpointViewPort>
+									<shadui:BreakpointView Breakpoint="MdAndUp">
 										<Grid Margin="-8,20" ColumnDefinitions="3* 2*">
 											<Border
 												Margin="8"
@@ -191,7 +189,7 @@
 																			Orientation="Horizontal"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left">
-																			<controls:Avatar
+																			<shadui:Avatar
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
@@ -235,10 +233,10 @@
 												</DockPanel>
 											</Border>
 										</Grid>
-									</breakpoints:View>
-								</breakpoints:ViewPort>
-								<breakpoints:ViewPort>
-									<breakpoints:View Breakpoint="MdAndUp">
+									</shadui:BreakpointView>
+								</shadui:BreakpointViewPort>
+								<shadui:BreakpointViewPort>
+									<shadui:BreakpointView Breakpoint="MdAndUp">
 										<Grid Margin="-8,0" ColumnDefinitions="4.7* 2*">
 											<Border
 												Grid.Column="0"
@@ -278,7 +276,7 @@
 																			Orientation="Horizontal"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left">
-																			<controls:Avatar
+																			<shadui:Avatar
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
@@ -381,7 +379,7 @@
 																			Orientation="Horizontal"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left">
-																			<controls:Avatar
+																			<shadui:Avatar
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
@@ -419,8 +417,8 @@
 												</DockPanel>
 											</Border>
 										</Grid>
-									</breakpoints:View>
-								</breakpoints:ViewPort>
+									</shadui:BreakpointView>
+								</shadui:BreakpointViewPort>
 							</StackPanel>
 						</TabItem>
 						<TabItem Header="Analytics"/>

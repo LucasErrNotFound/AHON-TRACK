@@ -1,15 +1,20 @@
-﻿using Avalonia.Controls;
+﻿using AHON_TRACK.Views;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Input;
-using ShadUI.Dialogs;
-using ShadUI.Toasts;
+using ShadUI;
 using System;
 using System.ComponentModel.DataAnnotations;
+<<<<<<< HEAD
 using AHON_TRACK.Views;
 using Avalonia;
 using System.Text;
 using System.Security.Cryptography;
 using Microsoft.Data.SqlClient;
+=======
+using System.Threading.Tasks;
+>>>>>>> 0e5d54b9436b4c86346a0b59534501a947e2dba5
 
 namespace AHON_TRACK.ViewModels
 {
@@ -17,20 +22,22 @@ namespace AHON_TRACK.ViewModels
     {
         public ToastManager ToastManager { get; }
         public DialogManager DialogManager { get; }
+        public PageManager PageManager { get; } = new PageManager(new ServiceProvider());
 
-        public LoginViewModel(DialogManager dialogManager, ToastManager toastManager)
+        private bool _shouldShowSuccessLogInToast = false;
+        // private bool _shouldShowErrorToast = false; will be used in the future if needed
+
+        public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
         {
             ToastManager = toastManager;
             DialogManager = dialogManager;
+            PageManager = pageManager;
         }
 
         public LoginViewModel()
         {
-            if (Design.IsDesignMode)
-            {
-                ToastManager = new ToastManager();
-                DialogManager = new DialogManager();
-            }
+            ToastManager = new ToastManager();
+            DialogManager = new DialogManager();
         }
 
         // Connection string to your SSMS database
@@ -40,7 +47,7 @@ namespace AHON_TRACK.ViewModels
         private string _username = string.Empty;
 
         [Required(ErrorMessage = "Username is required")]
-        public string Username 
+        public string Username
         {
             get => _username;
             set => SetProperty(ref _username, value, true);
@@ -62,6 +69,8 @@ namespace AHON_TRACK.ViewModels
         {
             Username = string.Empty;
             Password = string.Empty;
+            _shouldShowSuccessLogInToast = false;
+            // _shouldShowErrorToast = false; will be used in the future if needed
 
             ClearAllErrors();
         }
@@ -74,19 +83,29 @@ namespace AHON_TRACK.ViewModels
 
             if (HasErrors) // the condition here will change and will implement the CheckCredentials Method.
             {
+                // _shouldShowErrorToast = true; will be used in the future if needed
+                _shouldShowSuccessLogInToast = false;
                 ToastManager.CreateToast("Wrong Credentials! Try Again")
                     .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
-                    .WithDelay(8)
+                    .WithDelay(5)
                     .ShowError();
                 return;
             }
-
-            ToastManager.CreateToast("You have signed in! Welcome back!")
-                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
-                .WithDelay(6)
-                .ShowSuccess();
-
+            _shouldShowSuccessLogInToast = true;
+            // _shouldShowErrorToast = false; will be used in the future if needed
             SwitchToMainWindow();
+        }
+        public void SetInitialLogOutToastState(bool showLogOutSuccess)
+        {
+            if (!showLogOutSuccess) return;
+
+            Task.Delay(350).ContinueWith(_ =>
+            {
+                ToastManager.CreateToast("You have successfully logged out of your account!")
+                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                    .WithDelay(5)
+                    .ShowSuccess();
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         // Authentication Logic
@@ -169,10 +188,12 @@ namespace AHON_TRACK.ViewModels
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 var currentWindow = desktop.MainWindow; // Keep reference to LoginView
+                var serviceProvider = new ServiceProvider();
+                var pageManager = new PageManager(serviceProvider);
                 var dialogManager = new DialogManager();
                 var toastManager = new ToastManager();
                 var dashboardViewModel = new DashboardViewModel();
-                var manageEmployeesViewModel = new ManageEmployeesViewModel();
+                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager, pageManager);
                 var memberCheckInOutViewModel = new MemberCheckInOutViewModel();
                 var manageMembershipViewModel = new ManageMembershipViewModel();
                 var walkInRegistration = new WalkInRegistrationViewModel();
@@ -191,9 +212,7 @@ namespace AHON_TRACK.ViewModels
                 var equipmentUsageReportsViewModel = new EquipmentUsageReportsViewModel();
                 var classAttendanceReportsViewModel = new ClassAttendanceReportsViewModel();
 
-
-                // Create and show the MainWindow
-                var mainWindowViewModel = new MainWindowViewModel(
+                var mainWindowViewModel = new MainWindowViewModel(pageManager,
                         dialogManager, toastManager, dashboardViewModel, manageEmployeesViewModel, memberCheckInOutViewModel,
                         manageMembershipViewModel, walkInRegistration, memberDirectoryViewModel, trainingSchedulesViewModel,
                         roomEquipmentBookingViewModel, paymentOverviewViewModel, outstandingBalancesViewModel, paymentHistoryViewModel,
@@ -206,11 +225,9 @@ namespace AHON_TRACK.ViewModels
                 };
 
                 desktop.MainWindow = mainWindow;
-                mainWindow.Show();
+                mainWindowViewModel.SetInitialLogInToastState(_shouldShowSuccessLogInToast);
                 mainWindowViewModel.Initialize();
-
-
-                // Close the LoginView after MainWindow is shown
+                mainWindow.Show();
                 currentWindow?.Close();
             }
         }

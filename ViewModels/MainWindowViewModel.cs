@@ -1,274 +1,264 @@
-﻿using Avalonia.Controls;
+﻿using AHON_TRACK.Views;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using ShadUI.Dialogs;
-using ShadUI.Toasts;
+using ShadUI;
 using System;
+using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
-using AHON_TRACK.Views;
-using AHON_TRACK.ViewModels;
-using System.ComponentModel.Design;
-using ShadUI.Themes;
-using Avalonia;
 
 namespace AHON_TRACK.ViewModels;
 
-public sealed partial class MainWindowViewModel(
-    DialogManager dialogManager,
-    ToastManager toastManager,
-    DashboardViewModel dashboardViewModel,
-    ManageEmployeesViewModel manageEmployeesViewModel,
-    MemberCheckInOutViewModel memberCheckInOutViewModel,
-    ManageMembershipViewModel manageMembershipViewModel,
-    WalkInRegistrationViewModel walkInRegistrationViewModel,
-    MemberDirectoryViewModel memberDirectoryViewModel,
-    TrainingSchedulesViewModel trainingSchedulesViewModel,
-    RoomEquipmentBookingViewModel roomEquipmentBookingViewModel,
-    PaymentOverviewViewModel paymentOverviewViewModel,
-    OutstandingBalancesViewModel outstandingBalancesViewModel,
-    PaymentHistoryViewModel paymentHistoryViewModel,
-    ManageBillingViewModel manageBillingViewModel,
-    EquipmentInventoryViewModel equipmentInventoryViewModel,
-    ProductSupplementStockViewModel productSupplementStockViewModel,
-    SupplierManagementViewModel supplierManagementViewModel,
-    FinancialReportsViewModel financialReportsViewModel,
-    GymDemographicsViewModel gymDemographicsViewModel,
-    EquipmentUsageReportsViewModel equipmentUsageReportsViewModel,
-    ClassAttendanceReportsViewModel classAttendanceReportsViewModel) : ViewModelBase
+public sealed partial class MainWindowViewModel : ViewModelBase
 {
-    public MainWindowViewModel() : 
-        this(Design.IsDesignMode? new DialogManager() : null!,
-            Design.IsDesignMode? new ToastManager() : null!,
-            Design.IsDesignMode? new DashboardViewModel() : null!,
-            Design.IsDesignMode? new ManageEmployeesViewModel() : null!,
-            Design.IsDesignMode? new MemberCheckInOutViewModel() : null!,
-            Design.IsDesignMode? new ManageMembershipViewModel() : null!,
-            Design.IsDesignMode? new WalkInRegistrationViewModel() : null!,
-            Design.IsDesignMode? new MemberDirectoryViewModel() : null!,
-            Design.IsDesignMode? new TrainingSchedulesViewModel() : null!,
-            Design.IsDesignMode? new RoomEquipmentBookingViewModel() : null!,
-            Design.IsDesignMode? new PaymentOverviewViewModel() : null!,
-            Design.IsDesignMode? new OutstandingBalancesViewModel() : null!,
-            Design.IsDesignMode? new PaymentHistoryViewModel() : null!,
-            Design.IsDesignMode? new ManageBillingViewModel() : null!,
-            Design.IsDesignMode? new EquipmentInventoryViewModel() : null!,
-            Design.IsDesignMode? new ProductSupplementStockViewModel() : null!,
-            Design.IsDesignMode? new SupplierManagementViewModel() : null!,
-            Design.IsDesignMode? new FinancialReportsViewModel() : null!,
-            Design.IsDesignMode? new GymDemographicsViewModel() : null!,
-            Design.IsDesignMode? new EquipmentUsageReportsViewModel() : null!,
-            Design.IsDesignMode? new ClassAttendanceReportsViewModel() : null!
-        
-        ) { }
+    private readonly DashboardViewModel _dashboardViewModel;
+    private readonly ManageEmployeesViewModel _manageEmployeesViewModel;
+    private readonly MemberCheckInOutViewModel _memberCheckInOutViewModel;
+    private readonly ManageMembershipViewModel _manageMembershipViewModel;
+    private readonly WalkInRegistrationViewModel _walkInRegistrationViewModel;
+    private readonly MemberDirectoryViewModel _memberDirectoryViewModel;
+    private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
+    private readonly RoomEquipmentBookingViewModel _roomEquipmentBookingViewModel;
+    private readonly PaymentOverviewViewModel _paymentOverviewViewModel;
+    private readonly OutstandingBalancesViewModel _outstandingBalancesViewModel;
+    private readonly PaymentHistoryViewModel _paymentHistoryViewModel;
+    private readonly ManageBillingViewModel _manageBillingViewModel;
+    private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
+    private readonly ProductSupplementStockViewModel _productSupplementStockViewModel;
+    private readonly SupplierManagementViewModel _supplierManagementViewModel;
+    private readonly FinancialReportsViewModel _financialReportsViewModel;
+    private readonly GymDemographicsViewModel _gymDemographicsViewModel;
+    private readonly EquipmentUsageReportsViewModel _equipmentUsageReportsViewModel;
+    private readonly ClassAttendanceReportsViewModel _classAttendanceReportsViewModel;
+    private readonly PageManager _pageManager;
+
+    // Primary constructor for DI
+    public MainWindowViewModel(
+        PageManager pageManager,
+        DialogManager dialogManager,
+        ToastManager toastManager,
+        DashboardViewModel dashboardViewModel,
+        ManageEmployeesViewModel manageEmployeesViewModel,
+        MemberCheckInOutViewModel memberCheckInOutViewModel,
+        ManageMembershipViewModel manageMembershipViewModel,
+        WalkInRegistrationViewModel walkInRegistrationViewModel,
+        MemberDirectoryViewModel memberDirectoryViewModel,
+        TrainingSchedulesViewModel trainingSchedulesViewModel,
+        RoomEquipmentBookingViewModel roomEquipmentBookingViewModel,
+        PaymentOverviewViewModel paymentOverviewViewModel,
+        OutstandingBalancesViewModel outstandingBalancesViewModel,
+        PaymentHistoryViewModel paymentHistoryViewModel,
+        ManageBillingViewModel manageBillingViewModel,
+        EquipmentInventoryViewModel equipmentInventoryViewModel,
+        ProductSupplementStockViewModel productSupplementStockViewModel,
+        SupplierManagementViewModel supplierManagementViewModel,
+        FinancialReportsViewModel financialReportsViewModel,
+        GymDemographicsViewModel gymDemographicsViewModel,
+        EquipmentUsageReportsViewModel equipmentUsageReportsViewModel,
+        ClassAttendanceReportsViewModel classAttendanceReportsViewModel)
+    {
+        _pageManager = pageManager;
+        _dialogManager = dialogManager;
+        _toastManager = toastManager;
+        _dashboardViewModel = dashboardViewModel;
+        _manageEmployeesViewModel = manageEmployeesViewModel;
+        _memberCheckInOutViewModel = memberCheckInOutViewModel;
+        _manageMembershipViewModel = manageMembershipViewModel;
+        _walkInRegistrationViewModel = walkInRegistrationViewModel;
+        _memberDirectoryViewModel = memberDirectoryViewModel;
+        _trainingSchedulesViewModel = trainingSchedulesViewModel;
+        _roomEquipmentBookingViewModel = roomEquipmentBookingViewModel;
+        _paymentOverviewViewModel = paymentOverviewViewModel;
+        _outstandingBalancesViewModel = outstandingBalancesViewModel;
+        _paymentHistoryViewModel = paymentHistoryViewModel;
+        _manageBillingViewModel = manageBillingViewModel;
+        _equipmentInventoryViewModel = equipmentInventoryViewModel;
+        _productSupplementStockViewModel = productSupplementStockViewModel;
+        _supplierManagementViewModel = supplierManagementViewModel;
+        _financialReportsViewModel = financialReportsViewModel;
+        _gymDemographicsViewModel = gymDemographicsViewModel;
+        _equipmentUsageReportsViewModel = equipmentUsageReportsViewModel;
+        _classAttendanceReportsViewModel = classAttendanceReportsViewModel;
+
+        // Set up page navigation callback
+        _pageManager.OnNavigate = SwitchPage;
+    }
+
+    // Design-time constructor
+    public MainWindowViewModel()
+    {
+        _dialogManager = new DialogManager();
+        _toastManager = new ToastManager();
+        _pageManager = new PageManager(new ServiceProvider());
+        _dashboardViewModel = new DashboardViewModel();
+        _manageEmployeesViewModel = new ManageEmployeesViewModel();
+        _memberCheckInOutViewModel = new MemberCheckInOutViewModel();
+        _manageMembershipViewModel = new ManageMembershipViewModel();
+        _walkInRegistrationViewModel = new WalkInRegistrationViewModel();
+        _memberDirectoryViewModel = new MemberDirectoryViewModel();
+        _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
+        _roomEquipmentBookingViewModel = new RoomEquipmentBookingViewModel();
+        _paymentOverviewViewModel = new PaymentOverviewViewModel();
+        _outstandingBalancesViewModel = new OutstandingBalancesViewModel();
+        _paymentHistoryViewModel = new PaymentHistoryViewModel();
+        _manageBillingViewModel = new ManageBillingViewModel();
+        _equipmentInventoryViewModel = new EquipmentInventoryViewModel();
+        _productSupplementStockViewModel = new ProductSupplementStockViewModel();
+        _supplierManagementViewModel = new SupplierManagementViewModel();
+        _financialReportsViewModel = new FinancialReportsViewModel();
+        _gymDemographicsViewModel = new GymDemographicsViewModel();
+        _equipmentUsageReportsViewModel = new EquipmentUsageReportsViewModel();
+        _classAttendanceReportsViewModel = new ClassAttendanceReportsViewModel();
+    }
 
     [ObservableProperty]
-    private DialogManager _dialogManager = dialogManager;
+    private DialogManager _dialogManager;
 
     [ObservableProperty]
-    private ToastManager _toastManager = toastManager;
+    private ToastManager _toastManager;
 
     [ObservableProperty]
     private object? _selectedPage;
 
-    private async Task<bool> SwitchPageAsync(object page)
-    {
-        if (SelectedPage == page) return false;
+    [ObservableProperty]
+    private string _currentRoute = "dashboard";
 
-        await Task.Delay(200);
+    private ServiceProvider? _serviceProvider;
+    private bool _shouldShowSuccessLogOutToast = false;
+
+    private void SwitchPage(INavigable page, string route = "")
+    {
+        var pageType = page.GetType();
+        if (string.IsNullOrEmpty(route)) route = pageType.GetCustomAttribute<PageAttribute>()?.Route ?? "dashboard";
+        CurrentRoute = route;
+
+        if (SelectedPage == page) return;
         SelectedPage = page;
-        return true;
+        CurrentRoute = route;
+        page.Initialize();
     }
 
     [RelayCommand]
     private void TryClose()
     {
-        DialogManager.CreateDialog("Close", "Do you really want to exit?")
-            .WithPrimaryButton("Yes", OnAcceptExit)
+        DialogManager.CreateDialog("Close Application", "Are you sure you want to exit the application \n rather than logging out?")
+            .WithPrimaryButton("Yes", OnAcceptExit, DialogButtonStyle.Destructive)
             .WithCancelButton("No")
             .WithMinWidth(300)
             .Show();
     }
 
-    // I'll probably refactor this to make it shorter
     [RelayCommand]
-    private async Task OpenDashboard()
+    private void TryLogout()
     {
-        if (await SwitchPageAsync(dashboardViewModel))
-        {
-            dashboardViewModel.Initialize();
-        }
+        DialogManager.CreateDialog("Logout", "Do you really want to log out of your account?")
+            .WithPrimaryButton("Yes, log me out", SwitchToLoginWindow, DialogButtonStyle.Destructive)
+            .WithCancelButton("No")
+            .WithMinWidth(300)
+            .Show();
+        // SwitchToLoginWindow();
     }
 
     [RelayCommand]
-    private async Task OpenManageEmployees()
-    {
-        if (await SwitchPageAsync(manageEmployeesViewModel))
-        {
-            manageEmployeesViewModel.Initialize();
-        }
-    }
+    private void OpenDashboard() => SwitchPage(_dashboardViewModel);
 
     [RelayCommand]
-    private async Task OpenMemberCheckInOut()
-    {
-        if (await SwitchPageAsync(memberCheckInOutViewModel))
-        {
-            memberCheckInOutViewModel.Initialize();
-        }
-    }
+    private void OpenManageEmployees() => SwitchPage(_manageEmployeesViewModel);
 
     [RelayCommand]
-    private async Task OpenManageMembership()
-    {
-        if (await SwitchPageAsync(manageMembershipViewModel))
-        {
-            manageMembershipViewModel.Initialize();
-        }
-    }
+    private void OpenMemberCheckInOut() => SwitchPage(_memberCheckInOutViewModel);
 
     [RelayCommand]
-    private async Task OpenWalkInRegistration()
-    {
-        if (await SwitchPageAsync(walkInRegistrationViewModel))
-        {
-            walkInRegistrationViewModel.Initialize();
-        }
-    }
+    private void OpenManageMembership() => SwitchPage(_manageMembershipViewModel);
 
     [RelayCommand]
-    private async Task OpenMemberDirectory()
-    {
-        if (await SwitchPageAsync(memberDirectoryViewModel))
-        {
-            memberDirectoryViewModel.Initialize();
-        }
-    }
+    private void OpenWalkInRegistration() => SwitchPage(_walkInRegistrationViewModel);
 
     [RelayCommand]
-    private async Task OpenTrainingSchedules()
-    {
-        if (await SwitchPageAsync(trainingSchedulesViewModel))
-        {
-            trainingSchedulesViewModel.Initialize();
-        }
-    }
+    private void OpenMemberDirectory() => SwitchPage(_memberDirectoryViewModel);
 
     [RelayCommand]
-    private async Task OpenRoomEquipmentBooking()
-    {
-        if (await SwitchPageAsync(roomEquipmentBookingViewModel))
-        {
-            roomEquipmentBookingViewModel.Initialize();
-        }
-    }
+    private void OpenTrainingSchedules() => SwitchPage(_trainingSchedulesViewModel);
 
     [RelayCommand]
-    private async Task OpenPaymentOverview()
-    {
-        if (await SwitchPageAsync(paymentOverviewViewModel))
-        {
-            paymentOverviewViewModel.Initialize();
-        }
-    }
+    private void OpenRoomEquipmentBooking() => SwitchPage(_roomEquipmentBookingViewModel);
 
     [RelayCommand]
-    private async Task OpenOutstandingBalances()
-    {
-        if (await SwitchPageAsync(outstandingBalancesViewModel))
-        {
-            outstandingBalancesViewModel.Initialize();
-        }
-    }
+    private void OpenPaymentOverview() => SwitchPage(_paymentOverviewViewModel);
 
     [RelayCommand]
-    private async Task OpenPaymentHistory()
-    {
-        if (await SwitchPageAsync(paymentHistoryViewModel))
-        {
-            paymentHistoryViewModel.Initialize();
-        }
-    }
+    private void OpenOutstandingBalances() => SwitchPage(_outstandingBalancesViewModel);
 
     [RelayCommand]
-    private async Task OpenManageBilling()
-    {
-        if (await SwitchPageAsync(manageBillingViewModel))
-        {
-            manageBillingViewModel.Initialize();
-        }
-    }
+    private void OpenPaymentHistory() => SwitchPage(_paymentHistoryViewModel);
 
     [RelayCommand]
-    private async Task OpenEquipmentInventory()
-    {
-        if (await SwitchPageAsync(equipmentInventoryViewModel))
-        {
-            equipmentInventoryViewModel.Initialize();
-        }
-    }
+    private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
 
     [RelayCommand]
-    private async Task OpenProductSupplementStockViewModel()
-    {
-        if (await SwitchPageAsync(productSupplementStockViewModel))
-        {
-            productSupplementStockViewModel.Initialize();
-        }
-    }
+    private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
 
     [RelayCommand]
-    private async Task OpenSupplierManagement()
-    {
-        if (await SwitchPageAsync(supplierManagementViewModel))
-        {
-            supplierManagementViewModel.Initialize();
-        }
-    }
+    private void OpenProductSupplementStockViewModel() => SwitchPage(_productSupplementStockViewModel);
 
     [RelayCommand]
-    private async Task OpenFinancialReports()
-    {
-        if (await SwitchPageAsync(financialReportsViewModel))
-        {
-            financialReportsViewModel.Initialize();
-        }
-    }
+    private void OpenSupplierManagement() => SwitchPage(_supplierManagementViewModel);
 
     [RelayCommand]
-    private async Task OpenGymDemographics()
-    {
-        if (await SwitchPageAsync(gymDemographicsViewModel))
-        {
-            gymDemographicsViewModel.Initialize();
-        }
-    }
+    private void OpenFinancialReports() => SwitchPage(_financialReportsViewModel);
 
     [RelayCommand]
-    private async Task OpenEquipmentUsageReports()
-    {
-        if (await SwitchPageAsync(equipmentUsageReportsViewModel))
-        {
-            equipmentUsageReportsViewModel.Initialize();
-        }
-    }
+    private void OpenGymDemographics() => SwitchPage(_gymDemographicsViewModel);
 
     [RelayCommand]
-    private async Task OpenClassAttendanceReports()
-    {
-        if (await SwitchPageAsync(classAttendanceReportsViewModel))
-        {
-            classAttendanceReportsViewModel.Initialize();
-        }
-    }
+    private void OpenEquipmentUsageReports() => SwitchPage(_equipmentUsageReportsViewModel);
 
-    private void OnAcceptExit()
-    {
-        Environment.Exit(0);
-    }
+    [RelayCommand]
+    private void OpenClassAttendanceReports() => SwitchPage(_classAttendanceReportsViewModel);
+
+    private void OnAcceptExit() => Environment.Exit(0);
 
     public void Initialize()
     {
-        SelectedPage = dashboardViewModel;
-        dashboardViewModel.Initialize();
+        _shouldShowSuccessLogOutToast = false;
+        SwitchPage(_dashboardViewModel);
+    }
+
+    public void SetInitialLogInToastState(bool showLogInSuccess)
+    {
+        if (!showLogInSuccess) return;
+
+        Task.Delay(900).ContinueWith(_ =>
+        {
+            ToastManager.CreateToast("You have signed in! Welcome back!")
+            .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                .WithDelay(8)
+                .ShowSuccess();
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    private void SwitchToLoginWindow()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            _serviceProvider = new ServiceProvider();
+            _shouldShowSuccessLogOutToast = true;
+
+            var currentWindow = desktop.MainWindow; // Keep reference to MainWindow
+            var loginWindowViewModel = _serviceProvider.GetService<LoginViewModel>();
+            var loginWindow = new LoginView 
+            {
+                DataContext = loginWindowViewModel
+            };
+
+            desktop.MainWindow = loginWindow;
+            loginWindowViewModel.SetInitialLogOutToastState(_shouldShowSuccessLogOutToast);
+            loginWindowViewModel.Initialize();
+            loginWindow.Show();
+            currentWindow?.Close();
+        }
     }
 }
