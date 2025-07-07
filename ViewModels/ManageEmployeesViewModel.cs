@@ -306,15 +306,14 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             Debug.WriteLine("Opening Add New Employee Dialog...");
             _employeeDetailsDialogCardViewModel.Initialize();
             _dialogManager.CreateDialog(_employeeDetailsDialogCardViewModel)
-                .Dismissible()
                 .WithSuccessCallback(vm =>
-                    _toastManager.CreateToast("Sign in successful")
-                        .WithContent($"Hi Mardie, welcome back!")
+                    _toastManager.CreateToast("Added a new employee")
+                        .WithContent($"Welcome, new employee!")
                         .DismissOnClick()
                         .ShowSuccess())
                 .WithCancelCallback(() =>
-                    _toastManager.CreateToast("Sign in cancelled")
-                        .WithContent("Please sign in to continue.")
+                    _toastManager.CreateToast("Adding new employee cancelled")
+                        .WithContent("Add a new employee to continue")
                         .DismissOnClick()
                         .ShowWarning())
                 .Show();
