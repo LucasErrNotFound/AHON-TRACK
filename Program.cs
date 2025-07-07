@@ -31,6 +31,9 @@ namespace AHON_TRACK
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()
                 .WithInterFont()
-                .LogToTrace();
+                .LogToTrace().With(new SkiaOptions()
+                {
+                    MaxGpuResourceSizeBytes = 1000000000, // 1 GB of GPU memory
+                });
     }
 }
