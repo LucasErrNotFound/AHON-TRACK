@@ -1,4 +1,5 @@
 ﻿using AHON_TRACK;
+using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using Jab;
@@ -31,6 +32,7 @@ namespace AHON_TRACK;
 [Transient<GymDemographicsViewModel>]
 [Transient<EquipmentUsageReportsViewModel>]
 [Transient<ClassAttendanceReportsViewModel>]
+[Transient<EmployeeDetailsDialogCardViewModel>]
 [Singleton<ToastManager>]
 [Singleton<DialogManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
