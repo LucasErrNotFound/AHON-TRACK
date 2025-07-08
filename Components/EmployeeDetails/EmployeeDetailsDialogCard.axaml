@@ -55,7 +55,7 @@
 		BorderBrush="{DynamicResource BorderColor}"
 		BorderThickness="1"
 		Padding="30">
-		<ScrollViewer>
+		<ScrollViewer HorizontalScrollBarVisibility="Auto">
 			<StackPanel Spacing="0">
 
 				<!-- Header Section -->
@@ -75,6 +75,7 @@
 					<!-- First Name Field -->
 					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,30,0,0">
 						<TextBox
+							Text="{Binding EmployeeFirstName, Mode=TwoWay}"
 							Width="200"
 							FontSize="15"
 							Classes="Clearable"
@@ -84,20 +85,22 @@
 					</StackPanel>
 
 					<!-- Middle Initial Field -->
-					<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,35,0,0">
-						<TextBlock Text="Middle Initial" Classes="LabelField"/>
-						<ComboBox HorizontalAlignment="Left" SelectedIndex="0" Width="100" Foreground="{DynamicResource MutedColor}">
-							<ComboBoxItem Content="A"/>
-							<ComboBoxItem Content="B"/>
-							<ComboBoxItem Content="C"/>
-							<ComboBoxItem Content="D"/>
-							<ComboBoxItem Content="E"/>
+					<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,30,0,0">
+						<ComboBox
+							shadui:ControlAssist.Label="Middle Initial"
+							shadui:ControlAssist.Height="35"
+							Width="100"
+							HorizontalAlignment="Left"
+							PlaceholderText="-"
+							ItemsSource="{Binding MiddleInitialItems}"
+							SelectedItem="{Binding SelectedMiddleInitialItem, Mode=TwoWay}">
 						</ComboBox>
 					</StackPanel>
 
 					<!-- Last Name Field -->
 					<StackPanel Grid.Row="0" Grid.Column="2" Margin="10,30,0,0">
 						<TextBox
+							Text="{Binding EmployeeLastName, Mode=TwoWay}"
 							Width="200"
 							FontSize="15"
 							Classes="Clearable"
@@ -110,8 +113,8 @@
 					<StackPanel Grid.Row="0" Grid.Column="3" Margin="30,30,0,0">
 						<TextBlock Text="Gender" Classes="LabelField"/>
 						<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="23">
-							<RadioButton Content="Male" GroupName="Gender" Classes="FormRadio"/>
-							<RadioButton Content="Female" GroupName="Gender" Classes="FormRadio"/>
+							<RadioButton Content="Male" GroupName="EmployeeGender" Classes="FormRadio" IsChecked="{Binding IsMale}"/>
+							<RadioButton Content="Female" GroupName="EmployeeGender" Classes="FormRadio" IsChecked="{Binding IsFemale}"/>
 						</StackPanel>
 					</StackPanel>
 
@@ -124,22 +127,32 @@
 						<StackPanel
 							Orientation="Vertical"
 							Spacing="10">
-							<Border Width="80" Height="80" Margin="0,10"
+							<Border Width="90" Height="90" Margin="0,10"
 								Background="#F5F5F5"
 								BorderBrush="#CCCCCC"
 								BorderThickness="1"
-								CornerRadius="40">
+								CornerRadius="150"
+								ClipToBounds="True">
+
+								<Image 
+									Name="EmployeeProfileImage"
+									Stretch="UniformToFill"
+									IsVisible="True"
+									Source="avares://AHON_TRACK/Assets/ManageEmployeesView/default-profile-picture.png"/>
 								<!-- Profile image placeholder -->
 							</Border>
-							<Button Content="Choose File"
-									Classes="Outline"
-									HorizontalAlignment="Center"/>
+							<Button 
+								Content="Choose File"
+								Classes="Outline"
+								HorizontalAlignment="Center"
+								Click="Button_Click"/>
 						</StackPanel>
 					</StackPanel>
 
 					<!-- Row 2: Contact and Personal Details -->
 					<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,-70">
 						<TextBox
+							Text="{Binding EmployeeContactNumber, Mode=TwoWay}"
 							Width="200"
 							FontSize="15"
 							Classes="Clearable"
@@ -150,19 +163,23 @@
 
 					<!-- Position Field -->
 					<StackPanel Grid.Row="1" Grid.Column="1" Margin="0,-70">
-						<ComboBox HorizontalAlignment="Left" SelectedIndex="0" Width="130" shadui:ControlAssist.Label="Position">
-							<ComboBoxItem Content="Gym Staff"/>
-							<ComboBoxItem Content="Gym Admin"/>
+						<ComboBox 
+							HorizontalAlignment="Left" 
+							Width="130" 
+							shadui:ControlAssist.Label="Position"
+							PlaceholderText="-"
+							ItemsSource="{Binding EmployeePositionItems}"
+							SelectedItem="{Binding EmployeePosition, Mode=TwoWay}">
 						</ComboBox>
 					</StackPanel>
 
 					<!-- Age Field -->
 					<StackPanel Grid.Row="1" Grid.Column="2" Margin="45,-67">
 						<NumericUpDown
+							Value="{Binding EmployeeAge, Mode=TwoWay}"
 							shadui:ControlAssist.Label="Age"
 							FormatString="N0"
 							Watermark="Age"
-							Value="{}"
 							Width="130"
 							HorizontalAlignment="Left"/>
 					</StackPanel>
@@ -173,7 +190,7 @@
 							shadui:ControlAssist.Label="Date of Birth"
 							Width="150"
 							HorizontalAlignment="Left"
-							SelectedDate="{}"/>
+							SelectedDate="{Binding EmployeeBirthDate}"/>
 					</StackPanel>
 				</Grid>
 
@@ -186,17 +203,19 @@
 					<!-- Row 1: House Address and Number -->
 					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,15">
 						<TextBox
+							Text="{Binding EmployeeHouseAddress, Mode=TwoWay}"
 							Width="500"
 							FontSize="15"
 							Classes="Clearable"
 							UseFloatingWatermark="True"
-							Watermark="House Number"
+							Watermark="House Address"
 							HorizontalAlignment="Left"/>
 					</StackPanel>
 
 					<!-- House Number -->
 					<StackPanel Grid.Row="0" Grid.Column="1" Margin="-140,0,0,15">
 						<TextBox
+							Text="{Binding EmployeeHouseNumber, Mode=TwoWay}"
 							Width="190"
 							FontSize="15"
 							Classes="Clearable"
@@ -215,6 +234,7 @@
 						<!-- Street -->
 						<StackPanel Grid.Column="0" Margin="0,0,15,0">
 							<TextBox
+								Text="{Binding EmployeeStreet, Mode=TwoWay}"
 								Width="150"
 								FontSize="15"
 								Classes="Clearable"
@@ -226,6 +246,7 @@
 						<!-- Barangay -->
 						<StackPanel Grid.Column="1" Margin="-40,0,15,0">
 							<TextBox
+								Text="{Binding EmployeeBarangay, Mode=TwoWay}"
 								Width="150"
 								FontSize="15"
 								Classes="Clearable"
@@ -237,6 +258,7 @@
 						<!-- City/Town -->
 						<StackPanel Grid.Column="2" Margin="-80,0,15,0">
 							<TextBox
+								Text="{Binding EmployeeCityTown, Mode=TwoWay}"
 								Width="150"
 								FontSize="15"
 								Classes="Clearable"
@@ -248,6 +270,7 @@
 						<!-- Province -->
 						<StackPanel Grid.Column="3" Margin="-120,0,15,0">
 							<TextBox
+								Text="{Binding EmployeeProvince, Mode=TwoWay}"
 								Width="170"
 								FontSize="15"
 								Classes="Clearable"
@@ -259,6 +282,7 @@
 						<!-- Row 3: Postal/Zip Code -->
 						<StackPanel Grid.Row="2" Grid.Column="0" Margin="0,90,0,0">
 							<TextBox
+								Text="{Binding EmployeeZipCode, Mode=TwoWay}"
 								Width="150"
 								FontSize="15"
 								Classes="Clearable"
@@ -276,6 +300,7 @@
 					<!-- Row 1: Username and Password -->
 					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,15,0">
 						<TextBox
+							Text="{Binding EmployeeUsername, Mode=TwoWay}"
 							Width="230"
 							FontSize="15"
 							Classes="Clearable"
@@ -287,23 +312,23 @@
 					<!-- Password -->
 					<StackPanel Grid.Row="0" Grid.Column="1" Margin="-180,0,15,0">
 						<TextBox
+							Text="{Binding EmployeePassword, Mode=TwoWay}"
 							Width="230"
 							FontSize="15"
 							Classes="PasswordReveal"
 							PasswordChar="•"
 							UseFloatingWatermark="True"
 							Watermark="Password"
-							HorizontalAlignment="Left"
-							Text="{}"/>
+							HorizontalAlignment="Left"/>
 					</StackPanel>
 
 					<!-- Row 2: Date Joined Section -->
-					<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,30,15,0">
+					<StackPanel Grid.Row="0" Grid.Column="2" Margin="80,-3,15,0">
 						<CalendarDatePicker
 							shadui:ControlAssist.Label="Date Joined"
 							Width="150"
 							HorizontalAlignment="Left"
-							SelectedDate="{}"/>
+							SelectedDate="{Binding EmployeeDateJoined}"/>
 					</StackPanel>
 				</Grid>
 
@@ -311,7 +336,7 @@
 				<StackPanel
 					Orientation="Horizontal"
 					HorizontalAlignment="Right"
-					Margin="0,-10" Spacing="25">
+					Margin="0,70,20,0" Spacing="25">
 					<Button
 						Content="Cancel"
 						FontSize="16"
