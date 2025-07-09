@@ -69,14 +69,14 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Select your gender")]
-    public string EmployeeGender
+    public string? EmployeeGender
     {
         get => _employeeGender;
         set
         {
             if (_employeeGender != value)
             {
-                _employeeGender = value;
+                _employeeGender = value ?? string.Empty;
                 OnPropertyChanged(nameof(EmployeeGender));
                 OnPropertyChanged(nameof(IsMale));
                 OnPropertyChanged(nameof(IsFemale));
@@ -208,7 +208,7 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Date joined is required")]
-    [System.ComponentModel.DataAnnotations.DataType(DataType.Date, ErrorMessage = "Invalid date format")]
+    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
     public DateTime? EmployeeDateJoined
     {
         get => _employeeDateJoined;
@@ -231,7 +231,7 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
         EmployeeFirstName = string.Empty;
         SelectedMiddleInitialItem = string.Empty;
         EmployeeLastName = string.Empty;
-        EmployeeGender = string.Empty;
+        EmployeeGender = null;
         EmployeeContactNumber = string.Empty;
         EmployeePosition = string.Empty;
         EmployeeAge = null;
