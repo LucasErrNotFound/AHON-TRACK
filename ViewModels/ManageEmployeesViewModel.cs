@@ -301,31 +301,19 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private void ShowAddNewEmployeeDialog()
     {
-        try
-        {
-            Debug.WriteLine("Opening Add New Employee Dialog...");
-            _employeeDetailsDialogCardViewModel.Initialize();
-            _dialogManager.CreateDialog(_employeeDetailsDialogCardViewModel)
-                .WithSuccessCallback(vm =>
-                    _toastManager.CreateToast("Added a new employee")
-                        .WithContent($"Welcome, new employee!")
-                        .DismissOnClick()
-                        .ShowSuccess())
-                .WithCancelCallback(() =>
-                    _toastManager.CreateToast("Adding new employee cancelled")
-                        .WithContent("Add a new employee to continue")
-                        .DismissOnClick()
-                        .ShowWarning()).WithMaxWidth(950)
-                .Show();
-            Debug.WriteLine("Dialog opened successfully.");
-        }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Error")
-                .WithContent($"An error occurred while opening the dialog: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        _employeeDetailsDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_employeeDetailsDialogCardViewModel)
+            .WithSuccessCallback(vm =>
+                _toastManager.CreateToast("Added a new employee")
+                    .WithContent($"Welcome, new employee!")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Adding new employee cancelled")
+                    .WithContent("Add a new employee to continue")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(950)
+            .Show();
     }
 
     [RelayCommand]
