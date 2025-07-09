@@ -228,6 +228,24 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     [AvaloniaHotReload]
     public void Initialize()
     {
+        EmployeeFirstName = string.Empty;
+        SelectedMiddleInitialItem = string.Empty;
+        EmployeeLastName = string.Empty;
+        EmployeeGender = string.Empty;
+        EmployeeContactNumber = string.Empty;
+        EmployeePosition = string.Empty;
+        EmployeeAge = null;
+        EmployeeBirthDate = null;
+        EmployeeHouseAddress = string.Empty;
+        EmployeeHouseNumber = string.Empty;
+        EmployeeStreet = string.Empty;
+        EmployeeBarangay = string.Empty;
+        EmployeeCityTown = string.Empty;
+        EmployeeProvince = string.Empty;
+        EmployeeZipCode = null;
+        EmployeeUsername = string.Empty;
+        EmployeePassword = string.Empty;
+        EmployeeDateJoined = null;
         ClearAllErrors();
     }
 
