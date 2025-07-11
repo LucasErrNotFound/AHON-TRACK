@@ -109,12 +109,13 @@ namespace AHON_TRACK.ViewModels
                 var serviceProvider = new ServiceProvider().RegisterDialogs();
                 var pageManager = new PageManager(serviceProvider);
                 var dialogManager = new DialogManager();
+                var employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel(pageManager);
                 dialogManager.Register<EmployeeDetailsDialogCard, EmployeeDetailsDialogCardViewModel>();
 
                 var toastManager = new ToastManager();
                 var dashboardViewModel = new DashboardViewModel();
                 var employeeDetailsDialogCardViewModel = new EmployeeDetailsDialogCardViewModel(dialogManager);
-                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager, pageManager, employeeDetailsDialogCardViewModel); 
+                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager, pageManager, employeeDetailsDialogCardViewModel, employeeProfileInformationViewModel); 
                 var memberCheckInOutViewModel = new MemberCheckInOutViewModel();
                 var manageMembershipViewModel = new ManageMembershipViewModel();
                 var walkInRegistration = new WalkInRegistrationViewModel();
