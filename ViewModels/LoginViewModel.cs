@@ -1,4 +1,6 @@
-﻿using AHON_TRACK.Views;
+﻿using AHON_TRACK.Components.EmployeeDetails;
+using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Views;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -185,12 +187,15 @@ namespace AHON_TRACK.ViewModels
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 var currentWindow = desktop.MainWindow; // Keep reference to LoginView
-                var serviceProvider = new ServiceProvider();
+                var serviceProvider = new ServiceProvider().RegisterDialogs();
                 var pageManager = new PageManager(serviceProvider);
                 var dialogManager = new DialogManager();
+                dialogManager.Register<EmployeeDetailsDialogCard, EmployeeDetailsDialogCardViewModel>();
+
                 var toastManager = new ToastManager();
                 var dashboardViewModel = new DashboardViewModel();
-                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager, pageManager);
+                var employeeDetailsDialogCardViewModel = new EmployeeDetailsDialogCardViewModel(dialogManager);
+                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager, pageManager, employeeDetailsDialogCardViewModel); 
                 var memberCheckInOutViewModel = new MemberCheckInOutViewModel();
                 var manageMembershipViewModel = new ManageMembershipViewModel();
                 var walkInRegistration = new WalkInRegistrationViewModel();

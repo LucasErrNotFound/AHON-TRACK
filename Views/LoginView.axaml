@@ -136,8 +136,17 @@
 					</StackPanel>
 				</Panel>
 				<shadui:Card.Footer>
-					<Button Classes="Primary" FontSize="20" Padding="0,0,0,5" Margin="0,30" Height="38" Width="140" HorizontalAlignment="Right" Command="{Binding SignInCommand}" >
-						Sign In
+					<Button 
+						Classes="Primary" 
+						Content="Sign In"
+						FontSize="20" 
+						Padding="0,0,0,5" 
+						Margin="0,30" 
+						Height="38" 
+						Width="140" 
+						HorizontalAlignment="Right" 
+						Command="{Binding SignInCommand}"
+						HotKey="Enter">
 					</Button>
 				</shadui:Card.Footer>
 			</shadui:Card>

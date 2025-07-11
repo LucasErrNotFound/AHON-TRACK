@@ -1,4 +1,5 @@
-﻿using Avalonia;
+﻿using AHON_TRACK.Components.ViewModels;
+using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
@@ -10,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -78,25 +80,28 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
     private readonly PageManager _pageManager;
 
-    public DialogManager DialogManager { get; }
-    public ToastManager ToastManager { get; }
+    private readonly DialogManager _dialogManager;
+    private readonly ToastManager _toastManager;
+    private readonly EmployeeDetailsDialogCardViewModel _employeeDetailsDialogCardViewModel;
+
     public string Route => "manageEmployees";
 
-    public ManageEmployeesViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public ManageEmployeesViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, EmployeeDetailsDialogCardViewModel employeeDetailsDialogCardViewModel)
     {
         _pageManager = pageManager;
-        DialogManager = dialogManager;
-        ToastManager = toastManager;
+        _dialogManager = dialogManager;
+        _toastManager = toastManager;
+        _employeeDetailsDialogCardViewModel = employeeDetailsDialogCardViewModel;
         LoadSampleData();
         UpdateCounts();
-
     }
 
     public ManageEmployeesViewModel()
     {
-        ToastManager = new ToastManager();
-        DialogManager = new DialogManager();
+        _toastManager = new ToastManager();
+        _dialogManager = new DialogManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _employeeDetailsDialogCardViewModel = new EmployeeDetailsDialogCardViewModel(_dialogManager); // Initialize the field to avoid CS8618
     }
 
     [AvaloniaHotReload]
@@ -291,6 +296,24 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         {
             SelectAll = false;
         }
+    }
+
+    [RelayCommand]
+    private void ShowAddNewEmployeeDialog()
+    {
+        _employeeDetailsDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_employeeDetailsDialogCardViewModel)
+            .WithSuccessCallback(vm =>
+                _toastManager.CreateToast("Added a new employee")
+                    .WithContent($"Welcome, new employee!")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Adding new employee cancelled")
+                    .WithContent("Add a new employee to continue")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(950)
+            .Show();
     }
 
     [RelayCommand]
@@ -516,7 +539,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             await clipboard.SetTextAsync(employee.Name);
         }
 
-        ToastManager.CreateToast("Copy Employee Name")
+        _toastManager.CreateToast("Copy Employee Name")
             .WithContent($"Copied {employee.Name}'s name successfully!")
             .DismissOnClick()
             .WithDelay(6)
@@ -536,7 +559,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             var employeeNames = string.Join(", ", selectedEmployees.Select(emp => emp.Name));
             await clipboard.SetTextAsync(employeeNames);
 
-            ToastManager.CreateToast("Copy Employee Names")
+            _toastManager.CreateToast("Copy Employee Names")
                 .WithContent($"Copied multiple employee names successfully!")
                 .DismissOnClick()
                 .WithDelay(6)
@@ -555,7 +578,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             await clipboard.SetTextAsync(employee.ID);
         }
 
-        ToastManager.CreateToast("Copy Employee ID")
+        _toastManager.CreateToast("Copy Employee ID")
             .WithContent($"Copied {employee.Name}'s ID successfully!")
             .DismissOnClick()
             .WithDelay(6)
@@ -575,7 +598,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             var employeeIDs = string.Join(", ", selectedEmployees.Select(emp => emp.ID));
             await clipboard.SetTextAsync(employeeIDs);
 
-            ToastManager.CreateToast("Copy Employee ID")
+            _toastManager.CreateToast("Copy Employee ID")
                 .WithContent($"Copied multiple ID successfully!")
                 .DismissOnClick()
                 .WithDelay(6)
@@ -594,7 +617,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             await clipboard.SetTextAsync(employee.Username);
         }
 
-        ToastManager.CreateToast("Copy Employee Username")
+        _toastManager.CreateToast("Copy Employee Username")
             .WithContent($"Copied {employee.Username}'s username successfully!")
             .DismissOnClick()
             .WithDelay(6)
@@ -614,7 +637,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             var employeeUsernames = string.Join(", ", selectedEmployees.Select(emp => emp.Username));
             await clipboard.SetTextAsync(employeeUsernames);
 
-            ToastManager.CreateToast("Copy Employee Usernames")
+            _toastManager.CreateToast("Copy Employee Usernames")
                 .WithContent($"Copied multiple employee usernames successfully!")
                 .DismissOnClick()
                 .WithDelay(6)
@@ -633,7 +656,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             await clipboard.SetTextAsync(employee.ContactNumber);
         }
 
-        ToastManager.CreateToast("Copy Employee Contact No.")
+        _toastManager.CreateToast("Copy Employee Contact No.")
             .WithContent($"Copied {employee.Name}'s contact number successfully!")
             .DismissOnClick()
             .WithDelay(6)
@@ -653,7 +676,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             var employeeContactNumbers = string.Join(", ", selectedEmployees.Select(emp => emp.ContactNumber));
             await clipboard.SetTextAsync(employeeContactNumbers);
 
-            ToastManager.CreateToast("Copy Employee Contact No.")
+            _toastManager.CreateToast("Copy Employee Contact No.")
                 .WithContent($"Copied multiple employee contact numbers successfully!")
                 .DismissOnClick()
                 .WithDelay(6)
@@ -672,7 +695,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             await clipboard.SetTextAsync(employee.Position);
         }
 
-        ToastManager.CreateToast("Copy Employee Position")
+        _toastManager.CreateToast("Copy Employee Position")
             .WithContent($"Copied {employee.Name}'s position successfully!")
             .DismissOnClick()
             .WithDelay(6)
@@ -690,7 +713,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             await clipboard.SetTextAsync(employee.Status);
         }
 
-        ToastManager.CreateToast("Copy Employee Status")
+        _toastManager.CreateToast("Copy Employee Status")
             .WithContent($"Copied {employee.Name}'s status successfully!")
             .DismissOnClick()
             .WithDelay(6)
@@ -708,7 +731,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             await clipboard.SetTextAsync(employee.DateJoined.ToString());
         }
 
-        ToastManager.CreateToast("Copy Employee Date Joined")
+        _toastManager.CreateToast("Copy Employee Date Joined")
             .WithContent($"Copied {employee.Name}'s date joined successfully!")
             .DismissOnClick()
             .WithDelay(6)
@@ -720,7 +743,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         if (employee == null) return;
 
-        DialogManager.CreateDialog("" +
+        _dialogManager.CreateDialog("" +
             "Are you absolutely sure?",
             $"This action cannot be undone. This will permanently delete {employee.Name} and remove the data from your database.")
             .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(employee), DialogButtonStyle.Destructive)
@@ -735,7 +758,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         if (employee == null) return;
 
-        DialogManager.CreateDialog("" +
+        _dialogManager.CreateDialog("" +
             "Are you absolutely sure?",
             $"This action cannot be undone. This will permanently delete multiple accounts and remove their data from your database.")
             .WithPrimaryButton("Continue", () => OnSubmitDeleteMultipleItems(employee), DialogButtonStyle.Destructive)
@@ -752,7 +775,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         EmployeeItems.Remove(employee);
         UpdateCounts();
 
-        ToastManager.CreateToast($"Delete {employee.Position} Account")
+        _toastManager.CreateToast($"Delete {employee.Position} Account")
             .WithContent($"{employee.Name}'s Account deleted successfully!")
             .DismissOnClick()
             .WithDelay(6)
@@ -771,7 +794,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
         UpdateCounts();
 
-        ToastManager.CreateToast($"Delete Selected Accounts")
+        _toastManager.CreateToast($"Delete Selected Accounts")
             .WithContent($"Multiple accounts deleted successfully!")
             .DismissOnClick()
             .WithDelay(6)
