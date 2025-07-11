@@ -320,6 +320,33 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
+    private void ShowModifyEmployeeDialog(ManageEmployeesItem? employee)
+    {
+        if (employee is null)
+        {
+            _toastManager.CreateToast("No Employee Selected")
+                .WithContent("Please select an employee to modify")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+        _employeeDetailsDialogCardViewModel.InitializeForEditMode(employee);
+        _dialogManager.CreateDialog(_employeeDetailsDialogCardViewModel)
+            .WithSuccessCallback(vm =>
+                _toastManager.CreateToast("Modified Employee Details")
+                    .WithContent($"You have successfully modified {employee.Name}'s details")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Modifying Employee Details Cancelled")
+                    .WithContent("Click the three-dots if you want to modify your employees' details")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(950)
+            .Show();
+    }
+
+
+    [RelayCommand]
     private void OpenViewEmployeeProfile(ManageEmployeesItem employee)
     {
         if (employee == null)
