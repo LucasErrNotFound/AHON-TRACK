@@ -358,8 +358,13 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 .ShowError();
             return;
         }
-        EmployeeProfileInformationViewModel.SelectedEmployeeData = employee;
-        _pageManager.Navigate<EmployeeProfileInformationViewModel>();
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "IsCurrentUser", false },
+            { "EmployeeData", employee }
+        };
+        _pageManager.Navigate<EmployeeProfileInformationViewModel>(parameters);
     }
 
     [RelayCommand]
