@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
+using System.Collections.Generic;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -228,7 +229,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenViewProfile()
     {
-        _pageManager.Navigate<EmployeeProfileInformationViewModel>();
+        var parameters = new Dictionary<string, object>
+        {
+            { "IsCurrentUser", true }
+        };
+        _pageManager.Navigate<EmployeeProfileInformationViewModel>(parameters);
     }
 
     private void OnAcceptExit() => Environment.Exit(0);
