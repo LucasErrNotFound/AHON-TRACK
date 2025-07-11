@@ -33,6 +33,7 @@ namespace AHON_TRACK;
 [Transient<EquipmentUsageReportsViewModel>]
 [Transient<ClassAttendanceReportsViewModel>]
 [Transient<EmployeeDetailsDialogCardViewModel>]
+[Transient<EmployeeProfileInformationViewModel>]
 [Singleton<ToastManager>]
 [Singleton<DialogManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
