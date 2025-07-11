@@ -445,7 +445,7 @@
 							</shadui:MenuItemAssist.Label>
 							<Separator/>
 							<!--Show Profile: Command property missing-->
-							<MenuItem Header="View Profile">
+							<MenuItem Header="View Profile" Command="{Binding OpenViewProfileCommand}">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
 										<Svg Path="avares://AHON_TRACK/Assets/MainWindowView/show-profile-icon.svg"/>
