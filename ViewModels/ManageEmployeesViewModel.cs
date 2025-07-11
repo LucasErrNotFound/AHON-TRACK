@@ -11,7 +11,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -83,17 +82,20 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly EmployeeDetailsDialogCardViewModel _employeeDetailsDialogCardViewModel;
+    private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
     public string Route => "manageEmployees";
 
-    public ManageEmployeesViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, EmployeeDetailsDialogCardViewModel employeeDetailsDialogCardViewModel)
+    public ManageEmployeesViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, EmployeeDetailsDialogCardViewModel employeeDetailsDialogCardViewModel, EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _employeeDetailsDialogCardViewModel = employeeDetailsDialogCardViewModel;
+        _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         LoadSampleData();
         UpdateCounts();
+
     }
 
     public ManageEmployeesViewModel()
@@ -102,6 +104,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _dialogManager = new DialogManager();
         _pageManager = new PageManager(new ServiceProvider());
         _employeeDetailsDialogCardViewModel = new EmployeeDetailsDialogCardViewModel(_dialogManager); // Initialize the field to avoid CS8618
+        _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel(_pageManager); // Initialize the field to avoid CS8618
     }
 
     [AvaloniaHotReload]
@@ -314,6 +317,22 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .DismissOnClick()
                     .ShowWarning()).WithMaxWidth(950)
             .Show();
+    }
+
+    [RelayCommand]
+    private void OpenViewEmployeeProfile(ManageEmployeesItem employee)
+    {
+        if (employee == null)
+        {
+            // Write a debugger message on why employee variable is null
+            _toastManager.CreateToast("Error")
+                .WithContent("No employee selected to view profile.")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+        EmployeeProfileInformationViewModel.SelectedEmployeeData = employee;
+        _pageManager.Navigate<EmployeeProfileInformationViewModel>();
     }
 
     [RelayCommand]
