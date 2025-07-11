@@ -350,7 +350,10 @@
 																CommandParameter="{Binding}"/>
 														</MenuItem>
 
-														<MenuItem Header="Modify Employee Details"/>
+														<MenuItem 
+															Header="Modify Employee Details"
+															Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowModifyEmployeeDialogCommand}"
+															CommandParameter="{Binding}"/>
 														<Separator/>
 														<MenuItem 
 															Header="Delete" 
