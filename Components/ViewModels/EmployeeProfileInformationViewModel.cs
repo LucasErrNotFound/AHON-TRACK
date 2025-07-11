@@ -11,9 +11,12 @@ using System.Threading.Tasks;
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("viewEmployeeProfile")]
-public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase, INavigable
+public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase, INavigableWithParameters
 {
     private readonly PageManager _pageManager;
+
+    [ObservableProperty]
+    private bool _isFromCurrentUser = false;
 
     [ObservableProperty]
     private string _employeeFullNameHeader = string.Empty;
@@ -46,10 +49,10 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private string _employeeLastLogin = string.Empty;
 
     [ObservableProperty]
-    private string _employeeHouseAddress = string.Empty; 
+    private string _employeeHouseAddress = string.Empty;
 
     [ObservableProperty]
-    private string _employeeHouseNumber = string.Empty; 
+    private string _employeeHouseNumber = string.Empty;
 
     [ObservableProperty]
     private string _employeeStreet = string.Empty;
@@ -63,7 +66,8 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     [ObservableProperty]
     private string _employeeZipCode = string.Empty;
 
-    public static ManageEmployeesItem? SelectedEmployeeData { get; set; }
+    // You can remove this static property since we're now using parameters
+    private ManageEmployeesItem? _selectedEmployeeData;
 
     public EmployeeProfileInformationViewModel(PageManager pageManager)
     {
@@ -75,17 +79,50 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         _pageManager = new PageManager(new ServiceProvider());
     }
 
+    // Implementation of INavigableWithParameters
+    public void SetNavigationParameters(Dictionary<string, object> parameters)
+    {
+        // Check if this is current user profile
+        if (parameters.TryGetValue("IsCurrentUser", out var isCurrentUserValue) && isCurrentUserValue is bool isCurrentUser)
+        {
+            IsFromCurrentUser = isCurrentUser;
+        }
+
+        // Check if employee data is passed
+        if (parameters.TryGetValue("EmployeeData", out var employeeDataValue) && employeeDataValue is ManageEmployeesItem employeeData)
+        {
+            _selectedEmployeeData = employeeData;
+        }
+    }
+
     public void Initialize()
     {
-        if (SelectedEmployeeData != null)
+        if (IsFromCurrentUser)
+        {
+            InitializeCurrentUserProfile();
+        }
+        else if (_selectedEmployeeData != null)
+        {
+            InitializeEmployeeProfile();
+        }
+        else
+        {
+            Debug.WriteLine("No navigation parameters set, using default values.");
+            SetDefaultValues();
+        }
+    }
+
+    private void InitializeEmployeeProfile()
+    {
+        if (_selectedEmployeeData != null)
         {
             // Pass the employee data to the profile properties
-            EmployeeID = SelectedEmployeeData.ID;
-            EmployeePosition = SelectedEmployeeData.Position;
-            EmployeeDateJoined = SelectedEmployeeData.DateJoined.ToString("MMMM d, yyyy");
-            EmployeeFullName = SelectedEmployeeData.Name;
-            EmployeeFullNameHeader = $"{SelectedEmployeeData.Name}'s Profile";
-            EmployeePhoneNumber = SelectedEmployeeData.ContactNumber;
+            EmployeeID = _selectedEmployeeData.ID;
+            EmployeePosition = _selectedEmployeeData.Position;
+            EmployeeDateJoined = _selectedEmployeeData.DateJoined.ToString("MMMM d, yyyy");
+            EmployeeFullName = _selectedEmployeeData.Name;
+            EmployeeFullNameHeader = $"{_selectedEmployeeData.Name}'s Profile";
+            EmployeePhoneNumber = _selectedEmployeeData.ContactNumber;
 
             // Set default values for properties not available in ManageEmployeesItem
             EmployeeAge = "30"; // Default or calculate from birth date if available
@@ -99,20 +136,22 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             EmployeeCityProvince = "Cebu City, Cebu"; // Default
             EmployeeZipCode = "6000"; // Default
         }
-        else
-        {
-            Debug.WriteLine("SelectedEmployeeData is null, setting default values.");
-            SetDefaultValues();
-        }
+    }
+
+    public void InitializeCurrentUserProfile()
+    {
+        IsFromCurrentUser = true;
+        SetDefaultValues();
+        EmployeeFullNameHeader = "My Profile"; // Different header for current user
     }
 
     private void SetDefaultValues()
     {
         EmployeeID = "E12345";
         EmployeePosition = "Software Engineer";
-        EmployeeDateJoined = "2023-01-15";
+        EmployeeDateJoined = "January 15, 2023";
         EmployeeFullName = "John Doe";
-        EmployeeFullNameHeader = "John Doe's Profile";
+        EmployeeFullNameHeader = IsFromCurrentUser ? "My Profile" : "John Doe's Profile";
         EmployeeAge = "30";
         EmployeeBirthDate = "1993-05-20";
         EmployeeGender = "Male";
