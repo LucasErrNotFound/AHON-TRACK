@@ -60,10 +60,10 @@
 
 				<!-- Header Section -->
 				<TextBlock
-					Text="Personal Information"
+					Text="{Binding DialogTitle}"
 					Classes="h4"/>
 				<TextBlock
-					Text="Please fill out the form to create this employee's information"
+					Text="{Binding DialogDescription}"
 					Classes="Muted"/>
 
 				<!-- Personal Information Grid-->
