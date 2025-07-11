@@ -53,7 +53,7 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     private DateTime? _employeeDateJoined;
 
     [Required(ErrorMessage = "First name is required")]
-    [MinLength(3, ErrorMessage = "Must be at least 3 characters long")]
+    [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeFirstName
     {
@@ -69,7 +69,7 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Last name is required")]
-    [MinLength(3, ErrorMessage = "Must be at least 3 characters long")]
+    [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeLastName
     {
