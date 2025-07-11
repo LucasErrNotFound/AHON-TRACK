@@ -6,15 +6,12 @@ using CommunityToolkit.Mvvm.Input;
 using ShadUI;
 using System;
 using System.ComponentModel.DataAnnotations;
-<<<<<<< HEAD
 using AHON_TRACK.Views;
 using Avalonia;
 using System.Text;
 using System.Security.Cryptography;
 using Microsoft.Data.SqlClient;
-=======
 using System.Threading.Tasks;
->>>>>>> 0e5d54b9436b4c86346a0b59534501a947e2dba5
 
 namespace AHON_TRACK.ViewModels
 {
