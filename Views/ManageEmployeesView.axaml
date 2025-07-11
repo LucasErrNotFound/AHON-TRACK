@@ -294,50 +294,47 @@
 															<TextBlock Text="Actions" FontSize="15" FontWeight="Regular" Foreground="{DynamicResource MutedColor}"/>
 														</shadui:MenuItemAssist.Label>
 
-														<MenuItem Header="View Employee"/>
+														<MenuItem 
+															Header="View Employee" 
+															Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).OpenViewEmployeeProfileCommand}"
+															CommandParameter="{Binding}"/>
 														<MenuItem Header="Copy">
-															<MenuItem Header="Copy Employee Name"
+															<MenuItem 
+																Header="Copy Employee Name"
 																IsVisible="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}}"
 																Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeNameCommand}"
-																CommandParameter="{Binding}"
-															/>
-															<MenuItem Header="Copy Selected Employee Name"
+																CommandParameter="{Binding}"/>
+															<MenuItem 
+																Header="Copy Selected Employee Name"
 																IsVisible="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}}"
 																Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeNameCommand}"
-																CommandParameter="{Binding}"
-															/>
+																CommandParameter="{Binding}"/>
 															<MenuItem 
 																Header="Copy Employee ID"
 																IsVisible="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}}"
 																Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeIDCommand}"
-																CommandParameter="{Binding}"
-															/>
+																CommandParameter="{Binding}"/>
 															<MenuItem 
 																Header="Copy Selected Employee ID"
 																IsVisible="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}}"
 																Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeIDCommand}"
-																CommandParameter="{Binding}"
-															/>
+																CommandParameter="{Binding}"/>
 															<MenuItem Header="Copy Employee Username"
 																IsVisible="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}}"
 																Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeUsernameCommand}"
-																CommandParameter="{Binding}"
-															/>
+																CommandParameter="{Binding}"/>
 															<MenuItem Header="Copy Selected Employee Username"
 																IsVisible="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}}"
 																Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeUsernameCommand}"
-																CommandParameter="{Binding}"
-															/>
+																CommandParameter="{Binding}"/>
 															<MenuItem Header="Copy Employee Contact No."
 																IsVisible="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}}"
 																Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeContactNumberCommand}"
-																CommandParameter="{Binding}"
-															/>
+																CommandParameter="{Binding}"/>
 															<MenuItem Header="Copy Selected Employee Contact No."
 																IsVisible="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}}"
 																Command="{Binding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeContactNumberCommand}"
-																CommandParameter="{Binding}"
-															/>
+																CommandParameter="{Binding}"/>
 															<Separator/>
 															<MenuItem 
 																Header="Copy Employee Position"
