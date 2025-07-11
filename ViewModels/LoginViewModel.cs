@@ -41,7 +41,7 @@ namespace AHON_TRACK.ViewModels
 
         // Connection string to your SSMS database
         private string ConnectionString =>
-            "Data Source=localhost;Initial Catalog=AHON_DB;Integrated Security=True";
+            "Data Source=RCALUBAYAN\\SQLEXPRESS;Initial Catalog=AHON_TRACK_DATABASE;Integrated Security=True;Trust Server Certificate=True";
 
         private string _username = string.Empty;
 
@@ -80,20 +80,28 @@ namespace AHON_TRACK.ViewModels
             ClearAllErrors();
             ValidateAllProperties();
 
-            if (HasErrors) // the condition here will change and will implement the CheckCredentials Method.
+            // First, check for input validation errors (e.g., blank fields)
+            if (HasErrors)
+                return;
+
+            string role;
+
+            // Now, check credentials via DB
+            if (CheckCredentials(Username, Password, out role))
             {
-                // _shouldShowErrorToast = true; will be used in the future if needed
+                _shouldShowSuccessLogInToast = true;
+                SwitchToMainWindow(); // Proceed to main view
+            }
+            else
+            {
                 _shouldShowSuccessLogInToast = false;
                 ToastManager.CreateToast("Wrong Credentials! Try Again")
                     .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                     .WithDelay(5)
                     .ShowError();
-                return;
             }
-            _shouldShowSuccessLogInToast = true;
-            // _shouldShowErrorToast = false; will be used in the future if needed
-            SwitchToMainWindow();
         }
+
         public void SetInitialLogOutToastState(bool showLogOutSuccess)
         {
             if (!showLogOutSuccess) return;
