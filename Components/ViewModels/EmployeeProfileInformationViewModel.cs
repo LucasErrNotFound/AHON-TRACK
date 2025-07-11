@@ -66,7 +66,6 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     [ObservableProperty]
     private string _employeeZipCode = string.Empty;
 
-    // You can remove this static property since we're now using parameters
     private ManageEmployeesItem? _selectedEmployeeData;
 
     public EmployeeProfileInformationViewModel(PageManager pageManager)
@@ -79,7 +78,6 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         _pageManager = new PageManager(new ServiceProvider());
     }
 
-    // Implementation of INavigableWithParameters
     public void SetNavigationParameters(Dictionary<string, object> parameters)
     {
         // Check if this is current user profile
@@ -116,7 +114,6 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     {
         if (_selectedEmployeeData != null)
         {
-            // Pass the employee data to the profile properties
             EmployeeID = _selectedEmployeeData.ID;
             EmployeePosition = _selectedEmployeeData.Position;
             EmployeeDateJoined = _selectedEmployeeData.DateJoined.ToString("MMMM d, yyyy");
@@ -124,7 +121,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             EmployeeFullNameHeader = $"{_selectedEmployeeData.Name}'s Profile";
             EmployeePhoneNumber = _selectedEmployeeData.ContactNumber;
 
-            // Set default values for properties not available in ManageEmployeesItem
+            // Set default values for properties that are not available in ManageEmployeesItem (Hard-coded, sorry :)
             EmployeeAge = "30"; // Default or calculate from birth date if available
             EmployeeBirthDate = "1993-05-20"; // Default
             EmployeeGender = "Male"; // Default
@@ -142,7 +139,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     {
         IsFromCurrentUser = true;
         SetDefaultValues();
-        EmployeeFullNameHeader = "My Profile"; // Different header for current user
+        EmployeeFullNameHeader = "My Profile";
     }
 
     private void SetDefaultValues()
