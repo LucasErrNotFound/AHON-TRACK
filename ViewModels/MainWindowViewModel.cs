@@ -9,6 +9,7 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using AHON_TRACK.Components.ViewModels;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -33,6 +34,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly GymDemographicsViewModel _gymDemographicsViewModel;
     private readonly EquipmentUsageReportsViewModel _equipmentUsageReportsViewModel;
     private readonly ClassAttendanceReportsViewModel _classAttendanceReportsViewModel;
+
+    private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
+
     private readonly PageManager _pageManager;
 
     // Primary constructor for DI
@@ -112,6 +116,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _gymDemographicsViewModel = new GymDemographicsViewModel();
         _equipmentUsageReportsViewModel = new EquipmentUsageReportsViewModel();
         _classAttendanceReportsViewModel = new ClassAttendanceReportsViewModel();
+
+        _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel(_pageManager);
     }
 
     [ObservableProperty]
@@ -218,6 +224,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand]
     private void OpenClassAttendanceReports() => SwitchPage(_classAttendanceReportsViewModel);
+
+    [RelayCommand]
+    private void OpenViewProfile()
+    {
+        _pageManager.Navigate<EmployeeProfileInformationViewModel>();
+    }
 
     private void OnAcceptExit() => Environment.Exit(0);
 
