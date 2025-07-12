@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AHON_TRACK.Functionalities;
+namespace AHON_TRACK.Converters;
 
 public class StringToBitmapConverter : IValueConverter
 {

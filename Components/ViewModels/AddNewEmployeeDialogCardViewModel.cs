@@ -4,12 +4,16 @@ using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
+public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 {
     [ObservableProperty]
     private string[] _middleInitialItems = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]; // Will simplfy this later
@@ -224,12 +228,12 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeDateJoined, value, true);
     }
 
-    public EmployeeDetailsDialogCardViewModel(DialogManager dialogManager)
+    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager)
     {
         _dialogManager = dialogManager;
     }
 
-    public EmployeeDetailsDialogCardViewModel()
+    public AddNewEmployeeDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
     }
@@ -257,7 +261,7 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
         EmployeeLastName = nameParts.Length > 1 ? nameParts[^1] : "Doe"; // Last element
 
         // Set default values for fields not available in ManageEmployeesItem
-        EmployeeGender = "Male"; 
+        EmployeeGender = "Male";
         EmployeeContactNumber = !string.IsNullOrEmpty(employee.ContactNumber) ?
             employee.ContactNumber.Replace(" ", "") : "09123456789";
         EmployeePosition = !string.IsNullOrEmpty(employee.Position) ? employee.Position : "Gym Staff";
@@ -273,7 +277,7 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
         EmployeeZipCode = "4031";
 
         EmployeeUsername = !string.IsNullOrEmpty(employee.Username) ? employee.Username : "defaultuser";
-        EmployeePassword = "defaultpassword"; 
+        EmployeePassword = "defaultpassword";
         EmployeeDateJoined = employee.DateJoined != default ? employee.DateJoined : DateTime.Now;
     }
 

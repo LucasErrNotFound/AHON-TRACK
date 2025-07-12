@@ -1,18 +1,23 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:AHON_TRACK.ViewModels"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
-        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
-        x:Class="AHON_TRACK.Views.LoginView"
-        x:DataType="vm:LoginViewModel"
-        Icon="/Assets/AHON-Track-Window.ico"
-        WindowStartupLocation="CenterScreen"
-		CanResize="False"
-		Width="1000"
-		Height="700"
-        Title="AHON TRACK">
+<Window 
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:vm="using:AHON_TRACK.ViewModels"
+	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+	xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
+	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+	x:Class="AHON_TRACK.LoginView"
+	x:DataType="vm:LoginViewModel"
+	mc:Ignorable="d" 
+	d:DesignWidth="1000" 
+	d:DesignHeight="700"
+	CanResize="False"
+	WindowStartupLocation="CenterScreen"
+	Icon="/Assets/AHON-Track-Window.ico"
+	Width="1000"
+	Height="700"
+	Title="AHON TRACK">
 
 	<shadui:Window.LogoContent>
 		<Svg
@@ -23,9 +28,9 @@
 	</shadui:Window.LogoContent>
 
 	<shadui:Window.Hosts>
-		<shadui:DialogHost 
-			Manager="{Binding DialogManager}"
-			Owner="{Binding RelativeSource={RelativeSource AncestorType=shadui:Window}}" />
+		<shadui:DialogHost
+			Manager="{CompiledBinding DialogManager}"
+			Owner="{CompiledBinding RelativeSource={RelativeSource AncestorType=shadui:Window}}" />
 	</shadui:Window.Hosts>
 
 	<Window.Resources>
@@ -40,14 +45,14 @@
 	</Design.DataContext>
 
 	<Grid>
-		<shadui:ToastHost Manager="{Binding ToastManager}" ZIndex="1000"/>
-			<Image
-				Source="/Assets/LoginView/AHON-Track-Secondary-Logo.png"
-				Width="160"
-				Height="95"
-				HorizontalAlignment="Left"
-				VerticalAlignment="Top"
-				Margin="45,5"/>
+		<shadui:ToastHost Manager="{CompiledBinding ToastManager}" ZIndex="1000"/>
+		<Image
+			Source="/Assets/LoginView/AHON-Track-Secondary-Logo.png"
+			Width="160"
+			Height="95"
+			HorizontalAlignment="Left"
+			VerticalAlignment="Top"
+			Margin="45,5"/>
 		<StackPanel HorizontalAlignment="Left" Margin="60,110,10,10">
 			<TextBlock
 				Text="The future of"
@@ -93,7 +98,7 @@
 				Classes="Primary"
 				Content="About Us"
 				HorizontalAlignment="Left"
-				Margin="80,60" 
+				Margin="80,60"
 				Padding="35,0,35,0"
 				FontSize="17"/>
 			<Image
@@ -121,7 +126,7 @@
 							Foreground="{StaticResource Foreground}"
 							Watermark="Username"
 							FontSize="17"
-							Text="{Binding Username, Mode=TwoWay}"/>
+							Text="{CompiledBinding Username, Mode=TwoWay}"/>
 					</StackPanel>
 					<StackPanel Margin="0,120">
 						<TextBox
@@ -132,20 +137,20 @@
 							PasswordChar="•"
 							Watermark="Enter your password"
 							FontSize="17"
-							Text="{Binding Password, Mode=TwoWay}"/>
+							Text="{CompiledBinding Password, Mode=TwoWay}"/>
 					</StackPanel>
 				</Panel>
 				<shadui:Card.Footer>
-					<Button 
-						Classes="Primary" 
+					<Button
+						Classes="Primary"
 						Content="Sign In"
-						FontSize="20" 
-						Padding="0,0,0,5" 
-						Margin="0,30" 
-						Height="38" 
-						Width="140" 
-						HorizontalAlignment="Right" 
-						Command="{Binding SignInCommand}"
+						FontSize="20"
+						Padding="0,0,0,5"
+						Margin="0,30"
+						Height="38"
+						Width="140"
+						HorizontalAlignment="Right"
+						Command="{CompiledBinding SignInCommand}"
 						HotKey="Enter">
 					</Button>
 				</shadui:Card.Footer>

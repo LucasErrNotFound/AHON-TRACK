@@ -1,14 +1,14 @@
+using Avalonia;
 using Avalonia.Controls;
-using System;
+using Avalonia.Markup.Xaml;
 using Window = ShadUI.Window;
 
-namespace AHON_TRACK.Views
+namespace AHON_TRACK;
+
+public partial class LoginView : Window
 {
-    public partial class LoginView : Window
+    public LoginView()
     {
-        public LoginView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

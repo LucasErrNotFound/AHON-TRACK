@@ -1,4 +1,4 @@
-using AHON_TRACK.ViewModels;
+﻿using AHON_TRACK.ViewModels;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -12,12 +12,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-
         Closing += OnClosing;
-        //FullscreenButton.Click += OnFullScreen;
-        //ExitFullscreenButton.Click += OnExitFullScreen;
     }
-
     private void OnFullScreen(object? sender, RoutedEventArgs e)
     {
         WindowState = WindowState.FullScreen;

@@ -1,12 +1,12 @@
 ﻿using AHON_TRACK;
-using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.ViewModels;
+using AHON_TRACK.Components.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
-using Jab;
-using Serilog;
-using ShadUI;
 using System;
 using System.IO;
+using ShadUI;
+using Jab;
+using Serilog;
 
 namespace AHON_TRACK;
 
@@ -15,27 +15,10 @@ namespace AHON_TRACK;
 [Transient<MainWindowViewModel>]
 [Transient<DashboardViewModel>]
 [Transient<ManageEmployeesViewModel>]
-[Transient<MemberCheckInOutViewModel>]
-[Transient<ManageMembershipViewModel>]
-[Transient<WalkInRegistrationViewModel>]
-[Transient<MemberDirectoryViewModel>]
-[Transient<TrainingSchedulesViewModel>]
-[Transient<RoomEquipmentBookingViewModel>]
-[Transient<PaymentOverviewViewModel>]
-[Transient<OutstandingBalancesViewModel>]
-[Transient<PaymentHistoryViewModel>]
-[Transient<ManageBillingViewModel>]
-[Transient<EquipmentInventoryViewModel>]
-[Transient<ProductSupplementStockViewModel>]
-[Transient<SupplierManagementViewModel>]
-[Transient<FinancialReportsViewModel>]
-[Transient<GymDemographicsViewModel>]
-[Transient<EquipmentUsageReportsViewModel>]
-[Transient<ClassAttendanceReportsViewModel>]
-[Transient<EmployeeDetailsDialogCardViewModel>]
+[Transient<AddNewEmployeeDialogCardViewModel>]
 [Transient<EmployeeProfileInformationViewModel>]
-[Singleton<ToastManager>]
 [Singleton<DialogManager>]
+[Singleton<ToastManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
@@ -46,7 +29,7 @@ public partial class ServiceProvider
         var currentFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "AHON_TRACK\\logs");
 
-        Directory.CreateDirectory(currentFolder); //ensure the directory exists
+        Directory.CreateDirectory(currentFolder);
 
         var file = Path.Combine(currentFolder, "log.txt");
 
@@ -55,7 +38,7 @@ public partial class ServiceProvider
             .WriteTo.File(file, rollingInterval: RollingInterval.Day)
             .CreateLogger();
 
-        Log.Logger = config; //set the global logger
+        Log.Logger = config;
 
         return config;
     }

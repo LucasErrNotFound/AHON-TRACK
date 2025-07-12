@@ -1,4 +1,5 @@
-﻿using AHON_TRACK.Components.ViewModels;
+﻿// using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Components.ViewModels;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
@@ -11,11 +12,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
+[Page("manageEmployees")]
 public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
@@ -81,21 +84,22 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly EmployeeDetailsDialogCardViewModel _employeeDetailsDialogCardViewModel;
+    private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
-    public string Route => "manageEmployees";
-
-    public ManageEmployeesViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, EmployeeDetailsDialogCardViewModel employeeDetailsDialogCardViewModel, EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
+    public ManageEmployeesViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager, 
+        PageManager pageManager, 
+        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _employeeDetailsDialogCardViewModel = employeeDetailsDialogCardViewModel;
+        _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         LoadSampleData();
         UpdateCounts();
-
     }
 
     public ManageEmployeesViewModel()
@@ -103,8 +107,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _toastManager = new ToastManager();
         _dialogManager = new DialogManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _employeeDetailsDialogCardViewModel = new EmployeeDetailsDialogCardViewModel(_dialogManager); // Initialize the field to avoid CS8618
-        _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel(_pageManager); // Initialize the field to avoid CS8618
+        _addNewEmployeeDialogCardViewModel = new AddNewEmployeeDialogCardViewModel();
+        _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
     }
 
     [AvaloniaHotReload]
@@ -144,7 +148,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             {
                 ID = "1001",
                 AvatarSource = DEFAULT_AVATAR_SOURCE,
-                Name = "Rome Jedd Calubayan",
+                Name = "Jedd Calubayan",
                 Username = "Kuya Rome",
                 ContactNumber = "0975 994 3010",
                 Position = "Gym Staff",
@@ -304,8 +308,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private void ShowAddNewEmployeeDialog()
     {
-        _employeeDetailsDialogCardViewModel.Initialize();
-        _dialogManager.CreateDialog(_employeeDetailsDialogCardViewModel)
+        _addNewEmployeeDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
             .WithSuccessCallback(vm =>
                 _toastManager.CreateToast("Added a new employee")
                     .WithContent($"Welcome, new employee!")
@@ -330,8 +334,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 .ShowError();
             return;
         }
-        _employeeDetailsDialogCardViewModel.InitializeForEditMode(employee);
-        _dialogManager.CreateDialog(_employeeDetailsDialogCardViewModel)
+        _addNewEmployeeDialogCardViewModel.InitializeForEditMode(employee);
+        _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
             .WithSuccessCallback(vm =>
                 _toastManager.CreateToast("Modified Employee Details")
                     .WithContent($"You have successfully modified {employee.Name}'s details")
@@ -794,14 +798,23 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         if (employee == null) return;
 
-        _dialogManager.CreateDialog("" +
-            "Are you absolutely sure?",
-            $"This action cannot be undone. This will permanently delete {employee.Name} and remove the data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(employee), DialogButtonStyle.Destructive)
-            .WithCancelButton("Cancel")
-            .WithMaxWidth(512)
-            .Dismissible()
-            .Show();
+        try
+        {
+            Debug.WriteLine($"Showing deletion dialog for employee: {employee.Name}");
+            _dialogManager.CreateDialog("" +
+                "Are you absolutely sure?",
+                $"This action cannot be undone. This will permanently delete {employee.Name} and remove the data from your database.")
+                .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(employee), DialogButtonStyle.Destructive)
+                .WithCancelButton("Cancel")
+                .WithMaxWidth(512)
+                .Dismissible()
+                .Show();
+            Debug.WriteLine("Deletion dialog shown successfully.");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error showing deletion dialog: {ex.Message}");
+        }
     }
 
     [RelayCommand]

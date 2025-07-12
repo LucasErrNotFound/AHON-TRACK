@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using ShadUI;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,6 +15,9 @@ namespace AHON_TRACK.Components.ViewModels;
 public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase, INavigableWithParameters
 {
     private readonly PageManager _pageManager;
+    private readonly DialogManager _dialogManager;
+    private readonly ToastManager _toastManager;
+    private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
 
     [ObservableProperty]
     private bool _isFromCurrentUser = false;
@@ -68,14 +72,21 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     private ManageEmployeesItem? _selectedEmployeeData;
 
-    public EmployeeProfileInformationViewModel(PageManager pageManager)
+    public EmployeeProfileInformationViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel)
     {
+        _dialogManager = dialogManager;
+        _toastManager = toastManager;
         _pageManager = pageManager;
+        _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
+
     }
 
     public EmployeeProfileInformationViewModel()
     {
+        _dialogManager = new DialogManager();
+        _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _addNewEmployeeDialogCardViewModel = new AddNewEmployeeDialogCardViewModel();
     }
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
@@ -164,4 +175,36 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     [RelayCommand]
     private void BackPage() => _pageManager.Navigate<DashboardViewModel>();
+
+    [RelayCommand]
+    private void ShowEditProfileDialog()
+    {
+        // Create a ManageEmployeesItem from current profile data for editing
+        var currentEmployeeData = new ManageEmployeesItem
+        {
+            ID = EmployeeID,
+            Name = EmployeeFullName,
+            Position = EmployeePosition,
+            ContactNumber = EmployeePhoneNumber,
+            DateJoined = DateTime.Parse(EmployeeDateJoined),
+            Username = "currentuser" // You might want to store this properly
+        };
+
+        Debug.WriteLine("Showing edit profile dialog with current employee data.");
+        _addNewEmployeeDialogCardViewModel.InitializeForEditMode(currentEmployeeData);
+        _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
+            .WithSuccessCallback(vm =>
+                _toastManager.CreateToast("Modified Employee Details")
+                    .WithContent($"You have successfully modified details")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Modifying Employee Details Cancelled")
+                    .WithContent("Click the three-dots if you want to modify your employees' details")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(950)
+            .Show();
+        Debug.WriteLine("Edit profile dialog shown successfully.");
+
+    }
 }
