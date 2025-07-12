@@ -3,14 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.Input;
-using System.Threading.Tasks;
 
-namespace AHON_TRACK.Components.EmployeeDetails;
+namespace AHON_TRACK.Components.AddNewEmployeeDialog;
 
-public partial class EmployeeDetailsDialogCard : UserControl
+public partial class AddNewEmployeeDialogCard : UserControl
 {
-    public EmployeeDetailsDialogCard()
+    public AddNewEmployeeDialogCard()
     {
         InitializeComponent();
     }
@@ -22,7 +20,7 @@ public partial class EmployeeDetailsDialogCard : UserControl
         {
             AllowMultiple = false,
             Title = "Select an image file",
-            FileTypeFilter = [ FilePickerFileTypes.ImageJpg, FilePickerFileTypes.ImagePng, FilePickerFileTypes.ImageAll ]
+            FileTypeFilter = [FilePickerFileTypes.ImageJpg, FilePickerFileTypes.ImagePng, FilePickerFileTypes.ImageAll]
         });
 
         if (files.Count > 0)

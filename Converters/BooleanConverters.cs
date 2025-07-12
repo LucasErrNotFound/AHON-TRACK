@@ -2,7 +2,7 @@
 using Avalonia.Data.Converters;
 using Avalonia.Layout;
 
-namespace AHON_TRACK.Functionalities;
+namespace AHON_TRACK.Converters;
 
 public static class BooleanConverters
 {

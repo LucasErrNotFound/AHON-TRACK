@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AHON_TRACK.ViewModels;
 using Avalonia.Controls;
@@ -12,7 +12,8 @@ namespace AHON_TRACK
         {
             // Add mappings for your components
             // Pattern: "ViewModelName" -> "ComponentFolder"
-            { "EmployeeProfileInformationViewModel", "EmployeeDetails" },
+            { "EmployeeProfileInformationViewModel", "EmployeeProfile" },
+            { "AddNewEmployeeDialogCardViewModel", "AddNewEmployeeDialogCard" },
         };
 
         public Control? Build(object? param)
@@ -22,9 +23,9 @@ namespace AHON_TRACK
 
             var viewModelType = param.GetType();
             var viewModelName = viewModelType.FullName!;
-            
+
             var view = TryFindView(viewModelName, viewModelType);
-            
+
             if (view != null)
                 return view;
 
@@ -34,14 +35,14 @@ namespace AHON_TRACK
         private Control? TryFindView(string viewModelName, Type viewModelType)
         {
             var viewModelClassName = viewModelType.Name;
-            
-            if (viewModelName.Contains("Components.ViewModels") && 
+
+            if (viewModelName.Contains("Components.ViewModels") &&
                 _componentMappings.TryGetValue(viewModelClassName, out var componentFolder))
             {
                 var componentViewName = viewModelName
                     .Replace("Components.ViewModels", $"Components.{componentFolder}", StringComparison.Ordinal)
                     .Replace("ViewModel", "View", StringComparison.Ordinal);
-                
+
                 var view = TryCreateView(componentViewName);
                 if (view != null) return view;
             }

@@ -2,7 +2,7 @@
 using System;
 using System.Globalization;
 
-namespace AHON_TRACK.Functionalities;
+namespace AHON_TRACK.Converters;
 
 public class IntToBoolConverter : IValueConverter
 {
