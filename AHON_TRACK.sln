@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36301.6 d17.14
+VisualStudioVersion = 17.14.36301.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AHON_TRACK", "AHON_TRACK.csproj", "{2982C0EA-9672-BD6C-2A06-D9DE075C6112}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AHON_TRACK.Desktop", "..\AHON_TRACK.Desktop\AHON_TRACK.Desktop.csproj", "{0B702E44-8445-5C2A-DB95-8D9397BC3A76}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +15,6 @@ Global
 		{2982C0EA-9672-BD6C-2A06-D9DE075C6112}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2982C0EA-9672-BD6C-2A06-D9DE075C6112}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2982C0EA-9672-BD6C-2A06-D9DE075C6112}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0B702E44-8445-5C2A-DB95-8D9397BC3A76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0B702E44-8445-5C2A-DB95-8D9397BC3A76}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0B702E44-8445-5C2A-DB95-8D9397BC3A76}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0B702E44-8445-5C2A-DB95-8D9397BC3A76}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

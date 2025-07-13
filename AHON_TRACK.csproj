@@ -1,29 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
-  </ItemGroup>
+	<ItemGroup>
+		<AvaloniaResource Include="Assets\**" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.1" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.1" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+	<ItemGroup>
+		<PackageReference Include="Avalonia" Version="11.3.1" />
+		<PackageReference Include="Avalonia.Desktop" Version="11.3.1" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.1" />
+		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.1" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
 
-    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.1" />
-    <PackageReference Include="ShadUI" Version="0.1.4" />
-	<PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5.4" />
-	<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="11.3.0.1" />
-	<PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All" Publish="True" />
-	<PackageReference Include="Jab" Version="0.11.0" PrivateAssets="All" />
-	<PackageReference Include="Serilog" Version="4.3.0" />
-	<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-  </ItemGroup>
+		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.1" />
+		<PackageReference Include="ShadUI" Version="0.1.4" />
+		<PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5.4" />
+		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="11.3.0.1" />
+		<PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All" Publish="True" />
+		<PackageReference Include="Jab" Version="0.11.0" PrivateAssets="All" />
+		<PackageReference Include="Serilog" Version="4.3.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+	</ItemGroup>
 </Project>
