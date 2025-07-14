@@ -32,14 +32,14 @@
 					<Border
                         MinWidth="150"
                         Margin="8"
-                        Background="{DynamicResource CardBackgroundColor}"
+                        Background="{TemplateBinding CardBackground}"
                         BorderBrush="{DynamicResource BorderColor}"
                         BorderThickness="1"
                         BoxShadow="{DynamicResource Shadow}"
                         CornerRadius="{DynamicResource 2XlCornerRadius}">
 						<StackPanel Margin="24">
 							<Grid ColumnDefinitions="* Auto">
-								<TextBlock Classes="Small" Text="{TemplateBinding Title}" />
+								<TextBlock Classes="Large" Text="{TemplateBinding Title}" />
 								<ContentPresenter Grid.Column="1" Content="{TemplateBinding Icon}" />
 							</Grid>
 							<TextBlock
@@ -49,7 +49,6 @@
                                 Text="{TemplateBinding Value}"
                                 TextWrapping="Wrap" />
 							<TextBlock
-                                Classes="Caption Muted"
                                 FontSize="13"
                                 Text="{TemplateBinding Hint}"
                                 TextWrapping="Wrap" />
