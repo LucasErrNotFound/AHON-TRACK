@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls.Primitives;
+using Avalonia.Media;
 
 namespace AHON_TRACK.Components.Dashboard;
 
@@ -7,6 +8,15 @@ public class OverviewCard : TemplatedControl
 {
     public static readonly StyledProperty<string> TitleProperty =
         AvaloniaProperty.Register<OverviewCard, string>(nameof(Title));
+
+    public static readonly StyledProperty<IBrush?> CardBackgroundProperty = 
+               AvaloniaProperty.Register<OverviewCard, IBrush?>(nameof(CardBackground));
+
+    public IBrush? CardBackground
+    {
+        get => GetValue(CardBackgroundProperty);
+        set => SetValue(CardBackgroundProperty, value);
+    }
 
     public string Title
     {
