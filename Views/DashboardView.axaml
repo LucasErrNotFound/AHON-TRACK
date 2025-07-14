@@ -45,8 +45,61 @@
 						<TabItem Header="Overview">
 							<StackPanel>
 								<shadui:BreakpointViewPort>
-									<shadui:BreakpointView Breakpoint="MdAndUp">
+									<!-- Extra large and up breakpoint (1280px and above). -->
+									<shadui:BreakpointView Breakpoint="XlAndUp">
 										<UniformGrid Margin="-6,0" Columns="4">
+											<dashboard:OverviewCard
+															Title="Total Revenue"
+															FontWeight="SemiBold"
+															Hint="+96% from last month"
+															Value="₱20,911.69">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/philippine-peso-icon.svg"
+														Opacity="0.5"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Member Subscriptions"
+												Hint="+16% from last month"
+												Value="+18">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/member-subscriptions-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Sales"
+												Hint="+16% from last month"
+												Value="+69">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/sales-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Active Now"
+												Hint="+26 since last hour"
+												Value="+9">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/active-now-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+										</UniformGrid>
+									</shadui:BreakpointView>
+
+									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<shadui:BreakpointView Breakpoint="XlAndDown">
+										<UniformGrid Margin="-6,0" Columns="2">
 											<dashboard:OverviewCard
 															Title="Total Revenue"
 															FontWeight="SemiBold"
@@ -97,7 +150,8 @@
 									</shadui:BreakpointView>
 								</shadui:BreakpointViewPort>
 								<shadui:BreakpointViewPort>
-									<shadui:BreakpointView Breakpoint="MdAndUp">
+									<!-- Extra large and up breakpoint (1280px and above). -->
+									<shadui:BreakpointView Breakpoint="XlAndUp">
 										<Grid Margin="-8,20" ColumnDefinitions="3* 2*">
 											<Border
 												Margin="8"
@@ -146,7 +200,136 @@
 												BorderThickness="1"
 												BoxShadow="{DynamicResource Shadow}"
 												CornerRadius="{DynamicResource 2XlCornerRadius}">
-												<DockPanel x:Name="RecentSalesCard" Height="500">
+												<DockPanel x:Name="RecentSalesCard1" Height="500">
+													<DockPanel.Resources>
+														<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+													</DockPanel.Resources>
+													<StackPanel
+														Margin="40,25"
+														DockPanel.Dock="Top"
+														Spacing="8">
+														<TextBlock
+																FontSize="17"
+																FontWeight="Bold"
+																Text="Recent Sales" />
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding SalesSummary}"/>
+													</StackPanel>
+													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding RecentSales}">
+
+															<!-- Define the item container style -->
+															<ItemsControl.ItemsPanel>
+																<ItemsPanelTemplate>
+																	<StackPanel Spacing="24" />
+																</ItemsPanelTemplate>
+															</ItemsControl.ItemsPanel>
+
+															<!-- Define the template for each item -->
+															<ItemsControl.ItemTemplate>
+																<DataTemplate>
+																	<Grid ColumnDefinitions="230 * 100">
+																		<!-- Customer Info Column -->
+																		<StackPanel
+																			Grid.Column="0"
+																			Orientation="Horizontal"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left">
+																			<shadui:Avatar
+																				Width="36"
+																				Height="36"
+																				VerticalAlignment="Center"
+																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																			<StackPanel Margin="15,0">
+																				<TextBlock
+																					Classes="Small"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding CustomerName}"/>
+																				<TextBlock
+																					Classes="Caption Muted"
+																					FontSize="13"
+																					Text="{CompiledBinding CustomerType}"/>
+																			</StackPanel>
+																		</StackPanel>
+
+																		<!-- Product Name Column -->
+																		<TextBlock
+																			Grid.Column="1"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left"
+																			FontSize="15"
+																			FontWeight="SemiBold"
+																			Text="{CompiledBinding ProductName}"/>
+
+																		<!-- Amount Column -->
+																		<TextBlock
+																			Grid.Column="2"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Right"
+																			FontSize="15"
+																			FontWeight="Bold"
+																			Foreground="{DynamicResource SuccessColor}"
+																			Text="{CompiledBinding FormattedAmount}"/>
+																	</Grid>
+																</DataTemplate>
+															</ItemsControl.ItemTemplate>
+														</ItemsControl>
+													</ScrollViewer>
+												</DockPanel>
+											</Border>
+										</Grid>
+									</shadui:BreakpointView>
+									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<shadui:BreakpointView Breakpoint="XlAndDown">
+										<Grid Margin="-8,20" RowDefinitions="* *">
+											<Border
+												Margin="8"
+												Background="{DynamicResource CardBackgroundColor}"
+												BorderBrush="{DynamicResource BorderColor}"
+												BorderThickness="1"
+												BoxShadow="{DynamicResource Shadow}"
+												CornerRadius="{DynamicResource 2XlCornerRadius}">
+												<DockPanel>
+													<TextBlock
+														Margin="24,24,24,12"
+														DockPanel.Dock="Top"
+														FontSize="17"
+														FontWeight="Bold"
+														Text="2025 Sales Overview"/>
+													<ComboBox
+														Margin="20,-35,30,0"
+														HorizontalAlignment="Right"
+														HorizontalContentAlignment="Center"
+														Width="100"
+														DockPanel.Dock="Top"
+														ItemsSource="{CompiledBinding AvailableYears}"
+														SelectedIndex="{CompiledBinding SelectedYearIndex}">
+														<ComboBoxItem>2025</ComboBoxItem>
+														<ComboBoxItem>2026</ComboBoxItem>
+														<ComboBoxItem>2027</ComboBoxItem>
+														<ComboBoxItem>2028</ComboBoxItem>
+														<ComboBoxItem>2029</ComboBoxItem>
+														<ComboBoxItem>2030</ComboBoxItem>
+													</ComboBox>
+													<avalonia:CartesianChart
+														Height="445"
+														Name="CartesianChart2"
+														Margin="12,0,12,12"
+														Series="{CompiledBinding Series}"
+														XAxes="{CompiledBinding XAxes}"
+														YAxes="{CompiledBinding YAxes}"
+														TooltipTextSize="14"/>
+												</DockPanel>
+											</Border>
+											<Border
+												Grid.Row="1"
+												Margin="8"
+												Background="{DynamicResource CardBackgroundColor}"
+												BorderBrush="{DynamicResource BorderColor}"
+												BorderThickness="1"
+												BoxShadow="{DynamicResource Shadow}"
+												CornerRadius="{DynamicResource 2XlCornerRadius}">
+												<DockPanel x:Name="RecentSalesCard2" Height="500">
 													<DockPanel.Resources>
 														<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
 													</DockPanel.Resources>
@@ -227,7 +410,8 @@
 									</shadui:BreakpointView>
 								</shadui:BreakpointViewPort>
 								<shadui:BreakpointViewPort>
-									<shadui:BreakpointView Breakpoint="MdAndUp">
+									<!-- Extra large and up breakpoint (1280px and above). -->
+									<shadui:BreakpointView Breakpoint="XlAndUp">
 										<Grid Margin="-8,0" ColumnDefinitions="4.7* 2*">
 											<Border
 												Grid.Column="0"
@@ -336,7 +520,191 @@
 												BorderThickness="1"
 												BoxShadow="{DynamicResource Shadow}"
 												CornerRadius="{DynamicResource 2XlCornerRadius}">
-												<DockPanel x:Name="RecentLogs" Height="500">
+												<DockPanel x:Name="RecentLogs2" Height="500">
+													<DockPanel.Resources>
+														<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+													</DockPanel.Resources>
+													<StackPanel
+														Margin="40,25"
+														DockPanel.Dock="Top"
+														Spacing="8">
+														<TextBlock
+																FontSize="17"
+																FontWeight="Bold"
+																Text="Recent Logs"/>
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding RecentLogsSummary}"/>
+													</StackPanel>
+													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding RecentLogs}">
+
+															<!-- Define the item container style -->
+															<ItemsControl.ItemsPanel>
+																<ItemsPanelTemplate>
+																	<StackPanel Spacing="24"/>
+																</ItemsPanelTemplate>
+															</ItemsControl.ItemsPanel>
+
+															<!-- Define the template for each item -->
+															<ItemsControl.ItemTemplate>
+																<DataTemplate>
+																	<Grid ColumnDefinitions="Auto * Auto">
+																		<!-- Staff/Admin Info Column -->
+																		<StackPanel
+																			Grid.Column="0"
+																			Orientation="Horizontal"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left">
+																			<shadui:Avatar
+																				Width="36"
+																				Height="36"
+																				VerticalAlignment="Center"
+																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																			<StackPanel Margin="15,0">
+																				<TextBlock
+																					Classes="Small"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding Username}"/>
+																				<TextBlock
+																					Classes="Caption Muted"
+																					FontSize="13"
+																					Text="{CompiledBinding UserType}"/>
+																			</StackPanel>
+																		</StackPanel>
+
+																		<!-- Action Log Column -->
+																		<TextBlock
+																			Grid.Column="1"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Right"
+																			FontSize="13"
+																			FontWeight="SemiBold"
+																			TextWrapping="Wrap"
+																			TextAlignment="Right"
+																			Width="150"
+																			Foreground="{DynamicResource SuccessColor}"
+																			Text="{CompiledBinding ActionLogName}"/>
+																	</Grid>
+																</DataTemplate>
+															</ItemsControl.ItemTemplate>
+														</ItemsControl>
+													</ScrollViewer>
+												</DockPanel>
+											</Border>
+										</Grid>
+									</shadui:BreakpointView>
+
+									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<shadui:BreakpointView Breakpoint="XlAndDown">
+										<Grid Margin="-8,0" RowDefinitions="* *">
+											<Border
+												Grid.Row="0"
+												Margin="8"
+												Background="{DynamicResource CardBackgroundColor}"
+												BorderBrush="{DynamicResource BorderColor}"
+												BorderThickness="1"
+												BoxShadow="{DynamicResource Shadow}"
+												CornerRadius="{DynamicResource 2XlCornerRadius}">
+												<DockPanel Height="500">
+													<DockPanel.Resources>
+														<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+													</DockPanel.Resources>
+													<StackPanel
+														Margin="40,25"
+														DockPanel.Dock="Top"
+														Spacing="8">
+														<TextBlock
+																FontSize="17"
+																FontWeight="Bold"
+																Text="Upcoming Training Sessions"/>
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding TrainingSessionsSummary}"/>
+													</StackPanel>
+													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding UpcomingTrainingSessions}">
+															<ItemsControl.ItemsPanel>
+																<ItemsPanelTemplate>
+																	<StackPanel Spacing="24"/>
+																</ItemsPanelTemplate>
+															</ItemsControl.ItemsPanel>
+															<ItemsControl.ItemTemplate>
+																<DataTemplate>
+																	<Grid ColumnDefinitions="250 200 170 150 150">
+																		<!-- Client Information Column -->
+																		<StackPanel
+																			Grid.Column="0"
+																			Orientation="Horizontal"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left">
+																			<shadui:Avatar
+																				Width="36"
+																				Height="36"
+																				VerticalAlignment="Center"
+																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																			<StackPanel Margin="15,0">
+																				<TextBlock
+																					Classes="Small"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding ClientName}"/>
+																				<TextBlock
+																					Classes="Caption Muted"
+																					FontSize="13"
+																					Text="{CompiledBinding MembershipType}"/>
+																			</StackPanel>
+																		</StackPanel>
+
+																		<!-- Training Type Column -->
+																		<TextBlock
+																			Grid.Column="1"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left"
+																			FontSize="15"
+																			FontWeight="SemiBold"
+																			Text="{CompiledBinding TrainingType}"/>
+
+																		<!-- Location Column -->
+																		<TextBlock
+																			Grid.Column="2"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left"
+																			FontSize="15"
+																			FontWeight="SemiBold"
+																			Text="{CompiledBinding Location}"/>
+
+																		<!-- Time Slot Column -->
+																		<TextBlock
+																			Grid.Column="3"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Left"
+																			FontSize="15"
+																			FontWeight="Bold"
+																			Text="{CompiledBinding TimeSlot}"/>
+
+																		<!-- Date Column -->
+																		<TextBlock
+																			Grid.Column="4"
+																			VerticalAlignment="Center"
+																			HorizontalAlignment="Right"
+																			FontSize="15"
+																			FontWeight="Bold"
+																			Foreground="{DynamicResource SuccessColor}"
+																			Text="{CompiledBinding FormattedDate}"/>
+																	</Grid>
+																</DataTemplate>
+															</ItemsControl.ItemTemplate>
+														</ItemsControl>
+													</ScrollViewer>
+												</DockPanel>
+											</Border>
+											<Border
+												Grid.Row="1"
+												Margin="8"
+												Background="{DynamicResource CardBackgroundColor}"
+												BorderBrush="{DynamicResource BorderColor}"
+												BorderThickness="1"
+												BoxShadow="{DynamicResource Shadow}"
+												CornerRadius="{DynamicResource 2XlCornerRadius}">
+												<DockPanel x:Name="RecentLogs1" Height="500">
 													<DockPanel.Resources>
 														<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
 													</DockPanel.Resources>
