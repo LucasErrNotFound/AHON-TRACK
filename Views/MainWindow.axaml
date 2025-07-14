@@ -14,7 +14,7 @@
 	x:DataType="vm:MainWindowViewModel"
 	mc:Ignorable="d"
 	Title="AHON TRACK"
-	Icon="/Assets/avalonia-logo.ico"
+	Icon="/Assets/AHON-Track-Window.ico"
 	WindowStartupLocation="CenterScreen"
 	WindowState="Maximized"
 	CanResize="True">
