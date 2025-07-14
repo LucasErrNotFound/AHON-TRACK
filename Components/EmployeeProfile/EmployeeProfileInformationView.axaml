@@ -237,6 +237,21 @@
 									</StackPanel>
 									<Separator Width="2000" Margin="0,20"/>
 
+									<!-- Employee Status Row -->
+									<StackPanel Grid.Column="1" Orientation="Horizontal">
+										<TextBlock
+											Text="Status"
+											Classes="h4"
+											Width="150"
+											Foreground="{DynamicResource FontForeground}"/>
+										<TextBlock
+											Text="{CompiledBinding EmployeeStatus}"
+											Classes="h5"
+											Margin="350,0"
+											Foreground="{DynamicResource FontForeground}"/>
+									</StackPanel>
+									<Separator Width="2000" Margin="0,20"/>
+
 									<!-- Date Joined Row -->
 									<StackPanel Grid.Column="1" Orientation="Horizontal">
 										<TextBlock
