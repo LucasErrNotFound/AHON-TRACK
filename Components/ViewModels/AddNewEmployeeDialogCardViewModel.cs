@@ -52,7 +52,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private string _employeeBarangay = string.Empty;
     private string _employeeCityTown = string.Empty;
     private string _employeeProvince = string.Empty;
-    private string? _employeeZipCode;
 
     // Account Section
     private string _employeeUsername = string.Empty;
@@ -198,14 +197,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeProvince, value, true);
     }
 
-    [Required(ErrorMessage = "Zip code is required")]
-    [Range(1000, 9999, ErrorMessage = "Zip code must be a 4-digit number")]
-    public string? EmployeeZipCode
-    {
-        get => _employeeZipCode;
-        set => SetProperty(ref _employeeZipCode, value, true);
-    }
-
     [Required(ErrorMessage = "Username is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
@@ -285,7 +276,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeBarangay = "Sample Barangay";
         EmployeeCityTown = "Sample City";
         EmployeeProvince = "Sample Province";
-        EmployeeZipCode = "4031";
 
         EmployeeUsername = !string.IsNullOrEmpty(employee.Username) ? employee.Username : "defaultuser";
         EmployeePassword = "defaultpassword";
@@ -318,7 +308,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         Debug.WriteLine($"Barangay: {EmployeeBarangay}");
         Debug.WriteLine($"City/Town: {EmployeeCityTown}");
         Debug.WriteLine($"Province: {EmployeeProvince}");
-        Debug.WriteLine($"Zip Code: {EmployeeZipCode}");
 
         // Account Details Debugging
         Debug.WriteLine($"\nUsername: {EmployeeUsername}");
@@ -351,7 +340,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeBarangay = string.Empty;
         EmployeeCityTown = string.Empty;
         EmployeeProvince = string.Empty;
-        EmployeeZipCode = null;
         EmployeeUsername = string.Empty;
         EmployeePassword = string.Empty;
         EmployeeDateJoined = null;
