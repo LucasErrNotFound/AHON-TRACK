@@ -8,11 +8,11 @@
 	xmlns:converters="clr-namespace:AHON_TRACK.Functionalities"
 	mc:Ignorable="d"
 	d:DesignWidth="950"
-	d:DesignHeight="930"
+	d:DesignHeight="900"
 	xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
 	x:DataType="viewModel:AddNewEmployeeDialogCardViewModel"
 	Width="950"
-	Height="930"
+	Height="900"
 	x:Class="AHON_TRACK.Components.AddNewEmployeeDialog.AddNewEmployeeDialogCard">
 
 	<Design.DataContext>
@@ -87,7 +87,7 @@
 					</StackPanel>
 
 					<!-- Middle Initial Field -->
-					<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,30,0,0">
+					<StackPanel Grid.Row="0" Grid.Column="1" Margin="45,29,0,0">
 						<ComboBox
 							shadui:ControlAssist.Label="Middle Initial"
 							shadui:ControlAssist.Height="35"
@@ -100,7 +100,7 @@
 					</StackPanel>
 
 					<!-- Last Name Field -->
-					<StackPanel Grid.Row="0" Grid.Column="2" Margin="10,30,0,0">
+					<StackPanel Grid.Row="0" Grid.Column="2" Margin="-30,30,0,0">
 						<TextBox
 							Text="{CompiledBinding EmployeeLastName, Mode=TwoWay}"
 							Width="200"
@@ -152,7 +152,7 @@
 					</StackPanel>
 
 					<!-- Row 2: Contact and Personal Details -->
-					<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,-70">
+					<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,-90">
 						<TextBox
 							Text="{CompiledBinding EmployeeContactNumber, Mode=TwoWay}"
 							Width="200"
@@ -163,20 +163,8 @@
 							HorizontalAlignment="Left"/>
 					</StackPanel>
 
-					<!-- Position Field -->
-					<StackPanel Grid.Row="1" Grid.Column="1" Margin="0,-70">
-						<ComboBox
-							HorizontalAlignment="Left"
-							Width="130"
-							shadui:ControlAssist.Label="Position"
-							PlaceholderText="-"
-							ItemsSource="{CompiledBinding EmployeePositionItems}"
-							SelectedItem="{CompiledBinding EmployeePosition, Mode=TwoWay}">
-						</ComboBox>
-					</StackPanel>
-
 					<!-- Age Field -->
-					<StackPanel Grid.Row="1" Grid.Column="2" Margin="45,-67">
+					<StackPanel Grid.Row="1" Grid.Column="1" Margin="45,-87">
 						<NumericUpDown
 							Value="{CompiledBinding EmployeeAge, Mode=TwoWay}"
 							shadui:ControlAssist.Label="Age"
@@ -187,7 +175,7 @@
 					</StackPanel>
 
 					<!-- Date of Birth Field -->
-					<StackPanel Grid.Row="1" Grid.Column="3" Margin="5,-45">
+					<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91">
 						<CalendarDatePicker
 							shadui:ControlAssist.Label="Date of Birth"
 							Width="150"
@@ -197,7 +185,7 @@
 				</Grid>
 
 				<!-- Address Section -->
-				<TextBlock Text="Address Details" Classes="h4" Margin="0,30"/>
+				<TextBlock Text="Address Details" Classes="h4" Margin="0,10"/>
 				<Grid
 					RowDefinitions="Auto, Auto, Auto"
 					ColumnDefinitions="3*, 1*">
@@ -234,7 +222,7 @@
 						Margin="0,20,0,0">
 
 						<!-- Street -->
-						<StackPanel Grid.Column="0" Margin="0,0,15,0">
+						<StackPanel Grid.Column="0" Margin="0,-20,15,0">
 							<TextBox
 								Text="{CompiledBinding EmployeeStreet, Mode=TwoWay}"
 								Width="150"
@@ -246,7 +234,7 @@
 						</StackPanel>
 
 						<!-- Barangay -->
-						<StackPanel Grid.Column="1" Margin="-40,0,15,0">
+						<StackPanel Grid.Column="1" Margin="-40,-20,15,0">
 							<TextBox
 								Text="{CompiledBinding EmployeeBarangay, Mode=TwoWay}"
 								Width="150"
@@ -258,7 +246,7 @@
 						</StackPanel>
 
 						<!-- City/Town -->
-						<StackPanel Grid.Column="2" Margin="-80,0,15,0">
+						<StackPanel Grid.Column="2" Margin="-80,-20,15,0">
 							<TextBox
 								Text="{CompiledBinding EmployeeCityTown, Mode=TwoWay}"
 								Width="150"
@@ -270,7 +258,7 @@
 						</StackPanel>
 
 						<!-- Province -->
-						<StackPanel Grid.Column="3" Margin="-120,0,15,0">
+						<StackPanel Grid.Column="3" Margin="-120,-20,15,0">
 							<TextBox
 								Text="{CompiledBinding EmployeeProvince, Mode=TwoWay}"
 								Width="170"
@@ -278,18 +266,6 @@
 								Classes="Clearable"
 								UseFloatingWatermark="True"
 								Watermark="Province"
-								HorizontalAlignment="Left"/>
-						</StackPanel>
-
-						<!-- Row 3: Postal/Zip Code -->
-						<StackPanel Grid.Row="2" Grid.Column="0" Margin="0,90,0,0">
-							<TextBox
-								Text="{CompiledBinding EmployeeZipCode, Mode=TwoWay}"
-								Width="150"
-								FontSize="15"
-								Classes="Clearable"
-								UseFloatingWatermark="True"
-								Watermark="Zip Code"
 								HorizontalAlignment="Left"/>
 						</StackPanel>
 					</Grid>
@@ -337,11 +313,23 @@
 					<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,20">
 						<ComboBox
 							HorizontalAlignment="Left"
-							Width="130"
+							Width="160"
 							shadui:ControlAssist.Label="Status"
 							PlaceholderText="-"
 							ItemsSource="{CompiledBinding EmployeeStatusItems}"
 							SelectedItem="{CompiledBinding EmployeeStatus, Mode=TwoWay}">
+						</ComboBox>
+					</StackPanel>
+
+					<!-- Position Field -->
+					<StackPanel Grid.Row="1" Grid.Column="1" Margin="-250,20,15,0">
+						<ComboBox
+							HorizontalAlignment="Left"
+							Width="160"
+							shadui:ControlAssist.Label="Position"
+							PlaceholderText="-"
+							ItemsSource="{CompiledBinding EmployeePositionItems}"
+							SelectedItem="{CompiledBinding EmployeePosition, Mode=TwoWay}">
 						</ComboBox>
 					</StackPanel>
 				</Grid>
@@ -350,7 +338,7 @@
 				<StackPanel
 					Orientation="Horizontal"
 					HorizontalAlignment="Right"
-					Margin="0,70,20,0" Spacing="25">
+					Margin="0,0,20,0" Spacing="25">
 					<Button
 						Content="Cancel"
 						FontSize="16"
