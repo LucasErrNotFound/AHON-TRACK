@@ -324,13 +324,25 @@
 							HorizontalAlignment="Left"/>
 					</StackPanel>
 
-					<!-- Row 2: Date Joined Section -->
+					<!-- Date Joined Section -->
 					<StackPanel Grid.Row="0" Grid.Column="2" Margin="80,-3,15,0">
 						<CalendarDatePicker
 							shadui:ControlAssist.Label="Date Joined"
 							Width="150"
 							HorizontalAlignment="Left"
 							SelectedDate="{CompiledBinding EmployeeDateJoined}"/>
+					</StackPanel>
+
+					<!-- Row 2: Status Field -->
+					<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,20">
+						<ComboBox
+							HorizontalAlignment="Left"
+							Width="130"
+							shadui:ControlAssist.Label="Status"
+							PlaceholderText="-"
+							ItemsSource="{CompiledBinding EmployeeStatusItems}"
+							SelectedItem="{CompiledBinding EmployeeStatus, Mode=TwoWay}">
+						</ComboBox>
 					</StackPanel>
 				</Grid>
 
