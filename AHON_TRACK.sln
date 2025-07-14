@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36202.13
+VisualStudioVersion = 17.14.36301.6
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AHON_TRACK", "AHON_TRACK.csproj", "{E36EEA9C-7CE7-4E5F-AE92-4A0A675D603C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AHON_TRACK", "AHON_TRACK.csproj", "{2982C0EA-9672-BD6C-2A06-D9DE075C6112}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E36EEA9C-7CE7-4E5F-AE92-4A0A675D603C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E36EEA9C-7CE7-4E5F-AE92-4A0A675D603C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E36EEA9C-7CE7-4E5F-AE92-4A0A675D603C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E36EEA9C-7CE7-4E5F-AE92-4A0A675D603C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2982C0EA-9672-BD6C-2A06-D9DE075C6112}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2982C0EA-9672-BD6C-2A06-D9DE075C6112}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2982C0EA-9672-BD6C-2A06-D9DE075C6112}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2982C0EA-9672-BD6C-2A06-D9DE075C6112}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {F971DB40-2B21-4963-853E-3774992DE3BE}
+		SolutionGuid = {7AE00092-86B7-43AE-B9B5-D5BE24AD9B39}
 	EndGlobalSection
 EndGlobal

@@ -2,7 +2,7 @@
 using System.Globalization;
 using Avalonia.Data.Converters;
 
-namespace AHON_TRACK.Functionalities;
+namespace AHON_TRACK.Converters;
 
 public class IntToInverseBoolConverter : IValueConverter
 {

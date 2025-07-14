@@ -1,20 +1,19 @@
-﻿<UserControl
-  x:Class="AHON_TRACK.Views.DashboardView"
-  xmlns="https://github.com/avaloniaui"
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-  xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
-  xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
-  xmlns:system="clr-namespace:System;assembly=System.Runtime"
-  xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
-  xmlns:dashboard="clr-namespace:AHON_TRACK.Components.Dashboard"
-  xmlns:func="using:AHON_TRACK.Functionalities"
-  xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
-  d:DesignHeight="2080"
-  d:DesignWidth="1666"
-  x:DataType="viewModels:DashboardViewModel"
-  mc:Ignorable="d">
+<UserControl
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="AHON_TRACK.Views.DashboardView"
+	x:DataType="vm:DashboardViewModel"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:vm="using:AHON_TRACK.ViewModels"
+	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+	xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
+	xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
+	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+	xmlns:dashboard="clr-namespace:AHON_TRACK.Components.Dashboard"
+	d:DesignWidth="2080"
+	d:DesignHeight="1666"
+	mc:Ignorable="d">
 
 	<UserControl.Resources>
 		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
@@ -37,8 +36,7 @@
 				FontWeight="SemiBold"
 				FontFamily="Inter"
 				Text="Dashboard"
-				Margin="90,30"
-			/>
+				Margin="90,30"/>
 		</StackPanel>
 		<ScrollViewer>
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
@@ -59,8 +57,7 @@
 														Width="23"
 														Height="23"
 														Path="/Assets/DashboardView/philippine-peso-icon.svg"
-														Opacity="0.5"
-												/>
+														Opacity="0.5"/>
 												</dashboard:OverviewCard.Icon>
 											</dashboard:OverviewCard>
 											<dashboard:OverviewCard
@@ -71,8 +68,7 @@
 													<Svg
 														Width="23"
 														Height="23"
-														Path="/Assets/DashboardView/member-subscriptions-icon.svg"
-												/>
+														Path="/Assets/DashboardView/member-subscriptions-icon.svg"/>
 												</dashboard:OverviewCard.Icon>
 											</dashboard:OverviewCard>
 											<dashboard:OverviewCard
@@ -83,8 +79,7 @@
 													<Svg
 														Width="23"
 														Height="23"
-														Path="/Assets/DashboardView/sales-icon.svg"
-												/>
+														Path="/Assets/DashboardView/sales-icon.svg"/>
 												</dashboard:OverviewCard.Icon>
 											</dashboard:OverviewCard>
 											<dashboard:OverviewCard
@@ -95,8 +90,7 @@
 													<Svg
 														Width="23"
 														Height="23"
-														Path="/Assets/DashboardView/active-now-icon.svg"
-												/>
+														Path="/Assets/DashboardView/active-now-icon.svg"/>
 												</dashboard:OverviewCard.Icon>
 											</dashboard:OverviewCard>
 										</UniformGrid>
@@ -118,16 +112,15 @@
 														DockPanel.Dock="Top"
 														FontSize="17"
 														FontWeight="Bold"
-														Text="2025 Sales Overview"
-												/>
+														Text="2025 Sales Overview"/>
 													<ComboBox
 														Margin="20,-35,30,0"
 														HorizontalAlignment="Right"
 														HorizontalContentAlignment="Center"
 														Width="100"
 														DockPanel.Dock="Top"
-														ItemsSource="{Binding AvailableYears}"
-														SelectedIndex="{Binding SelectedYearIndex}">
+														ItemsSource="{CompiledBinding AvailableYears}"
+														SelectedIndex="{CompiledBinding SelectedYearIndex}">
 														<ComboBoxItem>2025</ComboBoxItem>
 														<ComboBoxItem>2026</ComboBoxItem>
 														<ComboBoxItem>2027</ComboBoxItem>
@@ -139,13 +132,11 @@
 														Height="445"
 														Name="CartesianChart1"
 														Margin="12,0,12,12"
-														Series="{Binding Series}"
-														XAxes="{Binding XAxes}"
-														YAxes="{Binding YAxes}"
-														TooltipTextSize="14"
-												/>
+														Series="{CompiledBinding Series}"
+														XAxes="{CompiledBinding XAxes}"
+														YAxes="{CompiledBinding YAxes}"
+														TooltipTextSize="14"/>
 												</DockPanel>
-
 											</Border>
 											<Border
 												Grid.Column="1"
@@ -157,7 +148,7 @@
 												CornerRadius="{DynamicResource 2XlCornerRadius}">
 												<DockPanel x:Name="RecentSalesCard" Height="500">
 													<DockPanel.Resources>
-														<func:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+														<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
 													</DockPanel.Resources>
 													<StackPanel
 														Margin="40,25"
@@ -167,10 +158,10 @@
 																FontSize="17"
 																FontWeight="Bold"
 																Text="Recent Sales" />
-														<TextBlock Classes="Caption Muted" FontSize="14" Text="{Binding SalesSummary}" />
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding SalesSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-														<ItemsControl Margin="40,0,24,24" ItemsSource="{Binding RecentSales}">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding RecentSales}">
 
 															<!-- Define the item container style -->
 															<ItemsControl.ItemsPanel>
@@ -193,17 +184,17 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{Binding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
 																					FontWeight="SemiBold"
-																					Text="{Binding CustomerName}"/>
+																					Text="{CompiledBinding CustomerName}"/>
 																				<TextBlock
 																					Classes="Caption Muted"
 																					FontSize="13"
-																					Text="{Binding CustomerType}"/>
+																					Text="{CompiledBinding CustomerType}"/>
 																			</StackPanel>
 																		</StackPanel>
 
@@ -214,7 +205,7 @@
 																			HorizontalAlignment="Left"
 																			FontSize="15"
 																			FontWeight="SemiBold"
-																			Text="{Binding ProductName}"/>
+																			Text="{CompiledBinding ProductName}"/>
 
 																		<!-- Amount Column -->
 																		<TextBlock
@@ -224,7 +215,7 @@
 																			FontSize="15"
 																			FontWeight="Bold"
 																			Foreground="{DynamicResource SuccessColor}"
-																			Text="{Binding FormattedAmount}"/>
+																			Text="{CompiledBinding FormattedAmount}"/>
 																	</Grid>
 																</DataTemplate>
 															</ItemsControl.ItemTemplate>
@@ -248,7 +239,7 @@
 												CornerRadius="{DynamicResource 2XlCornerRadius}">
 												<DockPanel Height="500">
 													<DockPanel.Resources>
-														<func:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+														<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
 													</DockPanel.Resources>
 													<StackPanel
 														Margin="40,25"
@@ -257,11 +248,11 @@
 														<TextBlock
 																FontSize="17"
 																FontWeight="Bold"
-																Text="Upcoming Training Sessions" />
-														<TextBlock Classes="Caption Muted" FontSize="14" Text="{Binding TrainingSessionsSummary}" />
+																Text="Upcoming Training Sessions"/>
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding TrainingSessionsSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-														<ItemsControl Margin="40,0,24,24" ItemsSource="{Binding UpcomingTrainingSessions}">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding UpcomingTrainingSessions}">
 															<ItemsControl.ItemsPanel>
 																<ItemsPanelTemplate>
 																	<StackPanel Spacing="24"/>
@@ -280,17 +271,17 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{Binding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
 																					FontWeight="SemiBold"
-																					Text="{Binding ClientName}"/>
+																					Text="{CompiledBinding ClientName}"/>
 																				<TextBlock
 																					Classes="Caption Muted"
 																					FontSize="13"
-																					Text="{Binding MembershipType}"/>
+																					Text="{CompiledBinding MembershipType}"/>
 																			</StackPanel>
 																		</StackPanel>
 
@@ -301,7 +292,7 @@
 																			HorizontalAlignment="Left"
 																			FontSize="15"
 																			FontWeight="SemiBold"
-																			Text="{Binding TrainingType}"/>
+																			Text="{CompiledBinding TrainingType}"/>
 
 																		<!-- Location Column -->
 																		<TextBlock
@@ -310,7 +301,7 @@
 																			HorizontalAlignment="Left"
 																			FontSize="15"
 																			FontWeight="SemiBold"
-																			Text="{Binding Location}"/>
+																			Text="{CompiledBinding Location}"/>
 
 																		<!-- Time Slot Column -->
 																		<TextBlock
@@ -319,7 +310,7 @@
 																			HorizontalAlignment="Left"
 																			FontSize="15"
 																			FontWeight="Bold"
-																			Text="{Binding TimeSlot}"/>
+																			Text="{CompiledBinding TimeSlot}"/>
 
 																		<!-- Date Column -->
 																		<TextBlock
@@ -329,7 +320,7 @@
 																			FontSize="15"
 																			FontWeight="Bold"
 																			Foreground="{DynamicResource SuccessColor}"
-																			Text="{Binding FormattedDate}"/>
+																			Text="{CompiledBinding FormattedDate}"/>
 																	</Grid>
 																</DataTemplate>
 															</ItemsControl.ItemTemplate>
@@ -347,7 +338,7 @@
 												CornerRadius="{DynamicResource 2XlCornerRadius}">
 												<DockPanel x:Name="RecentLogs" Height="500">
 													<DockPanel.Resources>
-														<func:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+														<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
 													</DockPanel.Resources>
 													<StackPanel
 														Margin="40,25"
@@ -356,16 +347,16 @@
 														<TextBlock
 																FontSize="17"
 																FontWeight="Bold"
-																Text="Recent Logs" />
-														<TextBlock Classes="Caption Muted" FontSize="14" Text="{Binding RecentLogsSummary}" />
+																Text="Recent Logs"/>
+														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding RecentLogsSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-														<ItemsControl Margin="40,0,24,24" ItemsSource="{Binding RecentLogs}">
+														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding RecentLogs}">
 
 															<!-- Define the item container style -->
 															<ItemsControl.ItemsPanel>
 																<ItemsPanelTemplate>
-																	<StackPanel Spacing="24" />
+																	<StackPanel Spacing="24"/>
 																</ItemsPanelTemplate>
 															</ItemsControl.ItemsPanel>
 
@@ -383,17 +374,17 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{Binding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
 																					FontWeight="SemiBold"
-																					Text="{Binding Username}"/>
+																					Text="{CompiledBinding Username}"/>
 																				<TextBlock
 																					Classes="Caption Muted"
 																					FontSize="13"
-																					Text="{Binding UserType}"/>
+																					Text="{CompiledBinding UserType}"/>
 																			</StackPanel>
 																		</StackPanel>
 
@@ -408,7 +399,7 @@
 																			TextAlignment="Right"
 																			Width="150"
 																			Foreground="{DynamicResource SuccessColor}"
-																			Text="{Binding ActionLogName}"/>
+																			Text="{CompiledBinding ActionLogName}"/>
 																	</Grid>
 																</DataTemplate>
 															</ItemsControl.ItemTemplate>

@@ -10,8 +10,4 @@ public partial class ManageEmployeesView : UserControl
     {
         InitializeComponent();
     }
-
-    private void SortSelectionChangedCommand(object? sender, Avalonia.Controls.SelectionChangedEventArgs e)
-    {
-    }
 }

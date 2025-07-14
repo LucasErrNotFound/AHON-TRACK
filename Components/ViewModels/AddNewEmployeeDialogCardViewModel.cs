@@ -4,18 +4,31 @@ using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
+public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 {
     [ObservableProperty]
     private string[] _middleInitialItems = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]; // Will simplfy this later
 
     [ObservableProperty]
     private string[] _employeePositionItems = ["Gym Staff", "Gym Admin"];
+
+    [ObservableProperty]
+    private string _dialogTitle = "Add Employee Details";
+
+    [ObservableProperty]
+    private string _dialogDescription = "Please fill out the form to create this employee's information";
+
+    [ObservableProperty]
+    private bool _isEditMode = false;
 
     private readonly DialogManager _dialogManager;
 
@@ -44,7 +57,7 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     private DateTime? _employeeDateJoined;
 
     [Required(ErrorMessage = "First name is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
+    [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeFirstName
     {
@@ -60,7 +73,7 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Last name is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
+    [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeLastName
     {
@@ -215,12 +228,12 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeDateJoined, value, true);
     }
 
-    public EmployeeDetailsDialogCardViewModel(DialogManager dialogManager)
+    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager)
     {
         _dialogManager = dialogManager;
     }
 
-    public EmployeeDetailsDialogCardViewModel()
+    public AddNewEmployeeDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
     }
@@ -228,26 +241,46 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     [AvaloniaHotReload]
     public void Initialize()
     {
-        EmployeeFirstName = string.Empty;
-        SelectedMiddleInitialItem = string.Empty;
-        EmployeeLastName = string.Empty;
-        EmployeeGender = null;
-        EmployeeContactNumber = string.Empty;
-        EmployeePosition = string.Empty;
-        EmployeeAge = null;
-        EmployeeBirthDate = null;
-        EmployeeHouseAddress = string.Empty;
-        EmployeeHouseNumber = string.Empty;
-        EmployeeStreet = string.Empty;
-        EmployeeBarangay = string.Empty;
-        EmployeeCityTown = string.Empty;
-        EmployeeProvince = string.Empty;
-        EmployeeZipCode = null;
-        EmployeeUsername = string.Empty;
-        EmployeePassword = string.Empty;
-        EmployeeDateJoined = null;
-        ClearAllErrors();
+        IsEditMode = false;
+        DialogTitle = "Add Employee Details";
+        ClearAllFields();
     }
+
+    public void InitializeForEditMode(ManageEmployeesItem? employee)
+    {
+        IsEditMode = true;
+        DialogTitle = "Edit Employee Details";
+        DialogDescription = "Please update the employee's information";
+
+        ClearAllErrors();
+        var nameParts = employee.Name?.Split(' ') ?? [];
+
+        // Set personal details with default values
+        EmployeeFirstName = nameParts.Length > 0 ? nameParts[0] : "John";
+        SelectedMiddleInitialItem = nameParts.Length > 2 ? nameParts[1].TrimEnd('.') : "A";
+        EmployeeLastName = nameParts.Length > 1 ? nameParts[^1] : "Doe"; // Last element
+
+        // Set default values for fields not available in ManageEmployeesItem
+        EmployeeGender = "Male";
+        EmployeeContactNumber = !string.IsNullOrEmpty(employee.ContactNumber) ?
+            employee.ContactNumber.Replace(" ", "") : "09123456789";
+        EmployeePosition = !string.IsNullOrEmpty(employee.Position) ? employee.Position : "Gym Staff";
+        EmployeeAge = 25; // Default age
+        EmployeeBirthDate = DateTime.Now.AddYears(-25);
+
+        EmployeeHouseAddress = "Sample House Address";
+        EmployeeHouseNumber = "Blk 8 Lot 2";
+        EmployeeStreet = "Sample Street";
+        EmployeeBarangay = "Sample Barangay";
+        EmployeeCityTown = "Sample City";
+        EmployeeProvince = "Sample Province";
+        EmployeeZipCode = "4031";
+
+        EmployeeUsername = !string.IsNullOrEmpty(employee.Username) ? employee.Username : "defaultuser";
+        EmployeePassword = "defaultpassword";
+        EmployeeDateJoined = employee.DateJoined != default ? employee.DateJoined : DateTime.Now;
+    }
+
 
     [RelayCommand]
     private void SaveDetails()
@@ -287,5 +320,28 @@ public sealed partial class EmployeeDetailsDialogCardViewModel : ViewModelBase
     private void Cancel()
     {
         _dialogManager.Close(this);
+    }
+
+    private void ClearAllFields()
+    {
+        EmployeeFirstName = string.Empty;
+        SelectedMiddleInitialItem = string.Empty;
+        EmployeeLastName = string.Empty;
+        EmployeeGender = null;
+        EmployeeContactNumber = string.Empty;
+        EmployeePosition = string.Empty;
+        EmployeeAge = null;
+        EmployeeBirthDate = null;
+        EmployeeHouseAddress = string.Empty;
+        EmployeeHouseNumber = string.Empty;
+        EmployeeStreet = string.Empty;
+        EmployeeBarangay = string.Empty;
+        EmployeeCityTown = string.Empty;
+        EmployeeProvince = string.Empty;
+        EmployeeZipCode = null;
+        EmployeeUsername = string.Empty;
+        EmployeePassword = string.Empty;
+        EmployeeDateJoined = null;
+        ClearAllErrors();
     }
 }
