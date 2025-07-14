@@ -207,6 +207,58 @@
 											</dashboard:OverviewCard>
 										</UniformGrid>
 									</shadui:BreakpointView>
+
+									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<shadui:BreakpointView Breakpoint="XlAndDown">
+										<UniformGrid Margin="-6,0" Columns="2">
+											<dashboard:OverviewCard
+															Title="Total Revenue"
+															FontWeight="SemiBold"
+															Hint="+96% from last month"
+															Value="₱20,911.69">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/philippine-peso-icon.svg"
+														Opacity="0.5"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Member Subscriptions"
+												Hint="+16% from last month"
+												Value="+18">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/member-subscriptions-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Sales"
+												Hint="+16% from last month"
+												Value="+69">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/sales-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Active Now"
+												Hint="+26 since last hour"
+												Value="+9">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="23"
+														Height="23"
+														Path="/Assets/DashboardView/active-now-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+										</UniformGrid>
+									</shadui:BreakpointView>
 								</shadui:BreakpointViewPort>
 								<shadui:BreakpointViewPort>
 									<!-- Extra large and up breakpoint (1280px and above). -->
