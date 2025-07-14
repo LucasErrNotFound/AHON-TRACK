@@ -32,6 +32,9 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private string _employeePosition = string.Empty;
 
     [ObservableProperty]
+    private string _employeeStatus = string.Empty;
+
+    [ObservableProperty]
     private string _employeeDateJoined = string.Empty;
 
     [ObservableProperty]
@@ -127,6 +130,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         {
             EmployeeID = _selectedEmployeeData.ID;
             EmployeePosition = _selectedEmployeeData.Position;
+            EmployeeStatus = _selectedEmployeeData.Status;
             EmployeeDateJoined = _selectedEmployeeData.DateJoined.ToString("MMMM d, yyyy");
             EmployeeFullName = _selectedEmployeeData.Name;
             EmployeeFullNameHeader = $"{_selectedEmployeeData.Name}'s Profile";
@@ -157,6 +161,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     {
         EmployeeID = "E12345";
         EmployeePosition = "Software Engineer";
+        EmployeeStatus = "Active";
         EmployeeDateJoined = "January 15, 2023";
         EmployeeFullName = "John Doe";
         EmployeeFullNameHeader = IsFromCurrentUser ? "My Profile" : "John Doe's Profile";
@@ -185,6 +190,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             ID = EmployeeID,
             Name = EmployeeFullName,
             Position = EmployeePosition,
+            Status = EmployeeStatus,
             ContactNumber = EmployeePhoneNumber,
             DateJoined = DateTime.Parse(EmployeeDateJoined),
             Username = "currentuser" // You might want to store this properly
@@ -205,6 +211,5 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
                     .ShowWarning()).WithMaxWidth(950)
             .Show();
         Debug.WriteLine("Edit profile dialog shown successfully.");
-
     }
 }
