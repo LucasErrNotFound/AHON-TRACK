@@ -160,6 +160,88 @@
 															Value="₱20,911.69">
 												<dashboard:OverviewCard.Icon>
 													<Svg
+														Width="30"
+														Height="30"
+														Path="/Assets/DashboardView/philippine-peso-icon.svg"
+														Opacity="0.5"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Member Subscriptions"
+												CardBackground="{StaticResource BlueGradient}"
+												Foreground="White"
+												Hint="+16% from last month"
+												Value="+18">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="30"
+														Height="30"
+														Path="/Assets/DashboardView/member-subscriptions-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Sales"
+												CardBackground="{StaticResource PurpleGradient}"
+												Foreground="White"
+												Hint="+16% from last month"
+												Value="+69">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="30"
+														Height="30"
+														Path="/Assets/DashboardView/sales-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+											<dashboard:OverviewCard
+												Title="Active Now"
+												CardBackground="{StaticResource OrangeGradient}"
+												Foreground="White"
+												Hint="+26 since last hour"
+												Value="+9">
+												<dashboard:OverviewCard.Icon>
+													<Svg
+														Width="30"
+														Height="30"
+														Path="/Assets/DashboardView/active-now-icon.svg"/>
+												</dashboard:OverviewCard.Icon>
+											</dashboard:OverviewCard>
+										</UniformGrid>
+									</shadui:BreakpointView>
+
+									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<shadui:BreakpointView Breakpoint="XlAndDown">
+										<UniformGrid Margin="-6,0" Columns="2">
+											<UniformGrid.Resources>
+												<LinearGradientBrush x:Key="GreenGradient" StartPoint="0%,50%" EndPoint="100%, 50%">
+													<GradientStop Color="#22C55E" Offset="0.0"/>
+													<GradientStop Color="#4CAF50" Offset="1.0"/>
+												</LinearGradientBrush>
+
+												<LinearGradientBrush x:Key="BlueGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+													<GradientStop Color="#64B5F6" Offset="0.0"/>
+													<GradientStop Color="#2196F3" Offset="1.0"/>
+												</LinearGradientBrush>
+
+												<LinearGradientBrush x:Key="OrangeGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+													<GradientStop Color="#FFB74D" Offset="0.0"/>
+													<GradientStop Color="#FF9800" Offset="1.0"/>
+												</LinearGradientBrush>
+
+												<LinearGradientBrush x:Key="PurpleGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+													<GradientStop Color="#BA68C8" Offset="0.0"/>
+													<GradientStop Color="#9C27B0" Offset="1.0"/>
+												</LinearGradientBrush>
+											</UniformGrid.Resources>
+
+											<dashboard:OverviewCard
+															Title="Total Revenue"
+															CardBackground="{StaticResource GreenGradient}"
+															Foreground="White"
+															FontWeight="SemiBold"
+															Hint="+96% from last month"
+															Value="₱20,911.69">
+												<dashboard:OverviewCard.Icon>
+													<Svg
 														Width="23"
 														Height="23"
 														Path="/Assets/DashboardView/philippine-peso-icon.svg"
