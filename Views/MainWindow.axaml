@@ -11,6 +11,8 @@
 	x:Class="AHON_TRACK.Views.MainWindow"
 	d:DesignWidth="1920"
 	d:DesignHeight="1080"
+	MinWidth="1150"
+	MinHeight="830"
 	x:DataType="vm:MainWindowViewModel"
 	mc:Ignorable="d"
 	Title="AHON TRACK"
