@@ -122,7 +122,8 @@
                         AsSeparator="True"
                         Text="Members &amp; Access" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
+						Command="{CompiledBinding OpenCheckInOutCommand}"
+						Route="checkInOut"
 						Content="Check-in/Check-out"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Member Check-in/Check-out'}">
