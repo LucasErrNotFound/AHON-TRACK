@@ -123,7 +123,7 @@
                         Text="Members &amp; Access" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding}"
-						Content="Member Check-in/Check-out"
+						Content="Check-in/Check-out"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Member Check-in/Check-out'}">
 						<shadui:SidebarItem.Icon>
@@ -146,20 +146,6 @@
 									Width="24"
 									Height="24"
 									Path="avares://AHON_TRACK/Assets/MainWindowView/manage-membership-icon.svg"/>
-							</Viewbox>
-						</shadui:SidebarItem.Icon>
-					</shadui:SidebarItem>
-					<shadui:SidebarItem
-						Command="{CompiledBinding}"
-						Content="Walk-in Registration"
-						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Walk-in Registration'}">
-						<shadui:SidebarItem.Icon>
-							<Viewbox>
-								<Svg
-									Width="24"
-									Height="24"
-									Path="avares://AHON_TRACK/Assets/MainWindowView/walk-in-icon.svg"/>
 							</Viewbox>
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
