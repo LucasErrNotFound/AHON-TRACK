@@ -16,6 +16,7 @@
 	x:DataType="vm:MainWindowViewModel"
 	mc:Ignorable="d"
 	Title="AHON TRACK"
+	TitleFontWeight="SemiBold"
 	Icon="/Assets/AHON-Track-Window.ico"
 	WindowStartupLocation="CenterScreen"
 	WindowState="Maximized"
