@@ -18,6 +18,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly DashboardViewModel _dashboardViewModel;
     private readonly ManageEmployeesViewModel _manageEmployeesViewModel;
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
+	private readonly CheckInOutViewModel _checkInOutViewModel;
 
     // Primary constructor for DI
     public MainWindowViewModel(
@@ -26,12 +27,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ToastManager toastManager,
         DashboardViewModel dashboardViewModel,
         ManageEmployeesViewModel manageEmployeesViewModel,
-        EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
+        EmployeeProfileInformationViewModel employeeProfileInformationViewModel,
+		CheckInOutViewModel checkInOutViewModel)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _dashboardViewModel = dashboardViewModel;
+		_checkInOutViewModel = checkInOutViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -47,6 +50,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _pageManager = new PageManager(new ServiceProvider());
         _dashboardViewModel = new DashboardViewModel();
         _manageEmployeesViewModel = new ManageEmployeesViewModel();
+		_checkInOutViewModel = new CheckInOutViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
     }
 
@@ -109,9 +113,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenManageEmployees() => SwitchPage(_manageEmployeesViewModel);
 
-    /*
     [RelayCommand]
-    private void OpenMemberCheckInOut() => SwitchPage(_memberCheckInOutViewModel);
+    private void OpenCheckInOut() => SwitchPage(_checkInOutViewModel);
+
+    /*
 
     [RelayCommand]
     private void OpenManageMembership() => SwitchPage(_manageMembershipViewModel);
