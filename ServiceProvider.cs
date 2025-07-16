@@ -17,6 +17,7 @@ namespace AHON_TRACK;
 [Transient<ManageEmployeesViewModel>]
 [Transient<AddNewEmployeeDialogCardViewModel>]
 [Transient<EmployeeProfileInformationViewModel>]
+[Transient<CheckInOutViewModel>]
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
