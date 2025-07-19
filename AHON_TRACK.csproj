@@ -33,5 +33,6 @@
 
 	<ItemGroup>
 	  <Folder Include="Assets\Fonts\" />
+	  <Folder Include="Assets\CheckInOutView\" />
 	</ItemGroup>
 </Project>
