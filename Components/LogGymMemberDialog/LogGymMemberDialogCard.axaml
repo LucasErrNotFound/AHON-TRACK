@@ -1,0 +1,200 @@
+<UserControl
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+	mc:Ignorable="d"
+	d:DesignWidth="950"
+	d:DesignHeight="600"
+	xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
+	x:DataType="viewModel:LogGymMemberDialogCardViewModel"
+	Width="950"
+	Height="600"
+	x:Class="AHON_TRACK.Components.LogGymMemberDialog.LogGymMemberDialogCard">
+
+	<Design.DataContext>
+		<viewModel:LogGymMemberDialogCardViewModel/>
+	</Design.DataContext>
+
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36"/>
+
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75"/>
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
+	</UserControl.Resources>
+
+	<UserControl.Styles>
+		<Style Selector="TextBlock.h4">
+			<Setter Property="FontSize" Value="18"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Margin" Value="0,0,0,5"/>
+		</Style>
+		<Style Selector="TextBlock.Muted">
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Margin" Value="0,0,0,5"/>
+		</Style>
+		<Style Selector="TextBlock.LabelField">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Margin" Value="0,0,0,5"/>
+		</Style>
+		<Style Selector="RadioButton.FormRadio">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="FontWeight" Value="Regular"/>
+			<Setter Property="Margin" Value="0,0,15,0"/>
+		</Style>
+	</UserControl.Styles>
+
+	<Border
+		Background="{DynamicResource BackgroundColor}"
+		BorderBrush="{DynamicResource BorderColor}"
+		BorderThickness="1"
+		Padding="30">
+		<StackPanel Spacing="0">
+			<!-- Header Section -->
+			<TextBlock
+				Text="Log a gym member"
+				Classes="h4"/>
+			<TextBlock
+				Text="Search a member to log him/her"
+				Classes="Muted"/>
+			<Grid>
+				<StackPanel>
+					<shadui:Card>
+						<StackPanel>
+							<Grid ColumnDefinitions="* * * ">
+								<AutoCompleteBox
+									Grid.Column="0"
+									Width="250"
+									FontSize="15"
+									shadui:ControlAssist.Height="40"
+									shadui:ControlAssist.ShowProgress="{Binding IsSearching}"
+									HorizontalAlignment="Left"
+									Classes="Clearable"
+									FilterMode="Contains"
+									ItemsSource="{Binding MemberSuggestions}"
+									Text="{Binding SearchText}"
+									Watermark="Search members...">
+									<AutoCompleteBox.InnerRightContent>
+										<Svg
+											Width="20"
+											Opacity="0.75"
+											Path="/Assets/CheckInOutView/search-icon.svg"/>
+									</AutoCompleteBox.InnerRightContent>
+								</AutoCompleteBox>
+								<StackPanel
+									Grid.Column="1"
+									Orientation="Horizontal"
+									HorizontalAlignment="Right"
+									Spacing="20"
+									Margin="407,0">
+									<Button
+										Classes="Outline"
+										Content="Cancel"
+										Command="{Binding CancelCommand}"/>
+									<Button
+										Classes="Primary"
+										Content="Submit"
+										Command="{Binding SubmitCommand}"
+										IsEnabled="{Binding SelectedMember, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+								</StackPanel>
+							</Grid>
+							<DataGrid
+								MaxHeight="350"
+								Margin="0,20"
+								ItemsSource="{Binding FilteredMembers}"
+								SelectedItem="{Binding SelectedMember}"
+								AutoGenerateColumns="False"
+								CanUserReorderColumns="False"
+								CanUserResizeColumns="False"
+								CanUserSortColumns="False"
+								GridLinesVisibility="All"
+								HeadersVisibility="Column"
+								SelectionMode="Single"
+								IsReadOnly="True">
+								<DataGrid.Resources>
+									<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+								</DataGrid.Resources>
+								<DataGrid.Columns>
+									<DataGridTextColumn
+										Width="Auto"
+										MinWidth="80"
+										Header="ID"
+										Binding="{Binding ID}"/>
+									<DataGridTemplateColumn
+										Width="Auto"
+										MinWidth="100"
+										Header="Picture">
+										<DataGridTemplateColumn.CellTemplate>
+											<DataTemplate>
+												<Border
+													Width="60"
+													Height="60"
+													CornerRadius="30"
+													ClipToBounds="True"
+													Margin="5">
+													<shadui:Avatar
+														Width="36"
+														Height="36"
+														VerticalAlignment="Center"
+														HorizontalAlignment="Center"
+														Margin="8"
+														Source="{Binding MemberPicturePath, Converter={StaticResource StringToBitMapConverter}}"/>
+												</Border>
+											</DataTemplate>
+										</DataGridTemplateColumn.CellTemplate>
+									</DataGridTemplateColumn>
+									<DataGridTextColumn
+										Width="*"
+										MinWidth="120"
+										Header="First Name"
+										Binding="{Binding FirstName}"/>
+									<DataGridTextColumn
+										Width="*"
+										MinWidth="120"
+										Header="Last Name"
+										Binding="{Binding LastName}"/>
+									<DataGridTextColumn
+										Width="Auto"
+										MinWidth="120"
+										Header="Membership Type"
+										Binding="{Binding MembershipType}"/>
+									<DataGridTemplateColumn
+										CanUserSort="False"
+										Header="Status"
+										Width="*"
+										MinWidth="180">
+										<DataGridTemplateColumn.CellTemplate>
+											<DataTemplate>
+												<Border
+													Background="{Binding StatusBackground}"
+													CornerRadius="11"
+													Padding="8,4"
+													Margin="0,0,0,0"
+													HorizontalAlignment="Left">
+													<TextBlock
+														Text="{Binding StatusDisplayText}"
+														Foreground="{Binding StatusForeground}"
+														FontSize="13"
+														FontWeight="Medium"
+														HorizontalAlignment="Center"
+														VerticalAlignment="Center"/>
+												</Border>
+											</DataTemplate>
+										</DataGridTemplateColumn.CellTemplate>
+									</DataGridTemplateColumn>
+								</DataGrid.Columns>
+							</DataGrid>
+						</StackPanel>
+					</shadui:Card>
+				</StackPanel>
+			</Grid>
+		</StackPanel>
+	</Border>
+</UserControl>
