@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-<UserControl 
-=======
 <UserControl
->>>>>>> fae2676 (feat: add CheckInOut user-control page)
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	x:Class="AHON_TRACK.Views.CheckInOutView"
@@ -14,12 +10,8 @@
 	xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
 	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
 	xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
-<<<<<<< HEAD
 	mc:Ignorable="d" 
-=======
 	xmlns:system="clr-namespace:System;assembly=System.Runtime"
-	mc:Ignorable="d"
->>>>>>> fae2676 (feat: add CheckInOut user-control page)
 	d:DesignWidth="1920" d:DesignHeight="1080">
 
 	<UserControl.Resources>
@@ -51,10 +43,7 @@
 				Margin="90,30"/>
 		</StackPanel>
 		<ScrollViewer>
-<<<<<<< HEAD
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
-=======
-			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="{StaticResource PageMargin}" Spacing="32">
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
 						<Grid RowDefinitions="* *">
@@ -385,7 +374,6 @@
 						</Grid>
 					</shadui:BreakpointView>
 				</shadui:BreakpointViewPort>
->>>>>>> fae2676 (feat: add CheckInOut user-control page)
 			</StackPanel>
 		</ScrollViewer>
 	</DockPanel>
