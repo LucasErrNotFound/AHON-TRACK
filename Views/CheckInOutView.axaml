@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 <UserControl 
+=======
+<UserControl
+>>>>>>> fae2676 (feat: add CheckInOut user-control page)
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	x:Class="AHON_TRACK.Views.CheckInOutView"
@@ -10,7 +14,12 @@
 	xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
 	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
 	xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+<<<<<<< HEAD
 	mc:Ignorable="d" 
+=======
+	xmlns:system="clr-namespace:System;assembly=System.Runtime"
+	mc:Ignorable="d"
+>>>>>>> fae2676 (feat: add CheckInOut user-control page)
 	d:DesignWidth="1920" d:DesignHeight="1080">
 
 	<UserControl.Resources>
@@ -42,7 +51,341 @@
 				Margin="90,30"/>
 		</StackPanel>
 		<ScrollViewer>
+<<<<<<< HEAD
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
+=======
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="{StaticResource PageMargin}" Spacing="32">
+				<shadui:BreakpointViewPort>
+					<shadui:BreakpointView Breakpoint="XlAndUp">
+						<Grid RowDefinitions="* *">
+							<TextBlock
+								Classes="h3"
+								FontWeight="Medium"
+								Text="Walk-in Records"
+								Foreground="{StaticResource FontForeground}"
+								HorizontalAlignment="Center"
+								Margin="0,0,820,0"/>
+							<shadui:Card Width="1090" Margin="0,30">
+								<StackPanel>
+									<StackPanel 
+										Orientation="Horizontal" 
+										HorizontalAlignment="Right"
+										Spacing="30">
+										<CalendarDatePicker 
+											VerticalAlignment="Top"
+											Margin="0,-2"
+											shadui:ControlAssist.Label="Date Today" 
+											SelectedDate="{x:Static system:DateTime.Today}"
+											IsEnabled="False"/>
+										<Button
+											Content="Log Walk-in"
+											Classes="Primary"
+											Padding="30,0,30,0"
+											Height="40"
+											Margin="0,20"/>
+									</StackPanel>
+									<Grid RowDefinitions="Auto *">
+										<DataGrid
+											MaxHeight="660"
+											Grid.Row="1"
+											AutoGenerateColumns="False"
+											CanUserReorderColumns="False"
+											CanUserResizeColumns="False"
+											CanUserSortColumns="False"
+											GridLinesVisibility="All"
+											HeadersVisibility="Column"
+											IsReadOnly="True"
+											ItemsSource="{CompiledBinding WalkInGroupedPeople}"
+											SelectionMode="Single">
+											<DataGrid.Columns>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="80"
+													Header="ID"
+													x:DataType="viewModels:WalkInPerson"
+													Binding="{CompiledBinding ID}"/>
+												<DataGridTextColumn
+													Width="*"
+													MinWidth="120"
+													Header="First Name"
+													x:DataType="viewModels:WalkInPerson"
+													Binding="{CompiledBinding FirstName}"/>
+												<DataGridTextColumn
+													Width="*"
+													MinWidth="120"
+													Header="Last Name"
+													x:DataType="viewModels:WalkInPerson"
+													Binding="{CompiledBinding LastName}"/>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="80"
+													Header="Age"
+													x:DataType="viewModels:WalkInPerson"
+													Binding="{CompiledBinding Age}"/>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="120"
+													Header="Contact No."
+													x:DataType="viewModels:WalkInPerson"
+													Binding="{CompiledBinding ContactNumber}"/>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="120"
+													Header="Package Type"
+													x:DataType="viewModels:WalkInPerson"
+													Binding="{CompiledBinding PackageType}"/>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="100"
+													Header="Check-in"
+													x:DataType="viewModels:WalkInPerson"
+													Binding="{CompiledBinding CheckInTime, StringFormat='h:mm tt'}"/>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="100"
+													Header="Check-out"
+													x:DataType="viewModels:WalkInPerson"
+													Binding="{CompiledBinding CheckOutTime, StringFormat='h:mm tt'}"/>
+												<DataGridTemplateColumn Header="Actions">
+													<DataGridTemplateColumn.CellTemplate>
+														<DataTemplate x:DataType="viewModels:CheckInOutViewModel">
+															<StackPanel Orientation="Horizontal" Spacing="8" Width="120" Height="25">
+																<Button 
+																	Height="20"
+																	Classes="Icon"
+																	ToolTip.Tip="Delete from table"
+																	VerticalAlignment="Center">
+																	<shadui:ButtonAssist.Icon>
+																		<Svg Path="avares://AHON_TRACK/Assets/CheckInOutView/delete-icon.svg" Width="18"/>
+																	</shadui:ButtonAssist.Icon>
+																</Button>
+																<Button 
+																	Height="20"
+																	Classes="Icon"
+																	ToolTip.Tip="Edit"
+																	VerticalAlignment="Center">
+																	<shadui:ButtonAssist.Icon>
+																		<Svg Path="avares://AHON_TRACK/Assets/CheckInOutView/edit-icon.svg" Width="18"/>
+																	</shadui:ButtonAssist.Icon>
+																</Button>
+																<Menu>
+																	<MenuItem 
+																		ToolTip.Tip="Menu" 
+																		HorizontalAlignment="Center" 
+																		VerticalAlignment="Center"
+																		shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedLeft"
+																		Classes="Icon Grid">
+																		<MenuItem.Header>
+																			<Svg 
+																				Path="avares://AHON_TRACK/Assets/CheckInOutView/three-dots-icon.svg"
+																				Width="18"
+																				Height="18"/>
+																		</MenuItem.Header>
+																		<shadui:MenuItemAssist.Label>
+																			<TextBlock Text="Actions" FontSize="15" FontWeight="Regular" Foreground="{DynamicResource MutedColor}"/>
+																		</shadui:MenuItemAssist.Label>
+																		<MenuItem Header="Stamp Check-out"/>
+																	</MenuItem>
+																</Menu>
+															</StackPanel>
+														</DataTemplate>
+													</DataGridTemplateColumn.CellTemplate>
+												</DataGridTemplateColumn>
+											</DataGrid.Columns>
+										</DataGrid>
+									</Grid>
+								</StackPanel>
+							</shadui:Card>
+							<TextBlock
+								Grid.Row="1"
+								Classes="h3"
+								FontWeight="Medium"
+								Text="Member Records"
+								Foreground="{StaticResource FontForeground}"
+								HorizontalAlignment="Center"
+								Margin="0,0,820,0"/>
+							<shadui:Card Width="1200" Margin="0,30" Grid.Row="1">
+								<StackPanel>
+									<StackPanel
+										Orientation="Horizontal"
+										HorizontalAlignment="Right"
+										Spacing="30">
+										<CalendarDatePicker
+											VerticalAlignment="Top"
+											Margin="0,-2"
+											shadui:ControlAssist.Label="Date Today"
+											SelectedDate="{x:Static system:DateTime.Today}"
+											IsEnabled="False"/>
+										<Button
+											Content="Log Gym Member"
+											Classes="Primary"
+											Padding="30,0,30,0"
+											Height="40"
+											Margin="0,20"
+											Command="{CompiledBinding AddMemberPersonCommand}"/>
+									</StackPanel>
+									<Grid RowDefinitions="Auto *">
+										<DataGrid
+											Grid.Row="1"
+											CanUserReorderColumns="False"
+											CanUserResizeColumns="False"
+											CanUserSortColumns="False"
+											GridLinesVisibility="All"
+											HeadersVisibility="Column"
+											IsReadOnly="True"
+											ItemsSource="{CompiledBinding MemberGroupedPeople}"
+											SelectionMode="Single">
+											<DataGrid.Resources>
+												<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+											</DataGrid.Resources>
+											<DataGrid.Columns>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="70"
+													Header="ID"
+													x:DataType="viewModels:MemberPerson"
+													Binding="{CompiledBinding ID}"/>
+												<DataGridTemplateColumn
+													Width="Auto"
+													MinWidth="100"
+													Header="Picture">
+													<DataGridTemplateColumn.CellTemplate>
+														<DataTemplate x:DataType="viewModels:MemberPerson">
+															<Border
+																Width="60"
+																Height="60"
+																CornerRadius="30"
+																ClipToBounds="True"
+																Margin="5">
+																<shadui:Avatar
+																	Source="{CompiledBinding MemberPicturePath, Converter={StaticResource StringToBitMapConverter}}"
+																	Width="36"
+																	Height="36"
+																	VerticalAlignment="Center"
+																	HorizontalAlignment="Center"
+																	Margin="8"/>
+															</Border>
+														</DataTemplate>
+													</DataGridTemplateColumn.CellTemplate>
+												</DataGridTemplateColumn>
+												<DataGridTextColumn
+													Width="*"
+													MinWidth="120"
+													Header="First Name"
+													x:DataType="viewModels:MemberPerson"
+													Binding="{CompiledBinding FirstName}"/>
+												<DataGridTextColumn
+													Width="*"
+													MinWidth="120"
+													Header="Last Name"
+													x:DataType="viewModels:MemberPerson"
+													Binding="{CompiledBinding LastName}"/>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="120"
+													Header="Contact No."
+													x:DataType="viewModels:MemberPerson"
+													Binding="{CompiledBinding ContactNumber}"/>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="120"
+													Header="Membership Type"
+													x:DataType="viewModels:MemberPerson"
+													Binding="{CompiledBinding MembershipType}"/>
+												<DataGridTemplateColumn
+													CanUserSort="False"
+													Header="Status"
+													Width="Auto"
+													MinWidth="130">
+													<DataGridTemplateColumn.CellTemplate>
+														<DataTemplate DataType="viewModels:MemberPerson">
+															<Border
+																Background="{CompiledBinding StatusBackground}"
+																CornerRadius="11"
+																Padding="8,4"
+																Margin="0,0,0,0"
+																HorizontalAlignment="Left">
+																<TextBlock
+																	Text="{CompiledBinding StatusDisplayText}"
+																	Foreground="{CompiledBinding StatusForeground}"
+																	FontSize="13"
+																	FontWeight="Medium"
+																	HorizontalAlignment="Center"
+																	VerticalAlignment="Center"/>
+															</Border>
+														</DataTemplate>
+													</DataGridTemplateColumn.CellTemplate>
+												</DataGridTemplateColumn>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="80"
+													Header="Check-in"
+													x:DataType="viewModels:MemberPerson"
+													Binding="{CompiledBinding CheckInTime, StringFormat='h:mm tt'}"/>
+												<DataGridTextColumn
+													Width="Auto"
+													MinWidth="80"
+													Header="Check-out"
+													x:DataType="viewModels:MemberPerson"
+													Binding="{CompiledBinding CheckOutTime, StringFormat='h:mm tt'}"/>
+												<DataGridTemplateColumn Header="Actions">
+													<DataGridTemplateColumn.CellTemplate>
+														<DataTemplate x:DataType="viewModels:CheckInOutViewModel">
+															<StackPanel Orientation="Horizontal" Spacing="8" Width="120" Height="25">
+																<Button 
+																	Height="20"
+																	Classes="Icon"
+																	ToolTip.Tip="Delete from table"
+																	VerticalAlignment="Center">
+																	<shadui:ButtonAssist.Icon>
+																		<Svg Path="avares://AHON_TRACK/Assets/CheckInOutView/delete-icon.svg" Width="18"/>
+																	</shadui:ButtonAssist.Icon>
+																</Button>
+																<Button 
+																	Height="20"
+																	Classes="Icon"
+																	ToolTip.Tip="Edit"
+																	VerticalAlignment="Center">
+																	<shadui:ButtonAssist.Icon>
+																		<Svg Path="avares://AHON_TRACK/Assets/CheckInOutView/edit-icon.svg" Width="18"/>
+																	</shadui:ButtonAssist.Icon>
+																</Button>
+																<Menu>
+																	<MenuItem 
+																		ToolTip.Tip="Menu" 
+																		HorizontalAlignment="Center" 
+																		VerticalAlignment="Center"
+																		shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedLeft"
+																		Classes="Icon Grid">
+																		<MenuItem.Header>
+																			<Svg 
+																				Path="avares://AHON_TRACK/Assets/CheckInOutView/three-dots-icon.svg"
+																				Width="18"
+																				Height="18"/>
+																		</MenuItem.Header>
+																		<shadui:MenuItemAssist.Label>
+																			<TextBlock Text="Actions" FontSize="15" FontWeight="Regular" Foreground="{DynamicResource MutedColor}"/>
+																		</shadui:MenuItemAssist.Label>
+																		<MenuItem Header="Stamp Check-out"/>
+																		<MenuItem 
+																			Header="View Profile"
+																			Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).OpenViewMemberProfileCommand}"
+																			CommandParameter="{CompiledBinding}"/>
+																	</MenuItem>
+																</Menu>
+															</StackPanel>
+														</DataTemplate>
+													</DataGridTemplateColumn.CellTemplate>
+												</DataGridTemplateColumn>
+											</DataGrid.Columns>
+										</DataGrid>
+									</Grid>
+								</StackPanel>
+							</shadui:Card>
+						</Grid>
+					</shadui:BreakpointView>
+				</shadui:BreakpointViewPort>
+>>>>>>> fae2676 (feat: add CheckInOut user-control page)
 			</StackPanel>
 		</ScrollViewer>
 	</DockPanel>
