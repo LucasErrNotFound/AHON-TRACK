@@ -1,0 +1,919 @@
+<UserControl
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
+	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+	x:DataType="viewModel:MemberProfileInformationViewModel"
+	x:Class="AHON_TRACK.Components.MemberProfile.MemberProfileInformationView"
+	mc:Ignorable="d"
+	d:DesignWidth="1666"
+	d:DesignHeight="1080">
+
+	<Design.DataContext>
+		<viewModel:MemberProfileInformationViewModel/>
+	</Design.DataContext>
+
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36"/>
+
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75"/>
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
+
+		<SolidColorBrush x:Key="SuccessFontColor" Color="rgb(37,194,94)"/>
+		<SolidColorBrush x:Key="SuccessBackgroundColor" Color="rgb(37,194,94)" Opacity="0.2"/>
+	</UserControl.Resources>
+
+	<UserControl.Styles>
+		<Style Selector="TextBlock.h4">
+			<Setter Property="FontSize" Value="18"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="HorizontalAlignment" Value="Left"/>
+		</Style>
+		<Style Selector="TextBlock.h5">
+			<Setter Property="FontSize" Value="16"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="HorizontalAlignment" Value="Left"/>
+		</Style>
+	</UserControl.Styles>
+
+	<DockPanel LastChildFill="True">
+		<StackPanel
+            MaxWidth="{StaticResource PageMaxWidth}"
+            Margin="{StaticResource PageMargin}"
+            DockPanel.Dock="Top">
+			<TextBlock
+				Foreground="{DynamicResource FontForeground}"
+				FontSize="30"
+				FontWeight="SemiBold"
+				FontFamily="Inter"
+				Text="{CompiledBinding MemberFullNameHeader}"
+				Margin="90,90"/>
+		</StackPanel>
+		<ScrollViewer VerticalScrollBarVisibility="Auto">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
+				<shadui:BreakpointViewPort>
+					<!-- Extra large and up breakpoint (1280px and above). -->
+					<shadui:BreakpointView Breakpoint="XlAndUp">
+						<Grid Margin="100,20" ColumnDefinitions="5* 10*">
+							<shadui:Card Grid.Column="0" VerticalAlignment="Top">
+								<StackPanel>
+									<StackPanel HorizontalAlignment="Center">
+										<StackPanel
+											Orientation="Vertical"
+											Spacing="10">
+											<!-- Profile image placeholder -->
+											<Border
+												Width="90"
+												Height="90"
+												Margin="0,10"
+												Background="#F5F5F5"
+												BorderBrush="#CCCCCC"
+												BorderThickness="1"
+												CornerRadius="150"
+												ClipToBounds="True">
+												<Image
+													Name="MemberProfileImage1"
+													Stretch="UniformToFill"
+													IsVisible="True"
+													Source="avares://AHON_TRACK/Assets/CheckInOutView/user-admin.png"/>
+											</Border>
+
+											<!-- Username -->
+											<TextBlock
+												Text="{CompiledBinding MemberFullName}"
+												FontSize="24"
+												FontWeight="SemiBold"
+												Foreground="{DynamicResource FontForeground}"
+												HorizontalAlignment="Center"
+												Margin="0,-10"/>
+
+											<!-- Position -->
+											<TextBlock
+												Text="{CompiledBinding MemberPosition}"
+												Classes="Muted"
+												FontSize="14"
+												FontWeight="Medium"
+												HorizontalAlignment="Center"
+												Margin="0,5"/>
+										</StackPanel>
+
+										<!-- Full Name Contact -->
+										<StackPanel
+											Orientation="Horizontal"
+											HorizontalAlignment="Center"
+											Margin="0,20,0,8">
+											<Border
+												Background="LightBlue"
+												CornerRadius="11"
+												Padding="25,1">
+												<StackPanel
+												Orientation="Horizontal"
+												Height="30">
+													<Svg
+														VerticalAlignment="Center"
+														Width="20"
+														Height="20"
+														Margin="0,-3,10,0"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/contact-user-icon.svg"/>
+													<TextBlock
+														Text="{CompiledBinding MemberFullName}"
+														FontSize="13"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"/>
+												</StackPanel>
+											</Border>
+										</StackPanel>
+
+										<!-- Phone Number Contact -->
+										<StackPanel
+											Orientation="Horizontal"
+											HorizontalAlignment="Center"
+											Margin="0,5,0,0">
+											<Border
+												Background="{DynamicResource SuccessBackgroundColor}"
+												CornerRadius="11"
+												Padding="25,1">
+												<StackPanel
+													Orientation="Horizontal"
+													Height="30">
+													<Svg
+														VerticalAlignment="Center"
+														Width="20"
+														Height="20"
+														Margin="0,-3,10,0"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/phone-icon.svg"/>
+													<TextBlock
+														Text="{CompiledBinding MemberPhoneNumber}"
+														FontSize="13"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource SuccessFontColor}"
+														VerticalAlignment="Center"/>
+												</StackPanel>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</StackPanel>
+							</shadui:Card>
+							<!-- Right Content Area -->
+							<!-- Member Information Section -->
+							<shadui:Card Grid.Column="1" Margin="15,0,0,30" VerticalAlignment="Top">
+								<ScrollViewer>
+									<StackPanel>
+										<shadui:Card>
+											<StackPanel>
+												<!-- Header -->
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+													<Svg
+														Width="30"
+														Height="30"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/member-information-icon.svg"/>
+													<shadui:CardTitle
+														Content="Member Information"
+														FontSize="22"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"
+														Margin="20,0"/>
+												</StackPanel>
+												<Separator Margin="20"/>
+												<StackPanel>
+													<!-- Member ID Row -->
+													<StackPanel Grid.Column="0" Orientation="Horizontal">
+														<TextBlock
+															Text="Member ID"
+															Classes="h4"
+															Width="150"
+															Foreground="{DynamicResource FontForeground}"/>
+														<TextBlock
+															Text="{CompiledBinding MemberID}"
+															Classes="h5"
+															Margin="350,0"
+															Foreground="{DynamicResource FontForeground}"/>
+													</StackPanel>
+													<Separator Width="2000" Margin="0,20"/>
+
+													<!-- Member Position Row -->
+													<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<TextBlock
+															Text="Position"
+															Classes="h4"
+															Width="150"
+															Foreground="{DynamicResource FontForeground}"/>
+														<TextBlock
+															Text="{CompiledBinding MemberPosition}"
+															Classes="h5"
+															Margin="350,0"
+															Foreground="{DynamicResource FontForeground}"/>
+													</StackPanel>
+													<Separator Width="2000" Margin="0,20"/>
+
+													<!-- Member Status Row -->
+													<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<TextBlock
+															Text="Status"
+															Classes="h4"
+															Width="150"
+															Foreground="{DynamicResource FontForeground}"/>
+														<TextBlock
+															Text="{CompiledBinding MemberStatus}"
+															Classes="h5"
+															Margin="350,0"
+															Foreground="{DynamicResource FontForeground}"/>
+													</StackPanel>
+													<Separator Width="2000" Margin="0,20"/>
+
+													<!-- Date Joined Row -->
+													<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<TextBlock
+															Text="Date Joined"
+															Classes="h4"
+															Width="150"
+															Foreground="{DynamicResource FontForeground}"/>
+														<TextBlock
+															Text="{CompiledBinding MemberDateJoined}"
+															Classes="h5"
+															Margin="350,0"
+															Foreground="{DynamicResource FontForeground}"/>
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+										</shadui:Card>
+
+										<!-- Personal Information Section -->
+										<shadui:Card Margin="0,10">
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+													<Svg
+														Width="30"
+														Height="30"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/personal-information-icon.svg"/>
+													<shadui:CardTitle
+														Content="Personal Information"
+														FontSize="22"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"
+														Margin="20,0"/>
+												</StackPanel>
+												<Separator Margin="0,20"/>
+												<Grid>
+													<Grid.ColumnDefinitions>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+													</Grid.ColumnDefinitions>
+
+													<StackPanel>
+														<!-- Full Name Row -->
+														<StackPanel Grid.Column="0" Orientation="Horizontal">
+															<TextBlock
+																Text="Full Name"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberFullName}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Age Row -->
+														<StackPanel Grid.Column="1" Orientation="Horizontal">
+															<TextBlock
+																Text="Age"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberAge}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Birthdate Row -->
+														<StackPanel Grid.Column="2" Orientation="Horizontal">
+															<TextBlock
+																Text="Birthdate"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberBirthDate}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Gender Row -->
+														<StackPanel Grid.Column="3" Orientation="Horizontal">
+															<TextBlock
+																Text="Gender"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberGender}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+													</StackPanel>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+
+										<!-- Contact Information Section -->
+										<shadui:Card>
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+													<Svg
+														Width="30"
+														Height="30"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/personal-information-icon.svg"/>
+													<shadui:CardTitle
+														Content="Contact Information"
+														FontSize="22"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"
+														Margin="20,0"/>
+												</StackPanel>
+												<Separator Margin="0,20"/>
+												<Grid>
+													<Grid.ColumnDefinitions>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+													</Grid.ColumnDefinitions>
+													<StackPanel>
+														<!-- Phone Number Row -->
+														<StackPanel Grid.Column="0" Orientation="Horizontal">
+															<TextBlock
+																Text="Phone Number"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberPhoneNumber}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Last Login Row -->
+														<StackPanel Grid.Column="1" Orientation="Horizontal">
+															<TextBlock
+																Text="Last Login"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberLastLogin}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+													</StackPanel>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+										<!-- Address Information Section -->
+										<shadui:Card Margin="0,10">
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+													<Svg
+														Width="30"
+														Height="30"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/address-icon.svg"/>
+													<shadui:CardTitle
+														Content="Home Address"
+														FontSize="22"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"
+														Margin="20,0"/>
+												</StackPanel>
+												<Separator Margin="0,20"/>
+												<Grid>
+													<Grid.ColumnDefinitions>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+													</Grid.ColumnDefinitions>
+													<StackPanel>
+														<!-- House Address Row -->
+														<StackPanel Grid.Column="0" Orientation="Horizontal">
+															<TextBlock
+																Text="House Address"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberHouseAddress}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- House Number Row -->
+														<StackPanel Grid.Column="1" Orientation="Horizontal">
+															<TextBlock
+																Text="House Number"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberHouseNumber}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Street Row -->
+														<StackPanel Grid.Column="2" Orientation="Horizontal">
+															<TextBlock
+																Text="Street"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberStreet}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Barangay Row -->
+														<StackPanel Grid.Column="3" Orientation="Horizontal">
+															<TextBlock
+																Text="City &amp; Province"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberCityProvince}"
+																Classes="h5"
+																Margin="350,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+													</StackPanel>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+									</StackPanel>
+								</ScrollViewer>
+							</shadui:Card>
+						</Grid>
+					</shadui:BreakpointView>
+					<!-- Extra large and down breakpoint (1280px and below). -->
+					<shadui:BreakpointView Breakpoint="XlAndDown">
+						<Grid Margin="100,20" RowDefinitions="* *">
+							<shadui:Card Grid.Row="0" VerticalAlignment="Top">
+								<StackPanel>
+									<StackPanel HorizontalAlignment="Center">
+										<StackPanel
+											Orientation="Vertical"
+											Spacing="10">
+											<!-- Profile image placeholder -->
+											<Border
+												Width="90"
+												Height="90"
+												Margin="0,10"
+												Background="#F5F5F5"
+												BorderBrush="#CCCCCC"
+												BorderThickness="1"
+												CornerRadius="150"
+												ClipToBounds="True">
+												<Image
+													Name="MemberProfileImage2"
+													Stretch="UniformToFill"
+													IsVisible="True"
+													Source="avares://AHON_TRACK/Assets/CheckInOutView/user-admin.png"/>
+											</Border>
+
+											<!-- Username -->
+											<TextBlock
+												Text="{CompiledBinding MemberFullName}"
+												FontSize="24"
+												FontWeight="SemiBold"
+												Foreground="{DynamicResource FontForeground}"
+												HorizontalAlignment="Center"
+												Margin="0,-10"/>
+
+											<!-- Position -->
+											<TextBlock
+												Text="{CompiledBinding MemberPosition}"
+												Classes="Muted"
+												FontSize="14"
+												FontWeight="Medium"
+												HorizontalAlignment="Center"
+												Margin="0,5"/>
+										</StackPanel>
+
+										<!-- Full Name Contact -->
+										<StackPanel
+											Orientation="Horizontal"
+											HorizontalAlignment="Center"
+											Margin="0,20,0,8">
+											<Border
+												Background="LightBlue"
+												CornerRadius="11"
+												Padding="25,1">
+												<StackPanel
+												Orientation="Horizontal"
+												Height="30">
+													<Svg
+														VerticalAlignment="Center"
+														Width="20"
+														Height="20"
+														Margin="0,-3,10,0"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/contact-user-icon.svg"/>
+													<TextBlock
+														Text="{CompiledBinding MemberFullName}"
+														FontSize="13"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"/>
+												</StackPanel>
+											</Border>
+										</StackPanel>
+
+										<!-- Phone Number Contact -->
+										<StackPanel
+											Orientation="Horizontal"
+											HorizontalAlignment="Center"
+											Margin="0,5,0,0">
+											<Border
+												Background="{DynamicResource SuccessBackgroundColor}"
+												CornerRadius="11"
+												Padding="25,1">
+												<StackPanel
+													Orientation="Horizontal"
+													Height="30">
+													<Svg
+														VerticalAlignment="Center"
+														Width="20"
+														Height="20"
+														Margin="0,-3,10,0"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/phone-icon.svg"/>
+													<TextBlock
+														Text="{CompiledBinding MemberPhoneNumber}"
+														FontSize="13"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource SuccessFontColor}"
+														VerticalAlignment="Center"/>
+												</StackPanel>
+											</Border>
+										</StackPanel>
+									</StackPanel>
+								</StackPanel>
+							</shadui:Card>
+							<!-- Right Content Area -->
+							<!-- Member Information Section -->
+							<shadui:Card Grid.Row="1" Margin="0,20,0,30" HorizontalAlignment="Center">
+								<ScrollViewer>
+									<StackPanel>
+										<shadui:Card>
+											<StackPanel>
+												<!-- Header -->
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+													<Svg
+														Width="30"
+														Height="30"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/employee-information-icon.svg"/>
+													<shadui:CardTitle
+														Content="Member Information"
+														FontSize="22"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"
+														Margin="20,0"/>
+												</StackPanel>
+												<Separator Margin="20"/>
+												<StackPanel>
+													<!-- Member ID Row -->
+													<StackPanel Grid.Column="0" Orientation="Horizontal">
+														<TextBlock
+															Text="Member ID"
+															Classes="h4"
+															Width="150"
+															Foreground="{DynamicResource FontForeground}"/>
+														<TextBlock
+															Text="{CompiledBinding MemberID}"
+															Classes="h5"
+															Margin="200,0"
+															Foreground="{DynamicResource FontForeground}"/>
+													</StackPanel>
+													<Separator Width="2000" Margin="0,20"/>
+
+													<!-- Member Position Row -->
+													<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<TextBlock
+															Text="Position"
+															Classes="h4"
+															Width="150"
+															Foreground="{DynamicResource FontForeground}"/>
+														<TextBlock
+															Text="{CompiledBinding MemberPosition}"
+															Classes="h5"
+															Margin="200,0"
+															Foreground="{DynamicResource FontForeground}"/>
+													</StackPanel>
+													<Separator Width="2000" Margin="0,20"/>
+
+													<!-- Member Status Row -->
+													<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<TextBlock
+															Text="Status"
+															Classes="h4"
+															Width="150"
+															Foreground="{DynamicResource FontForeground}"/>
+														<TextBlock
+															Text="{CompiledBinding MemberStatus}"
+															Classes="h5"
+															Margin="200,0"
+															Foreground="{DynamicResource FontForeground}"/>
+													</StackPanel>
+													<Separator Width="2000" Margin="0,20"/>
+
+													<!-- Date Joined Row -->
+													<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<TextBlock
+															Text="Date Joined"
+															Classes="h4"
+															Width="150"
+															Foreground="{DynamicResource FontForeground}"/>
+														<TextBlock
+															Text="{CompiledBinding MemberDateJoined}"
+															Classes="h5"
+															Margin="200,0"
+															Foreground="{DynamicResource FontForeground}"/>
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+										</shadui:Card>
+
+										<!-- Personal Information Section -->
+										<shadui:Card Margin="0,10">
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+													<Svg
+														Width="30"
+														Height="30"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/personal-information-icon.svg"/>
+													<shadui:CardTitle
+														Content="Personal Information"
+														FontSize="22"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"
+														Margin="20,0"/>
+												</StackPanel>
+												<Separator Margin="0,20"/>
+												<Grid>
+													<Grid.ColumnDefinitions>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+													</Grid.ColumnDefinitions>
+
+													<StackPanel>
+														<!-- Full Name Row -->
+														<StackPanel Grid.Column="0" Orientation="Horizontal">
+															<TextBlock
+																Text="Full Name"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberFullName}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Age Row -->
+														<StackPanel Grid.Column="1" Orientation="Horizontal">
+															<TextBlock
+																Text="Age"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberAge}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Birthdate Row -->
+														<StackPanel Grid.Column="2" Orientation="Horizontal">
+															<TextBlock
+																Text="Birthdate"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberBirthDate}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Gender Row -->
+														<StackPanel Grid.Column="3" Orientation="Horizontal">
+															<TextBlock
+																Text="Gender"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberGender}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+													</StackPanel>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+
+										<!-- Contact Information Section -->
+										<shadui:Card>
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+													<Svg
+														Width="30"
+														Height="30"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/personal-information-icon.svg"/>
+													<shadui:CardTitle
+														Content="Contact Information"
+														FontSize="22"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"
+														Margin="20,0"/>
+												</StackPanel>
+												<Separator Margin="0,20"/>
+												<Grid>
+													<Grid.ColumnDefinitions>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+													</Grid.ColumnDefinitions>
+													<StackPanel>
+														<!-- Phone Number Row -->
+														<StackPanel Grid.Column="0" Orientation="Horizontal">
+															<TextBlock
+																Text="Phone Number"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberPhoneNumber}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Last Login Row -->
+														<StackPanel Grid.Column="1" Orientation="Horizontal">
+															<TextBlock
+																Text="Last Login"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberLastLogin}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+													</StackPanel>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+										<!-- Address Information Section -->
+										<shadui:Card Margin="0,10">
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+													<Svg
+														Width="30"
+														Height="30"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/address-icon.svg"/>
+													<shadui:CardTitle
+														Content="Home Address"
+														FontSize="22"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource InfoColor}"
+														VerticalAlignment="Center"
+														Margin="20,0"/>
+												</StackPanel>
+												<Separator Margin="0,20"/>
+												<Grid>
+													<Grid.ColumnDefinitions>
+														<ColumnDefinition Width="*"/>
+														<ColumnDefinition Width="*"/>
+													</Grid.ColumnDefinitions>
+													<StackPanel>
+														<!-- House Address Row -->
+														<StackPanel Grid.Column="0" Orientation="Horizontal">
+															<TextBlock
+																Text="House Address"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberHouseAddress}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- House Number Row -->
+														<StackPanel Grid.Column="1" Orientation="Horizontal">
+															<TextBlock
+																Text="House Number"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberHouseNumber}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Street Row -->
+														<StackPanel Grid.Column="2" Orientation="Horizontal">
+															<TextBlock
+																Text="Street"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberStreet}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+														<Separator Width="2000" Margin="0,20"/>
+
+														<!-- Barangay Row -->
+														<StackPanel Grid.Column="3" Orientation="Horizontal">
+															<TextBlock
+																Text="City &amp; Province"
+																Classes="h4"
+																Width="150"
+																Foreground="{DynamicResource FontForeground}"/>
+															<TextBlock
+																Text="{CompiledBinding MemberCityProvince}"
+																Classes="h5"
+																Margin="200,0"
+																Foreground="{DynamicResource FontForeground}"/>
+														</StackPanel>
+													</StackPanel>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+									</StackPanel>
+								</ScrollViewer>
+							</shadui:Card>
+						</Grid>
+					</shadui:BreakpointView>
+				</shadui:BreakpointViewPort>
+			</StackPanel>
+		</ScrollViewer>
+	</DockPanel>
+</UserControl>
