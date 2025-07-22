@@ -22,15 +22,18 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 	private readonly DialogManager _dialogManager;
 	private readonly ToastManager _toastManager;
 	private readonly LogGymMemberDialogCardViewModel _logGymMemberDialogCardViewModel;
+	private readonly LogWalkInPurchaseViewModel _logWalkInPurchaseViewModel;
 
-	public CheckInOutViewModel(PageManager pageManager, DialogManager dialogManager, ToastManager toastManager, LogGymMemberDialogCardViewModel logGymMemberDialogCardViewModel)
+	public CheckInOutViewModel(PageManager pageManager, DialogManager dialogManager, ToastManager toastManager, LogGymMemberDialogCardViewModel logGymMemberDialogCardViewModel, LogWalkInPurchaseViewModel logWalkInPurchaseViewModel)
 	{
 		_pageManager = pageManager;
 		_dialogManager = dialogManager;
 		_toastManager = toastManager;
 		_logGymMemberDialogCardViewModel = logGymMemberDialogCardViewModel;
+		_logWalkInPurchaseViewModel = logWalkInPurchaseViewModel;
 
 		LoadSampleData();
+
 	}
 
 	public CheckInOutViewModel()
@@ -39,6 +42,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		_dialogManager = new DialogManager();
 		_toastManager = new ToastManager();
 		_logGymMemberDialogCardViewModel = new LogGymMemberDialogCardViewModel();
+		_logWalkInPurchaseViewModel = new LogWalkInPurchaseViewModel();
 
 		LoadSampleData();
 	}
@@ -138,6 +142,12 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 				.WithContent("Failed to open member profile.")
 				.ShowError();
 		}
+	}
+
+	[RelayCommand]
+	private void OpenLogWalkInPurchase() 
+	{
+        _pageManager.Navigate<LogWalkInPurchaseViewModel>();
 	}
 }
 
