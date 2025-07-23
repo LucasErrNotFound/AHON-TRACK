@@ -150,20 +150,6 @@
 							</Viewbox>
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
-					<shadui:SidebarItem
-						Command="{CompiledBinding}"
-						Content="Member Directory"
-						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Member Directory'}">
-						<shadui:SidebarItem.Icon>
-							<Viewbox>
-								<Svg
-									Width="24"
-									Height="24"
-									Path="avares://AHON_TRACK/Assets/MainWindowView/member-directory-icon.svg"/>
-							</Viewbox>
-						</shadui:SidebarItem.Icon>
-					</shadui:SidebarItem>
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
