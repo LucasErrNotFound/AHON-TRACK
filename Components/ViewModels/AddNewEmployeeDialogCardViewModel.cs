@@ -22,6 +22,9 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private string[] _employeePositionItems = ["Gym Staff", "Gym Admin"];
 
     [ObservableProperty]
+    private string[] _employeeStatusItems = ["Active", "Inactive", "Terminated"];
+
+    [ObservableProperty]
     private string _dialogTitle = "Add Employee Details";
 
     [ObservableProperty]
@@ -49,12 +52,12 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private string _employeeBarangay = string.Empty;
     private string _employeeCityTown = string.Empty;
     private string _employeeProvince = string.Empty;
-    private string? _employeeZipCode;
 
     // Account Section
     private string _employeeUsername = string.Empty;
     private string _employeePassword = string.Empty;
     private DateTime? _employeeDateJoined;
+    private string _employeeStatus = string.Empty;
 
     [Required(ErrorMessage = "First name is required")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
@@ -194,14 +197,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeProvince, value, true);
     }
 
-    [Required(ErrorMessage = "Zip code is required")]
-    [Range(1000, 9999, ErrorMessage = "Zip code must be a 4-digit number")]
-    public string? EmployeeZipCode
-    {
-        get => _employeeZipCode;
-        set => SetProperty(ref _employeeZipCode, value, true);
-    }
-
     [Required(ErrorMessage = "Username is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
@@ -226,6 +221,13 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     {
         get => _employeeDateJoined;
         set => SetProperty(ref _employeeDateJoined, value, true);
+    }
+
+    [Required(ErrorMessage = "Status is required")]
+    public string EmployeeStatus
+    {
+        get => _employeeStatus;
+        set => SetProperty(ref _employeeStatus, value, true);
     }
 
     public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager)
@@ -274,11 +276,11 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeBarangay = "Sample Barangay";
         EmployeeCityTown = "Sample City";
         EmployeeProvince = "Sample Province";
-        EmployeeZipCode = "4031";
 
         EmployeeUsername = !string.IsNullOrEmpty(employee.Username) ? employee.Username : "defaultuser";
         EmployeePassword = "defaultpassword";
         EmployeeDateJoined = employee.DateJoined != default ? employee.DateJoined : DateTime.Now;
+        EmployeeStatus = !string.IsNullOrEmpty(employee.Status) ? employee.Status : "Active";
     }
 
 
@@ -306,12 +308,12 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         Debug.WriteLine($"Barangay: {EmployeeBarangay}");
         Debug.WriteLine($"City/Town: {EmployeeCityTown}");
         Debug.WriteLine($"Province: {EmployeeProvince}");
-        Debug.WriteLine($"Zip Code: {EmployeeZipCode}");
 
         // Account Details Debugging
         Debug.WriteLine($"\nUsername: {EmployeeUsername}");
         Debug.WriteLine($"Password: {EmployeePassword}");
         Debug.WriteLine($"Date Joined: {EmployeeDateJoined?.ToString("MMMM d, yyyy")}");
+        Debug.WriteLine($"Status: {EmployeeStatus}");
 
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
@@ -338,10 +340,10 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeBarangay = string.Empty;
         EmployeeCityTown = string.Empty;
         EmployeeProvince = string.Empty;
-        EmployeeZipCode = null;
         EmployeeUsername = string.Empty;
         EmployeePassword = string.Empty;
         EmployeeDateJoined = null;
+        EmployeeStatus = string.Empty;
         ClearAllErrors();
     }
 }

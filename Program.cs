@@ -33,7 +33,7 @@ namespace AHON_TRACK
                 .WithInterFont()
                 .LogToTrace().With(new SkiaOptions()
                 {
-                    MaxGpuResourceSizeBytes = 1000000000, // 1 GB of GPU memory
+                    MaxGpuResourceSizeBytes = 2000000000, // 2 GB of GPU memory
                 });
     }
 }

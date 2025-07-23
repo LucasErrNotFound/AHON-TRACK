@@ -36,4 +36,9 @@
 			<DependentUpon>LoginView.axaml</DependentUpon>
 		</Compile>
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Assets\Fonts\" />
+	  <Folder Include="Assets\CheckInOutView\" />
+	</ItemGroup>
 </Project>

@@ -2,6 +2,16 @@
 AHON Track is an **Avalonia-based Desktop Gym Management System** that handles **membership management**, **scheduling**, **billing**, **inventory**, and **analytics**. It aims to replace traditional pen-and-paper tracking with a **modern, offline digitized solution**—designed to simplify operations and empower gyms with efficient management tools.
 
 ## Features :jigsaw:
+### :closed_lock_with_key: Authentication Window
+A custom-styled authentication interface for staff and admin, featuring username and password login with clear **data validation** and **toast messages**. It supports **role-based access**, ensuring staff and admin levels receive appropriate permissions upon successful sign-in.
+
+![login-showcase](https://raw.githubusercontent.com/LucasErrNotFound/AHON-TRACK/main/docs/login-showcase.gif)
+
+---
+
+### :computer: Shell Window
+The Shell Window serves as the central workspace of the gym management system, providing unified access to modules for managing employees, walk-ins, gym members, scheduling, billing, and analytics. It also adapts based on the current user’s role: admins receive full access to all modules and sidebar items, while staff see a limited interface to their permissions, ensuring focused and secure management workflows.
+
 > [WIP] :building_construction:
 
 ## Acknowledgements :sparkling_heart:

@@ -13,7 +13,9 @@ namespace AHON_TRACK
             // Add mappings for your components
             // Pattern: "ViewModelName" -> "ComponentFolder"
             { "EmployeeProfileInformationViewModel", "EmployeeProfile" },
+            { "MemberProfileInformationViewModel", "MemberProfile" },
             { "AddNewEmployeeDialogCardViewModel", "AddNewEmployeeDialogCard" },
+            { "LogWalkInPurchaseViewModel", "LogWalkInPurchase" },
         };
 
         public Control? Build(object? param)

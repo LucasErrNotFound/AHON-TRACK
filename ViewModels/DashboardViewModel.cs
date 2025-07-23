@@ -364,7 +364,7 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
                     new ColumnSeries<int>
                     {
                         Values = data,
-                        Fill = new SolidColorPaint(SKColors.Black),
+                        Fill = new SolidColorPaint(SKColors.DarkSlateBlue),
                         MaxBarWidth = 50,
                         Name = $"{selectedYear} Sales"
                     }

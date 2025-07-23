@@ -6,6 +6,19 @@
              RequestedThemeVariant="Light">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<!-- Your existing resources -->
+				<ResourceInclude Source="/Components/Dashboard/OverviewCard.axaml"/>
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
+		<FontFamily x:Key="JetbrainsFont">avares://AHON_TRACK/Assets/Fonts#Jetbrains</FontFamily>
+		<FontFamily x:Key="ManropeFont">avares://AHON_TRACK/Assets/Fonts#Manrope</FontFamily>
+		<FontFamily x:Key="LucideIcon">avares://AHON_TRACK/Assets/Fonts#lucide</FontFamily>
+		<FontFamily x:Key="ShadUIIcon">avares://AHON_TRACK/Assets/Fonts#shadui</FontFamily>
+	</Application.Resources>
+
 	<Application.DataTemplates>
 		<local:ViewLocator/>
 	</Application.DataTemplates>
