@@ -17,8 +17,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly PageManager _pageManager;
     private readonly DashboardViewModel _dashboardViewModel;
     private readonly ManageEmployeesViewModel _manageEmployeesViewModel;
-    private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 	private readonly CheckInOutViewModel _checkInOutViewModel;
+	private readonly ManageMembershipViewModel _manageMembershipViewModel;
+
+    private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
     // Primary constructor for DI
     public MainWindowViewModel(
@@ -27,14 +29,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ToastManager toastManager,
         DashboardViewModel dashboardViewModel,
         ManageEmployeesViewModel manageEmployeesViewModel,
-        EmployeeProfileInformationViewModel employeeProfileInformationViewModel,
-		CheckInOutViewModel checkInOutViewModel)
+		CheckInOutViewModel checkInOutViewModel,
+		ManageMembershipViewModel manageMembershipViewModel,
+        EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _dashboardViewModel = dashboardViewModel;
 		_checkInOutViewModel = checkInOutViewModel;
+		_manageMembershipViewModel = manageMembershipViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -51,6 +55,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _dashboardViewModel = new DashboardViewModel();
         _manageEmployeesViewModel = new ManageEmployeesViewModel();
 		_checkInOutViewModel = new CheckInOutViewModel();
+		_manageMembershipViewModel = new ManageMembershipViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
     }
 
@@ -116,11 +121,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenCheckInOut() => SwitchPage(_checkInOutViewModel);
 
-    /*
-
     [RelayCommand]
     private void OpenManageMembership() => SwitchPage(_manageMembershipViewModel);
 
+    /*
     [RelayCommand]
     private void OpenWalkInRegistration() => SwitchPage(_walkInRegistrationViewModel);
 
