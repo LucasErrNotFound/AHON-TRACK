@@ -1,4 +1,5 @@
-﻿using ShadUI;
+﻿using HotAvalonia;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +29,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		_pageManager = new PageManager(new ServiceProvider());
 	}
 
+	[AvaloniaHotReload]
 	public void Initialize()
 	{
 
