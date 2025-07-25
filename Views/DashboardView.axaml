@@ -7,7 +7,6 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:vm="using:AHON_TRACK.ViewModels"
 	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
-	xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
 	xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
 	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
 	xmlns:dashboard="clr-namespace:AHON_TRACK.Components.Dashboard"
@@ -45,7 +44,7 @@
 						<TabItem Header="Overview">
 							<StackPanel>
 								<shadui:BreakpointViewPort>
-									<!-- Extra large and up breakpoint (1280px and above). -->
+									<!-- Extra large and up breakpoint (1280 px and above). -->
 									<shadui:BreakpointView Breakpoint="XlAndUp">
 										<UniformGrid Margin="-6,0" Columns="4">
 											<UniformGrid.Resources>
@@ -126,7 +125,7 @@
 										</UniformGrid>
 									</shadui:BreakpointView>
 
-									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<!-- Extra large and down breakpoint (less than 1280 px). -->
 									<shadui:BreakpointView Breakpoint="XlAndDown">
 										<UniformGrid Margin="-6,0" Columns="2">
 											<UniformGrid.Resources>
@@ -208,7 +207,7 @@
 										</UniformGrid>
 									</shadui:BreakpointView>
 
-									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<!-- Extra large and down breakpoint (less than 1280 px). -->
 									<shadui:BreakpointView Breakpoint="XlAndDown">
 										<UniformGrid Margin="-6,0" Columns="2">
 											<UniformGrid.Resources>
@@ -291,7 +290,7 @@
 									</shadui:BreakpointView>
 								</shadui:BreakpointViewPort>
 								<shadui:BreakpointViewPort>
-									<!-- Extra large and up breakpoint (1280px and above). -->
+									<!-- Extra large and up breakpoint (1280 px and above). -->
 									<shadui:BreakpointView Breakpoint="XlAndUp">
 										<Grid Margin="-8,20" ColumnDefinitions="3* 2*">
 											<Border
@@ -350,9 +349,9 @@
 														DockPanel.Dock="Top"
 														Spacing="8">
 														<TextBlock
-																FontSize="17"
-																FontWeight="Bold"
-																Text="Recent Sales" />
+															FontSize="17"
+															FontWeight="Bold"
+															Text="Recent Sales" />
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding SalesSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
@@ -420,7 +419,7 @@
 											</Border>
 										</Grid>
 									</shadui:BreakpointView>
-									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<!-- Extra large and down breakpoint (less than 1280 px). -->
 									<shadui:BreakpointView Breakpoint="XlAndDown">
 										<Grid Margin="-8,20" RowDefinitions="* *">
 											<Border
@@ -551,7 +550,7 @@
 									</shadui:BreakpointView>
 								</shadui:BreakpointViewPort>
 								<shadui:BreakpointViewPort>
-									<!-- Extra large and up breakpoint (1280px and above). -->
+									<!-- Extra large and up breakpoint (1280 px and above). -->
 									<shadui:BreakpointView Breakpoint="XlAndUp">
 										<Grid Margin="-8,0" ColumnDefinitions="4.7* 2*">
 											<Border
@@ -735,7 +734,7 @@
 										</Grid>
 									</shadui:BreakpointView>
 
-									<!-- Extra large and down breakpoint (less than 1280px). -->
+									<!-- Extra large and down breakpoint (less than 1280 px). -->
 									<shadui:BreakpointView Breakpoint="XlAndDown">
 										<Grid Margin="-8,0" RowDefinitions="* *">
 											<Border
