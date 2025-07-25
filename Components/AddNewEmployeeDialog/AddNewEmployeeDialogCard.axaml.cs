@@ -1,6 +1,6 @@
-using Avalonia;
+using System;
+using System.Diagnostics;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 
@@ -15,26 +15,30 @@ public partial class AddNewEmployeeDialogCard : UserControl
 
     private async void Button_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        var topLevel = TopLevel.GetTopLevel(this);
-        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        try
         {
-            AllowMultiple = false,
-            Title = "Select an image file",
-            FileTypeFilter = [FilePickerFileTypes.ImageJpg, FilePickerFileTypes.ImagePng, FilePickerFileTypes.ImageAll]
-        });
-
-        if (files.Count > 0)
-        {
-            var file = files[0];
-            using var stream = await file.OpenReadAsync();
-            var bitmap = new Bitmap(stream);
-
-            var profileImage = this.FindControl<Image>("EmployeeProfileImage");
-            if (profileImage != null)
+            var topLevel = TopLevel.GetTopLevel(this);
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                profileImage.Source = bitmap;
-                profileImage.IsVisible = true; // Ensure the image is visible after loading
-            }
+                AllowMultiple = false,
+                Title = "Select an image file",
+                FileTypeFilter = [FilePickerFileTypes.ImageJpg, FilePickerFileTypes.ImagePng, FilePickerFileTypes.ImageAll]
+            });
+
+            if (files.Count <= 0) return;
+            var file = files[0];
+            await using var stream = await file.OpenReadAsync();
+        
+            var bitmap = new Bitmap(stream);
+            var profileImage = this.FindControl<Image>("EmployeeProfileImage");
+        
+            if (profileImage == null) return;
+            profileImage.Source = bitmap;
+            profileImage.IsVisible = true; // Ensure the image is visible after loading
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
         }
     }
 }
