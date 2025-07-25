@@ -215,7 +215,8 @@
 					<!-- Row 2: Location Details -->
 					<Grid
 						Grid.Row="1"
-						Grid.ColumnSpan="2"
+						Grid.Column="0"
+						Grid.ColumnSpan="2" 
 						ColumnDefinitions="1*, 1*, 1*, 1*"
 						Margin="0,20,0,0">
 
@@ -299,7 +300,7 @@
 					</StackPanel>
 
 					<!-- Date Joined Section -->
-					<StackPanel Grid.Row="0" Grid.Column="2" Margin="80,-3,15,0">
+					<StackPanel Grid.Row="0" Grid.Column="1" Margin="80,-3,15,0">
 						<CalendarDatePicker
 							shadui:ControlAssist.Label="Date Joined"
 							Width="150"
