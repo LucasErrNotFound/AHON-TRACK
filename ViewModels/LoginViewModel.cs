@@ -16,7 +16,7 @@ public partial class LoginViewModel : ViewModelBase
     public PageManager PageManager { get; } = new PageManager(new ServiceProvider());
 
     private bool _shouldShowSuccessLogInToast = false;
-    // private bool _shouldShowErrorToast = false; //  will be used in the future if needed
+    // private bool _shouldShowErrorToast = false; // will be used in the future if needed
 
     public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
