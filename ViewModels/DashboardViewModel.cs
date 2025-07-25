@@ -15,13 +15,13 @@ using System.Threading.Tasks;
 namespace AHON_TRACK.ViewModels;
 
 [Page("dashboard")]
-public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, INavigable
+public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, INavigable
 {
     #region Private Fields
 
     private readonly PageManager _pageManager;
     private readonly DashboardModel _dashboardModel;
-    private int _selectedYearIndex = 0;
+    private int _selectedYearIndex;
     private ISeries[] _series = [];
     private ObservableCollection<int> _availableYears = [];
     private ObservableCollection<SalesItem> _recentSales = [];
@@ -202,9 +202,9 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
 
     private void InitializeAxes()
     {
-        XAxes = new Axis[]
-        {
-                new Axis
+        XAxes =
+        [
+            new Axis
                 {
                     Name = "Months",
                     NamePaint = new SolidColorPaint(SKColors.Red),
@@ -213,11 +213,11 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
                     TextSize = 13,
                     MinStep = 1,
                 }
-        };
+        ];
 
-        YAxes = new Axis[]
-        {
-                new Axis
+        YAxes =
+        [
+            new Axis
                 {
                     Name = "Profit",
                     NamePaint = new SolidColorPaint(SKColors.Green),
@@ -226,11 +226,11 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
                     SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
                     {
                         StrokeThickness = 2,
-                        PathEffect = new DashEffect(new float[] { 3, 3 })
+                        PathEffect = new DashEffect([3, 3])
                     },
                     Labeler = value => Labelers.FormatCurrency(value, ",", ".", "₱"),
                 }
-        };
+        ];
     }
 
     private void InitializeChart()
@@ -256,7 +256,7 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading sales data: {ex.Message}"); // Don't ask me why this is a Console based error handling :)
+            Console.WriteLine($"Error loading sales data: {ex.Message}"); // Don't ask me why this is a Console-based error handling :)
         }
     }
 
@@ -274,7 +274,7 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading training sessions data: {ex.Message}"); // Don't ask me why this is a Console based error handling :)
+            Console.WriteLine($"Error loading training sessions data: {ex.Message}"); // Don't ask me why this is a Console-based error handling :)
         }
     }
 
@@ -292,7 +292,7 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading recent logs data: {ex.Message}"); // Don't ask me why this is a Console based error handling :)
+            Console.WriteLine($"Error loading recent logs data: {ex.Message}"); // Don't ask me why this is a Console-based error handling :)
         }
     }
 
@@ -302,7 +302,7 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
 
     public void AddSale(SalesItem newSale)
     {
-        RecentSales.Insert(0, newSale); // Add to beginning for "recent" sales
+        RecentSales.Insert(0, newSale); // Add to the beginning for "recent" sales
         UpdateSalesSummary();
     }
 
@@ -338,7 +338,7 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
 
     public void AddRecentLog(RecentLog newLog)
     {
-        RecentLogs.Insert(0, newLog); // Add to beginning for "recent" logs
+        RecentLogs.Insert(0, newLog); // Add to the beginning for "recent" logs
         UpdateRecentLogsSummary();
     }
 
@@ -359,16 +359,16 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
             int selectedYear = AvailableYears[_selectedYearIndex];
             var data = _dashboardModel.GetDataForYear(selectedYear);
 
-            Series = new ISeries[]
-            {
-                    new ColumnSeries<int>
+            Series =
+            [
+                new ColumnSeries<int>
                     {
                         Values = data,
                         Fill = new SolidColorPaint(SKColors.DarkSlateBlue),
                         MaxBarWidth = 50,
                         Name = $"{selectedYear} Sales"
                     }
-            };
+            ];
         }
     }
 
@@ -426,7 +426,7 @@ public partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged,
 
     public new event PropertyChangedEventHandler? PropertyChanged;
 
-    protected new virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    private new void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     #endregion
 }
