@@ -212,7 +212,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         var viewModel = provider.GetService<LoginViewModel>();
         viewModel.Initialize();
 
-        var loginWindow = new LoginView { DataContext = viewModel };
+        var loginWindow = new Views.LoginView { DataContext = viewModel };
         viewModel.SetInitialLogOutToastState(_shouldShowSuccessLogOutToast);
         desktop.MainWindow = loginWindow;
         loginWindow.Show();
