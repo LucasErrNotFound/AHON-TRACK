@@ -5,7 +5,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:vm="using:AHON_TRACK.ViewModels"
 	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
-	x:Class="AHON_TRACK.LoginView"
+	x:Class="AHON_TRACK.Views.LoginView"
 	x:DataType="vm:LoginViewModel"
 	mc:Ignorable="d" 
 	d:DesignWidth="1000" 
