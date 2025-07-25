@@ -1,5 +1,4 @@
-﻿// using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Components.ViewModels;
+﻿using AHON_TRACK.Components.ViewModels;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
@@ -13,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -22,63 +22,63 @@ namespace AHON_TRACK.ViewModels;
 public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
-    private List<ManageEmployeesItem> originalEmployeeData = new();
+    private List<ManageEmployeesItem> _originalEmployeeData = [];
 
     [ObservableProperty]
-    private ObservableCollection<ManageEmployeesItem> employeeItems = new();
+    private ObservableCollection<ManageEmployeesItem> _employeeItems = [];
 
     [ObservableProperty]
-    private List<ManageEmployeesItem> currentFilteredData = new();
+    private List<ManageEmployeesItem> _currentFilteredData = [];
 
     [ObservableProperty]
-    private string searchStringResult = string.Empty;
+    private string _searchStringResult = string.Empty;
 
     [ObservableProperty]
-    private bool isSearchingEmployee = false;
+    private bool _isSearchingEmployee;
 
     [ObservableProperty]
-    private bool selectAll = false;
+    private bool _selectAll;
 
     [ObservableProperty]
-    private int selectedCount = 0;
+    private int _selectedCount;
 
     [ObservableProperty]
-    private int totalCount = 0;
+    private int _totalCount;
 
     [ObservableProperty]
-    private bool showIDColumn = true;
+    private bool _showIdColumn = true;
 
     [ObservableProperty]
-    private bool showPictureColumn = true;
+    private bool _showPictureColumn = true;
 
     [ObservableProperty]
-    private bool showNameColumn = true;
+    private bool _showNameColumn = true;
 
     [ObservableProperty]
-    private bool showUsernameColumn = true;
+    private bool _showUsernameColumn = true;
 
     [ObservableProperty]
-    private bool showContactNumberColumn = true;
+    private bool _showContactNumberColumn = true;
 
     [ObservableProperty]
-    private bool showPositionColumn = true;
+    private bool _showPositionColumn = true;
 
     [ObservableProperty]
-    private bool showStatusColumn = true;
+    private bool _showStatusColumn = true;
 
     [ObservableProperty]
-    private bool showDateJoined = true;
+    private bool _showDateJoined = true;
 
     [ObservableProperty]
-    private int selectedSortIndex = -1;
+    private int _selectedSortIndex = -1;
 
     [ObservableProperty]
-    private int selectedFilterIndex = -1;
+    private int _selectedFilterIndex = -1;
 
     [ObservableProperty]
-    private bool isInitialized = false;
+    private bool _isInitialized;
 
-    private const string DEFAULT_AVATAR_SOURCE = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+    private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly PageManager _pageManager;
 
@@ -114,12 +114,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     [AvaloniaHotReload]
     public void Initialize()
     {
-        if (!IsInitialized)
-        {
-            LoadSampleData();
-            UpdateCounts();
-            IsInitialized = true;
-        }
+        if (IsInitialized) return;
+        LoadSampleData();
+        UpdateCounts();
+        IsInitialized = true;
     }
 
     private void LoadSampleData()
@@ -142,12 +140,12 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
     private List<ManageEmployeesItem> GetSampleEmployeesData()
     {
-        return new List<ManageEmployeesItem>
-        {
+        return
+        [
             new ManageEmployeesItem
             {
                 ID = "1001",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "Jedd Calubayan",
                 Username = "Kuya Rome",
                 ContactNumber = "0975 994 3010",
@@ -155,10 +153,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Active",
                 DateJoined = new DateTime(2025, 6, 16)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1002",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "JC Casidore",
                 Username = "Jaycee",
                 ContactNumber = "0989 445 0949",
@@ -166,10 +165,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Active",
                 DateJoined = new DateTime(2025, 6, 16)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1003",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "Mardie Dela Cruz",
                 Username = "Figora",
                 ContactNumber = "0901 990 9921",
@@ -177,10 +177,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Inactive",
                 DateJoined = new DateTime(2025, 6, 17)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1004",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "JL Taberdo",
                 Username = "JeyEL",
                 ContactNumber = "0957 889 3724",
@@ -188,10 +189,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Terminated",
                 DateJoined = new DateTime(2025, 6, 19)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1005",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "Jav Agustin",
                 Username = "Mr. Javitos",
                 ContactNumber = "0923 354 4866",
@@ -199,10 +201,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Inactive",
                 DateJoined = new DateTime(2025, 6, 21)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1006",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "Marc Torres",
                 Username = "Sora",
                 ContactNumber = "0913 153 4456",
@@ -210,10 +213,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Active",
                 DateJoined = new DateTime(2025, 6, 21)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1007",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "Maverick Lim",
                 Username = "Kiriya",
                 ContactNumber = "0983 853 0459",
@@ -221,10 +225,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Terminated",
                 DateJoined = new DateTime(2022, 11, 9)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1008",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "Dave Dapitillo",
                 Username = "Dabii69",
                 ContactNumber = "0914 145 4552",
@@ -232,10 +237,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Inactive",
                 DateJoined = new DateTime(2023, 11, 9)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1009",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "Sianrey Flora",
                 Username = "Reylifts",
                 ContactNumber = "0911 115 4232",
@@ -243,10 +249,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Active",
                 DateJoined = new DateTime(2020, 11, 29)
             },
+
             new ManageEmployeesItem
             {
                 ID = "1010",
-                AvatarSource = DEFAULT_AVATAR_SOURCE,
+                AvatarSource = DefaultAvatarSource,
                 Name = "Mark Dela Cruz",
                 Username = "MarkyWTF",
                 ContactNumber = "0931 315 1672",
@@ -254,10 +261,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = "Terminated",
                 DateJoined = new DateTime(2018, 10, 1)
             }
-        };
+        ];
     }
 
-    // Method to load employees from database (for future implementation)
+    // Method to load employees from a database (for future implementation)
     public async Task<List<ManageEmployeesItem>> GetEmployeesFromDatabaseAsync()
     {
         // Chill, hardcoded for visual only || Replace this with your actual SQL database call
@@ -267,7 +274,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         // return employees.ToList();
 
         await Task.Delay(100); // Simulate async operation
-        return new List<ManageEmployeesItem>();
+        return [];
     }
 
     // Method to generate summary text
@@ -282,7 +289,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     }
     */
 
-    public void OnEmployeePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnEmployeePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ManageEmployeesItem.IsSelected))
         {
@@ -290,19 +297,12 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
     }
 
-    public void UpdateCounts()
+    private void UpdateCounts()
     {
         SelectedCount = EmployeeItems.Count(x => x.IsSelected);
         TotalCount = EmployeeItems.Count;
 
-        if (EmployeeItems.Count > 0)
-        {
-            SelectAll = EmployeeItems.All(x => x.IsSelected);
-        }
-        else
-        {
-            SelectAll = false;
-        }
+        SelectAll = EmployeeItems.Count > 0 && EmployeeItems.All(x => x.IsSelected);
     }
 
     [RelayCommand]
@@ -310,7 +310,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         _addNewEmployeeDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
-            .WithSuccessCallback(vm =>
+            .WithSuccessCallback(_ =>
                 _toastManager.CreateToast("Added a new employee")
                     .WithContent($"Welcome, new employee!")
                     .DismissOnClick()
@@ -336,7 +336,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
         _addNewEmployeeDialogCardViewModel.InitializeForEditMode(employee);
         _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
-            .WithSuccessCallback(vm =>
+            .WithSuccessCallback(_ =>
                 _toastManager.CreateToast("Modified Employee Details")
                     .WithContent($"You have successfully modified {employee.Name}'s details")
                     .DismissOnClick()
@@ -351,7 +351,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
 
     [RelayCommand]
-    private void OpenViewEmployeeProfile(ManageEmployeesItem employee)
+    private void OpenViewEmployeeProfile(ManageEmployeesItem? employee)
     {
         if (employee == null)
         {
@@ -389,17 +389,17 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private void SortByID()
+    private void SortById()
     {
-        var sortedByID = EmployeeItems.OrderBy(employee => employee.ID).ToList();
+        var sortedById = EmployeeItems.OrderBy(employee => employee.ID).ToList();
         EmployeeItems.Clear();
 
-        foreach (var employees in sortedByID)
+        foreach (var employees in sortedById)
         {
             EmployeeItems.Add(employees);
         }
         // Update current filtered data to match sorted state
-        CurrentFilteredData = [.. sortedByID];
+        CurrentFilteredData = [.. sortedById];
     }
 
     [RelayCommand]
@@ -623,7 +623,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private async Task ShowCopySingleEmployeeID(ManageEmployeesItem? employee)
+    private async Task ShowCopySingleEmployeeId(ManageEmployeesItem? employee)
     {
         if (employee == null) return;
 
@@ -641,7 +641,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private async Task ShowCopyMultipleEmployeeID(ManageEmployeesItem? employee)
+    private async Task ShowCopyMultipleEmployeeId(ManageEmployeesItem? employee)
     {
         var selectedEmployees = EmployeeItems.Where(item => item.IsSelected).ToList();
         if (employee == null) return;
@@ -783,7 +783,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         var clipboard = Clipboard.Get();
         if (clipboard != null)
         {
-            await clipboard.SetTextAsync(employee.DateJoined.ToString());
+            await clipboard.SetTextAsync(employee.DateJoined.ToString(CultureInfo.InvariantCulture));
         }
 
         _toastManager.CreateToast("Copy Employee Date Joined")
@@ -879,7 +879,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         switch (selectedIndex)
         {
             case 0:
-                SortByIDCommand.Execute(null);
+                SortByIdCommand.Execute(null);
                 break;
             case 1:
                 SortNamesByAlphabeticalCommand.Execute(null);
@@ -940,33 +940,33 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 public partial class ManageEmployeesItem : ObservableObject
 {
     [ObservableProperty]
-    private bool isSelected = false;
+    private bool _isSelected;
 
     [ObservableProperty]
-    private string iD = string.Empty;
+    private string _iD = string.Empty;
 
     [ObservableProperty]
-    private string avatarSource = string.Empty;
+    private string _avatarSource = string.Empty;
 
     [ObservableProperty]
-    private string name = string.Empty;
+    private string _name = string.Empty;
 
     [ObservableProperty]
-    private string username = string.Empty;
+    private string _username = string.Empty;
 
     [ObservableProperty]
-    private string contactNumber = string.Empty;
+    private string _contactNumber = string.Empty;
 
     [ObservableProperty]
-    private string position = string.Empty;
+    private string _position = string.Empty;
 
     [ObservableProperty]
-    private string status = string.Empty;
+    private string _status = string.Empty;
 
     [ObservableProperty]
-    private DateTime dateJoined;
+    private DateTime _dateJoined;
 
-    public IBrush StatusForeground => Status?.ToLowerInvariant() switch
+    public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500
         "inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)), // Gray-500
@@ -974,7 +974,7 @@ public partial class ManageEmployeesItem : ObservableObject
         _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
     };
 
-    public IBrush StatusBackground => Status?.ToLowerInvariant() switch
+    public IBrush StatusBackground => Status.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
         "inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)), // Gray-500 with alpha
@@ -982,12 +982,12 @@ public partial class ManageEmployeesItem : ObservableObject
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))           // Default Gray-500 with alpha
     };
 
-    public string StatusDisplayText => Status?.ToLowerInvariant() switch
+    public string StatusDisplayText => Status.ToLowerInvariant() switch
     {
         "active" => "● Active",
         "inactive" => "● Inactive",
         "terminated" => "● Terminated",
-        _ => Status ?? ""
+        _ => Status
     };
 
     // Notify when status changes to update colors
@@ -1003,10 +1003,6 @@ public class Clipboard
 {
     public static IClipboard? Get()
     {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window })
-        {
-            return window.Clipboard!;
-        }
-        return null;
+        return Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window } ? window.Clipboard! : null;
     }
 }
