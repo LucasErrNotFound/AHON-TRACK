@@ -25,8 +25,8 @@
 		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
 		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
 
-		<SolidColorBrush x:Key="SuccessFontColor" Color="rgb(37,194,94)"/>
-		<SolidColorBrush x:Key="SuccessBackgroundColor" Color="rgb(37,194,94)" Opacity="0.2"/>
+		<SolidColorBrush x:Key="SuccessFontColor" Color="#22E55E"/>
+		<SolidColorBrush x:Key="SuccessBackgroundColor" Color="#22C55E" Opacity="0.2"/>
 	</UserControl.Resources>
 
 	<UserControl.Styles>
@@ -60,7 +60,7 @@
 		<ScrollViewer VerticalScrollBarVisibility="Auto">
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
 				<shadui:BreakpointViewPort>
-					<!-- Extra large and up breakpoint (1280px and above). -->
+					<!-- Extra large and up breakpoint (1280 px and above). -->
 					<shadui:BreakpointView Breakpoint="XlAndUp">
 						<Grid Margin="100,20" ColumnDefinitions="5* 10*">
 							<shadui:Card Grid.Column="0" VerticalAlignment="Top">
@@ -188,7 +188,7 @@
 												<Separator Margin="20"/>
 												<StackPanel>
 													<!-- Member ID Row -->
-													<StackPanel Grid.Column="0" Orientation="Horizontal">
+													<StackPanel Orientation="Horizontal">
 														<TextBlock
 															Text="Member ID"
 															Classes="h4"
@@ -203,7 +203,7 @@
 													<Separator Width="2000" Margin="0,20"/>
 
 													<!-- Member Position Row -->
-													<StackPanel Grid.Column="1" Orientation="Horizontal">
+													<StackPanel Orientation="Horizontal">
 														<TextBlock
 															Text="Position"
 															Classes="h4"
@@ -218,7 +218,7 @@
 													<Separator Width="2000" Margin="0,20"/>
 
 													<!-- Member Status Row -->
-													<StackPanel Grid.Column="1" Orientation="Horizontal">
+													<StackPanel Orientation="Horizontal">
 														<TextBlock
 															Text="Status"
 															Classes="h4"
@@ -233,7 +233,7 @@
 													<Separator Width="2000" Margin="0,20"/>
 
 													<!-- Date Joined Row -->
-													<StackPanel Grid.Column="1" Orientation="Horizontal">
+													<StackPanel Orientation="Horizontal">
 														<TextBlock
 															Text="Date Joined"
 															Classes="h4"
@@ -277,7 +277,7 @@
 
 													<StackPanel>
 														<!-- Full Name Row -->
-														<StackPanel Grid.Column="0" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Full Name"
 																Classes="h4"
@@ -292,7 +292,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Age Row -->
-														<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Age"
 																Classes="h4"
@@ -307,7 +307,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Birthdate Row -->
-														<StackPanel Grid.Column="2" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Birthdate"
 																Classes="h4"
@@ -322,7 +322,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Gender Row -->
-														<StackPanel Grid.Column="3" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Gender"
 																Classes="h4"
@@ -364,7 +364,7 @@
 													</Grid.ColumnDefinitions>
 													<StackPanel>
 														<!-- Phone Number Row -->
-														<StackPanel Grid.Column="0" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Phone Number"
 																Classes="h4"
@@ -379,7 +379,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Last Login Row -->
-														<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Last Login"
 																Classes="h4"
@@ -420,7 +420,7 @@
 													</Grid.ColumnDefinitions>
 													<StackPanel>
 														<!-- House Address Row -->
-														<StackPanel Grid.Column="0" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="House Address"
 																Classes="h4"
@@ -435,7 +435,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- House Number Row -->
-														<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="House Number"
 																Classes="h4"
@@ -450,7 +450,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Street Row -->
-														<StackPanel Grid.Column="2" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Street"
 																Classes="h4"
@@ -465,7 +465,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Barangay Row -->
-														<StackPanel Grid.Column="3" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="City &amp; Province"
 																Classes="h4"
@@ -486,7 +486,7 @@
 							</shadui:Card>
 						</Grid>
 					</shadui:BreakpointView>
-					<!-- Extra large and down breakpoint (1280px and below). -->
+					<!-- Extra large and down breakpoint (1280 px and below). -->
 					<shadui:BreakpointView Breakpoint="XlAndDown">
 						<Grid Margin="100,20" RowDefinitions="* *">
 							<shadui:Card Grid.Row="0" VerticalAlignment="Top">
@@ -614,7 +614,7 @@
 												<Separator Margin="20"/>
 												<StackPanel>
 													<!-- Member ID Row -->
-													<StackPanel Grid.Column="0" Orientation="Horizontal">
+													<StackPanel Orientation="Horizontal">
 														<TextBlock
 															Text="Member ID"
 															Classes="h4"
@@ -629,7 +629,7 @@
 													<Separator Width="2000" Margin="0,20"/>
 
 													<!-- Member Position Row -->
-													<StackPanel Grid.Column="1" Orientation="Horizontal">
+													<StackPanel Orientation="Horizontal">
 														<TextBlock
 															Text="Position"
 															Classes="h4"
@@ -644,7 +644,7 @@
 													<Separator Width="2000" Margin="0,20"/>
 
 													<!-- Member Status Row -->
-													<StackPanel Grid.Column="1" Orientation="Horizontal">
+													<StackPanel Orientation="Horizontal">
 														<TextBlock
 															Text="Status"
 															Classes="h4"
@@ -659,7 +659,7 @@
 													<Separator Width="2000" Margin="0,20"/>
 
 													<!-- Date Joined Row -->
-													<StackPanel Grid.Column="1" Orientation="Horizontal">
+													<StackPanel Orientation="Horizontal">
 														<TextBlock
 															Text="Date Joined"
 															Classes="h4"
@@ -703,7 +703,7 @@
 
 													<StackPanel>
 														<!-- Full Name Row -->
-														<StackPanel Grid.Column="0" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Full Name"
 																Classes="h4"
@@ -718,7 +718,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Age Row -->
-														<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Age"
 																Classes="h4"
@@ -733,7 +733,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Birthdate Row -->
-														<StackPanel Grid.Column="2" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Birthdate"
 																Classes="h4"
@@ -748,7 +748,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Gender Row -->
-														<StackPanel Grid.Column="3" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Gender"
 																Classes="h4"
@@ -790,7 +790,7 @@
 													</Grid.ColumnDefinitions>
 													<StackPanel>
 														<!-- Phone Number Row -->
-														<StackPanel Grid.Column="0" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Phone Number"
 																Classes="h4"
@@ -805,7 +805,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Last Login Row -->
-														<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Last Login"
 																Classes="h4"
@@ -846,7 +846,7 @@
 													</Grid.ColumnDefinitions>
 													<StackPanel>
 														<!-- House Address Row -->
-														<StackPanel Grid.Column="0" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="House Address"
 																Classes="h4"
@@ -861,7 +861,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- House Number Row -->
-														<StackPanel Grid.Column="1" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="House Number"
 																Classes="h4"
@@ -876,7 +876,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Street Row -->
-														<StackPanel Grid.Column="2" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="Street"
 																Classes="h4"
@@ -891,7 +891,7 @@
 														<Separator Width="2000" Margin="0,20"/>
 
 														<!-- Barangay Row -->
-														<StackPanel Grid.Column="3" Orientation="Horizontal">
+														<StackPanel Orientation="Horizontal">
 															<TextBlock
 																Text="City &amp; Province"
 																Classes="h4"
