@@ -1,5 +1,4 @@
-﻿using AHON_TRACK;
-using AHON_TRACK.ViewModels;
+﻿using AHON_TRACK.ViewModels;
 using AHON_TRACK.Components.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using System;
@@ -29,7 +28,7 @@ namespace AHON_TRACK;
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
 public partial class ServiceProvider
 {
-    public ILogger LoggerFactory()
+    public static ILogger LoggerFactory()
     {
         var currentFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "AHON_TRACK\\logs");
