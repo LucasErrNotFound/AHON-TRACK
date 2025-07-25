@@ -23,7 +23,7 @@ public class App : Application
         var viewModel = provider.GetService<LoginViewModel>();
         viewModel.Initialize();
 
-        var loginWindow = new LoginView { DataContext = viewModel };
+        var loginWindow = new Views.LoginView { DataContext = viewModel };
         desktop.MainWindow = loginWindow;
         base.OnFrameworkInitializationCompleted();
     }
