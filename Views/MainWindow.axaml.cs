@@ -2,7 +2,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Interactivity;
 using Window = ShadUI.Window;
 
 namespace AHON_TRACK.Views;
@@ -13,15 +12,6 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Closing += OnClosing;
-    }
-    private void OnFullScreen(object? sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState.FullScreen;
-    }
-
-    private void OnExitFullScreen(object? sender, RoutedEventArgs e)
-    {
-        ExitFullScreen();
     }
 
     private void OnClosing(object? sender, WindowClosingEventArgs e)
