@@ -4,11 +4,13 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using System.Linq;
+using System.Threading;
 
 namespace AHON_TRACK;
 
 public class App : Application
 {
+    private static Mutex? _appMutex;
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -17,6 +19,14 @@ public class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
+        _appMutex = new Mutex(true, "AHON_TRACK", out var createdNew);
+        
+        if (!createdNew)
+        {
+            var instanceDialog = new InstanceDialog();
+            instanceDialog.Show();
+            return;
+        }
         DisableAvaloniaDataAnnotationValidation();
 
         var provider = new ServiceProvider();
