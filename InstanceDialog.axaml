@@ -24,16 +24,18 @@
             Path="/Assets/MainWindowView/Primary-Logo.svg"/>
     </shadui:Window.LogoContent>
     <StackPanel Margin="24,16" Spacing="8">
-        <TextBlock Classes="Large" Text="Uh oh!"/>
+        <TextBlock Classes="Large" Text="Uh oh!" Foreground="#2C2F36"/>
         <TextBlock
             Classes="Small"
             Text="An instance of AHON Track app is already running on this computer. You can only run one instance at a time."
+            Foreground="#2C2F36"
             TextWrapping="Wrap"/>
         <Button
             Margin="0,24"
             HorizontalAlignment="Right"
             Classes="Primary"
             Click="OnClose"
-            Content="Close"/>
+            Content="Close"
+            Background="#2C2F36"/>
     </StackPanel>
 </shadui:Window>
