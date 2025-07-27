@@ -141,7 +141,7 @@
                         AsSeparator="True"
                         Text="Scheduling &amp; Classes" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
+						Command="{CompiledBinding OpenTrainingSchedulesCommand}"
 						Content="Training Schedules"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Training Schedules'}">
