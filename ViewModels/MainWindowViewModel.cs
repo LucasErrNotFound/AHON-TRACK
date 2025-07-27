@@ -19,6 +19,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly ManageEmployeesViewModel _manageEmployeesViewModel;
 	private readonly CheckInOutViewModel _checkInOutViewModel;
 	private readonly ManageMembershipViewModel _manageMembershipViewModel;
+    private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
@@ -31,6 +32,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ManageEmployeesViewModel manageEmployeesViewModel,
 		CheckInOutViewModel checkInOutViewModel,
 		ManageMembershipViewModel manageMembershipViewModel,
+        TrainingSchedulesViewModel trainingSchedulesViewModel,
         EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
@@ -39,6 +41,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _dashboardViewModel = dashboardViewModel;
 		_checkInOutViewModel = checkInOutViewModel;
 		_manageMembershipViewModel = manageMembershipViewModel;
+        _trainingSchedulesViewModel = trainingSchedulesViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -57,6 +60,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		_checkInOutViewModel = new CheckInOutViewModel();
 		_manageMembershipViewModel = new ManageMembershipViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
+        _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
     }
 
     [ObservableProperty]
@@ -124,16 +128,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenManageMembership() => SwitchPage(_manageMembershipViewModel);
 
-    /*
-    [RelayCommand]
-    private void OpenWalkInRegistration() => SwitchPage(_walkInRegistrationViewModel);
-
-    [RelayCommand]
-    private void OpenMemberDirectory() => SwitchPage(_memberDirectoryViewModel);
-
     [RelayCommand]
     private void OpenTrainingSchedules() => SwitchPage(_trainingSchedulesViewModel);
 
+    /*
     [RelayCommand]
     private void OpenRoomEquipmentBooking() => SwitchPage(_roomEquipmentBookingViewModel);
 
