@@ -24,6 +24,7 @@ namespace AHON_TRACK;
 [Transient<MemberProfileInformationViewModel>]
 [Transient<LogGymMemberDialogCardViewModel>]
 [Transient<LogWalkInPurchaseViewModel>]
+[Transient<AddTrainingScheduleDialogCardViewModel>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
