@@ -1,0 +1,280 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
+    x:DataType="viewModels:TrainingSchedulesViewModel"
+    x:Class="AHON_TRACK.Views.TrainingSchedulesView"
+    mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080">
+
+    <Design.DataContext>
+        <viewModels:TrainingSchedulesViewModel/>
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+        <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
+        <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
+        <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+
+        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+        <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
+        <converters:DateToStringConverter x:Key="DateToStringConverter" />
+    </UserControl.Resources>
+
+    <DockPanel LastChildFill="True">
+        <StackPanel
+            MaxWidth="{StaticResource PageMaxWidth}"
+            Margin="{StaticResource PageMargin}"
+            DockPanel.Dock="Top">
+            <TextBlock
+                FontSize="30"
+                FontWeight="SemiBold"
+                FontFamily="Inter"
+                Text="Training Schedules"
+                Foreground="{StaticResource FontForeground}"
+                Margin="90,30" />
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,20,48,24" Spacing="16">
+                <shadui:BreakpointViewPort>
+                    <shadui:BreakpointView Breakpoint="XlAndUp">
+                        <UniformGrid Margin="-6, 0" Columns="4">
+                            <UniformGrid.Resources>
+                                <LinearGradientBrush x:Key="GreenGradient" StartPoint="0%,50%" EndPoint="100%, 50%">
+                                    <GradientStop Color="#22C55E" Offset="0.0" />
+                                    <GradientStop Color="#4CAF50" Offset="1.0" />
+                                </LinearGradientBrush>
+
+                                <LinearGradientBrush x:Key="BlueGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+                                    <GradientStop Color="#64B5F6" Offset="0.0" />
+                                    <GradientStop Color="#2196F3" Offset="1.0" />
+                                </LinearGradientBrush>
+
+                                <LinearGradientBrush x:Key="OrangeGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+                                    <GradientStop Color="#FFB74D" Offset="0.0" />
+                                    <GradientStop Color="#FF9800" Offset="1.0" />
+                                </LinearGradientBrush>
+
+                                <LinearGradientBrush x:Key="PurpleGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+                                    <GradientStop Color="#BA68C8" Offset="0.0" />
+                                    <GradientStop Color="#9C27B0" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </UniformGrid.Resources>
+
+                            <card:OverviewCard
+                                Title="Current Schedule"
+                                CardBackground="{StaticResource GreenGradient}"
+                                Foreground="White"
+                                Hint="+0.6% from yesterday"
+                                Value="9 Appointments">
+                            </card:OverviewCard>
+                            <card:OverviewCard
+                                Title="Upcoming Schedule"
+                                CardBackground="{StaticResource BlueGradient}"
+                                Foreground="White"
+                                Hint="+0.3% from yesterday"
+                                Value="3 Appointments">
+                            </card:OverviewCard>
+                            <card:OverviewCard
+                                Title="Coaches"
+                                CardBackground="{StaticResource OrangeGradient}"
+                                Foreground="White"
+                                Hint="Number of Coaches"
+                                Value="3 Appointments">
+                            </card:OverviewCard>
+                        </UniformGrid>
+                    </shadui:BreakpointView>
+                </shadui:BreakpointViewPort>
+                <shadui:BreakpointViewPort>
+                    <shadui:BreakpointView Breakpoint="XlAndUp">
+                        <StackPanel Margin="0,0,50,0">
+                            <shadui:Card MaxHeight="650" HasShadow="True">
+                                <Grid ColumnDefinitions="1* 3*" ColumnSpacing="30">
+                                    <shadui:Card Grid.Column="0" VerticalAlignment="Top" HasShadow="True">
+                                        <StackPanel>
+                                            <Calendar
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+                                            <!-- Filtering Options -->
+                                            <shadui:Card Margin="7,10,7,0" HasShadow="True">
+                                                <StackPanel>
+                                                    <CheckBox IsChecked="{CompiledBinding IsChecked}" Content="Select All"/>
+                                                    <ItemsControl Margin="28,5,0,0" ItemsSource="{CompiledBinding FilterItems}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate DataType="{x:Type viewModels:CheckBoxItem}">
+                                                                <CheckBox
+                                                                    Margin="0,10,0,0"
+                                                                    Content="{CompiledBinding Text}"
+                                                                    IsChecked="{CompiledBinding IsChecked}"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </shadui:Card>
+                                        </StackPanel>
+                                    </shadui:Card>
+                                    <shadui:Card Grid.Column="1" VerticalAlignment="Top" HasShadow="True">
+                                        <StackPanel>
+                                            <StackPanel
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Right"
+                                                Margin="0,0,0,20">
+                                                <Button
+                                                    Content="Add Schedule"
+                                                    Classes="Primary"
+                                                    Padding="30,0"
+                                                    Command="{CompiledBinding OpenAddScheduleDialogCommand}"/>
+                                            </StackPanel>
+                                            <DataGrid
+                                                MaxHeight="490"
+                                                AutoGenerateColumns="False"
+                                                CanUserReorderColumns="False"
+                                                CanUserResizeColumns="False"
+                                                CanUserSortColumns="False"
+                                                GridLinesVisibility="All"
+                                                HeadersVisibility="Column"
+                                                IsReadOnly="True"
+                                                ItemsSource="{CompiledBinding ScheduledClients}"
+                                                SelectionMode="Single">
+
+                                                <DataGrid.Resources>
+                                                    <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+                                                </DataGrid.Resources>
+
+                                                <DataGrid.Columns>
+                                                    <!--  ID Column -->
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        MinWidth="80"
+                                                        Header="ID"
+                                                        x:DataType="viewModels:ScheduledPerson"
+                                                        Binding="{CompiledBinding ID}" />
+
+                                                    <!--  Picture Column -->
+                                                    <DataGridTemplateColumn
+                                                        CanUserSort="False"
+                                                        Header="Picture"
+                                                        x:DataType="viewModels:ScheduledPerson"
+                                                        Width="100">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate x:DataType="viewModels:ScheduledPerson"
+                                                                DataType="viewModels:TrainingSchedulesViewModel">
+                                                                <shadui:Avatar
+                                                                    Width="36"
+                                                                    Height="36"
+                                                                    VerticalAlignment="Center"
+                                                                    HorizontalAlignment="Center"
+                                                                    Source="{CompiledBinding PicturePath, Converter={StaticResource StringToBitMapConverter}}"
+                                                                    Margin="8" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <!--  First Name Column -->
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        MinWidth="120"
+                                                        Header="First Name"
+                                                        x:DataType="viewModels:ScheduledPerson"
+                                                        Binding="{CompiledBinding FirstName}" />
+
+                                                    <!--  Last Name Column -->
+                                                    <DataGridTextColumn
+                                                        Width="*"
+                                                        MinWidth="120"
+                                                        Header="Last Name"
+                                                        x:DataType="viewModels:ScheduledPerson"
+                                                        Binding="{CompiledBinding LastName}" />
+
+                                                    <!--  Contact No. Name Column -->
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        MinWidth="150"
+                                                        Header="Contact No."
+                                                        x:DataType="viewModels:ScheduledPerson"
+                                                        Binding="{CompiledBinding ContactNumber}" />
+
+                                                    <!--  Package Type Column -->
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        MinWidth="150"
+                                                        Header="Package Type"
+                                                        x:DataType="viewModels:ScheduledPerson"
+                                                        Binding="{CompiledBinding PackageType}" />
+                                                    
+                                                    <!--  Scheduled Time Column -->
+                                                    <DataGridTextColumn
+                                                        Width="Auto"
+                                                        MinWidth="180"
+                                                        Header="Scheduled Time"
+                                                        x:DataType="viewModels:ScheduledPerson"
+                                                        Binding="{CompiledBinding ScheduledTimeRangeFormatted}" />
+
+                                                    <!--Dropdown button (three-dots)-->
+                                                    <DataGridTemplateColumn CanUserResize="False" CanUserSort="False" Width="60">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate DataType="viewModels:TrainingSchedulesViewModel">
+                                                                <Menu>
+                                                                    <MenuItem
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"
+                                                                        Classes="Icon Grid"
+                                                                        shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+                                                                        <MenuItem.Header>
+                                                                            <Svg
+                                                                                Width="24"
+                                                                                Height="24"
+                                                                                Path="/Assets/ManageEmployeesView/three-dots-icon.svg" />
+                                                                        </MenuItem.Header>
+                                                                        <shadui:MenuItemAssist.Label>
+                                                                            <TextBlock Text="Actions" FontSize="15"
+                                                                                FontWeight="Regular"
+                                                                                Foreground="{DynamicResource MutedColor}" />
+                                                                        </shadui:MenuItemAssist.Label>
+
+                                                                        <MenuItem
+                                                                            Header="View Profile"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext), FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}" />
+                                                                        <MenuItem
+                                                                            Header="Change Schedule"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext), FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}" />
+                                                                        <Separator />
+                                                                        <MenuItem
+                                                                            Header="Delete"
+                                                                            Foreground="{DynamicResource DestructiveColor}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext), FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}"
+                                                                            IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext), Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
+                                                                    </MenuItem>
+                                                                </Menu>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+                                    </shadui:Card>
+                                </Grid>
+                            </shadui:Card>
+                        </StackPanel>
+                    </shadui:BreakpointView>
+                </shadui:BreakpointViewPort>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>
