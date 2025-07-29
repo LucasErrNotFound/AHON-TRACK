@@ -39,7 +39,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
         if (validate) ValidateProperty(value, propertyName);
     }
 
-    private void ValidateProperty<T>(T value, string propertyName)
+    protected void ValidateProperty<T>(T value, string propertyName)
     {
         ClearErrors(propertyName);
 
@@ -55,7 +55,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
             AddError(propertyName, validationResult.ErrorMessage ?? string.Empty);
     }
 
-    private void AddError(string propertyName, string error)
+    protected void AddError(string propertyName, string error)
     {
         if (!_errors.TryGetValue(propertyName, out var value))
         {
