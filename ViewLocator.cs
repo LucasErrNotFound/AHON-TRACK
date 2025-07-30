@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using AHON_TRACK.ViewModels;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
@@ -10,12 +11,13 @@ namespace AHON_TRACK
     {
         private readonly Dictionary<string, string> _componentMappings = new()
         {
-            // Add mappings for your components
+            // Add mappings for your component
             // Pattern: "ViewModelName" -> "ComponentFolder"
             { "EmployeeProfileInformationViewModel", "EmployeeProfile" },
             { "MemberProfileInformationViewModel", "MemberProfile" },
             { "AddNewEmployeeDialogCardViewModel", "AddNewEmployeeDialogCard" },
             { "LogWalkInPurchaseViewModel", "LogWalkInPurchase" },
+            { "AddTrainingScheduleDialogCardViewModel", "AddTrainingSchedule" }
         };
 
         public Control? Build(object? param)
@@ -28,10 +30,7 @@ namespace AHON_TRACK
 
             var view = TryFindView(viewModelName, viewModelType);
 
-            if (view != null)
-                return view;
-
-            return new TextBlock { Text = "Not Found: " + viewModelName };
+            return view ?? new TextBlock { Text = "Not Found: " + viewModelName };
         }
 
         private Control? TryFindView(string viewModelName, Type viewModelType)
@@ -50,11 +49,10 @@ namespace AHON_TRACK
             }
             var defaultViewName = viewModelName.Replace("ViewModel", "View", StringComparison.Ordinal);
             var view2 = TryCreateView(defaultViewName);
-            if (view2 != null) return view2;
-            return null;
+            return view2 ?? null;
         }
 
-        private Control? TryCreateView(string viewName)
+        private static Control? TryCreateView(string viewName)
         {
             try
             {
@@ -64,8 +62,9 @@ namespace AHON_TRACK
                     return (Control)Activator.CreateInstance(type)!;
                 }
             }
-            catch
+            catch (Exception e)
             {
+                Debug.WriteLine(e);
             }
             return null;
         }

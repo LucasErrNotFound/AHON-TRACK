@@ -23,11 +23,10 @@
 		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
 		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
 
-		<SolidColorBrush x:Key="SuccessFontColor" Color="rgb(37,194,94)"/>
-		<SolidColorBrush x:Key="SuccessColor" Color="rgb(37,194,94)"/>
-		<SolidColorBrush x:Key="SuccessColor60" Color="rgb(37,194,94)" Opacity="0.6"/>
-		<SolidColorBrush x:Key="SuccessColor20" Color="rgb(37,194,94)" Opacity="0.2"/>
-		<SolidColorBrush x:Key="SuccessColor10" Color="rgb(37,194,94)" Opacity="0.1"/>
+		<SolidColorBrush x:Key="SuccessFontColor" Color="#22C55E"/>
+		<SolidColorBrush x:Key="SuccessColor" Color="#22C55E"/>
+		<SolidColorBrush x:Key="SuccessColor60" Color="#22C55E" Opacity="0.6"/>
+		<SolidColorBrush x:Key="SuccessColor10" Color="#22C55E" Opacity="0.1"/>
 	</UserControl.Resources>
 
 	<UserControl.Styles>
@@ -287,7 +286,7 @@
 										Padding="20,0,20,0"
 										Content="Cancel"
 										Classes="Outline"
-										Command=""/>
+										Command="{CompiledBinding}"/>
 								</StackPanel>
 							</shadui:Card>
 							<shadui:Card Grid.Column="1" Margin="20,0" Padding="40,40">
@@ -635,7 +634,7 @@
 														VerticalAlignment="Center"/>
 												</StackPanel>
 											</StackPanel>
-											<StackPanel Grid.Column="1">
+											<StackPanel Grid.Row="0" Grid.Column="1">
 												<StackPanel Orientation="Vertical" Margin="0,15,0,0" Spacing="15">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock

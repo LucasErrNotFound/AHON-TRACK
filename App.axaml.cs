@@ -4,11 +4,13 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using System.Linq;
+using System.Threading;
 
 namespace AHON_TRACK;
 
-public partial class App : Application
+public class App : Application
 {
+    private static Mutex? _appMutex;
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -17,18 +19,26 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
+        _appMutex = new Mutex(true, "AHON_TRACK", out var createdNew);
+        
+        if (!createdNew)
+        {
+            var instanceDialog = new InstanceDialog();
+            instanceDialog.Show();
+            return;
+        }
         DisableAvaloniaDataAnnotationValidation();
 
         var provider = new ServiceProvider();
         var viewModel = provider.GetService<LoginViewModel>();
         viewModel.Initialize();
 
-        var loginWindow = new LoginView { DataContext = viewModel };
+        var loginWindow = new Views.LoginView { DataContext = viewModel };
         desktop.MainWindow = loginWindow;
         base.OnFrameworkInitializationCompleted();
     }
 
-    private void DisableAvaloniaDataAnnotationValidation()
+    private static void DisableAvaloniaDataAnnotationValidation()
     {
         // Get an array of plugins to remove
         var dataValidationPluginsToRemove =

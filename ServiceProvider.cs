@@ -1,5 +1,4 @@
-﻿using AHON_TRACK;
-using AHON_TRACK.ViewModels;
+﻿using AHON_TRACK.ViewModels;
 using AHON_TRACK.Components.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using System;
@@ -16,6 +15,8 @@ namespace AHON_TRACK;
 [Transient<DashboardViewModel>]
 [Transient<ManageEmployeesViewModel>]
 [Transient<CheckInOutViewModel>]
+[Transient<ManageMembershipViewModel>]
+[Transient<TrainingSchedulesViewModel>]
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
 [Transient<AddNewEmployeeDialogCardViewModel>]
@@ -23,12 +24,13 @@ namespace AHON_TRACK;
 [Transient<MemberProfileInformationViewModel>]
 [Transient<LogGymMemberDialogCardViewModel>]
 [Transient<LogWalkInPurchaseViewModel>]
+[Transient<AddTrainingScheduleDialogCardViewModel>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
 public partial class ServiceProvider
 {
-    public ILogger LoggerFactory()
+    public static ILogger LoggerFactory()
     {
         var currentFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "AHON_TRACK\\logs");

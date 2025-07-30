@@ -57,18 +57,18 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
 
     protected void AddError(string propertyName, string error)
     {
-        if (!_errors.ContainsKey(propertyName))
+        if (!_errors.TryGetValue(propertyName, out var value))
         {
-            _errors[propertyName] = new List<string>();
+            value = ([]);
+            _errors[propertyName] = value;
         }
 
-        if (_errors[propertyName].Contains(error)) return;
-
-        _errors[propertyName].Add(error);
+        if (value.Contains(error)) return;
+        value.Add(error);
         OnErrorsChanged(propertyName);
     }
 
-    protected void ClearErrors(string propertyName)
+    private void ClearErrors(string propertyName)
     {
         if (_errors.Remove(propertyName)) OnErrorsChanged(propertyName);
     }

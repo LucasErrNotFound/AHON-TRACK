@@ -1,19 +1,18 @@
-<Window 
+<shadui:Window 
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:vm="using:AHON_TRACK.ViewModels"
 	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
-	xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
-	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
-	x:Class="AHON_TRACK.LoginView"
+	x:Class="AHON_TRACK.Views.LoginView"
 	x:DataType="vm:LoginViewModel"
 	mc:Ignorable="d" 
 	d:DesignWidth="1000" 
 	d:DesignHeight="700"
 	CanResize="False"
 	WindowStartupLocation="CenterScreen"
+	TitleFontWeight="SemiBold"
 	Icon="/Assets/AHON-Track-Window.ico"
 	Width="1000"
 	Height="700"
@@ -123,7 +122,7 @@
 							Classes="Clearable"
 							shadui:ControlAssist.Label="Username"
 							shadui:ControlAssist.Height="40"
-							Foreground="{StaticResource Foreground}"
+							Foreground="{StaticResource FontForeground}"
 							Watermark="Username"
 							FontSize="17"
 							Text="{CompiledBinding Username, Mode=TwoWay}"/>
@@ -133,7 +132,7 @@
 							Classes="PasswordReveal"
 							shadui:ControlAssist.Label="Password"
 							shadui:ControlAssist.Height="40"
-							Foreground="{StaticResource Foreground}"
+							Foreground="{StaticResource FontForeground}"
 							PasswordChar="•"
 							Watermark="Enter your password"
 							FontSize="17"
@@ -157,4 +156,4 @@
 			</shadui:Card>
 		</StackPanel>
 	</Grid>
-</Window>
+</shadui:Window>

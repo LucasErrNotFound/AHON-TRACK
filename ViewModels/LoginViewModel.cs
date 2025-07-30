@@ -18,8 +18,10 @@ public partial class LoginViewModel : ViewModelBase
     public DialogManager DialogManager { get; }
     public PageManager PageManager { get; }
 
+    public const string ConnectionString = "Data Source=RCALUBAYAN\\SQLEXPRESS;Initial Catalog=AHON_TRACK_DATABASE;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
+
     private bool _shouldShowSuccessLogInToast = false;
-    private const string ConnectionString = "Data Source=RCALUBAYAN\\SQLEXPRESS;Initial Catalog=AHON_TRACK_DATABASE;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
+    // private bool _shouldShowErrorToast = false; // will be used in the future if needed
 
     public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {

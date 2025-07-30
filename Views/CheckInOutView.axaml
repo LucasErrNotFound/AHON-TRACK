@@ -6,8 +6,6 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
-	xmlns:svg="clr-namespace:Avalonia.Svg;assembly=Svg.Controls.Avalonia"
-	xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
 	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
 	xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
 	mc:Ignorable="d" 
@@ -54,7 +52,7 @@
 								Foreground="{StaticResource FontForeground}"
 								HorizontalAlignment="Center"
 								Margin="0,0,820,0"/>
-							<shadui:Card Width="1090" Margin="0,30">
+							<shadui:Card Grid.Row="0" Width="1090" Margin="0,30">
 								<StackPanel>
 									<StackPanel 
 										Orientation="Horizontal" 
@@ -359,7 +357,7 @@
 																		<MenuItem Header="Stamp Check-out"/>
 																		<MenuItem 
 																			Header="View Profile"
-																			Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).OpenViewMemberProfileCommand}"
+																			Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).OpenViewMemberProfileCommand, FallbackValue={x:Null}}"
 																			CommandParameter="{CompiledBinding}"/>
 																	</MenuItem>
 																</Menu>
