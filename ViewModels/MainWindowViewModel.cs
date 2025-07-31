@@ -133,16 +133,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     /*
     [RelayCommand]
-    private void OpenPaymentOverview() => SwitchPage(_paymentOverviewViewModel);
-
-    [RelayCommand]
-    private void OpenOutstandingBalances() => SwitchPage(_outstandingBalancesViewModel);
-
-    [RelayCommand]
-    private void OpenPaymentHistory() => SwitchPage(_paymentHistoryViewModel);
-
-    [RelayCommand]
     private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
+    
+    [RelayCommand]
+    private void OpenItemPurchase() => SwitchPage(_paymentOverviewViewModel);
 
     [RelayCommand]
     private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
