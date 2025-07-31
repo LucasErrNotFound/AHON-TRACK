@@ -3,6 +3,7 @@ using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
 
+[Page("manage-billing")]
 public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 {
     private readonly DialogManager _dialogManager;
