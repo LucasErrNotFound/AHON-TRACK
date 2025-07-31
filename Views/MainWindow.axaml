@@ -10,7 +10,7 @@
 	d:DesignWidth="1920"
 	d:DesignHeight="1080"
 	MinWidth="1150"
-	MinHeight="830"
+	MinHeight="720"
 	x:DataType="vm:MainWindowViewModel"
 	mc:Ignorable="d"
 	Title="AHON TRACK"
