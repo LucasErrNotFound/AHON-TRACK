@@ -173,7 +173,7 @@
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
+						Command="{CompiledBinding OpenItemPurchaseCommand}"
 						Content="Item Purchase"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Item Purchase'}">
