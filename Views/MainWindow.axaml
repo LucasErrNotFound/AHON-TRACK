@@ -159,7 +159,7 @@
                         AsSeparator="True"
                         Text="Payments &amp; Billing" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
+						Command="{CompiledBinding OpenManageBillingCommand}"
 						Content="Manage Billing"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Manage Billing'}">
