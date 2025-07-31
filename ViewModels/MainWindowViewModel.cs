@@ -133,9 +133,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     /*
     [RelayCommand]
-    private void OpenRoomEquipmentBooking() => SwitchPage(_roomEquipmentBookingViewModel);
-
-    [RelayCommand]
     private void OpenPaymentOverview() => SwitchPage(_paymentOverviewViewModel);
 
     [RelayCommand]

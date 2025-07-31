@@ -154,20 +154,6 @@
 							</Viewbox>
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
-					<shadui:SidebarItem
-						Command="{CompiledBinding}"
-						Content="Room/Equipment Booking"
-						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Room/Equipment Booking'}">
-						<shadui:SidebarItem.Icon>
-							<Viewbox>
-								<Svg
-									Width="24"
-									Height="24"
-									Path="avares://AHON_TRACK/Assets/MainWindowView/room-equipment-icon.svg"/>
-							</Viewbox>
-						</shadui:SidebarItem.Icon>
-					</shadui:SidebarItem>
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
