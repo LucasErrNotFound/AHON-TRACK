@@ -20,6 +20,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 	private readonly CheckInOutViewModel _checkInOutViewModel;
 	private readonly ManageMembershipViewModel _manageMembershipViewModel;
     private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
+    private readonly ManageBillingViewModel _manageBillingViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
@@ -33,6 +34,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		CheckInOutViewModel checkInOutViewModel,
 		ManageMembershipViewModel manageMembershipViewModel,
         TrainingSchedulesViewModel trainingSchedulesViewModel,
+        ManageBillingViewModel billingViewModel,
         EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
@@ -42,6 +44,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		_checkInOutViewModel = checkInOutViewModel;
 		_manageMembershipViewModel = manageMembershipViewModel;
         _trainingSchedulesViewModel = trainingSchedulesViewModel;
+        _manageBillingViewModel = billingViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -61,6 +64,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		_manageMembershipViewModel = new ManageMembershipViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
+        _manageBillingViewModel = new ManageBillingViewModel();
     }
 
     [ObservableProperty]
@@ -131,10 +135,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenTrainingSchedules() => SwitchPage(_trainingSchedulesViewModel);
 
-    /*
     [RelayCommand]
     private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
     
+    /*
     [RelayCommand]
     private void OpenItemPurchase() => SwitchPage(_paymentOverviewViewModel);
 
