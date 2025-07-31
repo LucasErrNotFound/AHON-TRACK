@@ -21,6 +21,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 	private readonly ManageMembershipViewModel _manageMembershipViewModel;
     private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
     private readonly ManageBillingViewModel _manageBillingViewModel;
+    private readonly ItemPurchaseViewModel _itemPurchaseViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
@@ -35,6 +36,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		ManageMembershipViewModel manageMembershipViewModel,
         TrainingSchedulesViewModel trainingSchedulesViewModel,
         ManageBillingViewModel billingViewModel,
+        ItemPurchaseViewModel itemPurchaseViewModel,
         EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
@@ -45,6 +47,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		_manageMembershipViewModel = manageMembershipViewModel;
         _trainingSchedulesViewModel = trainingSchedulesViewModel;
         _manageBillingViewModel = billingViewModel;
+        _itemPurchaseViewModel = itemPurchaseViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -65,6 +68,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
         _manageBillingViewModel = new ManageBillingViewModel();
+        _itemPurchaseViewModel = new ItemPurchaseViewModel();
     }
 
     [ObservableProperty]
@@ -138,10 +142,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
     
-    /*
     [RelayCommand]
-    private void OpenItemPurchase() => SwitchPage(_paymentOverviewViewModel);
+    private void OpenItemPurchase() => SwitchPage(_itemPurchaseViewModel);
 
+    /*
     [RelayCommand]
     private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
 
