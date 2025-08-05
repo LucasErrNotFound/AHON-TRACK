@@ -1,4 +1,4 @@
-<UserControl 
+<UserControl
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -7,16 +7,17 @@
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
     xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
+    xmlns:system="clr-namespace:System;assembly=System.Runtime"
     x:DataType="viewModels:ManageBillingViewModel"
-    mc:Ignorable="d" 
-    d:DesignWidth="1683" 
+    mc:Ignorable="d"
+    d:DesignWidth="1683"
     d:DesignHeight="1080"
     x:Class="AHON_TRACK.Views.ManageBillingView">
-    
+
     <Design.DataContext>
-        <viewModels:ManageBillingViewModel/>
+        <viewModels:ManageBillingViewModel />
     </Design.DataContext>
-    
+
     <UserControl.Resources>
         <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
         <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
@@ -35,7 +36,7 @@
         <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
         <converters:DateToStringConverter x:Key="DateToStringConverter" />
     </UserControl.Resources>
-    
+
     <DockPanel LastChildFill="True">
         <StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
@@ -50,7 +51,986 @@
                 Margin="90,30" />
         </StackPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,20,48,24" Spacing="16">
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
+                <TabControl Margin="45,50">
+                    <TabControl.Items>
+                        <TabItem Header="Billing">
+                            <StackPanel>
+                                <UniformGrid Margin="-6,0" Columns="4">
+                                    <UniformGrid.Resources>
+                                        <LinearGradientBrush x:Key="GreenGradient" StartPoint="0%,50%"
+                                                             EndPoint="100%, 50%">
+                                            <GradientStop Color="#22C55E" Offset="0.0" />
+                                            <GradientStop Color="#4CAF50" Offset="1.0" />
+                                        </LinearGradientBrush>
+
+                                        <LinearGradientBrush x:Key="BlueGradient" StartPoint="0%,50%"
+                                                             EndPoint="100%,50%">
+                                            <GradientStop Color="#64B5F6" Offset="0.0" />
+                                            <GradientStop Color="#2196F3" Offset="1.0" />
+                                        </LinearGradientBrush>
+
+                                        <LinearGradientBrush x:Key="OrangeGradient" StartPoint="0%,50%"
+                                                             EndPoint="100%,50%">
+                                            <GradientStop Color="#FFB74D" Offset="0.0" />
+                                            <GradientStop Color="#FF9800" Offset="1.0" />
+                                        </LinearGradientBrush>
+
+                                        <LinearGradientBrush x:Key="PurpleGradient" StartPoint="0%,50%"
+                                                             EndPoint="100%,50%">
+                                            <GradientStop Color="#BA68C8" Offset="0.0" />
+                                            <GradientStop Color="#9C27B0" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </UniformGrid.Resources>
+
+                                    <card:OverviewCard
+                                        Title="Total Revenue"
+                                        CardBackground="{StaticResource GreenGradient}"
+                                        Foreground="White"
+                                        Hint="+96% from last month"
+                                        Value="₱20,911.69">
+
+                                        <card:OverviewCard.Icon>
+                                            <Svg
+                                                Width="30"
+                                                Height="30"
+                                                Path="/Assets/DashboardView/philippine-peso-icon.svg"
+                                                Opacity="0.5" />
+                                        </card:OverviewCard.Icon>
+                                    </card:OverviewCard>
+                                    <card:OverviewCard
+                                        Title="Active Members"
+                                        CardBackground="{StaticResource BlueGradient}"
+                                        Foreground="White"
+                                        Hint="Paying gym members"
+                                        Value="18">
+                                        <card:OverviewCard.Icon>
+                                            <Svg
+                                                Width="30"
+                                                Height="30"
+                                                Path="/Assets/DashboardView/member-subscriptions-icon.svg" />
+                                        </card:OverviewCard.Icon>
+                                    </card:OverviewCard>
+                                    <card:OverviewCard
+                                        Title="Active Now"
+                                        CardBackground="{StaticResource OrangeGradient}"
+                                        Foreground="White"
+                                        Hint="Active gym-goers today"
+                                        Value="9">
+                                        <card:OverviewCard.Icon>
+                                            <Svg
+                                                Width="30"
+                                                Height="30"
+                                                Path="/Assets/DashboardView/active-now-icon.svg" />
+                                        </card:OverviewCard.Icon>
+                                    </card:OverviewCard>
+                                </UniformGrid>
+                                <shadui:Card Margin="0,10" HasShadow="True" MaxHeight="600">
+                                    <StackPanel>
+                                        <TabControl>
+                                            <TabControl.Items>
+                                                <TabItem Header="Overview">
+                                                    <StackPanel>
+                                                        <Grid ColumnDefinitions="* *" Margin="0,20,0,30">
+                                                            <TextBlock
+                                                                Grid.Column="0"
+                                                                Text="Recent Activity"
+                                                                HorizontalAlignment="Left"
+                                                                Classes="h3" />
+                                                            <CalendarDatePicker
+                                                                Grid.Column="1"
+                                                                HorizontalAlignment="Right"
+                                                                Margin="0,-20"
+                                                                shadui:ControlAssist.Label="Date Today"
+                                                                SelectedDate="{x:Static system:DateTime.Today}"
+                                                                IsEnabled="False" />
+                                                        </Grid>
+                                                        <shadui:Card
+                                                            MaxHeight="365"
+                                                            HasShadow="True"
+                                                            BorderBrush="{DynamicResource DialogBackgroundColor}"
+                                                            Background="{DynamicResource DialogBackgroundColor}">
+                                                            <DockPanel>
+                                                                <DockPanel.Resources>
+                                                                    <converters:StringToBitmapConverter
+                                                                        x:Key="StringToBitMapConverter" />
+                                                                </DockPanel.Resources>
+                                                                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                                              VerticalScrollBarVisibility="Auto">
+                                                                    <ItemsControl Margin="40,0,24,24"
+                                                                        ItemsSource="{CompiledBinding RecentActivity}">
+
+                                                                        <!-- Define the item container style -->
+                                                                        <ItemsControl.ItemsPanel>
+                                                                            <ItemsPanelTemplate>
+                                                                                <StackPanel Spacing="24" />
+                                                                            </ItemsPanelTemplate>
+                                                                        </ItemsControl.ItemsPanel>
+
+                                                                        <ItemsControl.ItemTemplate>
+                                                                            <DataTemplate>
+                                                                                <shadui:Card Background="White" CornerRadius="5" BorderBrush="White">
+                                                                                    <Grid ColumnDefinitions="300 300 300 * 100">
+                                                                                        <!-- Customer Info Column -->
+                                                                                        <StackPanel
+                                                                                            Grid.Column="0"
+                                                                                            Orientation="Horizontal"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Left">
+                                                                                            <shadui:Avatar
+                                                                                                Width="36"
+                                                                                                Height="36"
+                                                                                                VerticalAlignment="Center"
+                                                                                                Source="{CompiledBinding PicturePath, Converter={StaticResource StringToBitMapConverter}}" />
+                                                                                            <StackPanel Margin="15,0">
+                                                                                                <TextBlock
+                                                                                                    Classes="Small"
+                                                                                                    FontSize="15"
+                                                                                                    FontWeight="SemiBold"
+                                                                                                    Text="{CompiledBinding CustomerName}" />
+                                                                                                <TextBlock
+                                                                                                    Classes="Caption Muted"
+                                                                                                    FontSize="13"
+                                                                                                    Text="{CompiledBinding CustomerType}" />
+                                                                                            </StackPanel>
+                                                                                        </StackPanel>
+
+                                                                                        <!-- Product Name Column -->
+                                                                                        <TextBlock
+                                                                                            Grid.Column="1"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Left"
+                                                                                            FontSize="15"
+                                                                                            FontWeight="SemiBold"
+                                                                                            Text="{CompiledBinding ProductName}" />
+                                                                                        
+                                                                                        <!-- Date Column -->
+                                                                                        <TextBlock
+                                                                                            Grid.Column="2"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Left"
+                                                                                            FontSize="15"
+                                                                                            FontWeight="SemiBold"
+                                                                                            Text="{CompiledBinding DateFormatted}" />
+                                                                                        
+                                                                                        <!-- Time Column -->
+                                                                                        <TextBlock
+                                                                                            Grid.Column="3"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Left"
+                                                                                            FontSize="15"
+                                                                                            FontWeight="SemiBold"
+                                                                                            Text="{CompiledBinding PurchaseTime, StringFormat='h:mm tt'}" />
+
+                                                                                        <!-- Amount Column -->
+                                                                                        <TextBlock
+                                                                                            Grid.Column="4"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Right"
+                                                                                            FontSize="15"
+                                                                                            FontWeight="Bold"
+                                                                                            Foreground="{DynamicResource SuccessColor}"
+                                                                                            Text="{CompiledBinding FormattedAmount}" />
+                                                                                    </Grid>
+                                                                                </shadui:Card>
+                                                                            </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                </ScrollViewer>
+                                                            </DockPanel>
+                                                        </shadui:Card>
+                                                    </StackPanel>
+                                                </TabItem>
+                                                <TabItem Header="Invoices">
+                                                    <StackPanel>
+                                                        <Grid ColumnDefinitions="* *" Margin="0,20,0,30">
+                                                            <TextBlock
+                                                                Grid.Column="0"
+                                                                Text="Invoices"
+                                                                HorizontalAlignment="Left"
+                                                                Classes="h3" />
+                                                            <CalendarDatePicker
+                                                                Grid.Column="1"
+                                                                HorizontalAlignment="Right"
+                                                                Margin="0,-20"
+                                                                shadui:ControlAssist.Label="Date Today"
+                                                                SelectedDate="{x:Static system:DateTime.Today}"
+                                                                IsEnabled="False" />
+                                                        </Grid>
+                                                        <StackPanel>
+                                                            <Grid ColumnDefinitions="Auto Auto Auto" ColumnSpacing="10">
+                                                                <TextBox 
+                                                                    Grid.Column="0"
+                                                                    Width="400"
+                                                                    HorizontalAlignment="Left"
+                                                                    shadui:ControlAssist.ShowProgress="{CompiledBinding }"
+                                                                    shadui:ControlAssist.Height="40"
+                                                                    Classes="Clearable"
+                                                                    Text="{CompiledBinding  Mode=TwoWay}"
+                                                                    FontSize="15"
+                                                                    Watermark="Search invoices...">
+                                                                    <TextBox.InnerRightContent>
+                                                                        <Svg
+                                                                            Width="20"
+                                                                            Opacity="0.75"
+                                                                            Path="/Assets/ManageEmployeesView/search-icon.svg"/>
+                                                                    </TextBox.InnerRightContent>
+                                                                </TextBox>
+                                                                <ComboBox 
+                                                                    Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    Width="150"
+                                                                    PlaceholderText="-">
+                                                                </ComboBox>
+                                                                <Button 
+                                                                    Grid.Column="2"
+                                                                    Classes="Primary"
+                                                                    Background="{DynamicResource InfoColor}"
+                                                                    Content="Download Invoice">
+                                                                </Button>
+                                                            </Grid>
+                                                            <DataGrid
+                                                                Height="315"
+                                                                CanUserReorderColumns="False"
+                                                                CanUserSortColumns="False"
+                                                                GridLinesVisibility="All"
+                                                                ItemsSource="{CompiledBinding }"
+                                                                SelectionMode="Single"
+                                                                Background="{DynamicResource CardBackgroundColor}"
+                                                                RowBackground="{DynamicResource CardBackgroundColor}"
+                                                                HeadersVisibility="Column"
+                                                                Margin="0,10,0,0">
+                                                                
+                                                                <DataGrid.Resources>
+                                                                    <converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
+                                                                </DataGrid.Resources>
+                                                                
+                                                                <DataGrid.Columns>
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="80"
+                                                                        Header="ID"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="*"
+                                                                        MinWidth="120"
+                                                                        Header="Customer"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="*"
+                                                                        MinWidth="120"
+                                                                        Header="Purchased Item"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="*"
+                                                                        MinWidth="120"
+                                                                        Header="Amount"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="*"
+                                                                        MinWidth="120"
+                                                                        Header="Date Purchased"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="*"
+                                                                        MinWidth="120"
+                                                                        Header="Status"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="20"
+                                                                        Header="Actions"
+                                                                        Binding="{CompiledBinding }" />
+                                                                </DataGrid.Columns>
+                                                            </DataGrid>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </TabItem>
+                                                <TabItem Header="Specialized Packages">
+                                                    <StackPanel>
+                                                        <Grid ColumnDefinitions="* *" Margin="0,20,0,30">
+                                                            <TextBlock
+                                                                Grid.Column="0"
+                                                                Text="Specialized Packages"
+                                                                HorizontalAlignment="Left"
+                                                                Classes="h3"/>
+                                                        </Grid>
+                                                        <StackPanel>
+                                                            <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="Auto Auto Auto" HorizontalAlignment="Center" ColumnSpacing="130" RowSpacing="30">
+                                                                <shadui:Card Grid.Row="0" Grid.Column="0" Width="330" Height="400">
+                                                                    <StackPanel>
+                                                                        <shadui:CardTitle Content="Free Trial" FontSize="18" FontWeight="Bold"/>
+                                                                        <shadui:CardDescription Content="Try any class or gym session—no charge"/>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                                                            <TextBlock
+                                                                                FontSize="35"
+                                                                                FontWeight="Bold"
+                                                                                Text="₱0.00"
+                                                                                VerticalAlignment="Bottom"/>
+                                                                            <TextBlock
+                                                                                Classes="Caption Muted"
+                                                                                FontSize="17"
+                                                                                FontWeight="Medium"
+                                                                                Text="/one-time only"
+                                                                                VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="0,10,0,0">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Risk-free first session" FontSize="14" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Explore the gym or class" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Meet our trainers" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Decide before committing" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="No hidden charges" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <Button 
+                                                                                Content="Edit Package"
+                                                                                Classes="Primary"
+                                                                                HorizontalAlignment="Center"
+                                                                                Padding="65,0"
+                                                                                Margin="0,25,0,0">
+                                                                            </Button>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </shadui:Card>
+                                                                <shadui:Card Grid.Row="0" Grid.Column="1" Width="330" Height="400">
+                                                                    <StackPanel>
+                                                                        <shadui:CardTitle Content="Walk-In" FontSize="18" FontWeight="Bold"/>
+                                                                        <shadui:CardDescription Content="Pay per session with no commitment"/>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                                                            <TextBlock
+                                                                                FontSize="35"
+                                                                                FontWeight="Bold"
+                                                                                Text="₱150.00"
+                                                                                VerticalAlignment="Bottom"/>
+                                                                            <TextBlock
+                                                                                Classes="Caption Muted"
+                                                                                FontSize="17"
+                                                                                FontWeight="Medium"
+                                                                                Text="/session"
+                                                                                VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="0,10,0,0">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Unlimited time" FontSize="14" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Perfect for casual visits" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Pay only when you train" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="No membership needed" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Great for one-time guests" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <Button 
+                                                                                Content="Edit Package"
+                                                                                Classes="Primary"
+                                                                                HorizontalAlignment="Center"
+                                                                                Padding="65,0"
+                                                                                Margin="0,25,0,0">
+                                                                            </Button>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </shadui:Card>
+                                                                <shadui:Card Grid.Row="0" Grid.Column="2" Width="330" Height="400">
+                                                                    <StackPanel>
+                                                                        <shadui:CardTitle Content="Monthly Membership" FontSize="18" FontWeight="Bold"/>
+                                                                        <shadui:CardDescription Content="Unlimited gym access for 30 days"/>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                                                            <TextBlock
+                                                                                FontSize="35"
+                                                                                FontWeight="Bold"
+                                                                                Text="₱500.00"
+                                                                                VerticalAlignment="Bottom"/>
+                                                                            <TextBlock
+                                                                                Classes="Caption Muted"
+                                                                                FontSize="17"
+                                                                                FontWeight="Medium"
+                                                                                Text="/month"
+                                                                                VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="0,10,0,0">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Unlimited gym sessions" FontSize="14" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Best value for regulars" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Discounted charges" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="30 days of full access" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Unli health checkups" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <Button 
+                                                                                Content="Edit Package"
+                                                                                Classes="Primary"
+                                                                                HorizontalAlignment="Center"
+                                                                                Padding="65,0"
+                                                                                Margin="0,25,0,0">
+                                                                            </Button>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </shadui:Card>
+                                                                <shadui:Card Grid.Row="1" Grid.Column="0" Width="330" Height="400">
+                                                                    <StackPanel>
+                                                                        <shadui:CardTitle Content="Boxing" FontSize="18" FontWeight="Bold"/>
+                                                                        <shadui:CardDescription Content="High-intensity training focused on boxing"/>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                                                            <TextBlock
+                                                                                FontSize="35"
+                                                                                FontWeight="Bold"
+                                                                                Text="₱450.00"
+                                                                                VerticalAlignment="Bottom"/>
+                                                                            <TextBlock
+                                                                                Classes="Caption Muted"
+                                                                                FontSize="17"
+                                                                                FontWeight="Medium"
+                                                                                Text="/session"
+                                                                                VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="0,10,0,0">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Boosts cardio and strength" FontSize="14" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Learn real boxing skills" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Stress relieving workouts" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Burns high calories fast" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Builds confidence and discipline" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <Button 
+                                                                                Content="Edit Package"
+                                                                                Classes="Primary"
+                                                                                HorizontalAlignment="Center"
+                                                                                Padding="65,0"
+                                                                                Margin="0,25,0,0">
+                                                                            </Button>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </shadui:Card>
+                                                                <shadui:Card Grid.Row="1" Grid.Column="1" Width="330" Height="400">
+                                                                    <StackPanel>
+                                                                        <shadui:CardTitle Content="Muay Thai" FontSize="18" FontWeight="Bold"/>
+                                                                        <shadui:CardDescription Content="Martial arts training for strength and endurance"/>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                                                            <TextBlock
+                                                                                FontSize="35"
+                                                                                FontWeight="Bold"
+                                                                                Text="₱500.00"
+                                                                                VerticalAlignment="Bottom"/>
+                                                                            <TextBlock
+                                                                                Classes="Caption Muted"
+                                                                                FontSize="17"
+                                                                                FontWeight="Medium"
+                                                                                Text="/session"
+                                                                                VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="0,10,0,0">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Full body conditioning" FontSize="14" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Improves flexibility and balance" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Learn about self-defense" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Culturally rich experience" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Great for strength and stamina" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <Button 
+                                                                                Content="Edit Package"
+                                                                                Classes="Primary"
+                                                                                HorizontalAlignment="Center"
+                                                                                Padding="65,0"
+                                                                                Margin="0,25,0,0">
+                                                                            </Button>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </shadui:Card>
+                                                                <shadui:Card Grid.Row="1" Grid.Column="2" Width="330" Height="400">
+                                                                    <StackPanel>
+                                                                        <shadui:CardTitle Content="CrossFit" FontSize="18" FontWeight="Bold"/>
+                                                                        <shadui:CardDescription Content="Functional workouts with high-intensity moves"/>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                                                            <TextBlock
+                                                                                FontSize="35"
+                                                                                FontWeight="Bold"
+                                                                                Text="₱300.00"
+                                                                                VerticalAlignment="Bottom"/>
+                                                                            <TextBlock
+                                                                                Classes="Caption Muted"
+                                                                                FontSize="17"
+                                                                                FontWeight="Medium"
+                                                                                Text="/session"
+                                                                                VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="0,10,0,0">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Builds functional strength" FontSize="14" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Constantly varied workouts" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Time efficient and intense" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Encourages community support" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Suitable for all fitness levels" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <Button 
+                                                                                Content="Edit Package"
+                                                                                Classes="Primary"
+                                                                                HorizontalAlignment="Center"
+                                                                                Padding="65,0"
+                                                                                Margin="0,25,0,0">
+                                                                            </Button>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </shadui:Card>
+                                                                <shadui:Card Grid.Row="2" Grid.Column="0" Width="330" Height="400">
+                                                                    <StackPanel>
+                                                                        <shadui:CardTitle Content="Personal Training" FontSize="18" FontWeight="Bold"/>
+                                                                        <shadui:CardDescription Content="One-on-one sessions tailored to your fitness goals"/>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                                                            <TextBlock
+                                                                                FontSize="35"
+                                                                                FontWeight="Bold"
+                                                                                Text="₱200.00"
+                                                                                VerticalAlignment="Bottom"/>
+                                                                            <TextBlock
+                                                                                Classes="Caption Muted"
+                                                                                FontSize="17"
+                                                                                FontWeight="Medium"
+                                                                                Text="/session"
+                                                                                VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="0,10,0,0">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Personalized workout plans" FontSize="14" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="One-on-one coaching" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Faster progress tracking" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Motivation and accountability" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Focus on your specific goals" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <Button 
+                                                                                Content="Edit Package"
+                                                                                Classes="Primary"
+                                                                                HorizontalAlignment="Center"
+                                                                                Padding="65,0"
+                                                                                Margin="0,25,0,0">
+                                                                            </Button>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </shadui:Card>
+                                                                <shadui:Card Grid.Row="2" Grid.Column="1" Width="340" Height="400">
+                                                                    <StackPanel>
+                                                                        <shadui:CardTitle Content="Zumba" FontSize="18" FontWeight="Bold"/>
+                                                                        <shadui:CardDescription Content="Dance-based cardio workouts with energetic music"/>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                                                            <TextBlock
+                                                                                FontSize="35"
+                                                                                FontWeight="Bold"
+                                                                                Text="₱210.00"
+                                                                                VerticalAlignment="Bottom"/>
+                                                                            <TextBlock
+                                                                                Classes="Caption Muted"
+                                                                                FontSize="17"
+                                                                                FontWeight="Medium"
+                                                                                Text="/session"
+                                                                                VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="0,10,0,0">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Fun and dance-filled sessions" FontSize="14" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Easy to follow routines" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Great for weight lost" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="Uplifts mood and energy" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                                <Svg
+                                                                                    Width="24"
+                                                                                    Height="24"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg"/>
+                                                                                <TextBlock Text="No experience needed" FontSize="14"/>
+                                                                            </StackPanel>
+                                                                            <Button 
+                                                                                Content="Edit Package"
+                                                                                Classes="Primary"
+                                                                                HorizontalAlignment="Center"
+                                                                                Padding="65,0"
+                                                                                Margin="0,25,0,0">
+                                                                            </Button>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </shadui:Card>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </TabItem>
+                                                <TabItem Header="Products">
+                                                    <StackPanel>
+                                                        <Grid RowDefinitions="* *" ColumnDefinitions="Auto Auto *" Margin="0,20,0,30">
+                                                            <TextBlock
+                                                                Grid.Row="0"
+                                                                Grid.Column="0"
+                                                                Text="Products"
+                                                                HorizontalAlignment="Left"
+                                                                Classes="h3"/>
+                                                            <ComboBox 
+                                                                Grid.Row="1" 
+                                                                Grid.Column="1"
+                                                                Margin="20,0,0,0"
+                                                                HorizontalAlignment="Left"
+                                                                VerticalAlignment="Center"
+                                                                Width="150"
+                                                                PlaceholderText="Category">
+                                                            </ComboBox>
+                                                            <TextBox 
+                                                                Grid.Row="1" 
+                                                                Grid.Column="0"
+                                                                Classes="Clearable"
+                                                                Width="300"
+                                                                HorizontalAlignment="Left">
+                                                                <TextBox.InnerRightContent>
+                                                                    <Svg
+                                                                        Width="20"
+                                                                        Opacity="0.75"
+                                                                        Path="/Assets/ManageEmployeesView/search-icon.svg"/>
+                                                                </TextBox.InnerRightContent>
+                                                            </TextBox>
+                                                            <Button 
+                                                                Grid.Row="1"
+                                                                Grid.Column="2"
+                                                                Content="Add Product"
+                                                                Classes="Primary"
+                                                                HorizontalAlignment="Right"
+                                                                Padding="30,0"
+                                                                Background="{DynamicResource InfoColor}">
+                                                            </Button>
+                                                        </Grid>
+                                                        <StackPanel>
+                                                            <DataGrid
+                                                                Height="335"
+                                                                AutoGenerateColumns="False"
+                                                                CanUserReorderColumns="False"
+                                                                CanUserResizeColumns="False"
+                                                                CanUserSortColumns="False"
+                                                                GridLinesVisibility="All"
+                                                                HeadersVisibility="Column"
+                                                                IsReadOnly="True"
+                                                                ItemsSource="{CompiledBinding }"
+                                                                SelectionMode="Single">
+                                                                
+                                                                <DataGrid.Resources>
+                                                                    <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+                                                                </DataGrid.Resources>
+                                                                
+                                                                <DataGrid.Columns>
+                                                                    <DataGridCheckBoxColumn Binding="{CompiledBinding }" CanUserSort="False" Width="60">
+                                                                        <!--CheckBox Header Column-->
+                                                                        <DataGridCheckBoxColumn.Header>
+                                                                            <CheckBox
+                                                                                x:Name="SelectToggler"
+                                                                                Command="{CompiledBinding }"
+                                                                                CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
+                                                                                IsChecked="{CompiledBinding }"
+                                                                                Margin="8,0"/>
+                                                                        </DataGridCheckBoxColumn.Header>
+                                                                    </DataGridCheckBoxColumn>
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="100"
+                                                                        Header="ID"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="400"
+                                                                        Header="Product Name"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="150"
+                                                                        Header="Price"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="150"
+                                                                        Header="Category"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="150"
+                                                                        Header="Stock"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="150"
+                                                                        Header="SKU"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="150"
+                                                                        Header="Status"
+                                                                        Binding="{CompiledBinding }" />
+                                                                    <DataGridTextColumn
+                                                                        Width="*"
+                                                                        MinWidth="100"
+                                                                        Header="Action"
+                                                                        Binding="{CompiledBinding }" />
+                                                                </DataGrid.Columns>
+                                                            </DataGrid>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </TabItem>
+                                                <TabItem Header="Reports"></TabItem>
+                                            </TabControl.Items>
+                                        </TabControl>
+                                    </StackPanel>
+                                </shadui:Card>
+                            </StackPanel>
+                        </TabItem>
+                        <TabItem Header="Purchase History">
+                        </TabItem>
+                    </TabControl.Items>
+                </TabControl>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
