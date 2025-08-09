@@ -67,12 +67,21 @@
                                     SelectedDate="{x:Static system:DateTime.Today}"
                                     IsEnabled="False" />
                                 <Button
-                                    Content="Log Walk-in"
                                     Classes="Primary"
                                     Padding="30,0,30,0"
                                     Height="40"
                                     Margin="0,20"
-                                    Command="{CompiledBinding OpenLogWalkInPurchaseCommand}" />
+                                    Command="{CompiledBinding OpenLogWalkInPurchaseCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Svg
+                                            Width="20"
+                                            Height="20"
+                                            Margin="0,0,10,0"
+                                            VerticalAlignment="Center"
+                                            Path="avares://AHON_TRACK/Assets/CheckInOutView/walkin-member-log-icon.svg" />
+                                        <TextBlock Text="Log Walk-in" Foreground="White" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                             <Grid RowDefinitions="Auto *">
                                 <DataGrid
@@ -214,12 +223,21 @@
                                     SelectedDate="{x:Static system:DateTime.Today}"
                                     IsEnabled="False" />
                                 <Button
-                                    Content="Log Gym Member"
                                     Classes="Primary"
-                                    Padding="30,0,30,0"
+                                    Padding="25,0,25,0"
                                     Height="40"
                                     Margin="0,20"
-                                    Command="{CompiledBinding AddMemberPersonCommand}" />
+                                    Command="{CompiledBinding AddMemberPersonCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Svg
+                                            Width="20"
+                                            Height="20"
+                                            Margin="0,0,10,0"
+                                            VerticalAlignment="Center"
+                                            Path="avares://AHON_TRACK/Assets/CheckInOutView/walkin-member-log-icon.svg" />
+                                        <TextBlock Text="Log Gym Member" Foreground="White" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                             <Grid RowDefinitions="Auto *">
                                 <DataGrid

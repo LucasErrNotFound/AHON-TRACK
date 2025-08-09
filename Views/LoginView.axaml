@@ -142,15 +142,24 @@
 				<shadui:Card.Footer>
 					<Button
 						Classes="Primary"
-						Content="Sign In"
-						FontSize="20"
+						FontSize="19"
 						Padding="0,0,0,5"
 						Margin="0,30"
 						Height="38"
 						Width="140"
 						HorizontalAlignment="Right"
+						VerticalAlignment="Center"
 						Command="{CompiledBinding SignInCommand}"
 						HotKey="Enter">
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+							<Svg
+								Width="20"
+								Height="20"
+								Margin="0,3,13,0"
+								VerticalAlignment="Center"
+								Path="avares://AHON_TRACK/Assets/LoginView/log-in-icon.svg" />
+							<TextBlock Text="Sign In" Foreground="White" VerticalAlignment="Center" />
+						</StackPanel>
 					</Button>
 				</shadui:Card.Footer>
 			</shadui:Card>

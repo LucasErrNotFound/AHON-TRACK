@@ -547,18 +547,45 @@
 							<StackPanel Grid.Row="3" HorizontalAlignment="Center">
 								<StackPanel Orientation="Horizontal" Spacing="10">
 									<Button
-										Content="Delete"
 										Classes="Destructive"
-										Padding="30,0,30,0" />
+										Padding="20,0,20,0">
+										<StackPanel Orientation="Horizontal">
+											<Svg
+												Width="18"
+												Height="18"
+												Margin="0,0,10,0"
+												VerticalAlignment="Center"
+												Path="avares://AHON_TRACK/Assets/ManageMembershipView/delete-icon.svg" />
+											<TextBlock Text="Delete" Foreground="White" VerticalAlignment="Center" />
+										</StackPanel>
+									</Button>
 									<Button
-										Content="Upgrade"
 										Classes="Secondary"
 										HorizontalAlignment="Center"
-										Padding="30,0,30,0" />
+										Padding="20,0,20,0">
+										<StackPanel Orientation="Horizontal">
+											<Svg
+												Width="18"
+												Height="18"
+												Margin="0,0,10,0"
+												VerticalAlignment="Center"
+												Path="avares://AHON_TRACK/Assets/ManageMembershipView/upgrade-icon.svg" />
+											<TextBlock Text="Upgrade" Foreground="{DynamicResource FontForeground}" VerticalAlignment="Center" />
+										</StackPanel>
+									</Button>
 									<Button
-										Content="Renew"
 										Classes="Primary"
-										Padding="40,0,40,0" />
+										Padding="20,0,20,0">
+										<StackPanel Orientation="Horizontal">
+											<Svg
+												Width="18"
+												Height="18"
+												Margin="0,0,10,0"
+												VerticalAlignment="Center"
+												Path="avares://AHON_TRACK/Assets/ManageMembershipView/renew-icon.svg" />
+											<TextBlock Text="Renew" Foreground="White" VerticalAlignment="Center" />
+										</StackPanel>
+									</Button>
 								</StackPanel>
 							</StackPanel>
 						</Grid>

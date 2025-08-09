@@ -137,10 +137,19 @@
                                         HorizontalAlignment="Right"
                                         Margin="0,0,0,20">
                                         <Button
-                                            Content="Add Schedule"
                                             Classes="Primary"
                                             Padding="30,0"
-                                            Command="{CompiledBinding OpenAddScheduleDialogCommand}" />
+                                            Command="{CompiledBinding OpenAddScheduleDialogCommand}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Svg
+                                                    Width="20"
+                                                    Height="20"
+                                                    Margin="0,0,10,0"
+                                                    VerticalAlignment="Center"
+                                                    Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/add-schedule-icon.svg" />
+                                                <TextBlock Text="Add Schedule" Foreground="White" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                     <DataGrid
                                         MaxHeight="490"
