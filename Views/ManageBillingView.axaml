@@ -285,8 +285,16 @@
                                                                 <Button 
                                                                     Grid.Column="2"
                                                                     Classes="Primary"
-                                                                    Background="{DynamicResource InfoColor}"
-                                                                    Content="Download Invoice">
+                                                                    Background="{DynamicResource InfoColor}">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <Svg
+                                                                            Width="20"
+                                                                            Height="20"
+                                                                            Margin="0,0,10,0"
+                                                                            VerticalAlignment="Center"
+                                                                            Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
+                                                                        <TextBlock Text="Download Invoice" Foreground="White" VerticalAlignment="Center" />
+                                                                    </StackPanel>
                                                                 </Button>
                                                             </Grid>
                                                             <DataGrid
@@ -416,11 +424,19 @@
                                                                                 <TextBlock Text="No hidden charges" FontSize="14"/>
                                                                             </StackPanel>
                                                                             <Button 
-                                                                                Content="Edit Package"
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
                                                                                 Margin="0,25,0,0">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <Svg
+                                                                                        Width="20"
+                                                                                        Height="20"
+                                                                                        Margin="0,0,10,0"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+                                                                                    <TextBlock Text="Edit Package" Foreground="White" VerticalAlignment="Center" />
+                                                                                </StackPanel>
                                                                             </Button>
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -484,11 +500,19 @@
                                                                                 <TextBlock Text="Great for one-time guests" FontSize="14"/>
                                                                             </StackPanel>
                                                                             <Button 
-                                                                                Content="Edit Package"
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
                                                                                 Margin="0,25,0,0">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <Svg
+                                                                                        Width="20"
+                                                                                        Height="20"
+                                                                                        Margin="0,0,10,0"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+                                                                                    <TextBlock Text="Edit Package" Foreground="White" VerticalAlignment="Center" />
+                                                                                </StackPanel>
                                                                             </Button>
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -552,11 +576,19 @@
                                                                                 <TextBlock Text="Unli health checkups" FontSize="14"/>
                                                                             </StackPanel>
                                                                             <Button 
-                                                                                Content="Edit Package"
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
                                                                                 Margin="0,25,0,0">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <Svg
+                                                                                        Width="20"
+                                                                                        Height="20"
+                                                                                        Margin="0,0,10,0"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+                                                                                    <TextBlock Text="Edit Package" Foreground="White" VerticalAlignment="Center" />
+                                                                                </StackPanel>
                                                                             </Button>
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -620,11 +652,19 @@
                                                                                 <TextBlock Text="Builds confidence and discipline" FontSize="14"/>
                                                                             </StackPanel>
                                                                             <Button 
-                                                                                Content="Edit Package"
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
                                                                                 Margin="0,25,0,0">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <Svg
+                                                                                        Width="20"
+                                                                                        Height="20"
+                                                                                        Margin="0,0,10,0"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+                                                                                    <TextBlock Text="Edit Package" Foreground="White" VerticalAlignment="Center" />
+                                                                                </StackPanel>
                                                                             </Button>
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -688,11 +728,19 @@
                                                                                 <TextBlock Text="Great for strength and stamina" FontSize="14"/>
                                                                             </StackPanel>
                                                                             <Button 
-                                                                                Content="Edit Package"
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
                                                                                 Margin="0,25,0,0">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <Svg
+                                                                                        Width="20"
+                                                                                        Height="20"
+                                                                                        Margin="0,0,10,0"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+                                                                                    <TextBlock Text="Edit Package" Foreground="White" VerticalAlignment="Center" />
+                                                                                </StackPanel>
                                                                             </Button>
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -756,11 +804,19 @@
                                                                                 <TextBlock Text="Suitable for all fitness levels" FontSize="14"/>
                                                                             </StackPanel>
                                                                             <Button 
-                                                                                Content="Edit Package"
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
                                                                                 Margin="0,25,0,0">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <Svg
+                                                                                        Width="20"
+                                                                                        Height="20"
+                                                                                        Margin="0,0,10,0"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+                                                                                    <TextBlock Text="Edit Package" Foreground="White" VerticalAlignment="Center" />
+                                                                                </StackPanel>
                                                                             </Button>
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -824,11 +880,19 @@
                                                                                 <TextBlock Text="Focus on your specific goals" FontSize="14"/>
                                                                             </StackPanel>
                                                                             <Button 
-                                                                                Content="Edit Package"
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
                                                                                 Margin="0,25,0,0">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <Svg
+                                                                                        Width="20"
+                                                                                        Height="20"
+                                                                                        Margin="0,0,10,0"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+                                                                                    <TextBlock Text="Edit Package" Foreground="White" VerticalAlignment="Center" />
+                                                                                </StackPanel>
                                                                             </Button>
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -892,11 +956,19 @@
                                                                                 <TextBlock Text="No experience needed" FontSize="14"/>
                                                                             </StackPanel>
                                                                             <Button 
-                                                                                Content="Edit Package"
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
                                                                                 Margin="0,25,0,0">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <Svg
+                                                                                        Width="20"
+                                                                                        Height="20"
+                                                                                        Margin="0,0,10,0"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+                                                                                    <TextBlock Text="Edit Package" Foreground="White" VerticalAlignment="Center" />
+                                                                                </StackPanel>
                                                                             </Button>
                                                                         </StackPanel>
                                                                     </StackPanel>
@@ -939,11 +1011,20 @@
                                                             <Button 
                                                                 Grid.Row="1"
                                                                 Grid.Column="2"
-                                                                Content="Add Product"
+                                                                FontSize="15"
                                                                 Classes="Primary"
                                                                 HorizontalAlignment="Right"
-                                                                Padding="30,0"
+                                                                Padding="20,0"
                                                                 Background="{DynamicResource InfoColor}">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Svg
+                                                                        Width="20"
+                                                                        Height="20"
+                                                                        Margin="0,0,10,0"
+                                                                        VerticalAlignment="Center"
+                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/add-product-icon.svg" />
+                                                                    <TextBlock Text="Add Product" Foreground="White" VerticalAlignment="Center" />
+                                                                </StackPanel>
                                                             </Button>
                                                         </Grid>
                                                         <StackPanel>
