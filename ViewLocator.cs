@@ -15,9 +15,7 @@ namespace AHON_TRACK
             // Pattern: "ViewModelName" -> "ComponentFolder"
             { "EmployeeProfileInformationViewModel", "EmployeeProfile" },
             { "MemberProfileInformationViewModel", "MemberProfile" },
-            { "AddNewEmployeeDialogCardViewModel", "AddNewEmployeeDialogCard" },
             { "LogWalkInPurchaseViewModel", "LogWalkInPurchase" },
-            { "AddTrainingScheduleDialogCardViewModel", "AddTrainingSchedule" }
         };
 
         public Control? Build(object? param)
