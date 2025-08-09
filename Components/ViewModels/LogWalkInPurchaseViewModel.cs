@@ -270,16 +270,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
 		}
 	}
 
-	public string SelectedPaymentMethod
-	{
-		get
-		{
-			if (IsCashSelected) return "Cash";
-			if (IsGCashSelected) return "GCash";
-			if (IsMayaSelected) return "Maya";
-			return "None";
-		}
-	}
 
 	public string CustomerFullName 
 	{
