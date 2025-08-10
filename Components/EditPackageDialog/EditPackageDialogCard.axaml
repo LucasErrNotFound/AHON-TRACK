@@ -246,7 +246,7 @@
                         Classes="Primary"
                         Command="{CompiledBinding SavePackageCommand}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Create Package" />
+                            <TextBlock Text="Edit Package" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
