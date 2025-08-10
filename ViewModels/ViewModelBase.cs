@@ -68,7 +68,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
         OnErrorsChanged(propertyName);
     }
 
-    private void ClearErrors(string propertyName)
+    protected void ClearErrors(string propertyName)
     {
         if (_errors.Remove(propertyName)) OnErrorsChanged(propertyName);
     }
