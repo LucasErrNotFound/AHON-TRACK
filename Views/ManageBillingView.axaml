@@ -356,12 +356,27 @@
                                                 </TabItem>
                                                 <TabItem Header="Specialized Packages">
                                                     <StackPanel>
-                                                        <Grid ColumnDefinitions="* *" Margin="0,20,0,30">
+                                                        <Grid ColumnDefinitions="* Auto" Margin="0,20,0,30">
                                                             <TextBlock
                                                                 Grid.Column="0"
                                                                 Text="Specialized Packages"
                                                                 HorizontalAlignment="Left"
                                                                 Classes="h3"/>
+                                                            <Button 
+                                                                Grid.Column="1"
+                                                                Margin="0,0,10,0"
+                                                                Classes="Primary"
+                                                                Background="{DynamicResource InfoColor}"
+                                                                Command="{CompiledBinding OpenAddNewPackageCommand}">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Svg
+                                                                        Width="22"
+                                                                        Height="22"
+                                                                        Margin="0,0,10,0"
+                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/add-new-package-icon.svg"/>
+                                                                    <TextBlock Text="Add New Package" Foreground="White" VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </Button>
                                                         </Grid>
                                                         <StackPanel>
                                                             <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="Auto Auto Auto" HorizontalAlignment="Center" ColumnSpacing="130" RowSpacing="30">
