@@ -17,14 +17,16 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly AddNewPackageDialogCardViewModel _addNewPackageDialogCardViewModel;
+    private readonly EditPackageDialogCardViewModel _editPackageDialogCardViewModel;
     private ObservableCollection<RecentActivity> _recentActivities = [];
 
-    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel)
+    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel,  EditPackageDialogCardViewModel editPackageDialogCardViewModel)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _addNewPackageDialogCardViewModel = addNewPackageDialogCardViewModel;
+        _editPackageDialogCardViewModel = editPackageDialogCardViewModel;
         LoadSampleSalesData();
     }
 
@@ -34,6 +36,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _addNewPackageDialogCardViewModel = new AddNewPackageDialogCardViewModel();
+        _editPackageDialogCardViewModel = new EditPackageDialogCardViewModel();
         LoadSampleSalesData();
     }
 
@@ -79,13 +82,32 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _addNewPackageDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_addNewPackageDialogCardViewModel)
             .WithSuccessCallback(_ =>
-                _toastManager.CreateToast("Logged a gym member")
-                    .WithContent($"Welcome, gym member!")
+                _toastManager.CreateToast("Added a new package")
+                    .WithContent($"You just added a new package to the database!")
                     .DismissOnClick()
                     .ShowSuccess())
             .WithCancelCallback(() =>
-                _toastManager.CreateToast("Logging a gym member cancelled")
-                    .WithContent("Log a gym member to continue")
+                _toastManager.CreateToast("Adding new package cancelled")
+                    .WithContent("If you want to add a new package, please try again.")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(550)
+            .Dismissible()
+            .Show();
+    }
+
+    [RelayCommand]
+    private void OpenEditPackage()
+    {
+        _editPackageDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_editPackageDialogCardViewModel)
+            .WithSuccessCallback(_ =>
+                _toastManager.CreateToast("Edit an existing package")
+                    .WithContent($"You just edited an existing package!")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Editing an existing package cancelled")
+                    .WithContent("If you want to edit an existing package, please try again.")
                     .DismissOnClick()
                     .ShowWarning()).WithMaxWidth(550)
             .Dismissible()
