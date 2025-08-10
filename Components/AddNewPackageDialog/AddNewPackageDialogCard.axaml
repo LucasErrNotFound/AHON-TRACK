@@ -4,7 +4,6 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
-    xmlns:system="clr-namespace:System;assembly=System.Runtime"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     mc:Ignorable="d" 
     d:DesignWidth="550" 
@@ -13,9 +12,7 @@
     Height="840"
     xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
     x:DataType="viewModel:AddNewPackageDialogCardViewModel"
-    x:Class="AHON_TRACK.Components.AddNewPackageDialog.AddNewPackageDialogCard"><!--
-    Width="550"
-    Height="800" -->
+    x:Class="AHON_TRACK.Components.AddNewPackageDialog.AddNewPackageDialogCard">
 
     <Design.DataContext>
         <viewModel:AddNewPackageDialogCardViewModel/>
