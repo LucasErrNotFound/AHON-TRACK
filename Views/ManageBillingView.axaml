@@ -442,7 +442,8 @@
                                                                                 Classes="Primary"
                                                                                 HorizontalAlignment="Center"
                                                                                 Padding="65,0"
-                                                                                Margin="0,25,0,0">
+                                                                                Margin="0,25,0,0"
+                                                                                Command="{CompiledBinding OpenEditPackageCommand}">
                                                                                 <StackPanel Orientation="Horizontal">
                                                                                     <Svg
                                                                                         Width="20"
