@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
+using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
 
@@ -13,13 +16,15 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly AddNewPackageDialogCardViewModel _addNewPackageDialogCardViewModel;
     private ObservableCollection<RecentActivity> _recentActivities = [];
 
-    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _addNewPackageDialogCardViewModel = addNewPackageDialogCardViewModel;
         LoadSampleSalesData();
     }
 
@@ -28,6 +33,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _addNewPackageDialogCardViewModel = new AddNewPackageDialogCardViewModel();
         LoadSampleSalesData();
     }
 
@@ -65,6 +71,25 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             new RecentActivity { CustomerName = "Marc Torres", ProductName = "Gym Membership", PurchaseDate = DateTime.Now, PurchaseTime = DateTime.Now.AddHours(1), Amount = 499.00m },
             new RecentActivity { CustomerName = "Maverick Lim", ProductName = "Cobra Berry", PurchaseDate = DateTime.Now, PurchaseTime = DateTime.Now.AddHours(1), Amount = 40.00m }
         ];
+    }
+
+    [RelayCommand]
+    private void OpenAddNewPackage()
+    {
+        _addNewPackageDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_addNewPackageDialogCardViewModel)
+            .WithSuccessCallback(_ =>
+                _toastManager.CreateToast("Logged a gym member")
+                    .WithContent($"Welcome, gym member!")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Logging a gym member cancelled")
+                    .WithContent("Log a gym member to continue")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(550)
+            .Dismissible()
+            .Show();
     }
 }
 
