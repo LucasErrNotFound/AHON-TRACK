@@ -16,6 +16,7 @@ namespace AHON_TRACK
             { "EmployeeProfileInformationViewModel", "EmployeeProfile" },
             { "MemberProfileInformationViewModel", "MemberProfile" },
             { "LogWalkInPurchaseViewModel", "LogWalkInPurchase" },
+            { "AddNewProductViewModel", "AddNewProduct" },
         };
 
         public Control? Build(object? param)
