@@ -10,7 +10,7 @@
 	d:DesignWidth="1920"
 	d:DesignHeight="1080"
 	MinWidth="1150"
-	MinHeight="830"
+	MinHeight="720"
 	x:DataType="vm:MainWindowViewModel"
 	mc:Ignorable="d"
 	Title="AHON TRACK"
@@ -154,68 +154,12 @@
 							</Viewbox>
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
-					<shadui:SidebarItem
-						Command="{CompiledBinding}"
-						Content="Room/Equipment Booking"
-						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Room/Equipment Booking'}">
-						<shadui:SidebarItem.Icon>
-							<Viewbox>
-								<Svg
-									Width="24"
-									Height="24"
-									Path="avares://AHON_TRACK/Assets/MainWindowView/room-equipment-icon.svg"/>
-							</Viewbox>
-						</shadui:SidebarItem.Icon>
-					</shadui:SidebarItem>
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
                         Text="Payments &amp; Billing" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
-						Content="Payment Overview"
-						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Payment Overview'}">
-						<shadui:SidebarItem.Icon>
-							<Viewbox>
-								<Svg
-									Width="24"
-									Height="24"
-									Path="avares://AHON_TRACK/Assets/MainWindowView/payment-oversight-icon.svg"/>
-							</Viewbox>
-						</shadui:SidebarItem.Icon>
-					</shadui:SidebarItem>
-					<shadui:SidebarItem
-						Command="{CompiledBinding}"
-						Content="Outstanding Balances"
-						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Outstanding Balances'}">
-						<shadui:SidebarItem.Icon>
-							<Viewbox>
-								<Svg
-									Width="24"
-									Height="24"
-									Path="avares://AHON_TRACK/Assets/MainWindowView/outstanding-balances-icon.svg"/>
-							</Viewbox>
-						</shadui:SidebarItem.Icon>
-					</shadui:SidebarItem>
-					<shadui:SidebarItem
-						Command="{CompiledBinding}"
-						Content="Payment History"
-						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Payment History'}">
-						<shadui:SidebarItem.Icon>
-							<Viewbox>
-								<Svg
-									Width="24"
-									Height="24"
-									Path="avares://AHON_TRACK/Assets/MainWindowView/payment-history-icon.svg"/>
-							</Viewbox>
-						</shadui:SidebarItem.Icon>
-					</shadui:SidebarItem>
-					<shadui:SidebarItem
-						Command="{CompiledBinding}"
+						Command="{CompiledBinding OpenManageBillingCommand}"
 						Content="Manage Billing"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Manage Billing'}">
@@ -225,6 +169,20 @@
 									Width="24"
 									Height="24"
 									Path="avares://AHON_TRACK/Assets/MainWindowView/manage-billing-icon.svg"/>
+							</Viewbox>
+						</shadui:SidebarItem.Icon>
+					</shadui:SidebarItem>
+					<shadui:SidebarItem
+						Command="{CompiledBinding OpenItemPurchaseCommand}"
+						Content="Item Purchase"
+						FontSize="15"
+						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Item Purchase'}">
+						<shadui:SidebarItem.Icon>
+							<Viewbox>
+								<Svg
+									Width="24"
+									Height="24"
+									Path="avares://AHON_TRACK/Assets/MainWindowView/payment-oversight-icon.svg"/>
 							</Viewbox>
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>

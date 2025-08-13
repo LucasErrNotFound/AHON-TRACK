@@ -1,0 +1,256 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    mc:Ignorable="d"
+    d:DesignWidth="550"
+    d:DesignHeight="1130"
+    Width="550"
+    Height="840"
+    xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
+    x:DataType="viewModel:EditPackageDialogCardViewModel"
+    x:Class="AHON_TRACK.Components.EditPackageDialog.EditPackageDialogCard">
+
+    <Design.DataContext>
+        <viewModel:EditPackageDialogCardViewModel />
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+        <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter" />
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.h4">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="TextBlock.Muted">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="TextBlock.LabelField">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="RadioButton.FormRadio">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Regular" />
+            <Setter Property="Margin" Value="0,0,15,0" />
+        </Style>
+    </UserControl.Styles>
+
+
+    <Border
+        Background="{DynamicResource BackgroundColor}"
+        BorderBrush="{DynamicResource BorderColor}"
+        BorderThickness="1"
+        Padding="30">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <StackPanel Spacing="0" Margin="0,0,10,0">
+                <!-- Header Section -->
+                <TextBlock
+                    Text="Edit Existing Package"
+                    Foreground="{DynamicResource FontForeground}"
+                    Classes="h4" />
+                <TextBlock
+                    Text="Edit this existing specialized package by modifying this form"
+                    Classes="Muted" />
+                <Grid RowDefinitions="Auto Auto" RowSpacing="15" Margin="0,20,0,0">
+                    <StackPanel Grid.Row="0">
+                        <TextBox
+                            Width="478"
+                            Watermark="e.g., Free Trial, Monthly Membership"
+                            Classes="Clearable"
+                            shadui:ControlAssist.Label="Package Name"
+                            Text="{CompiledBinding PackageName}">
+                        </TextBox>
+                    </StackPanel>
+                    <StackPanel Grid.Row="1">
+                        <TextBox
+                            Width="478"
+                            Watermark="Brief description of the package"
+                            shadui:ControlAssist.Label="Description"
+                            shadui:ControlAssist.Height="100"
+                            AcceptsReturn="True"
+                            Text="{CompiledBinding Description}"
+                            HorizontalAlignment="Left"
+                            TextWrapping="Wrap">
+                        </TextBox>
+                    </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="* *" Margin="0,30,0,0">
+                    <StackPanel Grid.Column="0">
+                        <NumericUpDown
+                            Width="150"
+                            shadui:ControlAssist.Label="Price (₱)"
+                            Classes="Clearable"
+                            FormatString="N2"
+                            ShowButtonSpinner="False"
+                            Watermark="0"
+                            HorizontalAlignment="Left"
+                            Value="{CompiledBinding Price}">
+                            <NumericUpDown.InnerLeftContent>
+                                <TextBlock Margin="8,0,-8,0" Text="₱" />
+                            </NumericUpDown.InnerLeftContent>
+                        </NumericUpDown>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBox
+                            Width="230"
+                            Watermark="e.g., monthly, one-time only"
+                            shadui:ControlAssist.Label="Duration"
+                            shadui:ControlAssist.Height="38"
+                            Margin="0,-4,0,0"
+                            HorizontalAlignment="Right"
+                            Text="{CompiledBinding Duration}">
+                        </TextBox>
+                    </StackPanel>
+                </Grid>
+                <Grid RowDefinitions="Auto Auto Auto Auto Auto" Margin="0,30,0,0" RowSpacing="10">
+                    <TextBox
+                        Grid.Row="0"
+                        Width="478"
+                        Classes="Clearable"
+                        shadui:ControlAssist.Label="Package Features"
+                        Watermark="Enter feature description"
+                        Text="{CompiledBinding FeatureDescription1}">
+                    </TextBox>
+                    <TextBox
+                        Grid.Row="1"
+                        Width="478"
+                        Classes="Clearable"
+                        Watermark="Enter feature description"
+                        Text="{CompiledBinding FeatureDescription2}">
+                    </TextBox>
+                    <TextBox
+                        Grid.Row="2"
+                        Width="478"
+                        Classes="Clearable"
+                        Watermark="Enter feature description"
+                        Text="{CompiledBinding FeatureDescription3}">
+                    </TextBox>
+                    <TextBox
+                        Grid.Row="3"
+                        Width="478"
+                        Classes="Clearable"
+                        Watermark="Enter feature description"
+                        Text="{CompiledBinding FeatureDescription4}">
+                    </TextBox>
+                    <TextBox
+                        Grid.Row="4"
+                        Width="478"
+                        Classes="Clearable"
+                        Watermark="Enter feature description"
+                        Text="{CompiledBinding FeatureDescription5}">
+                    </TextBox>
+                </Grid>
+                <Separator Margin="0,15,0,0" />
+                <Grid ColumnDefinitions="* *" Margin="0,20,0,0">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                        <Svg
+                            Width="22"
+                            Height="22"
+                            VerticalAlignment="Center"
+                            Path="avares://AHON_TRACK/Assets/ManageBillingView/discount-icon.svg" />
+                        <TextBlock
+                            Text="Optional Discount"
+                            FontSize="14"
+                            Foreground="{DynamicResource FontForeground}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <CheckBox
+                            Content="Enable discount"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            IsChecked="{CompiledBinding EnableDiscount}" />
+                    </StackPanel>
+                </Grid>
+                <Grid RowDefinitions="Auto Auto" ColumnDefinitions="* *" Margin="0,30,0,0"
+                      IsVisible="{CompiledBinding IsDiscountEnabled}">
+                    <StackPanel Grid.Row="0" Grid.Column="0">
+                        <ComboBox
+                            Width="200"
+                            HorizontalAlignment="Left"
+                            shadui:ControlAssist.Label="Discount Type"
+                            ItemsSource="{CompiledBinding DiscountTypeItems}"
+                            SelectedItem="{CompiledBinding SelectedDiscountTypeItem, Mode=TwoWay}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="0" Grid.Column="1">
+                        <NumericUpDown
+                            Width="200"
+                            shadui:ControlAssist.Label="Discount Value"
+                            Classes="Clearable"
+                            FormatString="{CompiledBinding DiscountFormat}"
+                            ShowButtonSpinner="False"
+                            Watermark="0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right"
+                            Value="{CompiledBinding DiscountValue}">
+                            <NumericUpDown.InnerLeftContent>
+                                <TextBlock Margin="8,0,-8,0" Text="{CompiledBinding DiscountSymbol}" />
+                            </NumericUpDown.InnerLeftContent>
+                        </NumericUpDown>
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,20,0,0">
+                        <ComboBox
+                            Width="200"
+                            HorizontalAlignment="Left"
+                            shadui:ControlAssist.Label="Discount For"
+                            ItemsSource="{CompiledBinding DiscountForItems}"
+                            SelectedItem="{CompiledBinding SelectedDiscountForItem, Mode=TwoWay}" />
+                    </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="* *" Margin="0,30,0,0" IsVisible="{CompiledBinding IsDiscountEnabled}">
+                    <StackPanel Grid.Column="0">
+                        <CalendarDatePicker
+                            shadui:ControlAssist.Label="Valid From"
+                            shadui:ControlAssist.ReadOnly="True"
+                            HorizontalAlignment="Left"
+                            SelectedDate="{CompiledBinding ValidFrom, Converter={StaticResource DateOnlyToDateTimeConverter}}"
+                            Width="200" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <CalendarDatePicker
+                            shadui:ControlAssist.Label="Valid Until (optional)"
+                            shadui:ControlAssist.ReadOnly="True"
+                            HorizontalAlignment="Right"
+                            Width="200"
+                            SelectedDate="{CompiledBinding ValidTo, Converter={StaticResource DateOnlyToDateTimeConverter}}" />
+                    </StackPanel>
+                </Grid>
+                <Separator Margin="0,15,0,0" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15" Margin="0,20,0,0">
+                    <Button
+                        Classes="Secondary"
+                        Command="{CompiledBinding CancelCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Cancel" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        Classes="Primary"
+                        Command="{CompiledBinding SavePackageCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Edit Package" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

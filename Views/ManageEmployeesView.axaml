@@ -116,21 +116,20 @@
 								</StackPanel>
 								<Button
 									Grid.Column="3"
-									Content="Add New Employee"
 									Classes="Primary"
 									FontSize="16"
 									Width="220"
 									Height="40"
 									Padding="20,0,20,0"
 									Command="{CompiledBinding ShowAddNewEmployeeDialogCommand}">
-									<!-- Bugged icon || Moving Icon to the left makes it smaller
-										<shadui:ButtonAssist.Icon>
-											<Svg
-												Width="20"
-												Height="20"
-												Path="/Assets/ManageEmployeesView/add-new-employee-icon.svg"/>
-										</shadui:ButtonAssist.Icon>
-												-->
+									<StackPanel Orientation="Horizontal">
+										<Svg
+											Width="22"
+											Height="22"
+											Margin="0,0,10,0"
+											Path="/Assets/ManageEmployeesView/add-new-employee-icon.svg"/>
+										<TextBlock Text="Add New Employee" Foreground="White" VerticalAlignment="Center" />
+									</StackPanel>
 								</Button>
 							</Grid>
 

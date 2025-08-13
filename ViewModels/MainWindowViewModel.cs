@@ -20,6 +20,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 	private readonly CheckInOutViewModel _checkInOutViewModel;
 	private readonly ManageMembershipViewModel _manageMembershipViewModel;
     private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
+    private readonly ManageBillingViewModel _manageBillingViewModel;
+    private readonly ItemPurchaseViewModel _itemPurchaseViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
@@ -33,6 +35,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		CheckInOutViewModel checkInOutViewModel,
 		ManageMembershipViewModel manageMembershipViewModel,
         TrainingSchedulesViewModel trainingSchedulesViewModel,
+        ManageBillingViewModel billingViewModel,
+        ItemPurchaseViewModel itemPurchaseViewModel,
         EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
@@ -42,6 +46,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		_checkInOutViewModel = checkInOutViewModel;
 		_manageMembershipViewModel = manageMembershipViewModel;
         _trainingSchedulesViewModel = trainingSchedulesViewModel;
+        _manageBillingViewModel = billingViewModel;
+        _itemPurchaseViewModel = itemPurchaseViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -61,6 +67,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		_manageMembershipViewModel = new ManageMembershipViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
+        _manageBillingViewModel = new ManageBillingViewModel();
+        _itemPurchaseViewModel = new ItemPurchaseViewModel();
     }
 
     [ObservableProperty]
@@ -131,22 +139,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenTrainingSchedules() => SwitchPage(_trainingSchedulesViewModel);
 
-    /*
-    [RelayCommand]
-    private void OpenRoomEquipmentBooking() => SwitchPage(_roomEquipmentBookingViewModel);
-
-    [RelayCommand]
-    private void OpenPaymentOverview() => SwitchPage(_paymentOverviewViewModel);
-
-    [RelayCommand]
-    private void OpenOutstandingBalances() => SwitchPage(_outstandingBalancesViewModel);
-
-    [RelayCommand]
-    private void OpenPaymentHistory() => SwitchPage(_paymentHistoryViewModel);
-
     [RelayCommand]
     private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
+    
+    [RelayCommand]
+    private void OpenItemPurchase() => SwitchPage(_itemPurchaseViewModel);
 
+    /*
     [RelayCommand]
     private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
 

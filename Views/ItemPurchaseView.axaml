@@ -1,0 +1,586 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
+    x:DataType="viewModels:ItemPurchaseViewModel"
+    mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
+    x:Class="AHON_TRACK.Views.ItemPurchaseView">
+
+    <Design.DataContext>
+        <viewModels:ItemPurchaseViewModel />
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+        <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
+        <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
+        <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+
+        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+        <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
+        <converters:DateToStringConverter x:Key="DateToStringConverter" />
+    </UserControl.Resources>
+    
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource FontForeground}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel LastChildFill="True">
+        <StackPanel
+            MaxWidth="{StaticResource PageMaxWidth}"
+            Margin="{StaticResource PageMargin}"
+            DockPanel.Dock="Top">
+            <TextBlock
+                FontSize="30"
+                FontWeight="SemiBold"
+                FontFamily="Inter"
+                Text="Item Purchase"
+                Foreground="{StaticResource FontForeground}"
+                Margin="90,30,0,0" />
+            <TextBlock
+                Classes="Caption Muted"
+                FontSize="14"
+                FontFamily="Inter"
+                Text="Manage customer purchases of gym products and supplements"
+                TextWrapping="Wrap"
+                Margin="90,0" />
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,48,24" Spacing="16">
+                <Grid ColumnDefinitions="Auto *" ColumnSpacing="50">
+                    <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="450">
+                        <StackPanel>
+                            <shadui:CardTitle Content="Select a customer" />
+                            <Grid ColumnDefinitions="Auto Auto" ColumnSpacing="10">
+                                <TextBox
+                                    Grid.Column="0"
+                                    Width="300"
+                                    HorizontalAlignment="Left"
+                                    shadui:ControlAssist.ShowProgress="{CompiledBinding }"
+                                    shadui:ControlAssist.Height="40"
+                                    Classes="Clearable"
+                                    Text="{CompiledBinding  Mode=TwoWay}"
+                                    FontSize="15"
+                                    Watermark="Search customers...">
+                                    <TextBox.InnerRightContent>
+                                        <Svg
+                                            Width="20"
+                                            Opacity="0.75"
+                                            Path="/Assets/ManageEmployeesView/search-icon.svg" />
+                                    </TextBox.InnerRightContent>
+                                </TextBox>
+                                <ComboBox
+                                    Grid.Column="1"
+                                    Width="150"
+                                    VerticalAlignment="Center"
+                                    PlaceholderText="Filter">
+                                    <ComboBoxItem Content="Gym Member" />
+                                    <ComboBoxItem Content="Walk-in" />
+                                </ComboBox>
+                            </Grid>
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                                <DataGrid
+                                    Height="315"
+                                    MaxWidth="648"
+                                    CanUserReorderColumns="False"
+                                    CanUserSortColumns="False"
+                                    GridLinesVisibility="All"
+                                    ItemsSource="{CompiledBinding }"
+                                    SelectionMode="Single"
+                                    Background="{DynamicResource CardBackgroundColor}"
+                                    RowBackground="{DynamicResource CardBackgroundColor}"
+                                    HeadersVisibility="Column"
+                                    Margin="0,10,0,0">
+
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn
+                                            Width="Auto"
+                                            MinWidth="80"
+                                            Header="ID"
+                                            Binding="{CompiledBinding }" />
+                                        <DataGridTextColumn
+                                            Width="*"
+                                            MinWidth="120"
+                                            Header="First Name"
+                                            Binding="{CompiledBinding }" />
+                                        <DataGridTextColumn
+                                            Width="*"
+                                            MinWidth="120"
+                                            Header="Last Name"
+                                            Binding="{CompiledBinding }" />
+                                        <DataGridTextColumn
+                                            Width="Auto"
+                                            MinWidth="80"
+                                            Header="Type"
+                                            Binding="{CompiledBinding }" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </shadui:Card>
+                    <shadui:Card Grid.Column="1" Margin="0,0,150,0">
+                        <StackPanel>
+                            <shadui:CardTitle Content="Categories" />
+                            <StackPanel Margin="0,20,0,0" Spacing="28">
+                                <ToggleButton
+                                    Classes="Outline"
+                                    HorizontalContentAlignment="Stretch"
+                                    IsChecked="{CompiledBinding IsAllItemsChecked}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                            <Svg
+                                                Width="30"
+                                                Height="30"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/all-items-icon.svg" />
+                                            <TextBlock
+                                                Text="All Items"
+                                                FontSize="14"
+                                                FontWeight="Medium"
+                                                VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="23"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+                                </ToggleButton>
+
+                                <ToggleButton
+                                    Classes="Outline"
+                                    HorizontalContentAlignment="Stretch"
+                                    IsChecked="{CompiledBinding IsDrinksChecked}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                            <Svg
+                                                Width="30"
+                                                Height="30"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/drinks-icon.svg" />
+                                            <TextBlock
+                                                Text="Drinks"
+                                                FontSize="14"
+                                                FontWeight="Medium"
+                                                VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="23"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+                                </ToggleButton>
+
+                                <ToggleButton
+                                    Classes="Outline"
+                                    HorizontalContentAlignment="Stretch"
+                                    IsChecked="{CompiledBinding IsSupplementsChecked}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                            <Svg
+                                                Width="30"
+                                                Height="30"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/pill-icon.svg" />
+                                            <TextBlock
+                                                Text="Supplements"
+                                                FontSize="14"
+                                                FontWeight="Medium"
+                                                VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="15"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+                                </ToggleButton>
+
+                                <ToggleButton
+                                    Classes="Outline"
+                                    HorizontalContentAlignment="Stretch"
+                                    IsChecked="{CompiledBinding IsApparelChecked}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                            <Svg
+                                                Width="30"
+                                                Height="30"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/apparel-icon.svg" />
+                                            <TextBlock
+                                                Text="Apparel"
+                                                FontSize="14"
+                                                FontWeight="Medium"
+                                                VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="8"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+                                </ToggleButton>
+
+                                <ToggleButton
+                                    Classes="Outline"
+                                    HorizontalContentAlignment="Stretch"
+                                    IsChecked="{CompiledBinding IsProductsChecked}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                                            <Svg
+                                                Width="30"
+                                                Height="30"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/products-icon.svg" />
+                                            <TextBlock
+                                                Text="Products"
+                                                FontSize="14"
+                                                FontWeight="Medium"
+                                                VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            Text="12"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center" />
+                                    </Grid>
+                                </ToggleButton>
+                            </StackPanel>
+                        </StackPanel>
+                    </shadui:Card>
+                </Grid>
+                <shadui:Card MaxHeight="900">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="20">
+                            <TextBox
+                                Width="400"
+                                HorizontalAlignment="Left"
+                                shadui:ControlAssist.ShowProgress="{CompiledBinding }"
+                                shadui:ControlAssist.Height="40"
+                                Classes="Clearable"
+                                Text="{CompiledBinding  Mode=TwoWay}"
+                                FontSize="15"
+                                Watermark="Search products..">
+                                <TextBox.InnerRightContent>
+                                    <Svg
+                                        Width="20"
+                                        Opacity="0.75"
+                                        Path="/Assets/ManageEmployeesView/search-icon.svg" />
+                                </TextBox.InnerRightContent>
+                            </TextBox>
+                        </StackPanel>
+                        <Grid 
+                            RowDefinitions="Auto Auto Auto Auto" 
+                            ColumnDefinitions="Auto Auto Auto Auto" 
+                            ColumnSpacing="30"
+                            RowSpacing="30"
+                            Margin="0,20,0,0">
+                            <shadui:Card Grid.Row="0" Grid.Column="0" Width="350">
+                                <StackPanel>
+                                    <Image
+                                        Width="250"
+                                        Height="250"
+                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/protein-powder-display.png"/>
+                                    <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
+                                        <TextBlock 
+                                            Grid.Row="0" 
+                                            Grid.Column="0"
+                                            Text="Gold Standard Whey Protein"
+                                            FontSize="17"
+                                            FontWeight="SemiBold"/>
+                                        <TextBlock 
+                                            Grid.Row="1" 
+                                            Grid.Column="0"
+                                            Text="5lbs Premium Whey Protein"
+                                            FontSize="14"
+                                            Classes="Caption Muted"/>
+                                        <TextBlock 
+                                            Grid.Row="2" 
+                                            Grid.Column="0"
+                                            Margin="0,15,0,0"
+                                            Text="₱2,500.00"
+                                            FontWeight="Bold"
+                                            Classes="h4"/>
+                                        <Border Grid.Row="2" Grid.Column="1"
+                                            IsVisible="{CompiledBinding }"
+                                            Background="{DynamicResource SuccessColor10}"
+                                            Padding="10,5,10,5"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource SuccessColor60}"
+                                            CornerRadius="6"
+                                            Margin="0,15,0,0"
+                                            HorizontalAlignment="Left">
+                                            <TextBlock
+                                                Text="15 Left"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource SuccessColor}"/>
+                                        </Border>
+                                    </Grid>
+                                    <Button
+                                        Classes="Primary"
+                                        Width="260"
+                                        Margin="0,30,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
+                                                Width="18"
+                                                Height="18"
+                                                Margin="0,0,10,0"
+                                                VerticalAlignment="Center"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                            <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </shadui:Card>
+                            <shadui:Card Grid.Row="0" Grid.Column="1" Width="350">
+                                <StackPanel>
+                                    <Image
+                                        Width="250"
+                                        Height="250"
+                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/creatine-display.png"/>
+                                    <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
+                                        <TextBlock 
+                                            Grid.Row="0" 
+                                            Grid.Column="0"
+                                            Text="Creatine XPLODE Powder"
+                                            FontSize="17"
+                                            FontWeight="SemiBold"/>
+                                        <TextBlock 
+                                            Grid.Row="1" 
+                                            Grid.Column="0"
+                                            Text="1.1lbs Creatine Monohydrate"
+                                            FontSize="14"
+                                            Classes="Caption Muted"/>
+                                        <TextBlock 
+                                            Grid.Row="2" 
+                                            Grid.Column="0"
+                                            Margin="0,15,0,0"
+                                            Text="₱1,050.00"
+                                            FontWeight="Bold"
+                                            Classes="h4"/>
+                                        <Border Grid.Row="2" Grid.Column="1"
+                                            IsVisible="{CompiledBinding }"
+                                            Background="{DynamicResource SuccessColor10}"
+                                            Padding="10,5,10,5"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource SuccessColor60}"
+                                            CornerRadius="6"
+                                            Margin="0,15,0,0"
+                                            HorizontalAlignment="Left">
+                                            <TextBlock
+                                                Text="8 Left"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource SuccessColor}"/>
+                                        </Border>
+                                    </Grid>
+                                    <Button
+                                        Classes="Primary"
+                                        Width="260"
+                                        Margin="0,30,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
+                                                Width="18"
+                                                Height="18"
+                                                Margin="0,0,10,0"
+                                                VerticalAlignment="Center"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                            <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </shadui:Card>
+                            <shadui:Card Grid.Row="0" Grid.Column="2" Width="350">
+                                <StackPanel>
+                                    <Image
+                                        Width="250"
+                                        Height="250"
+                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/preworkout-display.png"/>
+                                    <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
+                                        <TextBlock 
+                                            Grid.Row="0" 
+                                            Grid.Column="0"
+                                            Text="Insane Labz PSYCHOTIC"
+                                            FontSize="17"
+                                            FontWeight="SemiBold"/>
+                                        <TextBlock 
+                                            Grid.Row="1" 
+                                            Grid.Column="0"
+                                            Text="7.6oz Pre-Workout Peaches &amp; Cream"
+                                            TextWrapping="Wrap"
+                                            FontSize="14"
+                                            Classes="Caption Muted"/>
+                                        <TextBlock 
+                                            Grid.Row="2" 
+                                            Grid.Column="0"
+                                            Margin="0,15,0,0"
+                                            Text="₱900.00"
+                                            FontWeight="Bold"
+                                            Classes="h4"/>
+                                        <Border Grid.Row="2" Grid.Column="1"
+                                            IsVisible="{CompiledBinding }"
+                                            Background="{DynamicResource WarningColor10}"
+                                            Padding="10,5,10,5"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource WarningColor60}"
+                                            CornerRadius="6"
+                                            Margin="0,15,0,0"
+                                            HorizontalAlignment="Left">
+                                            <TextBlock
+                                                Text="5 Left"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource WarningColor}"/>
+                                        </Border>
+                                    </Grid>
+                                    <Button
+                                        Classes="Primary"
+                                        Width="260"
+                                        Margin="0,30,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
+                                                Width="18"
+                                                Height="18"
+                                                Margin="0,0,10,0"
+                                                VerticalAlignment="Center"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                            <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </shadui:Card>
+                            <shadui:Card Grid.Row="0" Grid.Column="3" Width="350">
+                                <StackPanel>
+                                    <Image
+                                        Width="250"
+                                        Height="250"
+                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/cobra-yellow-drink-display.png"/>
+                                    <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
+                                        <TextBlock 
+                                            Grid.Row="0" 
+                                            Grid.Column="0"
+                                            Text="Cobra Energy Drink"
+                                            FontSize="17"
+                                            FontWeight="SemiBold"/>
+                                        <TextBlock 
+                                            Grid.Row="1" 
+                                            Grid.Column="0"
+                                            Text="Cobra Yellow Blast Flavor"
+                                            FontSize="14"
+                                            Classes="Caption Muted"/>
+                                        <TextBlock 
+                                            Grid.Row="2" 
+                                            Grid.Column="0"
+                                            Margin="0,15,0,0"
+                                            Text="₱35.00"
+                                            FontWeight="Bold"
+                                            Classes="h4"/>
+                                        <Border Grid.Row="2" Grid.Column="1"
+                                            IsVisible="{CompiledBinding }"
+                                            Background="{DynamicResource ErrorColor10}"
+                                            Padding="10,5,10,5"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource ErrorColor60}"
+                                            CornerRadius="6"
+                                            Margin="0,15,0,0"
+                                            HorizontalAlignment="Left">
+                                            <TextBlock
+                                                Text="2 Left"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource ErrorColor}"/>
+                                        </Border>
+                                    </Grid>
+                                    <Button
+                                        Classes="Primary"
+                                        Width="260"
+                                        Margin="0,30,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
+                                                Width="18"
+                                                Height="18"
+                                                Margin="0,0,10,0"
+                                                VerticalAlignment="Center"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                            <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </shadui:Card>
+                            <shadui:Card Grid.Row="1" Grid.Column="0" Width="350">
+                                <StackPanel>
+                                    <Image
+                                        Width="250"
+                                        Height="250"
+                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/cobra-yellow-drink-display.png"/>
+                                    <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
+                                        <TextBlock 
+                                            Grid.Row="0" 
+                                            Grid.Column="0"
+                                            Text="Cobra Energy Drink"
+                                            FontSize="17"
+                                            FontWeight="SemiBold"/>
+                                        <TextBlock 
+                                            Grid.Row="1" 
+                                            Grid.Column="0"
+                                            Text="Cobra Yellow Blast Flavor"
+                                            FontSize="14"
+                                            Classes="Caption Muted"/>
+                                        <TextBlock 
+                                            Grid.Row="2" 
+                                            Grid.Column="0"
+                                            Margin="0,15,0,0"
+                                            Text="₱35.00"
+                                            FontWeight="Bold"
+                                            Classes="h4"/>
+                                        <Border Grid.Row="2" Grid.Column="1"
+                                            IsVisible="{CompiledBinding }"
+                                            Background="{DynamicResource ErrorColor10}"
+                                            Padding="10,5,10,5"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource ErrorColor60}"
+                                            CornerRadius="6"
+                                            Margin="0,15,0,0"
+                                            HorizontalAlignment="Left">
+                                            <TextBlock
+                                                Text="2 Left"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource ErrorColor}"/>
+                                        </Border>
+                                    </Grid>
+                                    <Button
+                                        Classes="Primary"
+                                        Width="260"
+                                        Margin="0,30,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
+                                                Width="18"
+                                                Height="18"
+                                                Margin="0,0,10,0"
+                                                VerticalAlignment="Center"
+                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                            <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </shadui:Card>
+                        </Grid>
+                    </StackPanel>
+                </shadui:Card>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>
