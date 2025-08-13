@@ -41,7 +41,7 @@ namespace AHON_TRACK.ViewModels
 
         // Connection string to your SSMS database
         private string ConnectionString =>
-            "Data Source=RCALUBAYAN\\SQLEXPRESS;Initial Catalog=AHON_TRACK_DATABASE;Integrated Security=True;Trust Server Certificate=True";
+            "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
         private string _username = string.Empty;
 
@@ -203,7 +203,7 @@ namespace AHON_TRACK.ViewModels
                 var toastManager = new ToastManager();
                 var dashboardViewModel = new DashboardViewModel();
                 var employeeDetailsDialogCardViewModel = new EmployeeDetailsDialogCardViewModel(dialogManager);
-                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager, pageManager, employeeDetailsDialogCardViewModel); 
+                var manageEmployeesViewModel = new ManageEmployeesViewModel(dialogManager, toastManager, pageManager, employeeDetailsDialogCardViewModel);
                 var memberCheckInOutViewModel = new MemberCheckInOutViewModel();
                 var manageMembershipViewModel = new ManageMembershipViewModel();
                 var walkInRegistration = new WalkInRegistrationViewModel();
