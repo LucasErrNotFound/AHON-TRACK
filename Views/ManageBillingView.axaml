@@ -1031,7 +1031,8 @@
                                                                 Classes="Primary"
                                                                 HorizontalAlignment="Right"
                                                                 Padding="20,0"
-                                                                Background="{DynamicResource InfoColor}">
+                                                                Background="{DynamicResource InfoColor}"
+                                                                Command="{CompiledBinding OpenAddNewProductCommand}">
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <Svg
                                                                         Width="20"
