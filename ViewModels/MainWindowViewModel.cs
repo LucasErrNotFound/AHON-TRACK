@@ -22,6 +22,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
     private readonly ManageBillingViewModel _manageBillingViewModel;
     private readonly ItemPurchaseViewModel _itemPurchaseViewModel;
+    private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
@@ -37,6 +38,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         TrainingSchedulesViewModel trainingSchedulesViewModel,
         ManageBillingViewModel billingViewModel,
         ItemPurchaseViewModel itemPurchaseViewModel,
+        EquipmentInventoryViewModel equipmentInventoryViewModel,
         EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
@@ -48,6 +50,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _trainingSchedulesViewModel = trainingSchedulesViewModel;
         _manageBillingViewModel = billingViewModel;
         _itemPurchaseViewModel = itemPurchaseViewModel;
+        _equipmentInventoryViewModel = equipmentInventoryViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -69,6 +72,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
         _manageBillingViewModel = new ManageBillingViewModel();
         _itemPurchaseViewModel = new ItemPurchaseViewModel();
+        _equipmentInventoryViewModel = new EquipmentInventoryViewModel();
     }
 
     [ObservableProperty]
@@ -145,10 +149,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenItemPurchase() => SwitchPage(_itemPurchaseViewModel);
 
-    /*
     [RelayCommand]
     private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
 
+    /*
     [RelayCommand]
     private void OpenProductSupplementStockViewModel() => SwitchPage(_productSupplementStockViewModel);
 
