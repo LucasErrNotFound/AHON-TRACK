@@ -191,7 +191,7 @@
                         AsSeparator="True"
                         Text="Manage Inventory" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
+						Command="{CompiledBinding OpenEquipmentInventoryCommand}"
 						Content="Equipment Inventory"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Equipment Inventory'}">
