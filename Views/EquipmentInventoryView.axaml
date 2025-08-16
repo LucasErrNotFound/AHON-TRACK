@@ -121,14 +121,14 @@
                             </Button>
                         </Grid>
                         <DataGrid
-                            Height="315"
+                            Height="650"
                             Margin="0,20,0,0"
                             CanUserReorderColumns="False"
                             CanUserSortColumns="False"
                             GridLinesVisibility="All"
                             SelectionMode="Single"
-                            HeadersVisibility="Column">
-                            
+                            HeadersVisibility="Column"><!-- The Height property should be MaxHeight in the future -->
+
                             <DataGrid.Columns>
                                 <DataGridCheckBoxColumn Binding="{CompiledBinding }" CanUserSort="False" Width="60">
                                     <!--CheckBox Header Column-->
