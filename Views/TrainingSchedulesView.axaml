@@ -152,7 +152,7 @@
                                         </Button>
                                     </StackPanel>
                                     <DataGrid
-                                        MaxHeight="490"
+                                        MaxHeight="485"
                                         AutoGenerateColumns="False"
                                         CanUserReorderColumns="False"
                                         CanUserResizeColumns="False"
