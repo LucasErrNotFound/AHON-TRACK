@@ -1,0 +1,66 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    x:DataType="viewModels:SupplierManagementViewModel"
+    mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
+    x:Class="AHON_TRACK.Views.SupplierManagementView">
+    
+    <Design.DataContext>
+        <viewModels:SupplierManagementViewModel/>
+    </Design.DataContext>
+    
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+        <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
+        <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
+        <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+
+        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+        <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
+        <converters:DateToStringConverter x:Key="DateToStringConverter" />
+    </UserControl.Resources>
+    
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource FontForeground}"/>
+        </Style>
+    </UserControl.Styles>
+    
+    <DockPanel LastChildFill="True">
+        <StackPanel
+            MaxWidth="{StaticResource PageMaxWidth}"
+            Margin="{StaticResource PageMargin}"
+            DockPanel.Dock="Top">
+            <TextBlock
+                FontSize="30"
+                FontWeight="SemiBold"
+                FontFamily="Inter"
+                Text="Supplier Management"
+                Margin="90,30,0,0" />
+            <TextBlock
+                Classes="Caption Muted"
+                FontSize="14"
+                FontFamily="Inter"
+                Text="Manage supplier relationships and contacts"
+                TextWrapping="Wrap"
+                Margin="90,0" />
+        </StackPanel>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,90,24" Spacing="16">
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>
