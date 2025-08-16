@@ -24,6 +24,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly ItemPurchaseViewModel _itemPurchaseViewModel;
     private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
     private readonly ItemStockViewModel  _itemStockViewModel;
+    private readonly SupplierManagementViewModel _supplierManagementViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
@@ -41,6 +42,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ItemPurchaseViewModel itemPurchaseViewModel,
         EquipmentInventoryViewModel equipmentInventoryViewModel,
         ItemStockViewModel itemStockViewModel,
+        SupplierManagementViewModel supplierManagementViewModel,
         EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
@@ -54,6 +56,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _itemPurchaseViewModel = itemPurchaseViewModel;
         _equipmentInventoryViewModel = equipmentInventoryViewModel;
         _itemStockViewModel = itemStockViewModel;
+        _supplierManagementViewModel = supplierManagementViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -77,6 +80,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _itemPurchaseViewModel = new ItemPurchaseViewModel();
         _equipmentInventoryViewModel = new EquipmentInventoryViewModel();
         _itemStockViewModel = new ItemStockViewModel();
+        _supplierManagementViewModel = new SupplierManagementViewModel();
     }
 
     [ObservableProperty]
@@ -159,10 +163,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenItemStockViewModel() => SwitchPage(_itemStockViewModel);
 
-    /*
     [RelayCommand]
     private void OpenSupplierManagement() => SwitchPage(_supplierManagementViewModel);
 
+    /*
     [RelayCommand]
     private void OpenFinancialReports() => SwitchPage(_financialReportsViewModel);
 
