@@ -66,7 +66,7 @@
                             <TextBox
                                 Grid.Column="0"
                                 HorizontalAlignment="Left"
-                                Watermark="Search Equipment"
+                                Watermark="Search Equipment..."
                                 shadui:ControlAssist.ShowProgress="{CompiledBinding }"
                                 Text=""
                                 shadui:ControlAssist.Height="40"
