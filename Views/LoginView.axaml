@@ -57,39 +57,46 @@
 				Text="The future of"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="35"
+				FontFamily="Inter"
 				FontWeight="Regular"/>
 			<TextBlock
 				Text="Gym"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="65"
+				FontFamily="Inter"
 				FontWeight="Bold"
 				Margin="0,0"/>
 			<TextBlock
 				Text="Management"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="65"
+				FontFamily="Inter"
 				FontWeight="Bold"/>
 			<TextBlock
 				Text="at your fingertips"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="35"
+				FontFamily="Inter"
 				FontWeight="Regular"
 				Margin="0,10"/>
 			<TextBlock
 				Text="Making it easier for staff to manage, oversee, "
 				Foreground="{StaticResource FontForeground}"
 				FontSize="23"
+				FontFamily="Inter"
 				FontWeight="Light"
 				Margin="0,10"/>
 			<TextBlock
 				Text="and engage with knowledge"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="23"
+				FontFamily="Inter"
 				FontWeight="Light"
 				Margin="0,-10"/>
 			<Button
 				Classes="Primary"
 				Content="About Us"
+				FontFamily="Inter"
 				HorizontalAlignment="Left"
 				Margin="80,60"
 				Padding="35,0,35,0"
@@ -106,8 +113,8 @@
 			<shadui:Card HorizontalAlignment="Right" Width="400" Height="490" Margin="65,100" ScrollViewer.VerticalScrollBarVisibility="Disabled">
 				<shadui:Card.Header>
 					<StackPanel Spacing="5">
-						<shadui:CardTitle FontSize="35" FontWeight="Bold" Foreground="{StaticResource FontForeground}">Sign In</shadui:CardTitle>
-						<shadui:CardDescription Foreground="{StaticResource FontForeground}" Opacity="0.6" FontSize="18">Enter your credentials</shadui:CardDescription>
+						<shadui:CardTitle FontFamily="Inter" FontSize="35" FontWeight="Bold" Foreground="{StaticResource FontForeground}">Sign In</shadui:CardTitle>
+						<shadui:CardDescription FontFamily="Inter" Foreground="{StaticResource FontForeground}" Opacity="0.6" FontSize="18">Enter your credentials</shadui:CardDescription>
 					</StackPanel>
 				</shadui:Card.Header>
 				<Panel>
@@ -137,6 +144,7 @@
 					<Button
 						Classes="Primary"
 						FontSize="19"
+						FontFamily="Inter"
 						Padding="0,0,0,5"
 						Margin="0,30"
 						Height="38"
@@ -149,7 +157,7 @@
 							<Svg
 								Width="20"
 								Height="20"
-								Margin="0,3,13,0"
+								Margin="0,3,13,0" 
 								VerticalAlignment="Center"
 								Path="avares://AHON_TRACK/Assets/LoginView/log-in-icon.svg" />
 							<TextBlock Text="Sign In" Foreground="White" VerticalAlignment="Center" />
