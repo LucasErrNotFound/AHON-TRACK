@@ -106,7 +106,8 @@
                                 Classes="Primary"
                                 Margin="20,0,0,0"
                                 HorizontalAlignment="Right"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                Command="{CompiledBinding ShowAddEquipmentDialogCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Svg
                                         Width="20"
@@ -186,6 +187,13 @@
                                     Width="Auto"
                                     MinWidth="150"
                                     Header="Condition"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Maintenance -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="150"
+                                    Header="Maintenance"
                                     Binding="{CompiledBinding }" />
                                 
                                 <!-- Status -->
