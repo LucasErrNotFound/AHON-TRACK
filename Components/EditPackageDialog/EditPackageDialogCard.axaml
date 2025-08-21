@@ -53,7 +53,6 @@
         </Style>
     </UserControl.Styles>
 
-
     <Border
         Background="{DynamicResource BackgroundColor}"
         BorderBrush="{DynamicResource BorderColor}"
