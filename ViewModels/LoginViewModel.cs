@@ -18,7 +18,7 @@ public partial class LoginViewModel : ViewModelBase
     public DialogManager DialogManager { get; }
     public PageManager PageManager { get; }
 
-    public const string ConnectionString = "Data Source=RCALUBAYAN\\SQLEXPRESS;Initial Catalog=AHON_TRACK_DATABASE;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
+    public const string ConnectionString = "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
     private bool _shouldShowSuccessLogInToast = false;
     // private bool _shouldShowErrorToast = false; // will be used in the future if needed
@@ -123,7 +123,7 @@ public partial class LoginViewModel : ViewModelBase
                     update.ExecuteNonQuery();
 
                     role = "Admin";
-                    LogAttempt(conn, username, role, true);
+                    LogAction(conn, username, role, "Login", "Login successful", true);
                     return true;
                 }
             }
@@ -143,12 +143,13 @@ public partial class LoginViewModel : ViewModelBase
                     update.ExecuteNonQuery();
 
                     role = "Staff";
-                    LogAttempt(conn, username, role, true);
+                    LogAction(conn, username, role, "Login", "Login successful", true);
                     return true;
                 }
             }
 
-            LogAttempt(conn, username, role, false);
+            // If no match found
+            LogAction(conn, username, role, "Login", "Login failed - invalid credentials", false);
             return false;
         }
         catch (Exception ex)
@@ -157,19 +158,55 @@ public partial class LoginViewModel : ViewModelBase
                 .WithContent(ex.Message)
                 .WithDelay(10)
                 .ShowError();
+
+            // Try to log DB error (optional)
+            try
+            {
+                using var conn = new SqlConnection(ConnectionString);
+                conn.Open();
+                LogAction(conn, username, role, "Login", $"Login failed - DB error: {ex.Message}", false);
+            }
+            catch
+            {
+                // If even logging fails, ignore (to prevent crash)
+            }
+
             return false;
         }
     }
 
-    private void LogAttempt(SqlConnection conn, string username, string role, bool success)
+
+    private void LogAction(SqlConnection conn, string username, string role, string actionType, string description, bool? success = null)
     {
-        var logCmd = new SqlCommand(
-            "INSERT INTO LoginLogs (Username, Role, IsSuccessful) VALUES (@username, @role, @success)", conn);
-        logCmd.Parameters.AddWithValue("@username", username);
-        logCmd.Parameters.AddWithValue("@role", role);
-        logCmd.Parameters.AddWithValue("@success", success);
-        logCmd.ExecuteNonQuery();
+        try
+        {
+            using (var logCmd = new SqlCommand(
+                "INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful) " +
+                "VALUES (@username, @role, @actionType, @description, @success)", conn))
+            {
+                logCmd.Parameters.AddWithValue("@username", username);
+                logCmd.Parameters.AddWithValue("@role", role);
+                logCmd.Parameters.AddWithValue("@actionType", actionType);
+                logCmd.Parameters.AddWithValue("@description", description);
+
+                // Handle nullable IsSuccessful
+                if (success.HasValue)
+                    logCmd.Parameters.AddWithValue("@success", success.Value);
+                else
+                    logCmd.Parameters.AddWithValue("@success", DBNull.Value);
+
+                logCmd.ExecuteNonQuery();
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastManager.CreateToast("Log Error")
+            .WithContent($"Failed to save log: {ex.Message}")
+            .WithDelay(10)
+            .ShowError();
+        }
     }
+
 
     private void SwitchToMainWindow()
     {
