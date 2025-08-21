@@ -6,6 +6,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using Microsoft.Data.SqlClient;
 using ShadUI;
 using System;
 using System.Collections.Generic;
@@ -88,9 +89,9 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
     public ManageEmployeesViewModel(
-        DialogManager dialogManager, 
-        ToastManager toastManager, 
-        PageManager pageManager, 
+        DialogManager dialogManager,
+        ToastManager toastManager,
+        PageManager pageManager,
         AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
@@ -98,7 +99,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _toastManager = toastManager;
         _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
-        LoadSampleData();
+        //LoadSampleData();
+        LoadEmployeesFromDatabaseAsync();
         UpdateCounts();
     }
 
@@ -111,13 +113,45 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
     }
 
+
     [AvaloniaHotReload]
-    public void Initialize()
+    /*public void Initialize()
     {
         if (IsInitialized) return;
-        LoadSampleData();
+        //LoadSampleData();
+        await LoadEmployeesFromDatabaseAsync();
         UpdateCounts();
         IsInitialized = true;
+    }*/
+
+    public async Task InitializeAsync() // new
+    {
+        if (IsInitialized) return;
+
+        await LoadEmployeesFromDatabaseAsync(); // now valid
+        UpdateCounts();
+        IsInitialized = true;
+    }
+
+    private async Task LoadEmployeesFromDatabaseAsync() //new
+    {
+        var employeesFromDb = await GetEmployeesFromDatabaseAsync();
+
+        // Store original data for filtering/sorting operations
+        OriginalEmployeeData = employeesFromDb;
+        CurrentFilteredData = [.. employeesFromDb];
+
+        EmployeeItems.Clear();
+        foreach (var employee in employeesFromDb)
+        {
+            employee.PropertyChanged += OnEmployeePropertyChanged;
+            EmployeeItems.Add(employee);
+        }
+
+        TotalCount = EmployeeItems.Count;
+
+        // Keep Items in sync if you’re using it in summary
+        Items = employeesFromDb;
     }
 
     private void LoadSampleData()
@@ -264,30 +298,71 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         ];
     }
 
-    // Method to load employees from a database (for future implementation)
+    // Method to load employees from a database (for future implementation) new
+    public const string connectionString =
+    "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
+
     public async Task<List<ManageEmployeesItem>> GetEmployeesFromDatabaseAsync()
     {
-        // Chill, hardcoded for visual only || Replace this with your actual SQL database call
-        // Example:
-        // using var connection = new SqlConnection(connectionString);
-        // var employees = await connection.QueryAsync<ManageEmployeesItem>("SELECT * FROM Employees ORDER BY Name");
-        // return employees.ToList();
+        var employees = new List<ManageEmployeesItem>();
 
-        await Task.Delay(100); // Simulate async operation
-        return [];
+        try
+        {
+            using var conn = new SqlConnection(connectionString);
+            await conn.OpenAsync();
+
+            string query = @"
+            SELECT 
+                EmployeeId,
+                Name,
+                Username,
+                ContactNumber,
+                Position,
+                Status,
+                DateJoined
+            FROM Employees
+            ORDER BY Name;";
+
+            using var cmd = new SqlCommand(query, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                employees.Add(new ManageEmployeesItem
+                {
+                    ID = reader["EmployeeID"].ToString(),
+                    AvatarSource = DefaultAvatarSource, // Placeholder for now
+                    Name = reader["Name"].ToString(),
+                    Username = reader["Username"].ToString(),
+                    ContactNumber = reader["ContactNumber"].ToString(),
+                    Position = reader["Position"].ToString(),
+                    Status = reader["Status"].ToString(),
+                    DateJoined = reader["DateJoined"] == DBNull.Value
+                        ? DateTime.MinValue
+                        : Convert.ToDateTime(reader["DateJoined"])
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching employees: {ex.Message}");
+        }
+
+        return employees;
     }
 
-    // Method to generate summary text
-    /*
-    public string GenerateEmployeesSummary()
+    public List<ManageEmployeesItem> Items { get; set; } = new();
+    public string GenerateEmployeesSummary() // new
     {
-        var activeCount = Items.Count(x => x.Status?.ToLowerInvariant() == "active");
-        var inactiveCount = Items.Count(x => x.Status?.ToLowerInvariant() == "inactive");
-        var terminatedCount = Items.Count(x => x.Status?.ToLowerInvariant() == "terminated");
+        int totalCount = Items?.Count ?? 0;
 
-        return $"Total: {TotalCount} employees (Active: {activeCount}, Inactive: {inactiveCount}, Terminated: {terminatedCount})";
+        int activeCount = Items?.Count(x => string.Equals(x.Status, "active", StringComparison.OrdinalIgnoreCase)) ?? 0;
+        int inactiveCount = Items?.Count(x => string.Equals(x.Status, "inactive", StringComparison.OrdinalIgnoreCase)) ?? 0;
+        int terminatedCount = Items?.Count(x => string.Equals(x.Status, "terminated", StringComparison.OrdinalIgnoreCase)) ?? 0;
+
+        return $"Total: {totalCount} employees (Active: {activeCount}, Inactive: {inactiveCount}, Terminated: {terminatedCount})";
     }
-    */
+
 
     private void OnEmployeePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

@@ -173,7 +173,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         InitializeChart();
         InitializeSalesData();
         InitializeTrainingSessionsData();
-        InitializeRecentLogsData();
+        _ = InitializeRecentLogsData(); //calls db info
     }
 
     private void InitializeAvailableYears()
@@ -194,9 +194,12 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         UpcomingTrainingSessions = new ObservableCollection<TrainingSession>(sessionsData);
     }
 
-    private void InitializeRecentLogsData()
+    private async Task InitializeRecentLogsData()
     {
-        var logsData = _dashboardModel.GetSampleRecentLogsData();
+        var logsData = await _dashboardModel.GetRecentLogsFromDatabaseAsync(
+            DashboardModel.connectionString
+        );
+
         RecentLogs = new ObservableCollection<RecentLog>(logsData);
     }
 
@@ -282,7 +285,9 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     {
         try
         {
-            var logsFromDb = await _dashboardModel.GetRecentLogsFromDatabaseAsync();
+            var logsFromDb = await _dashboardModel.GetRecentLogsFromDatabaseAsync(
+                DashboardModel.connectionString // Pass it here
+            );
 
             RecentLogs.Clear();
             foreach (var log in logsFromDb)
@@ -292,7 +297,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading recent logs data: {ex.Message}"); // Don't ask me why this is a Console-based error handling :)
+            Console.WriteLine($"Error loading recent logs data: {ex.Message}");
         }
     }
 

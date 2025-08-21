@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,11 +37,14 @@ public class TrainingSession
 // Model for Recent Logs
 public class RecentLog
 {
-    public string Username { get; set; } = string.Empty;
-    public string UserType { get; set; } = "Gym Admin";
-    public string ActionLogName { get; set; } = string.Empty;
-    public string AvatarSource { get; set; } = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+    public string Username { get; set; }
+    public string UserType { get; set; }
+    public string ActionLogName { get; set; }
     public DateTime LogDateTime { get; set; }
+
+    // New property for display
+    public string FormattedDateTime { get; set; }
+    public string AvatarSource { get; set; } = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 }
 
 // Main Dashboard Model - handles all data operations
@@ -228,7 +232,7 @@ public class DashboardModel
 
     #region Recent Logs Data Operations
 
-    public List<RecentLog> GetSampleRecentLogsData()
+    /*public List<RecentLog> GetSampleRecentLogsData()
     {
         return
         [
@@ -272,20 +276,54 @@ public class DashboardModel
                 LogDateTime = DateTime.Now.AddHours(-4)
             }
         ];
-    }
+    }*/
+    public const string connectionString = "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
-    public async Task<List<RecentLog>> GetRecentLogsFromDatabaseAsync()
+    public async Task<List<RecentLog>> GetRecentLogsFromDatabaseAsync(string connectionString)
     {
-        // Replace this with your actual SQL database call
-        // Example:
-        // using var connection = new SqlConnection(connectionString);
-        // var logs = await connection.QueryAsync<RecentLog>(
-        //     "SELECT * FROM ActivityLogs WHERE DATE(LogDateTime) = CURDATE() ORDER BY LogDateTime DESC LIMIT 10");
-        // return logs.ToList();
+        var logs = new List<RecentLog>();
 
-        await Task.Delay(100); // Simulate async operation
-        return [];
+        try
+        {
+            using var conn = new SqlConnection(connectionString);
+            await conn.OpenAsync();
+
+            string query = @"
+        SELECT TOP 10 
+        Username, 
+        Role AS UserType, 
+        ActionType AS ActionLogName, 
+        LogDateTime
+        FROM SystemLogs
+        ORDER BY LogDateTime DESC;";
+
+            using var cmd = new SqlCommand(query, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                DateTime logDateTime = (DateTime)reader["LogDateTime"];
+                string formattedDate = logDateTime.ToString("MM/dd/yyyy hh:mm tt"); // 12H format
+
+                logs.Add(new RecentLog
+                {
+                    Username = reader["Username"].ToString(),
+                    UserType = reader["UserType"].ToString(),           // comes from SQL alias
+                    ActionLogName = reader["ActionLogName"].ToString(), // comes from SQL alias
+                    LogDateTime = logDateTime,
+                    FormattedDateTime = formattedDate,
+                    AvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching logs: {ex.Message}");
+        }
+
+        return logs;
     }
+
 
     public string GenerateRecentLogsSummary(int logCount) => $"You have {logCount} recent action logs today";
 
