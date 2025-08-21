@@ -48,14 +48,12 @@
             <TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
-                FontFamily="Inter"
                 Text="Item Purchase"
                 Foreground="{StaticResource FontForeground}"
                 Margin="90,30,0,0" />
             <TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
-                FontFamily="Inter"
                 Text="Manage customer purchases of gym products and supplements"
                 TextWrapping="Wrap"
                 Margin="90,0" />

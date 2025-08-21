@@ -45,7 +45,6 @@
             <TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
-                FontFamily="Inter"
                 Text="Manage Billing"
                 Foreground="{StaticResource FontForeground}"
                 Margin="90,30" />

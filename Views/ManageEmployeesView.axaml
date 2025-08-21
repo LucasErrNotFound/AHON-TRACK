@@ -36,11 +36,9 @@
 			<TextBlock
 				FontSize="30"
 				FontWeight="SemiBold"
-				FontFamily="Inter"
 				Text="Manage Employees"
 				Foreground="{StaticResource FontForeground}"
-				Margin="90,30"
-			/>
+				Margin="90,30"/>
 		</StackPanel>
 		<ScrollViewer HorizontalScrollBarVisibility="Auto">
 			<StackPanel

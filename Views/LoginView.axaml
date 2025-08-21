@@ -57,40 +57,34 @@
 				Text="The future of"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="35"
-				FontFamily="Inter"
 				FontWeight="Regular"/>
 			<TextBlock
 				Text="Gym"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="65"
-				FontFamily="Inter"
 				FontWeight="Bold"
 				Margin="0,0"/>
 			<TextBlock
 				Text="Management"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="65"
-				FontFamily="Inter"
 				FontWeight="Bold"/>
 			<TextBlock
 				Text="at your fingertips"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="35"
-				FontFamily="Inter"
 				FontWeight="Regular"
 				Margin="0,10"/>
 			<TextBlock
 				Text="Making it easier for staff to manage, oversee, "
 				Foreground="{StaticResource FontForeground}"
 				FontSize="23"
-				FontFamily="Inter"
 				FontWeight="Light"
 				Margin="0,10"/>
 			<TextBlock
 				Text="and engage with knowledge"
 				Foreground="{StaticResource FontForeground}"
 				FontSize="23"
-				FontFamily="Inter"
 				FontWeight="Light"
 				Margin="0,-10"/>
 			<Button
@@ -112,8 +106,8 @@
 			<shadui:Card HorizontalAlignment="Right" Width="400" Height="490" Margin="65,100" ScrollViewer.VerticalScrollBarVisibility="Disabled">
 				<shadui:Card.Header>
 					<StackPanel Spacing="5">
-						<shadui:CardTitle FontFamily="Inter" FontSize="35" FontWeight="Bold" Foreground="{StaticResource FontForeground}">Sign In</shadui:CardTitle>
-						<shadui:CardDescription FontFamily="Inter" Foreground="{StaticResource FontForeground}" Opacity="0.6" FontSize="18">Enter your credentials</shadui:CardDescription>
+						<shadui:CardTitle FontSize="35" FontWeight="Bold" Foreground="{StaticResource FontForeground}">Sign In</shadui:CardTitle>
+						<shadui:CardDescription Foreground="{StaticResource FontForeground}" Opacity="0.6" FontSize="18">Enter your credentials</shadui:CardDescription>
 					</StackPanel>
 				</shadui:Card.Header>
 				<Panel>

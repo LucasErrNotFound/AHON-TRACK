@@ -35,7 +35,6 @@
             <TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
-                FontFamily="Inter"
                 Text="Check-in/Check-out"
                 Foreground="{StaticResource FontForeground}"
                 Margin="90,30" />
