@@ -42,16 +42,19 @@
 		<Grid ColumnDefinitions="Auto *">
 			<shadui:Sidebar
 				Grid.Column="0"
-				Width="237"
+				Width="257"
 				MinWidth="60"
 				Padding="{CompiledBinding #Toggler.IsChecked, Converter={x:Static converters:BooleanConverters.SidebarPadding}}"
                 BorderBrush="{DynamicResource BorderColor30}"
                 BorderThickness="0,0,1,0"
 				CurrentRoute="{CompiledBinding CurrentRoute}"
-                Expanded="{CompiledBinding #Toggler.IsChecked}">
+                Expanded="{CompiledBinding #Toggler.IsChecked}"
+				ItemIconContentSpacing="12">
+				<!--
 				<shadui:Sidebar.ExpandEasing>
 					<shadui:EaseInOutBack BounceIntensity="Soft" />
 				</shadui:Sidebar.ExpandEasing>
+				-->
 				<shadui:Sidebar.Header>
 					<ToggleButton
 						IsChecked="True"
@@ -71,7 +74,7 @@
 					</ToggleButton>
 				</shadui:Sidebar.Header>
 				<StackPanel Spacing="4">
-					<shadui:SidebarItemLabel AsSeparator="True" Text="Get Started" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
+					<shadui:SidebarItemLabel AsSeparator="True" Text="Get Started" FontSize="14" FontWeight="DemiBold" Margin="8" Classes="Caption Muted"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenDashboardCommand}"
 						Route="dashboard"
@@ -106,7 +109,7 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Members &amp; Access" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
+                        Text="Members &amp; Access" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenCheckInOutCommand}"
 						Route="checkInOut"
@@ -139,7 +142,7 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Scheduling &amp; Classes" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
+                        Text="Scheduling &amp; Classes" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenTrainingSchedulesCommand}"
 						Content="Training Schedules"
@@ -157,7 +160,7 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Payments &amp; Billing" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
+                        Text="Payments &amp; Billing" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenManageBillingCommand}"
 						Content="Manage Billing"
@@ -189,7 +192,7 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Manage Inventory" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
+                        Text="Manage Inventory" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenEquipmentInventoryCommand}"
 						Content="Equipment Inventory"
@@ -235,7 +238,7 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Reports &amp; Analytics" FontSize="15" Foreground="{DynamicResource DestructiveColor}"/>
+                        Text="Reports &amp; Analytics" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding}"
 						Content="Financial Reports"
@@ -266,7 +269,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding}"
-						Content="Equipment Usage Reports"
+						Content="Equipment Usage"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Equipment Usage Reports'}">
 						<shadui:SidebarItem.Icon>
@@ -280,7 +283,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding}"
-						Content="Class Attendance Reports"
+						Content="Class Attendance"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Class Attendance Reports'}">
 						<shadui:SidebarItem.Icon>
