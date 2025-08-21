@@ -211,7 +211,8 @@
                     Margin="0,20,0,0" 
                     Spacing="20">
                     <Button
-                        Classes="Secondary">
+                        Classes="Secondary"
+                        Command="{CompiledBinding CancelCommand}">
                         <StackPanel Orientation="Horizontal">
                             <Svg
                                 Width="20"
@@ -223,7 +224,8 @@
                         </StackPanel>
                     </Button>
                     <Button
-                        Classes="Primary">
+                        Classes="Primary"
+                        Command="{CompiledBinding AddEquipmentCommand}">
                         <StackPanel Orientation="Horizontal">
                             <Svg
                                 Width="20"
