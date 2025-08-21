@@ -25,5 +25,6 @@
 
     <Application.Styles>
 		<shadui:ShadTheme/>
+		<StyleInclude Source="avares://AHON_TRACK/Styles/Index.axaml"/>
     </Application.Styles>
 </Application>
