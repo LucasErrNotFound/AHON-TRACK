@@ -90,13 +90,11 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         get => _employeeGender;
         set
         {
-            if (_employeeGender != value)
-            {
-                _employeeGender = value ?? string.Empty;
-                OnPropertyChanged(nameof(EmployeeGender));
-                OnPropertyChanged(nameof(IsMale));
-                OnPropertyChanged(nameof(IsFemale));
-            }
+            if (_employeeGender == value) return;
+            _employeeGender = value ?? string.Empty;
+            OnPropertyChanged(nameof(EmployeeGender));
+            OnPropertyChanged(nameof(IsMale));
+            OnPropertyChanged(nameof(IsFemale));
         }
     }
 
@@ -136,11 +134,23 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Birth date is required")]
-    [System.ComponentModel.DataAnnotations.DataType(DataType.Date, ErrorMessage = "Invalid date format")]
+    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
     public DateTime? EmployeeBirthDate
     {
         get => _employeeBirthDate;
-        set => SetProperty(ref _employeeBirthDate, value, true);
+        set
+        {
+            SetProperty(ref _employeeBirthDate, value, true);
+            if (value.HasValue)
+            {
+                EmployeeAge = CalculateAge(value.Value);
+            }
+            else
+            {
+                _employeeAge = null;
+                OnPropertyChanged(nameof(EmployeeAge));
+            }
+        }
     }
 
     [Required(ErrorMessage = "House address is required")]
@@ -283,6 +293,14 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeStatus = !string.IsNullOrEmpty(employee.Status) ? employee.Status : "Active";
     }
 
+    private int CalculateAge(DateTime birthDate)
+    {
+        var today = DateTime.Today;
+        var age = today.Year - birthDate.Year;
+
+        if (birthDate.Date > today.AddYears(-age)) age--;
+        return age;
+    }
 
     [RelayCommand]
     private void SaveDetails()
