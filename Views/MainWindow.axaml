@@ -74,7 +74,14 @@
 					</ToggleButton>
 				</shadui:Sidebar.Header>
 				<StackPanel Spacing="4">
-					<shadui:SidebarItemLabel AsSeparator="True" Text="Get Started" FontSize="14" FontWeight="DemiBold" Margin="8" Classes="Caption Muted"/>
+					<shadui:SidebarItemLabel 
+						AsSeparator="True" 
+						Text="Get Started" 
+						FontSize="14" 
+						FontWeight="DemiBold" 
+						Margin="8" 
+						Classes="Caption Muted" 
+						Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenDashboardCommand}"
 						Route="dashboard"
@@ -109,7 +116,11 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Members &amp; Access" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
+                        Text="Members &amp; Access" 
+                        FontSize="14" 
+                        FontWeight="DemiBold" 
+                        Classes="Caption Muted"
+                        Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenCheckInOutCommand}"
 						Route="checkInOut"
@@ -142,7 +153,11 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Scheduling &amp; Classes" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
+                        Text="Scheduling &amp; Classes" 
+                        FontSize="14" 
+                        FontWeight="DemiBold" 
+                        Classes="Caption Muted"
+                        Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenTrainingSchedulesCommand}"
 						Content="Training Schedules"
@@ -160,7 +175,11 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Payments &amp; Billing" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
+                        Text="Payments &amp; Billing" 
+                        FontSize="14" 
+                        FontWeight="DemiBold" 
+                        Classes="Caption Muted"
+                        Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenManageBillingCommand}"
 						Content="Manage Billing"
@@ -192,7 +211,11 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Manage Inventory" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
+                        Text="Manage Inventory" 
+                        FontSize="14" 
+                        FontWeight="DemiBold" 
+                        Classes="Caption Muted"
+                        Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenEquipmentInventoryCommand}"
 						Content="Equipment Inventory"
@@ -238,7 +261,11 @@
 					<shadui:SidebarItemLabel
                         Margin="8,20,8,8"
                         AsSeparator="True"
-                        Text="Reports &amp; Analytics" FontSize="14" FontWeight="DemiBold" Classes="Caption Muted"/>
+                        Text="Reports &amp; Analytics" 
+                        FontSize="14" 
+                        FontWeight="DemiBold" 
+                        Classes="Caption Muted"
+                        Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding}"
 						Content="Financial Reports"
