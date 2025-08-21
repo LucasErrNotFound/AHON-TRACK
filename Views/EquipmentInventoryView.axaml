@@ -58,7 +58,7 @@
         </StackPanel>
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,90,24" Spacing="16">
-                <shadui:Card MinWidth="300" MaxWidth="1400">
+                <shadui:Card MinWidth="300" MaxWidth="1500">
                     <StackPanel>
                         <Grid ColumnDefinitions="Auto Auto Auto *">
                             <TextBox
@@ -144,7 +144,7 @@
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="80"
-                                    Header="Equipment ID"
+                                    Header="ID"
                                     Binding="{CompiledBinding }" />
                                 
                                 <!-- Equipment Name -->
@@ -160,18 +160,11 @@
                                     Header="Category"
                                     Binding="{CompiledBinding }" />
                                 
-                                <!-- Status -->
+                                <!-- Current Stock -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="120"
-                                    Header="Status"
-                                    Binding="{CompiledBinding }" />
-                                
-                                <!-- Condition -->
-                                <DataGridTextColumn
-                                    Width="Auto"
-                                    MinWidth="150"
-                                    Header="Condition"
+                                    MinWidth="90"
+                                    Header="Current Stock"
                                     Binding="{CompiledBinding }" />
                                 
                                 <!-- Purchase Date -->
@@ -188,11 +181,18 @@
                                     Header="Warranty"
                                     Binding="{CompiledBinding }" />
                                 
-                                <!-- Value -->
+                                <!-- Condition -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="150"
+                                    Header="Condition"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Status -->
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="120"
-                                    Header="Value"
+                                    Header="Status"
                                     Binding="{CompiledBinding }" />
                                 
                                 <!-- Action -->

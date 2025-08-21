@@ -58,7 +58,7 @@
         </StackPanel>
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,90,24" Spacing="16">
-                <shadui:Card MinWidth="300" MaxWidth="1400">
+                <shadui:Card MinWidth="300" MaxWidth="1500">
                     <StackPanel>
                         <Grid ColumnDefinitions="Auto Auto Auto *">
                             <TextBox
@@ -144,7 +144,7 @@
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="80"
-                                    Header="Supplier ID"
+                                    Header="ID"
                                     Binding="{CompiledBinding }" />
 
                                 <!-- Supplier Name -->
