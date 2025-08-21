@@ -68,7 +68,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeFirstName, value, true);
     }
 
-    [Required(ErrorMessage = "Select your MI")]
+    // [Required(ErrorMessage = "Select your MI")] -> I disabled this because apparently there are people who do not have middle name/initial
     public string SelectedMiddleInitialItem
     {
         get => _selectedMiddleInitialItem;
