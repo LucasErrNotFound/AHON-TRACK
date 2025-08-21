@@ -166,9 +166,12 @@
 						<NumericUpDown
 							Value="{CompiledBinding EmployeeAge, Mode=TwoWay}"
 							shadui:ControlAssist.Label="Age"
+							ShowButtonSpinner="False"
 							FormatString="N0"
 							Watermark="Age"
 							Width="130"
+							IsReadOnly="True"
+							IsEnabled="False"
 							HorizontalAlignment="Left"/>
 					</StackPanel>
 
