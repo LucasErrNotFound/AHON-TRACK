@@ -12,14 +12,14 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly EquipmentDialogViewModel _equipmentDialogViewModel;
+    private readonly EquipmentDialogCardViewModel _equipmentDialogCardViewModel;
     
-    public EquipmentInventoryViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, EquipmentDialogViewModel equipmentDialogViewModel)
+    public EquipmentInventoryViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, EquipmentDialogCardViewModel equipmentDialogCardViewModel)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _equipmentDialogViewModel = equipmentDialogViewModel;
+        _equipmentDialogCardViewModel = equipmentDialogCardViewModel;
     }
     
     public EquipmentInventoryViewModel()
@@ -27,7 +27,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _equipmentDialogViewModel = new EquipmentDialogViewModel();
+        _equipmentDialogCardViewModel = new EquipmentDialogCardViewModel();
     }
 
     [AvaloniaHotReload]
@@ -38,8 +38,8 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     [RelayCommand]
     private void ShowAddEquipmentDialog()
     {
-        _equipmentDialogViewModel.Initialize();
-        _dialogManager.CreateDialog(_equipmentDialogViewModel)
+        _equipmentDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_equipmentDialogCardViewModel)
             .WithSuccessCallback(_ =>
                 _toastManager.CreateToast("Added a new equipment")
                     .WithContent($"You just added a new equipment to the database!")

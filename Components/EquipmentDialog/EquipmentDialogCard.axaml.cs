@@ -4,9 +4,9 @@ using Avalonia.Markup.Xaml;
 
 namespace AHON_TRACK.Components.EquipmentDialog;
 
-public partial class EquipmentDialogView : UserControl
+public partial class EquipmentDialogCard : UserControl
 {
-    public EquipmentDialogView()
+    public EquipmentDialogCard()
     {
         InitializeComponent();
     }

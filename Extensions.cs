@@ -19,7 +19,7 @@ public static class Extensions
         dialogService.Register<AddTrainingScheduleDialogCard, AddTrainingScheduleDialogCardViewModel>();
         dialogService.Register<AddNewPackageDialogCard, AddNewPackageDialogCardViewModel>();
         dialogService.Register<EditPackageDialogCard, EditPackageDialogCardViewModel>();
-        dialogService.Register<EquipmentDialogView, EquipmentDialogViewModel>();
+        dialogService.Register<EquipmentDialogCard, EquipmentDialogCardViewModel>();
 
         return service;
     }

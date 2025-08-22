@@ -11,11 +11,11 @@
     Width="650"
     Height="840"
     xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
-    x:DataType="viewModel:EquipmentDialogViewModel"
-    x:Class="AHON_TRACK.Components.EquipmentDialog.EquipmentDialogView">
+    x:DataType="viewModel:EquipmentDialogCardViewModel"
+    x:Class="AHON_TRACK.Components.EquipmentDialog.EquipmentDialogCard">
     
     <Design.DataContext>
-        <viewModel:EquipmentDialogViewModel />
+        <viewModel:EquipmentDialogCardViewModel />
     </Design.DataContext>
     
     <UserControl.Resources>

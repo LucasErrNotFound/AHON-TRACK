@@ -6,20 +6,20 @@ using ShadUI;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public partial class EquipmentDialogViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
 
-    public EquipmentDialogViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public EquipmentDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
     }
 
-    public EquipmentDialogViewModel()
+    public EquipmentDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
