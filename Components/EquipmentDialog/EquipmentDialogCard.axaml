@@ -81,7 +81,7 @@
                                 VerticalAlignment="Center"
                                 Margin="10,0,0,0"/>
                         </StackPanel>
-                        <Grid RowDefinitions="Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+                        <Grid RowDefinitions="Auto Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
                             <StackPanel Grid.Row="0">
                                 <TextBox
                                     Classes="Clearable"
@@ -101,6 +101,18 @@
                                     shadui:ControlAssist.Label="Category"
                                     PlaceholderText="Select category">
                                 </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Row="3">
+                                <NumericUpDown
+                                    shadui:ControlAssist.Label="Current Stock"
+                                    Classes="Clearable"
+                                    FormatString="N2"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0">
+                                    <NumericUpDown.InnerLeftContent>
+                                        <TextBlock Margin="8,0,-8,0" Text="×" />
+                                    </NumericUpDown.InnerLeftContent>
+                                </NumericUpDown>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
