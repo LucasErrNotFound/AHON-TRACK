@@ -4,6 +4,7 @@ using AHON_TRACK.Components.AddNewPackageDialog;
 using AHON_TRACK.Components.AddTrainingScheduleDialog;
 using AHON_TRACK.Components.EditPackageDialog;
 using AHON_TRACK.Components.EquipmentDialog;
+using AHON_TRACK.Components.ItemDialog;
 using AHON_TRACK.Components.LogGymMemberDialog;
 using ShadUI;
 
@@ -20,6 +21,7 @@ public static class Extensions
         dialogService.Register<AddNewPackageDialogCard, AddNewPackageDialogCardViewModel>();
         dialogService.Register<EditPackageDialogCard, EditPackageDialogCardViewModel>();
         dialogService.Register<EquipmentDialogCard, EquipmentDialogCardViewModel>();
+        dialogService.Register<ItemDialogCard, ItemDialogCardViewModel>();
 
         return service;
     }
