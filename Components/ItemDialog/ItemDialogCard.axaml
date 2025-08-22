@@ -1,0 +1,219 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    mc:Ignorable="d"
+    d:DesignWidth="650"
+    d:DesignHeight="1130"
+    Width="650"
+    Height="840"
+    xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
+    x:DataType="viewModel:ItemDialogCardViewModel"
+    x:Class="AHON_TRACK.Components.ItemDialog.ItemDialogCard">
+    
+    <Design.DataContext>
+        <viewModel:ItemDialogCardViewModel />
+    </Design.DataContext>
+    
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+        <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter" />
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.h4">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="TextBlock.Muted">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="TextBlock.LabelField">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="RadioButton.FormRadio">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Regular" />
+            <Setter Property="Margin" Value="0,0,15,0" />
+        </Style>
+    </UserControl.Styles>
+    
+    <Border
+        Background="{DynamicResource BackgroundColor}"
+        BorderBrush="{DynamicResource BorderColor}"
+        BorderThickness="1"
+        Padding="30">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <StackPanel Spacing="0" Margin="0,0,10,0">
+                <TextBlock
+                    Text="Add New Item"
+                    Foreground="{DynamicResource FontForeground}"
+                    Classes="h4" />
+                <TextBlock
+                    Text="Add new items with details like name, price, and quantity to keep your inventory organized"
+                    Classes="Muted" />
+                <shadui:Card>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Svg
+                                Width="26"
+                                Height="26"
+                                VerticalAlignment="Center"
+                                Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/package-icon.svg"/>
+                            <TextBlock
+                                Text="Item Information" 
+                                FontSize="15"
+                                VerticalAlignment="Center"
+                                Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <Grid RowDefinitions="Auto Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+                            <StackPanel Grid.Row="0">
+                                <TextBox
+                                    Classes="Clearable"
+                                    shadui:ControlAssist.Label="Item Name"
+                                    Watermark="e.g., Treadmill Pro X12">
+                                </TextBox>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1">
+                                <TextBox
+                                    Classes="Clearable"
+                                    shadui:ControlAssist.Label="Item ID"
+                                    Watermark="e.g., EQ-001">
+                                </TextBox>
+                            </StackPanel>
+                            <StackPanel Grid.Row="2">
+                                <ComboBox
+                                    shadui:ControlAssist.Label="Category"
+                                    PlaceholderText="Select category">
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Row="3">
+                                <NumericUpDown
+                                    shadui:ControlAssist.Label="Current Stock"
+                                    Classes="Clearable"
+                                    FormatString="N2"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0">
+                                    <NumericUpDown.InnerLeftContent>
+                                        <TextBlock Margin="8,0,-8,0" Text="×" />
+                                    </NumericUpDown.InnerLeftContent>
+                                </NumericUpDown>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </shadui:Card>
+                <shadui:Card Margin="0,10,0,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Svg
+                                Width="26"
+                                Height="26"
+                                VerticalAlignment="Center"
+                                Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/peso-icon.svg"/>
+                            <TextBlock
+                                Text="Purchase Information" 
+                                FontSize="15"
+                                VerticalAlignment="Center"
+                                Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <Grid RowDefinitions="Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+                            <StackPanel Grid.Row="0">
+                                <NumericUpDown
+                                    shadui:ControlAssist.Label="Price"
+                                    Classes="Clearable"
+                                    FormatString="N2"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0.00">
+                                    <NumericUpDown.InnerLeftContent>
+                                        <TextBlock Margin="8,0,-8,0" Text="₱" />
+                                    </NumericUpDown.InnerLeftContent>
+                                </NumericUpDown>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1">
+                                <TextBox
+                                    Classes="Clearable"
+                                    shadui:ControlAssist.Label="Supplier"
+                                    Watermark="Supplier name">
+                                </TextBox>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </shadui:Card>
+                <shadui:Card Margin="0,10,0,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Svg
+                                Width="26"
+                                Height="26"
+                                VerticalAlignment="Center"
+                                Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/warranty-icon.svg"/>
+                            <TextBlock
+                                Text="Item Status" 
+                                FontSize="15"
+                                VerticalAlignment="Center"
+                                Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <Grid RowDefinitions="Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+                            <StackPanel Grid.Row="0">
+                                <CalendarDatePicker shadui:ControlAssist.Label="Item Expiry"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1">
+                                <ComboBox
+                                    shadui:ControlAssist.Label="Status"
+                                    PlaceholderText="Select status">
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </shadui:Card>
+                <StackPanel 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Margin="0,20,0,0" 
+                    Spacing="20">
+                    <Button
+                        Classes="Secondary"
+                        Command="{CompiledBinding CancelCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <Svg
+                                Width="20"
+                                Height="20"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0"
+                                Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/cancel-icon.svg" />
+                            <TextBlock Text="Cancel" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        Classes="Primary"
+                        Command="{CompiledBinding AddItemCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <Svg
+                                Width="20"
+                                Height="20"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0"
+                                Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/plus-icon.svg" />
+                            <TextBlock Text="Add Item" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>
