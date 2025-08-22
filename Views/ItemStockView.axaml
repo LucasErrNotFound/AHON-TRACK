@@ -181,6 +181,13 @@
                                     MinWidth="190"
                                     Header="Supplier"
                                     Binding="{CompiledBinding }" />
+                                
+                                <!-- Expiry -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="120"
+                                    Header="Expiry"
+                                    Binding="{CompiledBinding }" />
 
                                 <!-- Status -->
                                 <DataGridTextColumn
