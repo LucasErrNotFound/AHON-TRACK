@@ -139,6 +139,7 @@
 									Stretch="UniformToFill"
 									IsVisible="True"
 									Source="avares://AHON_TRACK/Assets/ManageEmployeesView/default-profile-picture.png"/>
+								<!--new binds-->
 								<!-- Profile image placeholder -->
 							</Border>
 							<Button
@@ -216,7 +217,7 @@
 					<Grid
 						Grid.Row="1"
 						Grid.Column="0"
-						Grid.ColumnSpan="2" 
+						Grid.ColumnSpan="2"
 						ColumnDefinitions="1*, 1*, 1*, 1*"
 						Margin="0,20,0,0">
 

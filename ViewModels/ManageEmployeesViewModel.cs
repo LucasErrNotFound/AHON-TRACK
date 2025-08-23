@@ -1,8 +1,12 @@
 ﻿using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -82,26 +86,30 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly PageManager _pageManager;
-
+    private readonly IEmployeeService _employeeService;
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
+    public ObservableCollection<ManageEmployeeModel> Employees { get; }
+        = new ObservableCollection<ManageEmployeeModel>();
+
     public ManageEmployeesViewModel(
         DialogManager dialogManager,
         ToastManager toastManager,
         PageManager pageManager,
-        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
+        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, EmployeeProfileInformationViewModel employeeProfileInformationViewModel, IEmployeeService employeeService)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
-        //LoadSampleData();
-        LoadEmployeesFromDatabaseAsync();
+        _employeeService = employeeService;
+        //LoadEmployeesAsync();
         UpdateCounts();
+
     }
 
     public ManageEmployeesViewModel()
@@ -115,44 +123,25 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
 
     [AvaloniaHotReload]
-    /*public void Initialize()
+    public void Initialize() // new
     {
         if (IsInitialized) return;
-        //LoadSampleData();
-        await LoadEmployeesFromDatabaseAsync();
-        UpdateCounts();
-        IsInitialized = true;
-    }*/
-
-    public async Task InitializeAsync() // new
-    {
-        if (IsInitialized) return;
-
-        await LoadEmployeesFromDatabaseAsync(); // now valid
+        _ = LoadEmployeesFromDatabaseAsync();
         UpdateCounts();
         IsInitialized = true;
     }
 
-    private async Task LoadEmployeesFromDatabaseAsync() //new
+    private async Task LoadEmployeesAsync()
     {
-        var employeesFromDb = await GetEmployeesFromDatabaseAsync();
+        var employees = await _employeeService.GetEmployeesAsync();
 
-        // Store original data for filtering/sorting operations
-        OriginalEmployeeData = employeesFromDb;
-        CurrentFilteredData = [.. employeesFromDb];
-
-        EmployeeItems.Clear();
-        foreach (var employee in employeesFromDb)
+        Employees.Clear();
+        foreach (var emp in employees)
         {
-            employee.PropertyChanged += OnEmployeePropertyChanged;
-            EmployeeItems.Add(employee);
+            Employees.Add(emp);
         }
-
-        TotalCount = EmployeeItems.Count;
-
-        // Keep Items in sync if you’re using it in summary
-        Items = employeesFromDb;
     }
+
 
     private void LoadSampleData()
     {
@@ -302,36 +291,86 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     public const string connectionString =
     "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
-    public async Task<List<ManageEmployeesItem>> GetEmployeesFromDatabaseAsync()
+    private async Task LoadEmployeesFromDatabaseAsync()
+    {
+        try
+        {
+            var employees = await _employeeService.GetEmployeesAsync();
+
+            var employeeItems = employees.Select(emp => new ManageEmployeesItem
+            {
+                ID = emp.ID,
+                // UPDATED: Use ImageHelper to get avatar or default
+                AvatarSource = emp.AvatarSource != null
+                ? $"data:image/png;base64,{ImageHelper.BitmapToBase64(emp.AvatarSource)}"
+                : DefaultAvatarSource,
+                Name = emp.Name,
+                Username = emp.Username,
+                ContactNumber = emp.ContactNumber,
+                Position = emp.Position,
+                Status = emp.Status,
+                DateJoined = emp.DateJoined
+            }).ToList();
+
+            OriginalEmployeeData = employeeItems;
+            CurrentFilteredData = [.. employeeItems];
+
+            EmployeeItems.Clear();
+            foreach (var employee in employeeItems)
+            {
+                employee.PropertyChanged += OnEmployeePropertyChanged;
+                EmployeeItems.Add(employee);
+            }
+
+            TotalCount = EmployeeItems.Count;
+            UpdateCounts();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Database Error")
+                .WithContent($"Failed to load employees: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+
+            LoadSampleData(); // Fallback to sample data
+        }
+    }
+
+    public List<ManageEmployeesItem> GetEmployeesFromDatabase()
     {
         var employees = new List<ManageEmployeesItem>();
 
         try
         {
             using var conn = new SqlConnection(connectionString);
-            await conn.OpenAsync();
+            conn.Open();
 
-            string query = @"
-            SELECT 
-                EmployeeId,
-                Name,
-                Username,
-                ContactNumber,
-                Position,
-                Status,
-                DateJoined
-            FROM Employees
-            ORDER BY Name;";
+            string query = @"SELECT 
+            EmployeeId,
+            LTRIM(RTRIM(
+                FirstName + 
+                ISNULL(' ' + MiddleInitial, '') + 
+                ' ' + LastName
+            )) AS Name,
+            Username,
+            ContactNumber,
+            Position,
+            Status,
+            DateJoined,
+            ProfilePicture
+        FROM Employees
+        ORDER BY Name;";
 
             using var cmd = new SqlCommand(query, conn);
-            using var reader = await cmd.ExecuteReaderAsync();
+            using var reader = cmd.ExecuteReader();
 
-            while (await reader.ReadAsync())
+            while (reader.Read())
             {
                 employees.Add(new ManageEmployeesItem
                 {
-                    ID = reader["EmployeeID"].ToString(),
-                    AvatarSource = DefaultAvatarSource, // Placeholder for now
+                    // FIX: Use correct column name "EmployeeId" not "ID"
+                    ID = reader["EmployeeId"].ToString(),
+                    AvatarSource = DefaultAvatarSource,
                     Name = reader["Name"].ToString(),
                     Username = reader["Username"].ToString(),
                     ContactNumber = reader["ContactNumber"].ToString(),
@@ -346,10 +385,16 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         catch (Exception ex)
         {
             Console.WriteLine($"Error fetching employees: {ex.Message}");
+            _toastManager?.CreateToast("Database Error")
+                .WithContent($"Failed to load employees: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
 
         return employees;
     }
+
+
 
     public List<ManageEmployeesItem> Items { get; set; } = new();
     public string GenerateEmployeesSummary() // new
@@ -384,19 +429,25 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     private void ShowAddNewEmployeeDialog()
     {
         _addNewEmployeeDialogCardViewModel.Initialize();
+
         _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
+            {
+                await LoadEmployeesFromDatabaseAsync();
                 _toastManager.CreateToast("Added a new employee")
-                    .WithContent($"Welcome, new employee!")
+                    .WithContent("Welcome, new employee!")
                     .DismissOnClick()
-                    .ShowSuccess())
+                    .ShowSuccess();
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new employee cancelled")
                     .WithContent("Add a new employee to continue")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(950)
+                    .ShowWarning())
+            .WithMaxWidth(950)
             .Show();
     }
+
 
     [RelayCommand]
     private void ShowModifyEmployeeDialog(ManageEmployeesItem? employee)
@@ -411,12 +462,17 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
         _addNewEmployeeDialogCardViewModel.InitializeForEditMode(employee);
         _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
+            {
+                // ✅ Reload the employee data after successful modification
+                await LoadEmployeesFromDatabaseAsync();
+
                 _toastManager.CreateToast("Modified Employee Details")
                     .WithContent($"You have successfully modified {employee.Name}'s details")
                     .DismissOnClick()
-                    .ShowSuccess())
-            .WithCancelCallback(() =>
+                    .ShowSuccess();
+            })
+                .WithCancelCallback(() =>
                 _toastManager.CreateToast("Modifying Employee Details Cancelled")
                     .WithContent("Click the three-dots if you want to modify your employees' details")
                     .DismissOnClick()
@@ -1040,6 +1096,8 @@ public partial class ManageEmployeesItem : ObservableObject
 
     [ObservableProperty]
     private DateTime _dateJoined;
+
+    public static Bitmap DefaultAvatarSource { get; internal set; }
 
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {

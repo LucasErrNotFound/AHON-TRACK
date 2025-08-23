@@ -1,11 +1,13 @@
-﻿using AHON_TRACK.ViewModels;
-using AHON_TRACK.Components.ViewModels;
+﻿using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
-using System;
-using System.IO;
-using ShadUI;
 using Jab;
 using Serilog;
+using ShadUI;
+using System;
+using System.IO;
 
 namespace AHON_TRACK;
 
@@ -33,6 +35,9 @@ namespace AHON_TRACK;
 [Singleton<IMessenger, WeakReferenceMessenger>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
+[Singleton<string>(Factory = nameof(ConnectionStringFactory))]
+[Singleton<IEmployeeService, EmployeeService>]
+
 public partial class ServiceProvider
 {
     public static ILogger LoggerFactory()
@@ -58,4 +63,11 @@ public partial class ServiceProvider
     {
         return new PageManager(this);
     }
+
+    private string ConnectionStringFactory()
+    {
+        return "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
+    }
+
+
 }

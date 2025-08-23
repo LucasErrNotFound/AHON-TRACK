@@ -1,4 +1,12 @@
-﻿using AHON_TRACK.ViewModels;
+﻿using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.ViewModels;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -7,9 +15,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -34,6 +44,8 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private bool _isEditMode = false;
 
     private readonly DialogManager _dialogManager;
+    private readonly IEmployeeService _employeeService;
+    private readonly ToastManager _toastManager;
 
     // Personal Details Section
     private string _employeeFirstName = string.Empty;
@@ -44,6 +56,8 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private string _employeePosition = string.Empty;
     private int? _employeeAge;
     private DateTime? _employeeBirthDate;
+    private object? _employeeProfilePicture = "";
+    private Bitmap _profileImageSource;
 
     // Address Section
     private string _employeeHouseAddress = string.Empty;
@@ -111,6 +125,8 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         get => EmployeeGender == "Female";
         set { if (value) EmployeeGender = "Female"; }
     }
+
+
 
     [Required(ErrorMessage = "Contact number is required")]
     [RegularExpression(@"^09\d{9}$", ErrorMessage = "Contact number must start with 09 and be 11 digits long")]
@@ -229,15 +245,28 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         get => _employeeStatus;
         set => SetProperty(ref _employeeStatus, value, true);
     }
+    [Required(ErrorMessage = "Profile Picture required")]
+    public object? EmployeeProfilePicture
+    {
+        get => _employeeProfilePicture;
+        set => SetProperty(ref _employeeProfilePicture, value, true);
+    }
 
-    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager)
+    [ObservableProperty]
+    private Bitmap profileImageSource;
+
+    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager, IEmployeeService employeeService, ToastManager toastManager)
     {
         _dialogManager = dialogManager;
+        _employeeService = employeeService;
+        _toastManager = toastManager;
     }
 
     public AddNewEmployeeDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
+        _toastManager = new ToastManager();
+        _employeeService = new EmployeeService("Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True", _toastManager);
     }
 
     [AvaloniaHotReload]
@@ -284,13 +313,56 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
 
+
     [RelayCommand]
-    private void SaveDetails()
+    private async Task SaveDetails()
     {
         ClearAllErrors();
         ValidateAllProperties();
 
         if (HasErrors) return;
+        try
+        {
+            var employee = new EmployeeModel
+            {
+                FirstName = EmployeeFirstName,
+                MiddleInitial = SelectedMiddleInitialItem,
+                LastName = EmployeeLastName,
+                Gender = EmployeeGender ?? "",
+                ContactNumber = EmployeeContactNumber,
+                Age = EmployeeAge ?? 0,
+                DateOfBirth = EmployeeBirthDate ?? DateTime.Now,
+                HouseAddress = EmployeeHouseAddress,
+                HouseNumber = EmployeeHouseNumber,
+                Street = EmployeeStreet,
+                Barangay = EmployeeBarangay,
+                CityTown = EmployeeCityTown,
+                Province = EmployeeProvince,
+                Username = EmployeeUsername,
+                Password = EmployeePassword,
+                DateJoined = EmployeeDateJoined ?? DateTime.Now,
+                Status = EmployeeStatus,
+                Position = EmployeePosition,
+                ProfilePicture = ImageHelper.GetDefaultAvatar()
+            };
+            bool success = await _employeeService.AddEmployeeAsync(employee);
+            if (success)
+            {
+                _toastManager.CreateToast("Employee added successfully!").DismissOnClick().Show();
+            }
+            else
+            {
+                _toastManager.CreateToast("Failed to add employee.").DismissOnClick().Show();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast($"Error: {ex.Message}").Show();
+            Debug.WriteLine($"Error adding employee: {ex.Message}");
+            Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            return; // Don't close dialog if there was an error
+        }
+
         // Personal Details Debugging
         Debug.WriteLine($"First Name: {EmployeeFirstName}");
         Debug.WriteLine($"Middle Initial: {SelectedMiddleInitialItem}");
@@ -324,6 +396,11 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         _dialogManager.Close(this);
     }
 
+    public void SetProfileImageBytes(byte[]? imageBytes)
+    {
+        EmployeeProfilePicture = imageBytes;
+    }
+
     private void ClearAllFields()
     {
         EmployeeFirstName = string.Empty;
@@ -344,6 +421,11 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeePassword = string.Empty;
         EmployeeDateJoined = null;
         EmployeeStatus = string.Empty;
+        EmployeeProfilePicture = null;
         ClearAllErrors();
+
+        ImageResetRequested?.Invoke();
     }
+
+    public event Action? ImageResetRequested;
 }
