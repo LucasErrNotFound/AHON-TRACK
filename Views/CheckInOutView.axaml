@@ -8,6 +8,7 @@
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
     mc:Ignorable="d"
     xmlns:system="clr-namespace:System;assembly=System.Runtime"
     d:DesignWidth="1920" d:DesignHeight="1080">
@@ -40,6 +41,9 @@
                 Margin="90,30" />
         </StackPanel>
         <ScrollViewer>
+            <Interaction.Behaviors>
+                <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+            </Interaction.Behaviors>
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
                 <!--
 				<shadui:BreakpointViewPort>

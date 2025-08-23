@@ -10,6 +10,7 @@
 	xmlns:avalonia="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
 	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
 	xmlns:dashboard="clr-namespace:AHON_TRACK.Components.Dashboard"
+	xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
 	d:DesignWidth="2080"
 	d:DesignHeight="1666"
 	mc:Ignorable="d">
@@ -37,6 +38,9 @@
 				Margin="90,30"/>
 		</StackPanel>
 		<ScrollViewer>
+			<Interaction.Behaviors>
+				<scroll:VerticalScrollViewerAnimatedBehavior/>
+			</Interaction.Behaviors>
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
 				<TabControl Margin="45,50">
 					<TabControl.Items>
@@ -272,6 +276,9 @@
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding SalesSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<Interaction.Behaviors>
+															<scroll:VerticalScrollViewerAnimatedBehavior/>
+														</Interaction.Behaviors>
 														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding RecentSales}">
 
 															<!-- Define the item container style -->
@@ -401,6 +408,9 @@
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding SalesSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<Interaction.Behaviors>
+															<scroll:VerticalScrollViewerAnimatedBehavior/>
+														</Interaction.Behaviors>
 														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding RecentSales}">
 
 															<!-- Define the item container style -->
@@ -493,6 +503,9 @@
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding TrainingSessionsSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<Interaction.Behaviors>
+															<scroll:VerticalScrollViewerAnimatedBehavior/>
+														</Interaction.Behaviors>
 														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding UpcomingTrainingSessions}">
 															<ItemsControl.ItemsPanel>
 																<ItemsPanelTemplate>
@@ -592,6 +605,9 @@
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding RecentLogsSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<Interaction.Behaviors>
+															<scroll:VerticalScrollViewerAnimatedBehavior/>
+														</Interaction.Behaviors>
 														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding RecentLogs}">
 
 															<!-- Define the item container style -->
@@ -677,6 +693,9 @@
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding TrainingSessionsSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<Interaction.Behaviors>
+															<scroll:VerticalScrollViewerAnimatedBehavior/>
+														</Interaction.Behaviors>
 														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding UpcomingTrainingSessions}">
 															<ItemsControl.ItemsPanel>
 																<ItemsPanelTemplate>
@@ -776,6 +795,9 @@
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding RecentLogsSummary}"/>
 													</StackPanel>
 													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+														<Interaction.Behaviors>
+															<scroll:VerticalScrollViewerAnimatedBehavior/>
+														</Interaction.Behaviors>
 														<ItemsControl Margin="40,0,24,24" ItemsSource="{CompiledBinding RecentLogs}">
 
 															<!-- Define the item container style -->

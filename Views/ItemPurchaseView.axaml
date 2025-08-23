@@ -6,6 +6,7 @@
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
     xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
     x:DataType="viewModels:ItemPurchaseViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
@@ -59,6 +60,9 @@
                 Margin="90,0" />
         </StackPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Interaction.Behaviors>
+                <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+            </Interaction.Behaviors>
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,48,24" Spacing="16">
                 <Grid ColumnDefinitions="Auto *" ColumnSpacing="50">
                     <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="450">
@@ -92,6 +96,9 @@
                                 </ComboBox>
                             </Grid>
                             <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                                <Interaction.Behaviors>
+                                    <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+                                </Interaction.Behaviors>
                                 <DataGrid
                                     Height="315"
                                     MaxWidth="648"
