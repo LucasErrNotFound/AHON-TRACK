@@ -348,7 +348,7 @@
 							</DataGrid>
 						</StackPanel>
 					</shadui:Card>
-					<shadui:Card Grid.Column="1" Margin="10,30" VerticalAlignment="Top" Height="820">
+					<shadui:Card Grid.Column="1" Margin="7,30,0,29" VerticalAlignment="Top" Height="820">
 						<Grid RowDefinitions="Auto Auto Auto Auto">
 							<StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
 								<shadui:Avatar
@@ -493,7 +493,7 @@
 														FontWeight="Regular" />
 												</StackPanel>
 												<StackPanel HorizontalAlignment="Right" Grid.Column="1">
-													<StackPanel Orientation="Vertical" Spacing="10">
+													<StackPanel Orientation="Vertical" Spacing="5">
 														<Border
 															IsVisible="{CompiledBinding }"
 															Background="{DynamicResource SuccessColor10}"

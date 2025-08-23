@@ -284,7 +284,7 @@
                             ColumnSpacing="30"
                             RowSpacing="30"
                             Margin="0,20,0,0">
-                            <shadui:Card Grid.Row="0" Grid.Column="0" Width="350">
+                            <shadui:Card Grid.Row="0" Grid.Column="0" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
@@ -342,7 +342,7 @@
                                     </Button>
                                 </StackPanel>
                             </shadui:Card>
-                            <shadui:Card Grid.Row="0" Grid.Column="1" Width="350">
+                            <shadui:Card Grid.Row="0" Grid.Column="1" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
@@ -400,7 +400,7 @@
                                     </Button>
                                 </StackPanel>
                             </shadui:Card>
-                            <shadui:Card Grid.Row="0" Grid.Column="2" Width="350">
+                            <shadui:Card Grid.Row="0" Grid.Column="2" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
@@ -416,8 +416,8 @@
                                         <TextBlock 
                                             Grid.Row="1" 
                                             Grid.Column="0"
-                                            Text="7.6oz Pre-Workout Peaches &amp; Cream"
-                                            TextWrapping="Wrap"
+                                            Text="7.6oz PreWorkout Peaches &amp; Cream"
+                                            TextWrapping="NoWrap"
                                             FontSize="14"
                                             Classes="Caption Muted"/>
                                         <TextBlock 
@@ -459,7 +459,7 @@
                                     </Button>
                                 </StackPanel>
                             </shadui:Card>
-                            <shadui:Card Grid.Row="0" Grid.Column="3" Width="350">
+                            <shadui:Card Grid.Row="0" Grid.Column="3" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
@@ -517,7 +517,7 @@
                                     </Button>
                                 </StackPanel>
                             </shadui:Card>
-                            <shadui:Card Grid.Row="1" Grid.Column="0" Width="350">
+                            <shadui:Card Grid.Row="1" Grid.Column="0" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
