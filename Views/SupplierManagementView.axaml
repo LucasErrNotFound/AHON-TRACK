@@ -106,7 +106,8 @@
                                 Classes="Primary"
                                 Margin="20,0,0,0"
                                 HorizontalAlignment="Right"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                Command="{CompiledBinding ShowAddSupplierDialogCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Svg
                                         Width="20"
