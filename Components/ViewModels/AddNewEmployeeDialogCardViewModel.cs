@@ -25,8 +25,8 @@ namespace AHON_TRACK.Components.ViewModels;
 
 public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private string[] _middleInitialItems = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]; // Will simplfy this later
+    [ObservableProperty] 
+    private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
     [ObservableProperty]
     private string[] _employeePositionItems = ["Gym Staff", "Gym Admin"];
@@ -82,7 +82,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeFirstName, value, true);
     }
 
-    [Required(ErrorMessage = "Select your MI")]
+    // [Required(ErrorMessage = "Select your MI")] -> I disabled this because apparently there are people who do not have middle name/initial
     public string SelectedMiddleInitialItem
     {
         get => _selectedMiddleInitialItem;
@@ -104,13 +104,11 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         get => _employeeGender;
         set
         {
-            if (_employeeGender != value)
-            {
-                _employeeGender = value ?? string.Empty;
-                OnPropertyChanged(nameof(EmployeeGender));
-                OnPropertyChanged(nameof(IsMale));
-                OnPropertyChanged(nameof(IsFemale));
-            }
+            if (_employeeGender == value) return;
+            _employeeGender = value ?? string.Empty;
+            OnPropertyChanged(nameof(EmployeeGender));
+            OnPropertyChanged(nameof(IsMale));
+            OnPropertyChanged(nameof(IsFemale));
         }
     }
 
@@ -152,11 +150,23 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Birth date is required")]
-    [System.ComponentModel.DataAnnotations.DataType(DataType.Date, ErrorMessage = "Invalid date format")]
+    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
     public DateTime? EmployeeBirthDate
     {
         get => _employeeBirthDate;
-        set => SetProperty(ref _employeeBirthDate, value, true);
+        set
+        {
+            SetProperty(ref _employeeBirthDate, value, true);
+            if (value.HasValue)
+            {
+                EmployeeAge = CalculateAge(value.Value);
+            }
+            else
+            {
+                _employeeAge = null;
+                OnPropertyChanged(nameof(EmployeeAge));
+            }
+        }
     }
 
     [Required(ErrorMessage = "House address is required")]
@@ -312,6 +322,14 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeStatus = !string.IsNullOrEmpty(employee.Status) ? employee.Status : "Active";
     }
 
+    private int CalculateAge(DateTime birthDate)
+    {
+        var today = DateTime.Today;
+        var age = today.Year - birthDate.Year;
+
+        if (birthDate.Date > today.AddYears(-age)) age--;
+        return age;
+    }
 
 
     [RelayCommand]
@@ -426,6 +444,10 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
         ImageResetRequested?.Invoke();
     }
+<<<<<<< HEAD
 
     public event Action? ImageResetRequested;
 }
+=======
+}
+>>>>>>> c18baf8b49329859fe409133eaabe0e013af4701

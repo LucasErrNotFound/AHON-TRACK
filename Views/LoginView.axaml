@@ -96,6 +96,7 @@
 			<Button
 				Classes="Primary"
 				Content="About Us"
+				FontFamily="Inter"
 				HorizontalAlignment="Left"
 				Margin="80,60"
 				Padding="35,0,35,0"
@@ -143,6 +144,7 @@
 					<Button
 						Classes="Primary"
 						FontSize="19"
+						FontFamily="Inter"
 						Padding="0,0,0,5"
 						Margin="0,30"
 						Height="38"
@@ -155,7 +157,7 @@
 							<Svg
 								Width="20"
 								Height="20"
-								Margin="0,3,13,0"
+								Margin="0,3,13,0" 
 								VerticalAlignment="Center"
 								Path="avares://AHON_TRACK/Assets/LoginView/log-in-icon.svg" />
 							<TextBlock Text="Sign In" Foreground="White" VerticalAlignment="Center" />

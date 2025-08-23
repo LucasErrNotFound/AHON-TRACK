@@ -6,6 +6,7 @@
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
     xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
     x:DataType="viewModels:ItemPurchaseViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
@@ -48,19 +49,20 @@
             <TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
-                FontFamily="Inter"
                 Text="Item Purchase"
                 Foreground="{StaticResource FontForeground}"
                 Margin="90,30,0,0" />
             <TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
-                FontFamily="Inter"
                 Text="Manage customer purchases of gym products and supplements"
                 TextWrapping="Wrap"
                 Margin="90,0" />
         </StackPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Interaction.Behaviors>
+                <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+            </Interaction.Behaviors>
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,48,24" Spacing="16">
                 <Grid ColumnDefinitions="Auto *" ColumnSpacing="50">
                     <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="450">
@@ -94,6 +96,9 @@
                                 </ComboBox>
                             </Grid>
                             <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                                <Interaction.Behaviors>
+                                    <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+                                </Interaction.Behaviors>
                                 <DataGrid
                                     Height="315"
                                     MaxWidth="648"
@@ -286,7 +291,7 @@
                             ColumnSpacing="30"
                             RowSpacing="30"
                             Margin="0,20,0,0">
-                            <shadui:Card Grid.Row="0" Grid.Column="0" Width="350">
+                            <shadui:Card Grid.Row="0" Grid.Column="0" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
@@ -344,7 +349,7 @@
                                     </Button>
                                 </StackPanel>
                             </shadui:Card>
-                            <shadui:Card Grid.Row="0" Grid.Column="1" Width="350">
+                            <shadui:Card Grid.Row="0" Grid.Column="1" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
@@ -402,7 +407,7 @@
                                     </Button>
                                 </StackPanel>
                             </shadui:Card>
-                            <shadui:Card Grid.Row="0" Grid.Column="2" Width="350">
+                            <shadui:Card Grid.Row="0" Grid.Column="2" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
@@ -418,8 +423,8 @@
                                         <TextBlock 
                                             Grid.Row="1" 
                                             Grid.Column="0"
-                                            Text="7.6oz Pre-Workout Peaches &amp; Cream"
-                                            TextWrapping="Wrap"
+                                            Text="7.6oz PreWorkout Peaches &amp; Cream"
+                                            TextWrapping="NoWrap"
                                             FontSize="14"
                                             Classes="Caption Muted"/>
                                         <TextBlock 
@@ -461,7 +466,7 @@
                                     </Button>
                                 </StackPanel>
                             </shadui:Card>
-                            <shadui:Card Grid.Row="0" Grid.Column="3" Width="350">
+                            <shadui:Card Grid.Row="0" Grid.Column="3" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"
@@ -519,7 +524,7 @@
                                     </Button>
                                 </StackPanel>
                             </shadui:Card>
-                            <shadui:Card Grid.Row="1" Grid.Column="0" Width="350">
+                            <shadui:Card Grid.Row="1" Grid.Column="0" Width="340">
                                 <StackPanel>
                                     <Image
                                         Width="250"

@@ -9,6 +9,7 @@
 	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
 	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
 	xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+	xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
 	d:DesignWidth="2080"
 	d:DesignHeight="1666"
 	mc:Ignorable="d">
@@ -36,13 +37,14 @@
 			<TextBlock
 				FontSize="30"
 				FontWeight="SemiBold"
-				FontFamily="Inter"
 				Text="Manage Employees"
 				Foreground="{StaticResource FontForeground}"
-				Margin="90,30"
-			/>
+				Margin="90,30"/>
 		</StackPanel>
 		<ScrollViewer HorizontalScrollBarVisibility="Auto">
+			<Interaction.Behaviors>
+				<scroll:VerticalScrollViewerAnimatedBehavior/>
+			</Interaction.Behaviors>
 			<StackPanel
 				MaxWidth="{StaticResource PageMaxWidth}"
 				Margin="{StaticResource PageMargin}"

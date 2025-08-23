@@ -15,11 +15,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Avalonia" Version="11.3.1" />
-		<PackageReference Include="Avalonia.Desktop" Version="11.3.1" />
+		<PackageReference Include="Avalonia" Version="11.3.3" />
+		<PackageReference Include="Avalonia.Desktop" Version="11.3.3" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.1" />
 		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.1" />
+<<<<<<< HEAD
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+=======
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+
+		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.3" />
+		<PackageReference Include="ShadUI" Version="0.1.5" />
+>>>>>>> c18baf8b49329859fe409133eaabe0e013af4701
 		<PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5.4" />
 		<PackageReference Include="ShadUI" Version="0.1.4" />
 		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="11.3.0.1" />
@@ -29,6 +37,7 @@
 		<PackageReference Include="Jab" Version="0.11.0" PrivateAssets="All" />
 		<PackageReference Include="Serilog" Version="4.3.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+<<<<<<< HEAD
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.1" />
 	</ItemGroup>
 
@@ -36,6 +45,9 @@
 		<Compile Update="Views\LoginView.axaml.cs">
 			<DependentUpon>LoginView.axaml</DependentUpon>
 		</Compile>
+=======
+        <PackageReference Include="Egolds.Xaml.Behaviors.Interactions.Animated" Version="11.3.3" />
+>>>>>>> c18baf8b49329859fe409133eaabe0e013af4701
 	</ItemGroup>
 
 	<ItemGroup>

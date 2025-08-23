@@ -76,7 +76,7 @@
 					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,30,0,0">
 						<TextBox
 							Text="{CompiledBinding EmployeeFirstName, Mode=TwoWay}"
-							Width="200"
+							Width="205"
 							FontSize="15"
 							Classes="Clearable"
 							UseFloatingWatermark="True"
@@ -101,7 +101,7 @@
 					<StackPanel Grid.Row="0" Grid.Column="2" Margin="-30,30,0,0">
 						<TextBox
 							Text="{CompiledBinding EmployeeLastName, Mode=TwoWay}"
-							Width="200"
+							Width="205"
 							FontSize="15"
 							Classes="Clearable"
 							UseFloatingWatermark="True"
@@ -143,10 +143,19 @@
 								<!-- Profile image placeholder -->
 							</Border>
 							<Button
-								Content="Choose File"
 								Classes="Outline"
 								HorizontalAlignment="Center"
-								Click="Button_Click"/>
+								Click="Button_Click">
+								<StackPanel Orientation="Horizontal">
+									<Svg
+										Width="20"
+										Height="20"
+										VerticalAlignment="Center"
+										Margin="0,0,7,0"
+										Path="avares://AHON_TRACK/Assets/ManageEmployeesView/upload-icon.svg"/>
+									<TextBlock Text="Choose File" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
 						</StackPanel>
 					</StackPanel>
 
@@ -167,9 +176,12 @@
 						<NumericUpDown
 							Value="{CompiledBinding EmployeeAge, Mode=TwoWay}"
 							shadui:ControlAssist.Label="Age"
+							ShowButtonSpinner="False"
 							FormatString="N0"
 							Watermark="Age"
 							Width="130"
+							IsReadOnly="True"
+							IsEnabled="False"
 							HorizontalAlignment="Left"/>
 					</StackPanel>
 
@@ -205,7 +217,7 @@
 					<StackPanel Grid.Row="0" Grid.Column="1" Margin="-140,0,0,15">
 						<TextBox
 							Text="{CompiledBinding EmployeeHouseNumber, Mode=TwoWay}"
-							Width="190"
+							Width="220"
 							FontSize="15"
 							Classes="Clearable"
 							UseFloatingWatermark="True"
@@ -338,21 +350,38 @@
 				<StackPanel
 					Orientation="Horizontal"
 					HorizontalAlignment="Right"
-					Margin="0,0,20,0" Spacing="25">
+					Margin="0,-10,20,0" Spacing="25">
 					<Button
-						Content="Cancel"
 						FontSize="16"
-						Width="100"
 						Height="40"
 						Classes="Outline"
-						Command="{CompiledBinding CancelCommand}"/>
+						Command="{CompiledBinding CancelCommand}">
+						<StackPanel Orientation="Horizontal">
+							<Svg
+								Width="20"
+								Height="20"
+								VerticalAlignment="Center"
+								Margin="0,0,7,0"
+								Path="avares://AHON_TRACK/Assets/ManageEmployeesView/cancel-icon.svg"/>
+							<TextBlock Text="Cancel" VerticalAlignment="Center"/>
+						</StackPanel>
+					</Button>
 					<Button
-						Content="Save Details"
 						FontSize="16"
 						Width="150"
 						Height="40"
 						Classes="Primary"
-						Command="{CompiledBinding SaveDetailsCommand}"/>
+						Command="{CompiledBinding SaveDetailsCommand}">
+						<StackPanel Orientation="Horizontal">
+							<Svg
+								Width="20"
+								Height="20"
+								VerticalAlignment="Center"
+								Margin="0,0,7,0"
+								Path="avares://AHON_TRACK/Assets/ManageEmployeesView/save-icon.svg"/>
+							<TextBlock Text="Save Details" VerticalAlignment="Center"/>
+						</StackPanel>
+					</Button>
 				</StackPanel>
 			</StackPanel>
 		</ScrollViewer>

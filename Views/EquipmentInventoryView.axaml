@@ -1,0 +1,219 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    x:DataType="viewModels:EquipmentInventoryViewModel"
+    mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
+    x:Class="AHON_TRACK.Views.EquipmentInventoryView">
+    
+    <Design.DataContext>
+        <viewModels:ItemPurchaseViewModel />
+    </Design.DataContext>
+    
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+        <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
+        <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
+        <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+
+        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+        <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
+        <converters:DateToStringConverter x:Key="DateToStringConverter" />
+    </UserControl.Resources>
+    
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource FontForeground}"/>
+        </Style>
+    </UserControl.Styles>
+    
+    <DockPanel LastChildFill="True">
+        <StackPanel
+            MaxWidth="{StaticResource PageMaxWidth}"
+            Margin="{StaticResource PageMargin}"
+            DockPanel.Dock="Top">
+            <TextBlock
+                FontSize="30"
+                FontWeight="SemiBold"
+                Text="Equipment Inventory"
+                Margin="90,30,0,0" />
+            <TextBlock
+                Classes="Caption Muted"
+                FontSize="14"
+                Text="Manage gym equipment and track maintenance"
+                TextWrapping="Wrap"
+                Margin="90,0" />
+        </StackPanel>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,90,24" Spacing="16">
+                <shadui:Card MinWidth="300" MaxWidth="1500">
+                    <StackPanel>
+                        <Grid ColumnDefinitions="Auto Auto Auto *">
+                            <TextBox
+                                Grid.Column="0"
+                                HorizontalAlignment="Left"
+                                Watermark="Search Equipment..."
+                                shadui:ControlAssist.ShowProgress="{CompiledBinding }"
+                                Text=""
+                                shadui:ControlAssist.Height="40"
+                                Classes="Clearable"
+                                Width="400">
+                                <TextBox.InnerRightContent>
+                                    <Svg
+                                        Width="20"
+                                        Opacity="0.75"
+                                        Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/search-icon.svg" />
+                                </TextBox.InnerRightContent>
+                            </TextBox>
+                            <ComboBox
+                                Grid.Column="1"
+                                Width="150"
+                                Margin="20,0,0,0"
+                                PlaceholderText="Filter"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center">
+                            </ComboBox>
+                            <Button
+                                Grid.Column="2"
+                                Classes="Outline"
+                                Margin="20,0,0,0"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <Svg
+                                        Width="20"
+                                        Height="20"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,8,0"
+                                        Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/export-icon.svg" />
+                                    <TextBlock Text="Export" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                Grid.Column="3"
+                                Classes="Primary"
+                                Margin="20,0,0,0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Command="{CompiledBinding ShowAddEquipmentDialogCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Svg
+                                        Width="20"
+                                        Height="20"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,8,0"
+                                        Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/add-equipment-icon.svg" />
+                                    <TextBlock Text="Add Equipment" Foreground="White" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <DataGrid
+                            Height="650"
+                            Margin="0,20,0,0"
+                            CanUserReorderColumns="False"
+                            CanUserSortColumns="False"
+                            GridLinesVisibility="All"
+                            SelectionMode="Single"
+                            HeadersVisibility="Column"><!-- The Height property should be MaxHeight in the future -->
+
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn Binding="{CompiledBinding }" CanUserSort="False" Width="60">
+                                    <!--CheckBox Header Column-->
+                                    <DataGridCheckBoxColumn.Header>
+                                        <CheckBox
+                                            x:Name="SelectToggler"
+                                            Command="{CompiledBinding }"
+                                            CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
+                                            IsChecked="{CompiledBinding }"
+                                            Margin="8,0"/>
+                                    </DataGridCheckBoxColumn.Header>
+                                </DataGridCheckBoxColumn>
+                                
+                                <!-- Equipment ID -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="80"
+                                    Header="ID"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Equipment Name -->
+                                <DataGridTextColumn
+                                    Width="*"
+                                    Header="Equipment Name"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Category -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="150"
+                                    Header="Category"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Current Stock -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="90"
+                                    Header="Current Stock"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Purchase Date -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="160"
+                                    Header="Purchase Date"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Warranty -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="150"
+                                    Header="Warranty"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Condition -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="150"
+                                    Header="Condition"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Maintenance -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="150"
+                                    Header="Maintenance"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Status -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="120"
+                                    Header="Status"
+                                    Binding="{CompiledBinding }" />
+                                
+                                <!-- Action -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="80"
+                                    Header="Action"
+                                    Binding="{CompiledBinding }" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </shadui:Card>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

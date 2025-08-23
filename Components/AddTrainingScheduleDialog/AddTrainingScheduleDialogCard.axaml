@@ -65,7 +65,7 @@
                 <TextBlock
                     Text="Add a new training schedule for your trainee"
                     Classes="Muted" />
-                <shadui:Card Margin="0,10" MaxHeight="590" HasShadow="True">
+                <shadui:Card Margin="0,10,0,0" MaxHeight="590" HasShadow="True">
                     <Grid ColumnDefinitions="Auto Auto" ColumnSpacing="50">
                         <StackPanel Grid.Column="0" Spacing="20" HorizontalAlignment="Left">
                             <TextBox
@@ -182,7 +182,7 @@
                                         SelectedDate="{CompiledBinding SelectedTrainingDate}">
                                     </CalendarDatePicker>
                                     <ComboBox 
-                                        Margin="30,20,0,20"
+                                        Margin="30,20,0,35"
                                         Width="200"
                                         PlaceholderText="Pick a coach"
                                         shadui:ControlAssist.Label="Assign Coach"
@@ -190,7 +190,7 @@
                                         SelectedItem="{CompiledBinding SelectedCoachItem}">
                                     </ComboBox>
                                 </StackPanel>
-                                <StackPanel Spacing="10" Margin="0,10" HorizontalAlignment="Left">
+                                <StackPanel Spacing="10" Margin="0,0,0,0" HorizontalAlignment="Left">
                                     <TimePicker 
                                         Width="255"
                                         shadui:ControlAssist.Label="Start Time"

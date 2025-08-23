@@ -1,10 +1,11 @@
-﻿using HotAvalonia;
+﻿using System.ComponentModel;
+using HotAvalonia;
 using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("manage-membership")]
-public sealed class ManageMembershipViewModel : ViewModelBase, INavigable
+public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
 	private readonly DialogManager _dialogManager;
 	private readonly ToastManager _toastManager;
