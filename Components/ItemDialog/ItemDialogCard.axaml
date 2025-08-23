@@ -86,14 +86,14 @@
                                 <TextBox
                                     Classes="Clearable"
                                     shadui:ControlAssist.Label="Item Name"
-                                    Watermark="e.g., Treadmill Pro X12">
+                                    Watermark="e.g., Cobra Yellow Blast">
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Grid.Row="1">
                                 <TextBox
                                     Classes="Clearable"
                                     shadui:ControlAssist.Label="Item ID"
-                                    Watermark="e.g., EQ-001">
+                                    Watermark="e.g., IT-001">
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Grid.Row="2">
