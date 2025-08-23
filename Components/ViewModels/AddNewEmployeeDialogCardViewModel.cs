@@ -15,8 +15,8 @@ namespace AHON_TRACK.Components.ViewModels;
 
 public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private string[] _middleInitialItems = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]; // Will simplfy this later
+    [ObservableProperty] 
+    private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
     [ObservableProperty]
     private string[] _employeePositionItems = ["Gym Staff", "Gym Admin"];
