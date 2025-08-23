@@ -5,6 +5,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
 	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+	xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
 	x:DataType="viewModel:LogWalkInPurchaseViewModel"
 	x:Class="AHON_TRACK.Components.LogWalkInPurchase.LogWalkInPurchaseView"
 	mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="2080">
@@ -77,6 +78,9 @@
 				Margin="90,30"/>
 		</StackPanel>
 		<ScrollViewer>
+			<Interaction.Behaviors>
+				<scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+			</Interaction.Behaviors>
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
@@ -208,7 +212,7 @@
 											<NumericUpDown
 												IsVisible="{CompiledBinding IsQuantityVisible, Mode=TwoWay}"
 												Value="{CompiledBinding SpecializedPackageQuantity, Mode=TwoWay}"
-												Width="160"
+												Width="130"
 												Margin="0,21"
 												shadui:ControlAssist.Label="Quantity"
 												FormatString="N0"
@@ -375,10 +379,10 @@
 											</StackPanel>
 											<!-- Right Column -->
 											<StackPanel Grid.Column="1">
-												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
+												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<Border
 														CornerRadius="5"
-														Padding="10,5,10,5"
+														Padding="20,5,20,5"
 														Background="LightGray">
 														<TextBlock
 															Text="1 Day"
@@ -442,9 +446,9 @@
 											</StackPanel>
 											<!-- Right Column -->
 											<StackPanel Grid.Column="1">
-												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
+												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<Border
-														HorizontalAlignment="Left"
+														HorizontalAlignment="Right"
 														CornerRadius="5"
 														Padding="15,5,15,5"
 														Background="LightGray">
@@ -563,10 +567,11 @@
 
 											<!-- Right Column -->
 											<StackPanel Grid.Column="1">
-												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
+												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="TX-2025-010198"
+															Text="TX-2025-0109"
+															TextWrapping="NoWrap"
 															FontWeight="SemiBold"
 															Classes="h5"/>
 														<TextBlock
@@ -607,7 +612,7 @@
 
 											<!-- Right Column -->
 											<StackPanel Grid.Column="1">
-												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
+												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
 															Text="₱150.00"
@@ -635,7 +640,7 @@
 												</StackPanel>
 											</StackPanel>
 											<StackPanel Grid.Row="0" Grid.Column="1">
-												<StackPanel Orientation="Vertical" Margin="0,15,0,0" Spacing="15">
+												<StackPanel Orientation="Vertical" Margin="0,15,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
 															Text="₱1,650.00"
@@ -715,8 +720,8 @@
 										FontSize="20"
 										Height="50"
 										HorizontalAlignment="Right"
-										Margin="0,15,0,0"
-										Padding="30,-3,30,0"
+										Margin="0,20,0,0"
+										Padding="30,0"
 										IsEnabled="{CompiledBinding IsPaymentPossible}"
 										Command="{CompiledBinding PaymentCommand}"/>
 								</StackPanel>
