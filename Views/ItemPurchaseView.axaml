@@ -29,6 +29,12 @@
         <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
         <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
         <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+        
+        <SolidColorBrush x:Key="blue-500" Color="#3B82F6" />
+        <SolidColorBrush x:Key="green-500" Color="#22C55E" />
+        <SolidColorBrush x:Key="orange-500" Color="#F97316" />
+        <SolidColorBrush x:Key="purple-500" Color="#A855F7" />
+        <SolidColorBrush x:Key="red-500" Color="#EF4444" />
 
         <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
         <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
@@ -64,8 +70,8 @@
                 <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
             </Interaction.Behaviors>
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,48,24" Spacing="16">
-                <Grid ColumnDefinitions="Auto *" ColumnSpacing="50">
-                    <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="450">
+                <Grid ColumnDefinitions="Auto *" ColumnSpacing="30">
+                    <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="480">
                         <StackPanel>
                             <shadui:CardTitle Content="Select a customer" />
                             <Grid ColumnDefinitions="Auto Auto" ColumnSpacing="10">
@@ -100,7 +106,7 @@
                                     <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
                                 </Interaction.Behaviors>
                                 <DataGrid
-                                    Height="315"
+                                    Height="335"
                                     MaxWidth="648"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
@@ -148,10 +154,16 @@
                                     IsChecked="{CompiledBinding IsAllItemsChecked}">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Svg
-                                                Width="30"
-                                                Height="30"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/all-items-icon.svg" />
+                                            <Border 
+                                                Background="{StaticResource blue-500}" 
+                                                CornerRadius="8"
+                                                Width="35"
+                                                Height="35">
+                                                <Svg
+                                                    Width="25"
+                                                    Height="25"
+                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/package-icon.svg" />
+                                            </Border>
                                             <TextBlock
                                                 Text="All Items"
                                                 FontSize="14"
@@ -172,10 +184,16 @@
                                     IsChecked="{CompiledBinding IsDrinksChecked}">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Svg
-                                                Width="30"
-                                                Height="30"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/drinks-icon.svg" />
+                                            <Border 
+                                                Background="{StaticResource green-500}" 
+                                                CornerRadius="8"
+                                                Width="35"
+                                                Height="35">
+                                                <Svg
+                                                    Width="25"
+                                                    Height="25"
+                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/drink-icon.svg" />
+                                            </Border>
                                             <TextBlock
                                                 Text="Drinks"
                                                 FontSize="14"
@@ -196,10 +214,16 @@
                                     IsChecked="{CompiledBinding IsSupplementsChecked}">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Svg
-                                                Width="30"
-                                                Height="30"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/pill-icon.svg" />
+                                            <Border 
+                                                Background="{StaticResource orange-500}" 
+                                                CornerRadius="8"
+                                                Width="35"
+                                                Height="35">
+                                                <Svg
+                                                    Width="25"
+                                                    Height="25"
+                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/supplement-icon.svg" />
+                                            </Border>
                                             <TextBlock
                                                 Text="Supplements"
                                                 FontSize="14"
@@ -220,10 +244,16 @@
                                     IsChecked="{CompiledBinding IsApparelChecked}">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Svg
-                                                Width="30"
-                                                Height="30"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/apparel-icon.svg" />
+                                            <Border 
+                                                Background="{StaticResource purple-500}" 
+                                                CornerRadius="8"
+                                                Width="35"
+                                                Height="35">
+                                                <Svg
+                                                    Width="25"
+                                                    Height="25"
+                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/apparel-icon.svg" />
+                                            </Border>
                                             <TextBlock
                                                 Text="Apparel"
                                                 FontSize="14"
@@ -244,10 +274,16 @@
                                     IsChecked="{CompiledBinding IsProductsChecked}">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Svg
-                                                Width="30"
-                                                Height="30"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/products-icon.svg" />
+                                            <Border 
+                                                Background="{StaticResource red-500}" 
+                                                CornerRadius="8"
+                                                Width="35"
+                                                Height="35">
+                                                <Svg
+                                                    Width="25"
+                                                    Height="25"
+                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/product-icon.svg" />
+                                            </Border>
                                             <TextBlock
                                                 Text="Products"
                                                 FontSize="14"
