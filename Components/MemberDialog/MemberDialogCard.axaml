@@ -1,0 +1,360 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    x:DataType="viewModel:MemberDialogCardViewModel"
+    mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="900"
+    Width="950"
+    Height="810"
+    x:Class="AHON_TRACK.Components.MemberDialog.MemberDialogCard">
+    
+    <Design.DataContext>
+        <viewModel:MemberDialogCardViewModel/>
+    </Design.DataContext>
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36"/>
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75"/>
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.h4">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+        <Style Selector="TextBlock.Muted">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+        <Style Selector="TextBlock.LabelField">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+        <Style Selector="RadioButton.FormRadio">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Regular"/>
+            <Setter Property="Margin" Value="0,0,15,0"/>
+        </Style>
+    </UserControl.Styles>
+    
+	<Border
+		Background="{DynamicResource BackgroundColor}"
+		BorderBrush="{DynamicResource BorderColor}"
+		BorderThickness="1"
+		Padding="30">
+		<ScrollViewer HorizontalScrollBarVisibility="Auto">
+			<StackPanel Spacing="0">
+
+				<!-- Header Section -->
+				<TextBlock
+					Text="{CompiledBinding DialogTitle}"
+					Classes="h4"/>
+				<TextBlock
+					Text="{CompiledBinding DialogDescription}"
+					Classes="Muted"/>
+
+				<!-- Personal Information Grid-->
+				<Grid
+					RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto"
+					ColumnDefinitions="2*, 1*, 2*, 1.5*, 1.5*">
+
+					<!-- Name Fields and Profile Picture -->
+					<!-- First Name Field -->
+					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,30,0,0">
+						<TextBox
+							Text="{CompiledBinding MemberFirstName, Mode=TwoWay}"
+							Width="205"
+							FontSize="15"
+							Classes="Clearable"
+							UseFloatingWatermark="True"
+							Watermark="First Name"
+							HorizontalAlignment="Left"/>
+					</StackPanel>
+
+					<!-- Middle Initial Field -->
+					<StackPanel Grid.Row="0" Grid.Column="1" Margin="45,29,0,0">
+						<ComboBox
+							shadui:ControlAssist.Label="Middle Initial"
+							shadui:ControlAssist.Height="35"
+							Width="100"
+							HorizontalAlignment="Left"
+							PlaceholderText="-"
+							ItemsSource="{CompiledBinding MiddleInitialItems}"
+							SelectedItem="{CompiledBinding SelectedMiddleInitialItem, Mode=TwoWay}">
+						</ComboBox>
+					</StackPanel>
+
+					<!-- Last Name Field -->
+					<StackPanel Grid.Row="0" Grid.Column="2" Margin="-30,30,0,0">
+						<TextBox
+							Text="{CompiledBinding MemberLastName, Mode=TwoWay}"
+							Width="205"
+							FontSize="15"
+							Classes="Clearable"
+							UseFloatingWatermark="True"
+							Watermark="Last Name"
+							HorizontalAlignment="Left"/>
+					</StackPanel>
+
+					<!-- Gender Field -->
+					<StackPanel Grid.Row="0" Grid.Column="3" Margin="30,30,0,0">
+						<TextBlock Text="Gender" Classes="LabelField"/>
+						<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="23">
+							<RadioButton Content="Male" GroupName="EmployeeGender" Classes="FormRadio" IsChecked="{CompiledBinding IsMale}"/>
+							<RadioButton Content="Female" GroupName="EmployeeGender" Classes="FormRadio" IsChecked="{CompiledBinding IsFemale}"/>
+						</StackPanel>
+					</StackPanel>
+
+					<!-- Profile Image Field -->
+					<StackPanel Grid.Row="0" Grid.Column="4" Margin="0,30,0,0">
+						<TextBlock
+							Text="Profile Picture"
+							Classes="LabelField"
+							Margin="35,0"/>
+						<StackPanel
+							Orientation="Vertical"
+							Spacing="10">
+							<Border Width="90" Height="90" Margin="0,10"
+								Background="#F5F5F5"
+								BorderBrush="#CCCCCC"
+								BorderThickness="1"
+								CornerRadius="150"
+								ClipToBounds="True">
+
+								<Image
+									Name="EmployeeProfileImage"
+									Stretch="UniformToFill"
+									IsVisible="True"
+									Source="avares://AHON_TRACK/Assets/ManageEmployeesView/default-profile-picture.png"/>
+								<!-- Profile image placeholder -->
+							</Border>
+							<Button
+								Classes="Outline"
+								HorizontalAlignment="Center"
+								Click="Button_Click">
+								<StackPanel Orientation="Horizontal">
+									<Svg
+										Width="20"
+										Height="20"
+										VerticalAlignment="Center"
+										Margin="0,0,7,0"
+										Path="avares://AHON_TRACK/Assets/ManageEmployeesView/upload-icon.svg"/>
+									<TextBlock Text="Choose File" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
+						</StackPanel>
+					</StackPanel>
+
+					<!-- Row 2: Contact and Personal Details -->
+					<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,-90">
+						<TextBox
+							Text="{CompiledBinding MemberContactNumber, Mode=TwoWay}"
+							Width="200"
+							FontSize="15"
+							Classes="Clearable"
+							UseFloatingWatermark="True"
+							Watermark="Contact Number"
+							HorizontalAlignment="Left"/>
+					</StackPanel>
+
+					<!-- Age Field -->
+					<StackPanel Grid.Row="1" Grid.Column="1" Margin="45,-87">
+						<NumericUpDown
+							Value="{CompiledBinding MemberAge, Mode=TwoWay}"
+							shadui:ControlAssist.Label="Age"
+							ShowButtonSpinner="False"
+							FormatString="N0"
+							Watermark="Age"
+							Width="130"
+							IsReadOnly="True"
+							IsEnabled="False"
+							HorizontalAlignment="Left"/>
+					</StackPanel>
+
+					<!-- Date of Birth Field -->
+					<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91">
+						<CalendarDatePicker
+							shadui:ControlAssist.Label="Date of Birth"
+							Width="150"
+							HorizontalAlignment="Left"
+							SelectedDate="{CompiledBinding MemberBirthDate}"/>
+					</StackPanel>
+				</Grid>
+
+				<!-- Address Section -->
+				<TextBlock Text="Address Details" Classes="h4" Margin="0,10"/>
+				<Grid
+					RowDefinitions="Auto, Auto, Auto"
+					ColumnDefinitions="3*, 1*">
+
+					<!-- Row 1: House Address and Number -->
+					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,15">
+						<TextBox
+							Text="{CompiledBinding MemberHouseAddress, Mode=TwoWay}"
+							Width="500"
+							FontSize="15"
+							Classes="Clearable"
+							UseFloatingWatermark="True"
+							Watermark="House Address"
+							HorizontalAlignment="Left"/>
+					</StackPanel>
+
+					<!-- House Number -->
+					<StackPanel Grid.Row="0" Grid.Column="1" Margin="-140,0,0,15">
+						<TextBox
+							Text="{CompiledBinding MemberHouseNumber, Mode=TwoWay}"
+							Width="220"
+							FontSize="15"
+							Classes="Clearable"
+							UseFloatingWatermark="True"
+							Watermark="House Number"
+							HorizontalAlignment="Left"/>
+					</StackPanel>
+
+					<!-- Row 2: Location Details -->
+					<Grid
+						Grid.Row="1"
+						Grid.Column="0"
+						Grid.ColumnSpan="2" 
+						ColumnDefinitions="1*, 1*, 1*, 1*"
+						Margin="0,20,0,0">
+
+						<!-- Street -->
+						<StackPanel Grid.Column="0" Margin="0,-20,15,0">
+							<TextBox
+								Text="{CompiledBinding MemberStreet, Mode=TwoWay}"
+								Width="150"
+								FontSize="15"
+								Classes="Clearable"
+								UseFloatingWatermark="True"
+								Watermark="Street"
+								HorizontalAlignment="Left"/>
+						</StackPanel>
+
+						<!-- Barangay -->
+						<StackPanel Grid.Column="1" Margin="-40,-20,15,0">
+							<TextBox
+								Text="{CompiledBinding MemberBarangay, Mode=TwoWay}"
+								Width="150"
+								FontSize="15"
+								Classes="Clearable"
+								UseFloatingWatermark="True"
+								Watermark="Barangay"
+								HorizontalAlignment="Left"/>
+						</StackPanel>
+
+						<!-- City/Town -->
+						<StackPanel Grid.Column="2" Margin="-80,-20,15,0">
+							<TextBox
+								Text="{CompiledBinding MemberCityTown, Mode=TwoWay}"
+								Width="150"
+								FontSize="15"
+								Classes="Clearable"
+								UseFloatingWatermark="True"
+								Watermark="City/Town"
+								HorizontalAlignment="Left"/>
+						</StackPanel>
+
+						<!-- Province -->
+						<StackPanel Grid.Column="3" Margin="-120,-20,15,0">
+							<TextBox
+								Text="{CompiledBinding MemberProvince, Mode=TwoWay}"
+								Width="170"
+								FontSize="15"
+								Classes="Clearable"
+								UseFloatingWatermark="True"
+								Watermark="Province"
+								HorizontalAlignment="Left"/>
+						</StackPanel>
+					</Grid>
+				</Grid>
+
+				<TextBlock Text="Membership Details" Classes="h4" Margin="0,30"/>
+				<Grid RowDefinitions="Auto" ColumnDefinitions="Auto Auto Auto">
+
+					<!-- Date Joined Section -->
+					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,-3,15,0">
+						<CalendarDatePicker
+							shadui:ControlAssist.Label="Date Joined"
+							Width="150"
+							HorizontalAlignment="Left"
+							SelectedDate="{CompiledBinding MemberDateJoined}"/>
+					</StackPanel>
+
+					<!-- Row 2: Status Field -->
+					<StackPanel Grid.Row="0" Grid.Column="1" Margin="10,-4,0,0">
+						<ComboBox
+							HorizontalAlignment="Left"
+							Width="160"
+							shadui:ControlAssist.Label="Status"
+							PlaceholderText="-"
+							ItemsSource="{CompiledBinding MemberStatusItems}"
+							SelectedItem="{CompiledBinding MemberStatus, Mode=TwoWay}">
+						</ComboBox>
+					</StackPanel>
+
+					<!-- Purchased Package/s Field -->
+					<StackPanel Grid.Row="0" Grid.Column="2" Margin="20,-4,0,0">
+						<ComboBox
+							HorizontalAlignment="Left"
+							Width="170"
+							shadui:ControlAssist.Label="Purchased Package/s"
+							PlaceholderText="-"
+							ItemsSource="{CompiledBinding MemberPackageItems}"
+							SelectedItem="{CompiledBinding MemberPackages, Mode=TwoWay}">
+						</ComboBox>
+					</StackPanel>
+				</Grid>
+
+				<!-- Action Buttons -->
+				<StackPanel
+					Orientation="Horizontal"
+					HorizontalAlignment="Right"
+					Margin="0,30,20,0" Spacing="25">
+					<Button
+						FontSize="16"
+						Height="40"
+						Classes="Outline"
+						Command="{CompiledBinding CancelCommand}">
+						<StackPanel Orientation="Horizontal">
+							<Svg
+								Width="20"
+								Height="20"
+								VerticalAlignment="Center"
+								Margin="0,0,7,0"
+								Path="avares://AHON_TRACK/Assets/ManageEmployeesView/cancel-icon.svg"/>
+							<TextBlock Text="Cancel" VerticalAlignment="Center"/>
+						</StackPanel>
+					</Button>
+					<Button
+						FontSize="16"
+						Width="150"
+						Height="40"
+						Classes="Primary"
+						Command="{CompiledBinding SaveDetailsCommand}">
+						<StackPanel Orientation="Horizontal">
+							<Svg
+								Width="20"
+								Height="20"
+								VerticalAlignment="Center"
+								Margin="0,0,7,0"
+								Path="avares://AHON_TRACK/Assets/ManageEmployeesView/save-icon.svg"/>
+							<TextBlock Text="Save Details" VerticalAlignment="Center"/>
+						</StackPanel>
+					</Button>
+				</StackPanel>
+			</StackPanel>
+		</ScrollViewer>
+	</Border>
+</UserControl>
