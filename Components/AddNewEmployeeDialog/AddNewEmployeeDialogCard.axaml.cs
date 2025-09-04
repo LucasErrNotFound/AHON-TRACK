@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using AHON_TRACK.Components.ViewModels;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
@@ -18,6 +19,12 @@ public partial class AddNewEmployeeDialogCard : UserControl
         try
         {
             var topLevel = TopLevel.GetTopLevel(this);
+
+            if (topLevel is null)
+            {
+                return;
+            }
+
             var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 AllowMultiple = false,
@@ -28,10 +35,15 @@ public partial class AddNewEmployeeDialogCard : UserControl
             if (files.Count <= 0) return;
             var file = files[0];
             await using var stream = await file.OpenReadAsync();
-        
+
             var bitmap = new Bitmap(stream);
+
+            if (DataContext is AddNewEmployeeDialogCardViewModel vm)
+            {
+                vm.ProfileImageSource = bitmap;
+            }
+
             var profileImage = this.FindControl<Image>("EmployeeProfileImage");
-        
             if (profileImage == null) return;
             profileImage.Source = bitmap;
             profileImage.IsVisible = true; // Ensure the image is visible after loading

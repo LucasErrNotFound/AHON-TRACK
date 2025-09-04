@@ -64,22 +64,10 @@ namespace AHON_TRACK.Converters
         }
 
         // Byte array to Bitmap conversion for UI display
-        public static Bitmap? BytesToBitmap(byte[]? bytes)
+        public static Bitmap BytesToBitmap(byte[] bytes)
         {
-            if (bytes == null || bytes.Length == 0) return null;
-
-            try
-            {
-                using (var ms = new MemoryStream(bytes))
-                {
-                    return new Bitmap(ms);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error converting bytes to bitmap: {ex.Message}");
-                return null;
-            }
+            using var ms = new MemoryStream(bytes);
+            return new Bitmap(ms);
         }
 
         // Base64 string to Bitmap conversion
@@ -100,20 +88,18 @@ namespace AHON_TRACK.Converters
         }
 
         // Bitmap to Base64 string conversion
-        public static string? BitmapToBase64(Bitmap? bitmap)
+        public static string BitmapToBase64(Bitmap bitmap)
         {
-            if (bitmap == null) return null;
+            using (var stream = new MemoryStream())
+            {
+                bitmap.Save(stream);
+                return Convert.ToBase64String(stream.ToArray());
+            }
+        }
 
-            try
-            {
-                var bytes = BitmapToBytes(bitmap);
-                return bytes != null ? Convert.ToBase64String(bytes) : null;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error converting bitmap to base64: {ex.Message}");
-                return null;
-            }
+        public static string BytesToBase64(byte[] bytes)
+        {
+            return Convert.ToBase64String(bytes);
         }
 
         // File path to byte array conversion for database storage

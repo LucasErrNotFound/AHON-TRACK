@@ -1,4 +1,5 @@
 ﻿using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
@@ -36,6 +37,7 @@ namespace AHON_TRACK;
 [Transient<EquipmentDialogCardViewModel>]
 [Transient<ItemDialogCardViewModel>]
 [Transient<SupplierDialogCardViewModel>]
+[Transient<DashboardModel>]
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
@@ -43,6 +45,8 @@ namespace AHON_TRACK;
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
 [Singleton<string>(Factory = nameof(ConnectionStringFactory))]
 [Singleton<IEmployeeService, EmployeeService>]
+[Singleton<IDashboardService, DashboardService>]
+[Singleton<IMemberService, MemberService>]
 
 public partial class ServiceProvider
 {

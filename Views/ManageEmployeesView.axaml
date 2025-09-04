@@ -190,7 +190,7 @@
 													Height="36"
 													VerticalAlignment="Center"
 													HorizontalAlignment="Center"
-													Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"
+													Source="{Binding AvatarSource}"
 													Margin="8"/>
 											</DataTemplate>
 										</DataGridTemplateColumn.CellTemplate>

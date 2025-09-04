@@ -20,12 +20,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel;
+using Tmds.DBus.Protocol;
 
 namespace AHON_TRACK.Components.ViewModels;
 
 public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
     [ObservableProperty]
@@ -56,8 +57,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private string _employeePosition = string.Empty;
     private int? _employeeAge;
     private DateTime? _employeeBirthDate;
-    private object? _employeeProfilePicture = "";
-    private Bitmap _profileImageSource;
 
     // Address Section
     private string _employeeHouseAddress = string.Empty;
@@ -255,11 +254,12 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         get => _employeeStatus;
         set => SetProperty(ref _employeeStatus, value, true);
     }
-    [Required(ErrorMessage = "Profile Picture required")]
-    public object? EmployeeProfilePicture
+
+    private byte[]? _profileImage;
+    public byte[]? ProfileImage
     {
-        get => _employeeProfilePicture;
-        set => SetProperty(ref _employeeProfilePicture, value, true);
+        get => _profileImage;
+        set => SetProperty(ref _profileImage, value);
     }
 
     [ObservableProperty]
@@ -361,7 +361,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                 DateJoined = EmployeeDateJoined ?? DateTime.Now,
                 Status = EmployeeStatus,
                 Position = EmployeePosition,
-                ProfilePicture = ImageHelper.GetDefaultAvatar()
+                ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
             };
             bool success = await _employeeService.AddEmployeeAsync(employee);
             if (success)
@@ -416,7 +416,17 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
     public void SetProfileImageBytes(byte[]? imageBytes)
     {
-        EmployeeProfilePicture = imageBytes;
+        ProfileImage = imageBytes;
+
+        if (imageBytes != null)
+        {
+            using var ms = new MemoryStream(imageBytes);
+            ProfileImageSource = new Bitmap(ms);
+        }
+        else
+        {
+            ProfileImageSource = null;
+        }
     }
 
     private void ClearAllFields()
@@ -439,15 +449,12 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeePassword = string.Empty;
         EmployeeDateJoined = null;
         EmployeeStatus = string.Empty;
-        EmployeeProfilePicture = null;
+        ProfileImage = null;
+        ProfileImageSource = null;
         ClearAllErrors();
 
         ImageResetRequested?.Invoke();
     }
-<<<<<<< HEAD
 
     public event Action? ImageResetRequested;
 }
-=======
-}
->>>>>>> c18baf8b49329859fe409133eaabe0e013af4701

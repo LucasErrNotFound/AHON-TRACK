@@ -8,6 +8,7 @@ using ShadUI;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AHON_TRACK.Services.Interface;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -18,6 +19,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
+    private readonly IEmployeeService _employeeService;
 
     [ObservableProperty]
     private bool _isFromCurrentUser = false;
@@ -75,12 +77,13 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     private ManageEmployeesItem? _selectedEmployeeData;
 
-    public EmployeeProfileInformationViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel)
+    public EmployeeProfileInformationViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, IEmployeeService employeeService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
+        _employeeService = employeeService;
 
     }
 
@@ -124,29 +127,42 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         }
     }
 
-    private void InitializeEmployeeProfile()
+    private async void InitializeEmployeeProfile()
     {
         if (_selectedEmployeeData != null)
         {
-            EmployeeID = _selectedEmployeeData.ID;
-            EmployeePosition = _selectedEmployeeData.Position;
-            EmployeeStatus = _selectedEmployeeData.Status;
-            EmployeeDateJoined = _selectedEmployeeData.DateJoined.ToString("MMMM d, yyyy");
-            EmployeeFullName = _selectedEmployeeData.Name;
-            EmployeeFullNameHeader = $"{_selectedEmployeeData.Name}'s Profile";
-            EmployeePhoneNumber = _selectedEmployeeData.ContactNumber;
+            var fullEmployee = await _employeeService.ViewEmployeeProfileAsync(int.Parse(_selectedEmployeeData.ID));
 
-            // Set default values for properties that are not available in ManageEmployeesItem (Hard-coded, sorry :)
-            EmployeeAge = "30"; // Default or calculate from birth date if available
-            EmployeeBirthDate = "1993-05-20"; // Default
-            EmployeeGender = "Male"; // Default
-            EmployeeLastLogin = DateTime.Now.ToString("MMMM dd, yyyy h:mmtt");
-            EmployeeHouseAddress = "123 Main"; // Default
-            EmployeeHouseNumber = "123"; // Default
-            EmployeeStreet = "Main Street"; // Default
-            EmployeeBarangay = "Maungib"; // Default
-            EmployeeCityProvince = "Cebu City, Cebu"; // Default
-            EmployeeZipCode = "6000"; // Default
+            if (fullEmployee != null)
+            {
+                EmployeeID = fullEmployee.ID;
+                EmployeePosition = fullEmployee.Position;
+                EmployeeStatus = fullEmployee.Status;
+                EmployeeDateJoined = fullEmployee.DateJoined == DateTime.MinValue
+                    ? "N/A"
+                    : fullEmployee.DateJoined.ToString("MMMM d, yyyy");
+                EmployeeFullName = fullEmployee.Name;
+                EmployeeFullNameHeader = $"{fullEmployee.Name}'s Profile";
+                EmployeePhoneNumber = fullEmployee.ContactNumber;
+
+                EmployeeAge = fullEmployee.Age;
+                EmployeeBirthDate = fullEmployee.Birthdate;
+                EmployeeGender = fullEmployee.Gender;
+                EmployeeLastLogin = fullEmployee.LastLogin;
+                EmployeeHouseAddress = fullEmployee.HouseAddress;
+                EmployeeHouseNumber = fullEmployee.HouseNumber;
+                EmployeeStreet = fullEmployee.Street;
+                EmployeeBarangay = fullEmployee.Barangay;
+                EmployeeCityProvince = fullEmployee.CityProvince;
+                EmployeeZipCode = fullEmployee.ZipCode;
+
+                // Profile Picture
+                if (fullEmployee.AvatarSource != null)
+                {
+                    // Assuming you add an ObservableProperty for this
+                    // EmployeeProfilePicture = fullEmployee.AvatarSource;
+                }
+            }
         }
     }
 

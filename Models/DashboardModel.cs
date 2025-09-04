@@ -231,52 +231,6 @@ public class DashboardModel
     #endregion
 
     #region Recent Logs Data Operations
-
-    /*public List<RecentLog> GetSampleRecentLogsData()
-    {
-        return
-        [
-            new RecentLog
-            {
-                Username = "Kuya Rome",
-                UserType = "Gym Admin",
-                ActionLogName = "Printed monthly reports",
-                LogDateTime = DateTime.Now.AddMinutes(-30)
-            },
-
-            new RecentLog
-            {
-                Username = "Jaycee",
-                UserType = "Gym Admin",
-                ActionLogName = "Modified rates in boxing package",
-                LogDateTime = DateTime.Now.AddHours(-1)
-            },
-
-            new RecentLog
-            {
-                Username = "Figora",
-                UserType = "Gym Staff",
-                ActionLogName = "Reported a broken gym equipment",
-                LogDateTime = DateTime.Now.AddHours(-2)
-            },
-
-            new RecentLog
-            {
-                Username = "JeyEL",
-                UserType = "Gym Staff",
-                ActionLogName = "Scheduled a gym equipment maintenance",
-                LogDateTime = DateTime.Now.AddHours(-3)
-            },
-
-            new RecentLog
-            {
-                Username = "Mr. Javitos",
-                UserType = "Gym Admin",
-                ActionLogName = "Printed month gym member summary",
-                LogDateTime = DateTime.Now.AddHours(-4)
-            }
-        ];
-    }*/
     public const string connectionString = "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
     public async Task<List<RecentLog>> GetRecentLogsFromDatabaseAsync(string connectionString)
@@ -289,7 +243,7 @@ public class DashboardModel
             await conn.OpenAsync();
 
             string query = @"
-        SELECT TOP 10 
+        SELECT TOP 5 
         Username, 
         Role AS UserType, 
         ActionType AS ActionLogName, 
@@ -323,6 +277,8 @@ public class DashboardModel
 
         return logs;
     }
+
+
 
 
     public string GenerateRecentLogsSummary(int logCount) => $"You have {logCount} recent action logs today";

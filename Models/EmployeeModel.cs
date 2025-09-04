@@ -7,7 +7,7 @@ public class EmployeeModel
     public string? MiddleInitial { get; set; }
     public string LastName { get; set; } = "";
     public string Gender { get; set; } = "";
-    public object? ProfilePicture { get; set; }
+    public byte[]? ProfilePicture { get; set; }
     public string? ContactNumber { get; set; }
     public int? Age { get; set; }
     public DateTime? DateOfBirth { get; set; }

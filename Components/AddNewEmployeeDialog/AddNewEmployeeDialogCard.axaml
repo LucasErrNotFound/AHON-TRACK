@@ -138,7 +138,7 @@
 									Name="EmployeeProfileImage"
 									Stretch="UniformToFill"
 									IsVisible="True"
-									Source="avares://AHON_TRACK/Assets/ManageEmployeesView/default-profile-picture.png"/>
+									Source="{Binding ProfileImageSource}"/>
 								<!--new binds-->
 								<!-- Profile image placeholder -->
 							</Border>

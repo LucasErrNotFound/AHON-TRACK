@@ -1,14 +1,15 @@
-﻿using AHON_TRACK.Views;
+﻿using AHON_TRACK.Models;
+using AHON_TRACK.Views;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Data.SqlClient;
 using ShadUI;
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Data.SqlClient;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -72,6 +73,13 @@ public partial class LoginViewModel : ViewModelBase
         ClearAllErrors();
         ValidateAllProperties();
 
+        /*if (string.IsNullOrWhiteSpace(Username) && string.IsNullOrWhiteSpace(Password))
+        {
+            _shouldShowSuccessLogInToast = true;
+            SwitchToMainWindow();
+            return;
+        } // BYPASS */
+
         if (HasErrors || !CheckCredentials(Username, Password, out string role))
         {
             _shouldShowSuccessLogInToast = false;
@@ -101,6 +109,12 @@ public partial class LoginViewModel : ViewModelBase
 
     private bool CheckCredentials(string username, string password, out string role)
     {
+        /*if (string.IsNullOrWhiteSpace(username) && string.IsNullOrWhiteSpace(password))
+        {
+            role = "Admin"; // or "Staff"
+            return true;
+        } // BYPASS */
+
         role = "Unknown";
 
         try
@@ -108,8 +122,8 @@ public partial class LoginViewModel : ViewModelBase
             using var conn = new SqlConnection(ConnectionString);
             conn.Open();
 
-            // Try Admins
-            string adminQuery = "SELECT AdminId FROM Admins WHERE Username = @user AND Password = @pass";
+            // 🔹 Try Admins
+            string adminQuery = "SELECT AdminID FROM Admins WHERE Username = @user AND Password = @pass";
             using (var adminCmd = new SqlCommand(adminQuery, conn))
             {
                 adminCmd.Parameters.AddWithValue("@user", username);
@@ -118,18 +132,25 @@ public partial class LoginViewModel : ViewModelBase
                 var adminId = adminCmd.ExecuteScalar();
                 if (adminId != null)
                 {
-                    var update = new SqlCommand("UPDATE Admins SET LoginCount = LoginCount + 1 WHERE AdminId = @id", conn);
+                    // ✅ Update LastLogin for Admin
+                    var update = new SqlCommand("UPDATE Admins SET LastLogin = @lastLogin WHERE AdminID = @id", conn);
+                    update.Parameters.AddWithValue("@lastLogin", DateTime.Now);
                     update.Parameters.AddWithValue("@id", adminId);
                     update.ExecuteNonQuery();
 
+                    CurrentUserModel.UserId = Convert.ToInt32(adminId);
+                    CurrentUserModel.Username = username;
+                    CurrentUserModel.Role = "Admin";
+
                     role = "Admin";
+
                     LogAction(conn, username, role, "Login", "Login successful", true);
                     return true;
                 }
             }
 
-            // Try Staffs
-            string staffQuery = "SELECT StaffId FROM Staffs WHERE Username = @user AND Password = @pass";
+            // 🔹 Try Staffs
+            string staffQuery = "SELECT StaffID FROM Staffs WHERE Username = @user AND Password = @pass";
             using (var staffCmd = new SqlCommand(staffQuery, conn))
             {
                 staffCmd.Parameters.AddWithValue("@user", username);
@@ -138,17 +159,25 @@ public partial class LoginViewModel : ViewModelBase
                 var staffId = staffCmd.ExecuteScalar();
                 if (staffId != null)
                 {
-                    var update = new SqlCommand("UPDATE Staffs SET LoginCount = LoginCount + 1 WHERE StaffId = @id", conn);
+                    // ✅ Update LastLogin for Staff
+                    var update = new SqlCommand("UPDATE Staffs SET LastLogin = @lastLogin WHERE StaffID = @id", conn);
+                    update.Parameters.AddWithValue("@lastLogin", DateTime.Now);
                     update.Parameters.AddWithValue("@id", staffId);
                     update.ExecuteNonQuery();
 
+                    // Save current user globally
+                    CurrentUserModel.UserId = Convert.ToInt32(staffId);
+                    CurrentUserModel.Username = username;
+                    CurrentUserModel.Role = "Staff";
+
                     role = "Staff";
+
                     LogAction(conn, username, role, "Login", "Login successful", true);
                     return true;
                 }
             }
 
-            // If no match found
+            // 🔹 If no match found
             LogAction(conn, username, role, "Login", "Login failed - invalid credentials", false);
             return false;
         }
@@ -159,7 +188,6 @@ public partial class LoginViewModel : ViewModelBase
                 .WithDelay(10)
                 .ShowError();
 
-            // Try to log DB error (optional)
             try
             {
                 using var conn = new SqlConnection(ConnectionString);
