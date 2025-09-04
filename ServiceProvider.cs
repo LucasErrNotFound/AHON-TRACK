@@ -37,7 +37,12 @@ namespace AHON_TRACK;
 [Transient<EquipmentDialogCardViewModel>]
 [Transient<ItemDialogCardViewModel>]
 [Transient<SupplierDialogCardViewModel>]
+<<<<<<< HEAD
 [Transient<DashboardModel>]
+=======
+[Transient<MemberDialogCardViewModel>]
+[Transient<AddNewMemberViewModel>]
+>>>>>>> 2a3bdf11f555f1d669ec83aaf947ec73d7a523d0
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
