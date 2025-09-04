@@ -107,7 +107,7 @@
 									Width="200"
 									Height="40"
 									Padding="20,0,20,0"
-									Command="{CompiledBinding }">
+									Command="{CompiledBinding OpenAddNewMemberViewCommand}">
 									<!-- Bugged icon || Moving Icon to the left makes it smaller
 											<shadui:ButtonAssist.Icon>
 												<Svg
@@ -547,7 +547,8 @@
 								<StackPanel Orientation="Horizontal" Spacing="10">
 									<Button
 										Classes="Destructive"
-										Padding="20,0,20,0">
+										Padding="20,0,20,0"
+										Command="{CompiledBinding ShowDeleteMemberCommand}">
 										<StackPanel Orientation="Horizontal">
 											<Svg
 												Width="18"
@@ -561,7 +562,8 @@
 									<Button
 										Classes="Secondary"
 										HorizontalAlignment="Center"
-										Padding="20,0,20,0">
+										Padding="20,0,20,0"
+										Command="{CompiledBinding OpenUpgradeMemberViewCommand}">
 										<StackPanel Orientation="Horizontal">
 											<Svg
 												Width="18"
@@ -574,7 +576,8 @@
 									</Button>
 									<Button
 										Classes="Primary"
-										Padding="20,0,20,0">
+										Padding="20,0,20,0"
+										Command="{CompiledBinding OpenRenewMemberViewCommand}">
 										<StackPanel Orientation="Horizontal">
 											<Svg
 												Width="18"
