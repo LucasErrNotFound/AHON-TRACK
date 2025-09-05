@@ -86,6 +86,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
 	public bool IsInactiveVisible => SelectedMember?.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase) ?? false;
 	public bool IsTerminatedVisible => SelectedMember?.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase) ?? false;
+	public bool HasSelectedMember => SelectedMember is not null;
 
 	public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
 	{
@@ -113,6 +114,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		OnPropertyChanged(nameof(IsActiveVisible));
 		OnPropertyChanged(nameof(IsInactiveVisible));
 		OnPropertyChanged(nameof(IsTerminatedVisible));
+		OnPropertyChanged(nameof(HasSelectedMember));
 	}
 
 	[AvaloniaHotReload]
