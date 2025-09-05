@@ -31,7 +31,6 @@
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.4" />
 		<PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All" Publish="True" />
 		<PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All" />
-=======
 		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="11.3.0.4" />
 		<PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All"/>
 		<PackageReference Include="Jab" Version="0.11.0" PrivateAssets="All" />
