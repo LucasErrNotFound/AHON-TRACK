@@ -32,6 +32,7 @@
 		<converters:IntToBoolConverter x:Key="IntToBoolConverter"/>
 		<converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter"/>
 		<converters:DateToStringConverter x:Key="DateToStringConverter"/>
+		<converters:StringToBitmapConverter x:Key="StringToBitmapConverter"/>
 	</UserControl.Resources>
 
 	<DockPanel LastChildFill="True">
@@ -123,6 +124,7 @@
 								CanUserSortColumns="False"
 								GridLinesVisibility="All"
 								ItemsSource="{CompiledBinding MemberItems}"
+								SelectedItem="{CompiledBinding SelectedMember}"
 								SelectionMode="Single"
 								Background="{DynamicResource CardBackgroundColor}"
 								RowBackground="{DynamicResource CardBackgroundColor}"
@@ -335,15 +337,15 @@
 							</DataGrid>
 						</StackPanel>
 					</shadui:Card>
-					<shadui:Card Grid.Column="1" Margin="7,30,0,29" VerticalAlignment="Top" Height="820">
+					<shadui:Card Grid.Column="1" Margin="7,30,0,29" VerticalAlignment="Top" Height="800">
 						<Grid RowDefinitions="Auto Auto Auto Auto">
 							<StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
 								<shadui:Avatar
-									Source="/Assets/MainWindowView/user-admin.png"
+									Source="{CompiledBinding SelectedMember.AvatarSource, Converter={StaticResource StringToBitmapConverter}, FallbackValue='/Assets/MainWindowView/user-admin.png'}"
 									Width="100"
 									Height="100" />
 								<TextBlock
-									Text="Mardie Dela Cruz"
+									Text="{CompiledBinding SelectedMember.Name, FallbackValue='Select a Member'}"
 									Classes="h4"
 									HorizontalAlignment="Center" />
 								<TextBlock
@@ -461,7 +463,7 @@
 														FontSize="16"
 														FontWeight="SemiBold" />
 													<TextBlock
-														Text="Regular	"
+														Text="{CompiledBinding SelectedMember.MembershipType, FallbackValue='Regular'}"
 														Classes="Muted"
 														FontSize="16"
 														FontWeight="Regular" />
@@ -474,7 +476,7 @@
 														FontSize="16"
 														FontWeight="SemiBold" />
 													<TextBlock
-														Text="July 13, 2025"
+														Text="{CompiledBinding SelectedMember.Validity, Converter={StaticResource DateToStringConverter}, FallbackValue='July 13, 2025'}"
 														Classes="Muted"
 														FontSize="16"
 														FontWeight="Regular" />
@@ -482,7 +484,7 @@
 												<StackPanel HorizontalAlignment="Right" Grid.Column="1">
 													<StackPanel Orientation="Vertical" Spacing="5">
 														<Border
-															IsVisible="{CompiledBinding }"
+															IsVisible="{CompiledBinding IsActiveVisible}"
 															Background="{DynamicResource SuccessColor10}"
 															Padding="10,5,10,5"
 															BorderThickness="1"
@@ -496,7 +498,7 @@
 																Foreground="{DynamicResource SuccessColor}" />
 														</Border>
 														<Border
-															IsVisible="{CompiledBinding }"
+															IsVisible="{CompiledBinding IsInactiveVisible}"
 															Background="{DynamicResource PrimaryColor10}"
 															Padding="10,5,10,5"
 															BorderThickness="1"
@@ -510,7 +512,7 @@
 																Foreground="{DynamicResource PrimaryColor}" />
 														</Border>
 														<Border
-															IsVisible="{CompiledBinding }"
+															IsVisible="{CompiledBinding IsTerminatedVisible}"
 															Background="{DynamicResource DestructiveColor10}"
 															Padding="10,5,10,5"
 															BorderThickness="1"

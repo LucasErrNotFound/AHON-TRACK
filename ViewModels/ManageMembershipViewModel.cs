@@ -72,6 +72,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	[ObservableProperty]
 	private bool _isInitialized;
 
+	[ObservableProperty]
+	private ManageMembersItem? _selectedMember;
+
 	private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 	
 	private readonly DialogManager _dialogManager;
@@ -79,6 +82,10 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	private readonly PageManager _pageManager;
 	private readonly MemberDialogCardViewModel  _memberDialogCardViewModel;
 	private readonly AddNewMemberViewModel _addNewMemberViewModel;
+
+	public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
+	public bool IsInactiveVisible => SelectedMember?.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase) ?? false;
+	public bool IsTerminatedVisible => SelectedMember?.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase) ?? false;
 
 	public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
 	{
@@ -101,6 +108,13 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		_addNewMemberViewModel = new AddNewMemberViewModel();
 	}
 
+	partial void OnSelectedMemberChanged(ManageMembersItem? value)
+	{
+		OnPropertyChanged(nameof(IsActiveVisible));
+		OnPropertyChanged(nameof(IsInactiveVisible));
+		OnPropertyChanged(nameof(IsTerminatedVisible));
+	}
+
 	[AvaloniaHotReload]
 	public void Initialize()
 	{
@@ -114,7 +128,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	{
 		var sampleMembers = GetSampleMembersData();
 
-		// Store original data for filtering/sorting operations
 		OriginalMemberData = sampleMembers;
 		CurrentFilteredData = [.. sampleMembers]; // Initialize current state
 
@@ -126,6 +139,11 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		}
 
 		TotalCount = MemberItems.Count;
+		
+		if (MemberItems.Count > 0)
+		{
+			SelectedMember = MemberItems[0];
+		}
 	}
 
 	private List<ManageMembersItem> GetSampleMembersData()
@@ -786,7 +804,6 @@ public partial class ManageMembersItem : ObservableObject
         _ => Status
     };
 
-    // Notify when status changes to update colors
     partial void OnStatusChanged(string value)
     {
         OnPropertyChanged(nameof(StatusForeground));
