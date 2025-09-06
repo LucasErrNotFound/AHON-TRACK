@@ -5,9 +5,11 @@ using HotAvalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Avalonia.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
 
@@ -16,6 +18,36 @@ namespace AHON_TRACK.ViewModels;
 [Page("checkInOut")]
 public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged, INavigable
 {
+	[ObservableProperty]
+	private List<WalkInPerson> _originalWalkInData = [];
+	
+	[ObservableProperty]
+	private List<MemberPerson> _originalMemberData = [];
+	
+	[ObservableProperty]
+	private List<WalkInPerson> _currentWalkInFilteredData = [];
+	
+	[ObservableProperty]
+	private List<MemberPerson> _currentMemberFilteredData = [];
+	
+	[ObservableProperty]
+	private ObservableCollection<WalkInPerson> _walkInPersons = [];
+	
+	[ObservableProperty]
+	private ObservableCollection<MemberPerson> _memberPersons = [];
+	
+	[ObservableProperty]
+	private bool _selectAll;
+
+	[ObservableProperty]
+	private int _selectedCount;
+
+	[ObservableProperty]
+	private int _totalCount;
+	
+	[ObservableProperty]
+	private bool _isInitialized;
+	
 	private readonly PageManager _pageManager;
 	private readonly DialogManager _dialogManager;
 	private readonly ToastManager _toastManager;
@@ -31,7 +63,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		_logWalkInPurchaseViewModel = logWalkInPurchaseViewModel;
 
 		LoadSampleData();
-
+		UpdateWalkInCounts();
+		UpdateMemberCounts();
 	}
 
 	public CheckInOutViewModel()
@@ -43,34 +76,51 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		_logWalkInPurchaseViewModel = new LogWalkInPurchaseViewModel();
 
 		LoadSampleData();
+		UpdateWalkInCounts();
+		UpdateMemberCounts();
 	}
-
-	[ObservableProperty]
-	private DataGridCollectionView _walkInGroupedPeople;
-
-	[ObservableProperty]
-	private DataGridCollectionView _memberGroupedPeople;
 
 	[AvaloniaHotReload]
 	public void Initialize()
 	{
+		if (IsInitialized) return;
+		LoadSampleData();
+		UpdateWalkInCounts();
+		UpdateMemberCounts();
+		IsInitialized = true;
 	}
 
 	private void LoadSampleData()
 	{
-		var walkInPeople = CreateSampleWalkInPeople();
-		var memberPeople = CreateSampleMemberPeople();
+		var walkInPeople = GetSampleWalkInPeople();
+		var memberPeople = GetSampleMemberPeople();
+		
+		OriginalWalkInData = walkInPeople;
+		OriginalMemberData = memberPeople;
 
-		var walkInDateHeader = new DataGridCollectionView(walkInPeople);
-		walkInDateHeader.GroupDescriptions.Add(new DataGridPathGroupDescription(nameof(WalkInPerson.DateFormatted)));
-		WalkInGroupedPeople = walkInDateHeader;
+		CurrentWalkInFilteredData = [..walkInPeople];
+		CurrentMemberFilteredData = [..memberPeople];
+		
+		WalkInPersons.Clear();
+		MemberPersons.Clear();
 
-		var memberDateHeader = new DataGridCollectionView(memberPeople);
-		memberDateHeader.GroupDescriptions.Add(new DataGridPathGroupDescription(nameof(MemberPerson.DateFormatted)));
-		MemberGroupedPeople = memberDateHeader;
+		foreach (var walkIn in walkInPeople)
+		{
+			walkIn.PropertyChanged += OnWalkInPropertyChanged;
+			WalkInPersons.Add(walkIn);
+		}
+		
+		foreach (var member in memberPeople)
+		{
+			member.PropertyChanged += OnMemberPropertyChanged;
+			MemberPersons.Add(member);
+		}
+		
+		TotalCount = WalkInPersons.Count;
+		TotalCount = MemberPersons.Count;
 	}
 
-	private List<WalkInPerson> CreateSampleWalkInPeople()
+	private List<WalkInPerson> GetSampleWalkInPeople()
 	{
 		return
 		[
@@ -176,7 +226,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		];
 	}
 
-	private List<MemberPerson> CreateSampleMemberPeople()
+	private List<MemberPerson> GetSampleMemberPeople()
 	{
 		return
 		[
@@ -261,6 +311,68 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			.DismissOnClick()
 			.ShowSuccess();
 	}
+	
+	[RelayCommand]
+	private void ShowWalkInItemDeletionDialog(WalkInPerson? walkInPerson)
+	{
+		if (walkInPerson is null) return;
+		
+		_dialogManager.CreateDialog("" + "Are you absolutely sure?", 
+				$"This action cannot be undone. This will permanently delete {walkInPerson.FirstName} {walkInPerson.LastName} and remove the data from your database.")
+			.WithPrimaryButton("Continue", () => OnSubmitDeleteSingleDataItem(walkInPerson), DialogButtonStyle.Destructive)
+			.WithCancelButton("Cancel")
+			.WithMaxWidth(512)
+			.Dismissible()
+			.Show();
+	}
+	
+	[RelayCommand]
+	private void ShowMemberItemDeletionDialog(MemberPerson? memberPerson)
+	{
+		if (memberPerson is null) return;
+		
+		_dialogManager.CreateDialog("" + "Are you absolutely sure?",
+				$"This action cannot be undone. This will permanently delete {memberPerson.FirstName} {memberPerson.LastName} and remove the data from your database.")
+			.WithPrimaryButton("Continue", () => OnSubmitDeleteSingleDataItem(memberPerson), DialogButtonStyle.Destructive)
+			.WithCancelButton("Cancel")
+			.WithMaxWidth(512)
+			.Dismissible()
+			.Show();
+	}
+	
+	private async Task OnSubmitDeleteSingleDataItem(WalkInPerson walkInPerson)
+	{
+		await DeleteItemFromDatabase(walkInPerson);
+		WalkInPersons.Remove(walkInPerson);
+		
+		_toastManager.CreateToast($"Delete {walkInPerson.FirstName} {walkInPerson.LastName} data")
+			.WithContent($"{walkInPerson.FirstName} {walkInPerson.LastName}'s data deleted successfully!")
+			.DismissOnClick()
+			.WithDelay(6)
+			.ShowSuccess();
+	}
+	
+	private async Task OnSubmitDeleteSingleDataItem(MemberPerson memberPerson)
+	{
+		await DeleteItemFromDatabase(memberPerson);
+		MemberPersons.Remove(memberPerson);
+
+		_toastManager.CreateToast($"Delete {memberPerson.FirstName} {memberPerson.LastName} data")
+			.WithContent($"{memberPerson.FirstName} {memberPerson.LastName}'s data deleted successfully!")
+			.DismissOnClick()
+			.WithDelay(6)
+			.ShowSuccess();
+	}
+	
+	private async Task DeleteItemFromDatabase(WalkInPerson walkInPerson)
+	{
+		await Task.Delay(100);
+	}
+	
+	private async Task DeleteItemFromDatabase(MemberPerson memberPerson)
+	{
+		await Task.Delay(100);
+	}
 
 	[RelayCommand]
 	private void OpenViewMemberProfile()
@@ -283,10 +395,45 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 	{
         _pageManager.Navigate<LogWalkInPurchaseViewModel>();
 	}
+	
+	private void OnWalkInPropertyChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		if (e.PropertyName == nameof(WalkInPerson.IsSelected))
+		{
+			UpdateWalkInCounts();
+		}
+	}
+	
+	private void OnMemberPropertyChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		if (e.PropertyName == nameof(MemberPerson.IsSelected))
+		{
+			UpdateMemberCounts();
+		}
+	}
+	
+	private void UpdateWalkInCounts()
+	{
+		SelectedCount = WalkInPersons.Count(x => x.IsSelected);
+		TotalCount = WalkInPersons.Count;
+
+		SelectAll = WalkInPersons.Count > 0 && WalkInPersons.All(x => x.IsSelected);
+	}
+	
+	private void UpdateMemberCounts()
+	{
+		SelectedCount = MemberPersons.Count(x => x.IsSelected);
+		TotalCount = MemberPersons.Count;
+
+		SelectAll = MemberPersons.Count > 0 && MemberPersons.All(x => x.IsSelected);
+	}
 }
 
-public class WalkInPerson : ObservableObject
+public partial class WalkInPerson : ObservableObject
 {
+	[ObservableProperty]
+	private bool _isSelected;
+	
 	public int ID { get; set; }
 	public string FirstName { get; set; } = string.Empty;
 	public string LastName { get; set; } = string.Empty;
@@ -305,8 +452,11 @@ public class WalkInPerson : ObservableObject
 	public string DateFormatted => CheckInTime?.ToString("MMMM dd, yyyy") ?? string.Empty;
 }
 
-public class MemberPerson : ViewModelBase
+public partial class MemberPerson : ViewModelBase
 {
+	[ObservableProperty]
+	private bool _isSelected;
+	
 	public int ID { get; set; }
 	public string? MemberPicture { get; set; } = string.Empty;
 	public string FirstName { get; set; } = string.Empty;

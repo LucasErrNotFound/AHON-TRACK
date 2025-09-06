@@ -69,7 +69,7 @@
                                     Margin="0,-2"
                                     shadui:ControlAssist.Label="Date Today"
                                     SelectedDate="{x:Static system:DateTime.Today}"
-                                    IsEnabled="False" />
+                                    IsEnabled="True" />
                                 <Button
                                     Classes="Primary"
                                     Padding="30,0,30,0"
@@ -90,6 +90,7 @@
                             <Grid RowDefinitions="Auto *">
                                 <DataGrid
                                     MaxHeight="660"
+                                    MinHeight="500"
                                     Grid.Row="1"
                                     AutoGenerateColumns="False"
                                     CanUserReorderColumns="False"
@@ -98,7 +99,7 @@
                                     GridLinesVisibility="All"
                                     HeadersVisibility="Column"
                                     IsReadOnly="True"
-                                    ItemsSource="{CompiledBinding WalkInGroupedPeople}"
+                                    ItemsSource="{CompiledBinding WalkInPersons}"
                                     SelectionMode="Single">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn
@@ -161,7 +162,7 @@
                                                             Classes="Icon"
                                                             ToolTip.Tip="Delete from table"
                                                             VerticalAlignment="Center"
-                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext) , FallbackValue={x:Null}}"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).ShowWalkInItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                             CommandParameter="{CompiledBinding}">
                                                             <shadui:ButtonAssist.Icon>
                                                                 <Svg
@@ -234,7 +235,7 @@
                                     Margin="0,-2"
                                     shadui:ControlAssist.Label="Date Today"
                                     SelectedDate="{x:Static system:DateTime.Today}"
-                                    IsEnabled="False" />
+                                    IsEnabled="True" />
                                 <Button
                                     Classes="Primary"
                                     Padding="25,0,25,0"
@@ -255,13 +256,15 @@
                             <Grid RowDefinitions="Auto *">
                                 <DataGrid
                                     Grid.Row="1"
+                                    MaxHeight="660"
+                                    MinHeight="500"
                                     CanUserReorderColumns="False"
                                     CanUserResizeColumns="False"
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
                                     HeadersVisibility="Column"
                                     IsReadOnly="True"
-                                    ItemsSource="{CompiledBinding MemberGroupedPeople}"
+                                    ItemsSource="{CompiledBinding MemberPersons}"
                                     SelectionMode="Single">
                                     <DataGrid.Resources>
                                         <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
@@ -369,7 +372,7 @@
                                                             Classes="Icon"
                                                             ToolTip.Tip="Delete from table"
                                                             VerticalAlignment="Center"
-                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext), FallbackValue={x:Null}}"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).ShowMemberItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                             CommandParameter="{CompiledBinding}">
                                                             <shadui:ButtonAssist.Icon>
                                                                 <Svg
