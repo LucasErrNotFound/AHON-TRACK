@@ -192,9 +192,11 @@
                                                                         Height="18" />
                                                                 </MenuItem.Header>
                                                                 <shadui:MenuItemAssist.Label>
-                                                                    <TextBlock Text="Actions" FontSize="15"
-                                                                               FontWeight="Regular"
-                                                                               Foreground="{DynamicResource MutedColor}" />
+                                                                    <TextBlock 
+                                                                        Text="Actions" 
+                                                                        FontSize="15"
+                                                                        FontWeight="Regular"
+                                                                        Foreground="{DynamicResource MutedColor}" />
                                                                 </shadui:MenuItemAssist.Label>
                                                                 <MenuItem 
                                                                     Header="Stamp Check-out" 
