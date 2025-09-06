@@ -160,7 +160,9 @@
                                                             Height="20"
                                                             Classes="Icon"
                                                             ToolTip.Tip="Delete from table"
-                                                            VerticalAlignment="Center">
+                                                            VerticalAlignment="Center"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext) , FallbackValue={x:Null}}"
+                                                            CommandParameter="{CompiledBinding}">
                                                             <shadui:ButtonAssist.Icon>
                                                                 <Svg
                                                                     Path="avares://AHON_TRACK/Assets/CheckInOutView/delete-icon.svg"
@@ -366,7 +368,9 @@
                                                             Height="20"
                                                             Classes="Icon"
                                                             ToolTip.Tip="Delete from table"
-                                                            VerticalAlignment="Center">
+                                                            VerticalAlignment="Center"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext), FallbackValue={x:Null}}"
+                                                            CommandParameter="{CompiledBinding}">
                                                             <shadui:ButtonAssist.Icon>
                                                                 <Svg
                                                                     Path="avares://AHON_TRACK/Assets/CheckInOutView/delete-icon.svg"

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
 
 namespace AHON_TRACK.ViewModels;
