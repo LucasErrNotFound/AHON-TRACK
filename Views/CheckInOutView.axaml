@@ -68,7 +68,7 @@
                                     VerticalAlignment="Top"
                                     Margin="0,-2"
                                     shadui:ControlAssist.Label="Date Today"
-                                    SelectedDate="{x:Static system:DateTime.Today}"
+                                    SelectedDate="{CompiledBinding SelectedDate}"
                                     IsEnabled="True" />
                                 <Button
                                     Classes="Primary"
@@ -234,7 +234,7 @@
                                     VerticalAlignment="Top"
                                     Margin="0,-2"
                                     shadui:ControlAssist.Label="Date Today"
-                                    SelectedDate="{x:Static system:DateTime.Today}"
+                                    SelectedDate="{CompiledBinding SelectedDate}"
                                     IsEnabled="True" />
                                 <Button
                                     Classes="Primary"

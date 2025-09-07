@@ -41,6 +41,9 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
 	[ObservableProperty]
 	private int _selectedCount;
+	
+	[ObservableProperty]
+	private DateTime _selectedDate = DateTime.Today;
 
 	[ObservableProperty]
 	private int _totalCount;
@@ -97,7 +100,10 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		
 		OriginalWalkInData = walkInPeople;
 		OriginalMemberData = memberPeople;
+		
+		FilterDataByDate(SelectedDate);
 
+		/*
 		CurrentWalkInFilteredData = [..walkInPeople];
 		CurrentMemberFilteredData = [..memberPeople];
 		
@@ -118,153 +124,174 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		
 		TotalCount = WalkInPersons.Count;
 		TotalCount = MemberPersons.Count;
+		*/
 	}
 
 	private List<WalkInPerson> GetSampleWalkInPeople()
 	{
+		var today = DateTime.Today;
 		return
 		[
+			// Today's data
 			new WalkInPerson
 			{
 				ID = 1018, FirstName = "Rome", LastName = "Calubayan", Age = 21, ContactNumber = "09283374574",
-				PackageType = "Gym", CheckInTime = DateTime.Now.AddDays(-1), CheckOutTime = null
+				PackageType = "Gym", CheckInTime = today.AddHours(8), CheckOutTime = null
 			},
 			new WalkInPerson
 			{
 				ID = 1017, FirstName = "Dave", LastName = "Dapitillo", Age = 22, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = DateTime.Now.AddDays(-1), CheckOutTime = null
+				PackageType = "Boxing", CheckInTime = today.AddHours(9), CheckOutTime = null
 			},
 			new WalkInPerson
 			{
 				ID = 1016, FirstName = "Sianrey", LastName = "Flora", Age = 20, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = DateTime.Now.AddDays(-1), CheckOutTime = null 
+				PackageType = "Boxing", CheckInTime = today.AddHours(10), CheckOutTime = null 
 			},
+        
+			// Yesterday's data
 			new WalkInPerson
 			{
 				ID = 1015, FirstName = "JC", LastName = "Casidor", Age = 30, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = DateTime.Now.AddDays(-1), CheckOutTime = null 
+				PackageType = "Boxing", CheckInTime = today.AddDays(-1).AddHours(8), CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1014, FirstName = "Mark", LastName = "Dela Cruz", Age = 21, ContactNumber = "09123456789",
-				PackageType = "Muay Thai", CheckInTime = DateTime.Now.AddDays(-2),
+				PackageType = "Muay Thai", CheckInTime = today.AddDays(-1).AddHours(9),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1013, FirstName = "Mardie", LastName = "Dela Cruz Jr.", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = DateTime.Now.AddDays(-2),
+				PackageType = "CrossFit", CheckInTime = today.AddDays(-1).AddHours(10),
 				CheckOutTime = null 
 			},
+        
+			// 2 days ago
 			new WalkInPerson
 			{
 				ID = 1012, FirstName = "Marc", LastName = "Torres", Age = 26, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = DateTime.Now.AddDays(-2), CheckOutTime = null 
+				PackageType = "Boxing", CheckInTime = today.AddDays(-2).AddHours(8), CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1011, FirstName = "Maverick", LastName = "Lim", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = DateTime.Now.AddDays(-2),
+				PackageType = "CrossFit", CheckInTime = today.AddDays(-2).AddHours(9),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1010, FirstName = "Adriel", LastName = "Del Rosario", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = DateTime.Now.AddDays(-3),
+				PackageType = "CrossFit", CheckInTime = today.AddDays(-2).AddHours(10),
 				CheckOutTime = null 
 			},
+        
+			// 3 days ago
 			new WalkInPerson
 			{
 				ID = 1009, FirstName = "JL", LastName = "Taberdo", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = DateTime.Now.AddDays(-3),
+				PackageType = "CrossFit", CheckInTime = today.AddDays(-3).AddHours(8),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1008, FirstName = "Jav", LastName = "Agustin", Age = 21, ContactNumber = "09123456789",
-				PackageType = "Muay Thai", CheckInTime = DateTime.Now.AddDays(-3),
+				PackageType = "Muay Thai", CheckInTime = today.AddDays(-3).AddHours(9),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1007, FirstName = "Daniel", LastName = "Empinado", Age = 20, ContactNumber = "09123456789",
-				PackageType = "Muay Thai", CheckInTime = DateTime.Now.AddDays(-3),
+				PackageType = "Muay Thai", CheckInTime = today.AddDays(-3).AddHours(10),
 				CheckOutTime = null 
 			},
+        
+			// 4 days ago
 			new WalkInPerson
 			{
 				ID = 1006, FirstName = "Marion", LastName = "Dela Roca", Age = 20, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = DateTime.Now.AddDays(-3), CheckOutTime = null 
+				PackageType = "Boxing", CheckInTime = today.AddDays(-4).AddHours(8), CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1005, FirstName = "Sianrey", LastName = "Flora", Age = 20, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = DateTime.Now.AddDays(-4), CheckOutTime = null 
+				PackageType = "Boxing", CheckInTime = today.AddDays(-4).AddHours(9), CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1004, FirstName = "JC", LastName = "Casidor", Age = 30, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = DateTime.Now.AddDays(-4), CheckOutTime = null 
+				PackageType = "Boxing", CheckInTime = today.AddDays(-4).AddHours(10), CheckOutTime = null 
 			},
+        
+			// 5 days ago
 			new WalkInPerson
 			{
 				ID = 1003, FirstName = "Mark", LastName = "Dela Cruz", Age = 21, ContactNumber = "09123456789",
-				PackageType = "Muay Thai", CheckInTime = DateTime.Now.AddDays(-4),
+				PackageType = "Muay Thai", CheckInTime = today.AddDays(-5).AddHours(8),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1002, FirstName = "Mardie", LastName = "Dela Cruz Jr.", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = DateTime.Now.AddDays(-4),
+				PackageType = "CrossFit", CheckInTime = today.AddDays(-5).AddHours(9),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1001, FirstName = "Marc", LastName = "Torres", Age = 26, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = DateTime.Now.AddDays(-4), CheckOutTime = null 
+				PackageType = "Boxing", CheckInTime = today.AddDays(-5).AddHours(10), CheckOutTime = null 
 			}
 		];
 	}
 
 	private List<MemberPerson> GetSampleMemberPeople()
 	{
+		var today = DateTime.Today;
 		return
 		[
+			// Today's data
 			new MemberPerson
 			{
 				ID = 2006, MemberPicture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
 				FirstName = "Mardie", LastName = "Dela Cruz", ContactNumber = "09123456789",
-				MembershipType = "Gym Member", Status = "Active", CheckInTime = DateTime.Now.AddHours(-1),
+				MembershipType = "Gym Member", Status = "Active", CheckInTime = today.AddHours(8),
 				CheckOutTime = null 
 			},
 			new MemberPerson
 			{
 				ID = 2005, MemberPicture = null, FirstName = "Cirilo", LastName = "Pagayunan Jr.",
 				ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Active",
-				CheckInTime = DateTime.Now.AddHours(-1), CheckOutTime = null 
+				CheckInTime = today.AddHours(9), CheckOutTime = null 
 			},
+        
+			// Yesterday's data
 			new MemberPerson
 			{
 				ID = 2004, MemberPicture = null, FirstName = "Raymart", LastName = "Soneja",
 				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive",
-				CheckInTime = DateTime.Now.AddDays(-2), CheckOutTime = null 
+				CheckInTime = today.AddDays(-1).AddHours(8), CheckOutTime = null 
 			},
+        
+			// 2 days ago
 			new MemberPerson
 			{
 				ID = 2003, MemberPicture = null, FirstName = "Xyrus", LastName = "Jawili",
 				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive",
-				CheckInTime = DateTime.Now.AddDays(-2), CheckOutTime = null 
+				CheckInTime = today.AddDays(-2).AddHours(8), CheckOutTime = null 
 			},
+        
+			// 3 days ago
 			new MemberPerson
 			{
 				ID = 2002, MemberPicture = null, FirstName = "Nash", LastName = "Floralde",
 				ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Terminated",
-				CheckInTime = DateTime.Now.AddDays(-3), CheckOutTime = null 
+				CheckInTime = today.AddDays(-3).AddHours(8), CheckOutTime = null 
 			},
 			new MemberPerson
 			{
 				ID = 2001, MemberPicture = null, FirstName = "Ry", LastName = "Estrada", ContactNumber = "09123456789",
-				MembershipType = "Free Trial", Status = "Terminated", CheckInTime = DateTime.Now.AddDays(-3),
+				MembershipType = "Free Trial", Status = "Terminated", CheckInTime = today.AddDays(-3).AddHours(9),
 				CheckOutTime = null 
 			}
 		];
@@ -410,6 +437,45 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		{
 			UpdateMemberCounts();
 		}
+	}
+	
+	partial void OnSelectedDateChanged(DateTime value)
+	{
+		FilterDataByDate(value);
+	}
+	
+	private void FilterDataByDate(DateTime selectedDate)
+	{
+		var filteredWalkInData = OriginalWalkInData
+			.Where(w => w.CheckInTime?.Date == selectedDate.Date)
+			.ToList();
+    
+		CurrentWalkInFilteredData = filteredWalkInData;
+    
+		WalkInPersons.Clear();
+		foreach (var walkIn in filteredWalkInData)
+		{
+			walkIn.PropertyChanged -= OnWalkInPropertyChanged;
+			walkIn.PropertyChanged += OnWalkInPropertyChanged;
+			WalkInPersons.Add(walkIn);
+		}
+    
+		var filteredMemberData = OriginalMemberData
+			.Where(m => m.CheckInTime?.Date == selectedDate.Date)
+			.ToList();
+    
+		CurrentMemberFilteredData = filteredMemberData;
+    
+		MemberPersons.Clear();
+		foreach (var member in filteredMemberData)
+		{
+			member.PropertyChanged -= OnMemberPropertyChanged;
+			member.PropertyChanged += OnMemberPropertyChanged;
+			MemberPersons.Add(member);
+		}
+    
+		UpdateWalkInCounts();
+		UpdateMemberCounts();
 	}
 	
 	private void UpdateWalkInCounts()
