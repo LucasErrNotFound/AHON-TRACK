@@ -48,13 +48,13 @@
 				Margin="90,30"/>
 		</StackPanel>
 		<ScrollViewer HorizontalScrollBarVisibility="Auto">
-			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="50,10,48,24" Spacing="16">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="50,10,40,0" Spacing="16">
 				<!--
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
 					-->
 				<Grid ColumnDefinitions="2* 3*">
-					<shadui:Card Margin="0,30" HorizontalAlignment="Left" VerticalAlignment="Top" Height="800">
+					<shadui:Card Margin="0,30" HorizontalAlignment="Left" VerticalAlignment="Top" Height="835">
 						<StackPanel Spacing="25">
 							<StackPanel Orientation="Horizontal">
 								<TextBox
@@ -118,7 +118,7 @@
 								</Button>
 							</StackPanel>
 							<DataGrid
-								Height="670"
+								Height="720"
 								x:Name="ManageMemberDataGrid"
 								CanUserReorderColumns="False"
 								CanUserSortColumns="False"
@@ -130,6 +130,12 @@
 								RowBackground="{DynamicResource CardBackgroundColor}"
 								HeadersVisibility="Column"
 								Margin="0">
+								
+								<DataGrid.Styles>
+									<Style Selector="TextBlock">
+										<Setter Property="TextWrapping" Value="WrapWithOverflow" />
+									</Style>
+								</DataGrid.Styles>
 
 								<DataGrid.Resources>
 									<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
@@ -199,12 +205,12 @@
 
 									<!--Membership Type Header Column-->
 									<DataGridTextColumn
-										Binding="{CompiledBinding MembershipType}"
+										Binding="{CompiledBinding AvailedPackages}"
 										CanUserSort="False"
-										Header="Membership Type"
+										Header="Availed Packages"
 										IsReadOnly="True"
 										FontSize="14"
-										IsVisible="{CompiledBinding ShowMembershipTypeColumn}"
+										IsVisible="{CompiledBinding ShowAvailedPackagesColumn}"
 										Width="160" />
 
 									<!--Status Header Column with Custom Template-->
@@ -337,7 +343,7 @@
 							</DataGrid>
 						</StackPanel>
 					</shadui:Card>
-					<shadui:Card Grid.Column="1" Margin="7,30,0,29" VerticalAlignment="Top" MaxHeight="800">
+					<shadui:Card Grid.Column="1" Margin="7,25,0,0" VerticalAlignment="Top" MaxHeight="837">
 						<Grid RowDefinitions="Auto Auto Auto Auto">
 							<StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
 								<shadui:Avatar
@@ -464,7 +470,9 @@
 														FontSize="16"
 														FontWeight="SemiBold" />
 													<TextBlock
-														Text="{CompiledBinding SelectedMember.MembershipType, FallbackValue='Regular'}"
+														Text="{CompiledBinding SelectedMember.AvailedPackages, FallbackValue='Regular'}"
+														Width="100"
+														TextWrapping="Wrap"
 														Classes="Muted"
 														FontSize="16"
 														FontWeight="Regular" />

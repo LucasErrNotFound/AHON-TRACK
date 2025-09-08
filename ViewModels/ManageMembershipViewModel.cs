@@ -55,7 +55,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	private bool _showContactNumberColumn = true;
 	
 	[ObservableProperty]
-	private bool _showMembershipTypeColumn = true;
+	private bool _showAvailedPackagesColumn = true;
 
 	[ObservableProperty]
 	private bool _showStatusColumn = true;
@@ -158,7 +158,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				AvatarSource = DefaultAvatarSource,
 				Name = "Jedd Calubayan",
 				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
+				AvailedPackages = "Boxing",
 				Status = "Active",
 				Validity = new DateTime(2025, 6, 16)
 			},
@@ -169,7 +169,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				AvatarSource = DefaultAvatarSource,
 				Name = "Marc Torres",
 				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
+				AvailedPackages = "None",
 				Status = "Inactive",
 				Validity = new DateTime(2025, 7, 16)
 			},
@@ -180,7 +180,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				AvatarSource = DefaultAvatarSource,
 				Name = "Mardie Dela Cruz",
 				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
+				AvailedPackages = "None",
 				Status = "Inactive",
 				Validity = new DateTime(2025, 7, 18)
 			},
@@ -191,7 +191,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				AvatarSource = DefaultAvatarSource,
 				Name = "Mark Dela Cruz",
 				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
+				AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
 				Status = "Active",
 				Validity = new DateTime(2025, 7, 18)
 			},
@@ -202,7 +202,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				AvatarSource = DefaultAvatarSource,
 				Name = "JL Taberdo",
 				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
+				AvailedPackages = "Gym",
 				Status = "Terminated",
 				Validity = new DateTime(2025, 4, 18)
 			},
@@ -391,7 +391,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				emp.ID.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
 				emp.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
 				emp.ContactNumber.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-				emp.MembershipType.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+				emp.AvailedPackages.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
 				emp.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
 				emp.Validity.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)
 			).ToList();
@@ -774,7 +774,7 @@ public partial class ManageMembersItem : ObservableObject
     private string _contactNumber = string.Empty;
     
     [ObservableProperty]
-    private string _membershipType = string.Empty;
+    private string _availedPackages = string.Empty;
 
     [ObservableProperty]
     private string _status = string.Empty;
