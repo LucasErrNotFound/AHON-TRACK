@@ -303,10 +303,23 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		_logGymMemberDialogCardViewModel.Initialize();
 		_dialogManager.CreateDialog(_logGymMemberDialogCardViewModel)
 			.WithSuccessCallback(_ =>
-				_toastManager.CreateToast("Logged a gym member")
-					.WithContent($"Welcome, gym member!")
-					.DismissOnClick()
-					.ShowSuccess())
+			{
+				var selectedMember	= _logGymMemberDialogCardViewModel.LastSelectedMember;
+				if (selectedMember is not null)
+				{
+					_toastManager.CreateToast($"Logged {selectedMember.FirstName} {selectedMember.LastName}")
+						.WithContent($"Welcome, gym member!")
+						.DismissOnClick()
+						.ShowSuccess();
+				}
+				else
+				{
+					_toastManager.CreateToast("Failed to log a gym member")
+						.WithContent($"Did not log a gym member, please try again.")
+						.DismissOnClick()
+						.ShowError();
+				}
+			})
 			.WithCancelCallback(() =>
 				_toastManager.CreateToast("Logging a gym member cancelled")
 					.WithContent("Log a gym member to continue")
