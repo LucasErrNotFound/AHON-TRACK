@@ -102,14 +102,14 @@
 										Classes="Primary"
 										Content="Submit"
 										Command="{Binding SubmitCommand}"
-										IsEnabled="{Binding SelectedMember, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+										IsEnabled="{Binding SelectedMember, Mode=TwoWay, Converter={x:Static ObjectConverters.IsNotNull}}"/>
 								</StackPanel>
 							</Grid>
 							<DataGrid
 								MaxHeight="350"
 								Margin="0,20"
 								ItemsSource="{Binding FilteredMembers}"
-								SelectedItem="{Binding SelectedMember}"
+								SelectedItem="{Binding SelectedMember, Mode=OneWayToSource}"
 								AutoGenerateColumns="False"
 								CanUserReorderColumns="False"
 								CanUserResizeColumns="False"
