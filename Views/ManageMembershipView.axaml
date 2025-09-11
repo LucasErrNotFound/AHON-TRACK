@@ -561,6 +561,7 @@
 										Classes="Secondary"
 										HorizontalAlignment="Center"
 										Padding="20,0,20,0"
+										IsEnabled="{CompiledBinding IsUpgradeButtonEnabled}"
 										Command="{CompiledBinding OpenUpgradeMemberViewCommand}">
 										<StackPanel Orientation="Horizontal">
 											<Svg

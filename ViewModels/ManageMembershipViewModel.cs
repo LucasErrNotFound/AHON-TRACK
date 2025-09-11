@@ -88,6 +88,10 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	public bool IsTerminatedVisible => SelectedMember?.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase) ?? false;
 	public bool HasSelectedMember => SelectedMember is not null;
 
+	public bool IsUpgradeButtonEnabled =>
+		!new[] { "Inactive", "Terminated" }
+			.Any(status => SelectedMember is not null && SelectedMember.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+
 	public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
 	{
 		_dialogManager = dialogManager;
@@ -115,6 +119,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		OnPropertyChanged(nameof(IsInactiveVisible));
 		OnPropertyChanged(nameof(IsTerminatedVisible));
 		OnPropertyChanged(nameof(HasSelectedMember));
+		OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
 	}
 
 	[AvaloniaHotReload]
