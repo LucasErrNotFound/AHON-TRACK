@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,9 +13,19 @@ using ShadUI;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-[Page("add-member")]
-public partial class AddNewMemberViewModel : ViewModelBase, INavigable
+public enum MemberViewContext
 {
+    AddNew,
+    Upgrade,
+    Renew
+}
+
+[Page("add-member")]
+public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigableWithParameters 
+{
+    [ObservableProperty] 
+    private MemberViewContext _viewContext = MemberViewContext.AddNew; 
+    
     [ObservableProperty] 
     private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
@@ -57,6 +70,29 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+
+    public string ViewTitle => ViewContext switch
+    {
+        MemberViewContext.AddNew => "Add New Member",
+        MemberViewContext.Upgrade => "Upgrade Existing Member",
+        MemberViewContext.Renew => "Renew Member",
+        _ => "Add New Member"
+    };
+
+    public string ViewDescription => ViewContext switch
+    {
+        MemberViewContext.AddNew => "Add a new gym member by filling out the forms",
+        MemberViewContext.Upgrade => "Upgrade an existing member's package and benefits",
+        MemberViewContext.Renew => "Renew an existing member's subscription",
+        _ => "Add a new gym member by filling out the forms"
+    };
+
+    public void SetViewContext(MemberViewContext context)
+    {
+        ViewContext = context;
+        OnPropertyChanged(nameof(ViewTitle));
+        OnPropertyChanged(nameof(ViewDescription));
+    }
     
     [Required(ErrorMessage = "First name is required")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
@@ -425,6 +461,77 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
     [AvaloniaHotReload]
     public void Initialize()
     {
+    }
+    
+    public void SetNavigationParameters(Dictionary<string, object> parameters)
+    {
+        if (parameters.TryGetValue("Context", out var context))
+        {
+            SetViewContext((MemberViewContext)context);
+        }
+
+        if (!parameters.TryGetValue("SelectedMember", out var member)) return;
+        var selectedMember = (ManageMembersItem)member;
+        PopulateFormWithMemberData(selectedMember);
+    }
+    
+    private void PopulateFormWithMemberData(ManageMembersItem member)
+    {
+         // Remove whitespaces from contact number
+    MemberContactNumber = member.ContactNumber.Replace(" ", "");
+    
+    // Parse the full name more intelligently
+    var nameParts = member.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    
+    if (nameParts.Length == 1)
+    {
+        // Only one name part
+        MemberFirstName = nameParts[0];
+        SelectedMiddleInitialItem = string.Empty;
+        MemberLastName = string.Empty;
+    }
+    else if (nameParts.Length == 2)
+    {
+        // Two name parts - first and last
+        MemberFirstName = nameParts[0];
+        SelectedMiddleInitialItem = string.Empty;
+        MemberLastName = nameParts[1];
+    }
+    else
+    {
+        // Three or more parts - need to find middle initial
+        int middleInitialIndex = -1;
+        
+        // Look for a single character (with or without dot) that could be a middle initial
+        for (int i = 1; i < nameParts.Length - 1; i++) // Skip first and last positions
+        {
+            string part = nameParts[i];
+            if (part.Length == 1 || (part.Length == 2 && part.EndsWith(".")))
+            {
+                middleInitialIndex = i;
+                break; // Take the first middle initial found
+            }
+        }
+        
+        if (middleInitialIndex != -1)
+        {
+            // Found middle initial
+            MemberFirstName = string.Join(" ", nameParts.Take(middleInitialIndex));
+            SelectedMiddleInitialItem = nameParts[middleInitialIndex].Replace(".", "");
+            MemberLastName = string.Join(" ", nameParts.Skip(middleInitialIndex + 1));
+        }
+        else
+        {
+            // No middle initial found - treat as compound first/last name
+            // Assume first part is first name, rest is last name
+            MemberFirstName = nameParts[0];
+            SelectedMiddleInitialItem = string.Empty;
+            MemberLastName = string.Join(" ", nameParts.Skip(1));
+        }
+    }
+
+    MemberPackages = member.AvailedPackages;
+    MemberStatus = member.Status;
     }
 
     [RelayCommand]
