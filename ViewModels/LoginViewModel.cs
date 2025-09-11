@@ -94,6 +94,7 @@ public partial class LoginViewModel : ViewModelBase
             ToastManager.CreateToast("You have successfully logged out of your account!")
             .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                 .WithDelay(5)
+                .DismissOnClick()
                 .ShowSuccess();
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
