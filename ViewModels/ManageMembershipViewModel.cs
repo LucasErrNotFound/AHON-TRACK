@@ -222,6 +222,28 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				Status = "Active",
 				Validity = new DateTime(2025, 4, 18)
 			},
+			
+			new ManageMembersItem
+			{
+				ID = "1007",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Sianrey V. Flora",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1008",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Marion James Dela Roca",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Inactive",
+				Validity = new DateTime(2025, 4, 18)
+			},
 		];
 	}
 	
