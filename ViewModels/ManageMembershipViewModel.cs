@@ -211,6 +211,17 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				Status = "Terminated",
 				Validity = new DateTime(2025, 4, 18)
 			},
+			
+			new ManageMembersItem
+			{
+				ID = "1006",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Robert Xyz B. Lucas",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
 		];
 	}
 	
@@ -708,19 +719,32 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	[RelayCommand]
 	private void OpenAddNewMemberView()
 	{
-		_pageManager.Navigate<AddNewMemberViewModel>();
+		_pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+		{
+			["Context"] = MemberViewContext.AddNew
+		});
 	} 
 	
 	[RelayCommand]
 	private void OpenUpgradeMemberView()
 	{
-		_pageManager.Navigate<AddNewMemberViewModel>();
+		if (SelectedMember == null) return;
+		_pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+		{
+			["Context"] = MemberViewContext.Upgrade,
+			["SelectedMember"] = SelectedMember
+		});
 	} 
 	
 	[RelayCommand]
 	private void OpenRenewMemberView()
 	{
-		_pageManager.Navigate<AddNewMemberViewModel>();
+		if (SelectedMember == null) return;
+		_pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+		{
+			["Context"] = MemberViewContext.Renew,
+			["SelectedMember"] = SelectedMember
+		});
 	} 
 	
 	[RelayCommand]
