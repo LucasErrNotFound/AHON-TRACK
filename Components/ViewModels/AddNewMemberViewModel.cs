@@ -27,7 +27,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private MemberViewContext _viewContext = MemberViewContext.AddNew; 
     
     [ObservableProperty] 
-    private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+    private string[] _middleInitialItems = 
+        ["A", "B", "C", "D", "E", "F", "G", "H",
+            "I", "J", "K", "L", "M", "N", "O", "P", 
+            "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]; // Revert change because of char to string issue
 
     [ObservableProperty]
     private string[] _memberPackageItems = ["Boxing", "Muay Thai", "Crossfit", "Zumba"];
@@ -477,61 +480,136 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     
     private void PopulateFormWithMemberData(ManageMembersItem member)
     {
-         // Remove whitespaces from contact number
-    MemberContactNumber = member.ContactNumber.Replace(" ", "");
+        // Remove whitespaces from contact number
+        MemberContactNumber = member.ContactNumber.Replace(" ", "");
+
+        // Parse the name using the enhanced algorithm
+        var nameResult = ParseFullName(member.Name);
     
-    // Parse the full name more intelligently
-    var nameParts = member.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-    
-    if (nameParts.Length == 1)
-    {
-        // Only one name part
-        MemberFirstName = nameParts[0];
-        SelectedMiddleInitialItem = string.Empty;
-        MemberLastName = string.Empty;
-    }
-    else if (nameParts.Length == 2)
-    {
-        // Two name parts - first and last
-        MemberFirstName = nameParts[0];
-        SelectedMiddleInitialItem = string.Empty;
-        MemberLastName = nameParts[1];
-    }
-    else
-    {
-        // Three or more parts - need to find middle initial
-        int middleInitialIndex = -1;
-        
-        // Look for a single character (with or without dot) that could be a middle initial
-        for (int i = 1; i < nameParts.Length - 1; i++) // Skip first and last positions
-        {
-            string part = nameParts[i];
-            if (part.Length == 1 || (part.Length == 2 && part.EndsWith(".")))
-            {
-                middleInitialIndex = i;
-                break; // Take the first middle initial found
-            }
-        }
-        
-        if (middleInitialIndex != -1)
-        {
-            // Found middle initial
-            MemberFirstName = string.Join(" ", nameParts.Take(middleInitialIndex));
-            SelectedMiddleInitialItem = nameParts[middleInitialIndex].Replace(".", "");
-            MemberLastName = string.Join(" ", nameParts.Skip(middleInitialIndex + 1));
-        }
-        else
-        {
-            // No middle initial found - treat as compound first/last name
-            // Assume first part is first name, rest is last name
-            MemberFirstName = nameParts[0];
-            SelectedMiddleInitialItem = string.Empty;
-            MemberLastName = string.Join(" ", nameParts.Skip(1));
-        }
+        MemberFirstName = nameResult.FirstName;
+        SelectedMiddleInitialItem = nameResult.MiddleInitial;
+        MemberLastName = nameResult.LastName;
+
+        MemberPackages = member.AvailedPackages;
+        MemberStatus = member.Status;
     }
 
-    MemberPackages = member.AvailedPackages;
-    MemberStatus = member.Status;
+    private (string FirstName, string MiddleInitial, string LastName) ParseFullName(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return (string.Empty, string.Empty, string.Empty);
+
+        var nameParts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (nameParts.Length == 0)
+            return (string.Empty, string.Empty, string.Empty);
+
+        if (nameParts.Length == 1)
+        {
+            // Only one part - treat as first name
+            return (nameParts[0], string.Empty, string.Empty);
+        }
+
+        // Look for middle initial (single character with optional dot, not at first or last position)
+        int middleInitialIndex = FindMiddleInitialIndex(nameParts);
+
+        if (middleInitialIndex != -1)
+        {
+            // Found middle initial - everything before is first name, everything after is last name
+            string firstName = string.Join(" ", nameParts.Take(middleInitialIndex));
+            string middleInitial = nameParts[middleInitialIndex].TrimEnd('.');
+            string lastName = string.Join(" ", nameParts.Skip(middleInitialIndex + 1));
+        
+            return (firstName, middleInitial, lastName);
+        }
+
+        // No middle initial found - use strategy to split first and last name
+        return SplitFirstAndLastName(nameParts);
+    }
+
+    private int FindMiddleInitialIndex(string[] nameParts)
+    {
+        // Look for middle initial (not at first or last position)
+        for (int i = 1; i < nameParts.Length - 1; i++)
+        {
+            string part = nameParts[i];
+        
+            // Check if it's a single character or single character with dot
+            if (part.Length == 1 || (part.Length == 2 && part.EndsWith(".")))
+            {
+                return i;
+            }
+        }
+    
+        return -1; // No middle initial found
+    }
+
+    private (string FirstName, string MiddleInitial, string LastName) SplitFirstAndLastName(string[] nameParts)
+    {
+        // Strategy for ambiguous cases without middle initial
+        // This addresses the "Juan Dela Cruz" ambiguity
+    
+        if (nameParts.Length == 2)
+        {
+            // Simple case: First Last
+            return (nameParts[0], string.Empty, nameParts[1]);
+        }
+
+        // For 3+ parts without middle initial, we need a strategy
+        // Option 1: Favor compound last names (common in Filipino names like "Dela Cruz", "De Leon")
+        if (HasCompoundLastNamePattern(nameParts))
+        {
+            return SplitWithCompoundLastName(nameParts);
+        }
+
+        // Option 2: Default strategy - first part is first name, rest is last name
+        return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
+    }
+
+    private bool HasCompoundLastNamePattern(string[] nameParts)
+    {
+        // Common Filipino compound last name prefixes
+        var compoundPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "de", "del", "dela", "delos", "delas", "van", "von", "da", "di", "du",
+            "san", "santa", "santo", "mc", "mac", "o'"
+        };
+
+        // Check if any part (except the first) starts with a compound prefix
+        for (int i = 1; i < nameParts.Length; i++)
+        {
+            if (compoundPrefixes.Contains(nameParts[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private (string FirstName, string MiddleInitial, string LastName) SplitWithCompoundLastName(string[] nameParts)
+    {
+        var compoundPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "de", "del", "dela", "delos", "delas", "van", "von", "da", "di", "du",
+            "san", "santa", "santo", "mc", "mac", "o'"
+        };
+
+        // Find the first compound prefix
+        for (int i = 1; i < nameParts.Length; i++)
+        {
+            if (compoundPrefixes.Contains(nameParts[i]))
+            {
+                // Everything before this index is first name
+                // Everything from this index onwards is last name
+                string firstName = string.Join(" ", nameParts.Take(i));
+                string lastName = string.Join(" ", nameParts.Skip(i));
+                return (firstName, string.Empty, lastName);
+            }
+        }
+
+        // Fallback - shouldn't reach here if HasCompoundLastNamePattern returned true
+        return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
     }
 
     [RelayCommand]
