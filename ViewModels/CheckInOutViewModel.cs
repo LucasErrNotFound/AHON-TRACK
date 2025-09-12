@@ -136,35 +136,35 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			new WalkInPerson
 			{
 				ID = 1018, FirstName = "Rome", LastName = "Calubayan", Age = 21, ContactNumber = "09283374574",
-				PackageType = "Gym", CheckInTime = today.AddHours(8), CheckOutTime = null
+				PackageType = "Gym", DateAttendance = today, CheckInTime = today.AddHours(8), CheckOutTime = null
 			},
 			new WalkInPerson
 			{
 				ID = 1017, FirstName = "Dave", LastName = "Dapitillo", Age = 22, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = today.AddHours(9), CheckOutTime = null
+				PackageType = "Boxing", DateAttendance = today, CheckInTime = today.AddHours(9), CheckOutTime = null
 			},
 			new WalkInPerson
 			{
 				ID = 1016, FirstName = "Sianrey", LastName = "Flora", Age = 20, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = today.AddHours(10), CheckOutTime = null 
+				PackageType = "Boxing", DateAttendance = today, CheckInTime = today.AddHours(10), CheckOutTime = null 
 			},
         
 			// Yesterday's data
 			new WalkInPerson
 			{
 				ID = 1015, FirstName = "JC", LastName = "Casidor", Age = 30, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = today.AddDays(-1).AddHours(8), CheckOutTime = null 
+				PackageType = "Boxing", DateAttendance = today.AddDays(-1), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1014, FirstName = "Mark", LastName = "Dela Cruz", Age = 21, ContactNumber = "09123456789",
-				PackageType = "Muay Thai", CheckInTime = today.AddDays(-1).AddHours(9),
+				PackageType = "Muay Thai", DateAttendance = today.AddDays(-1), CheckInTime = today.AddHours(9),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1013, FirstName = "Mardie", LastName = "Dela Cruz Jr.", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = today.AddDays(-1).AddHours(10),
+				PackageType = "CrossFit", DateAttendance = today.AddDays(-1), CheckInTime = today.AddHours(10),
 				CheckOutTime = null 
 			},
         
@@ -172,18 +172,18 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			new WalkInPerson
 			{
 				ID = 1012, FirstName = "Marc", LastName = "Torres", Age = 26, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = today.AddDays(-2).AddHours(8), CheckOutTime = null 
+				PackageType = "Boxing", DateAttendance = today.AddDays(-2), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1011, FirstName = "Maverick", LastName = "Lim", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = today.AddDays(-2).AddHours(9),
+				PackageType = "CrossFit", DateAttendance = today.AddDays(-2), CheckInTime = today.AddHours(9),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1010, FirstName = "Adriel", LastName = "Del Rosario", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = today.AddDays(-2).AddHours(10),
+				PackageType = "CrossFit", DateAttendance = today.AddDays(-2), CheckInTime = today.AddHours(10),
 				CheckOutTime = null 
 			},
         
@@ -191,19 +191,19 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			new WalkInPerson
 			{
 				ID = 1009, FirstName = "JL", LastName = "Taberdo", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = today.AddDays(-3).AddHours(8),
+				PackageType = "CrossFit", DateAttendance = today.AddDays(-3), CheckInTime = today.AddHours(8),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1008, FirstName = "Jav", LastName = "Agustin", Age = 21, ContactNumber = "09123456789",
-				PackageType = "Muay Thai", CheckInTime = today.AddDays(-3).AddHours(9),
+				PackageType = "Muay Thai", DateAttendance = today.AddDays(-3), CheckInTime = today.AddHours(9),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1007, FirstName = "Daniel", LastName = "Empinado", Age = 20, ContactNumber = "09123456789",
-				PackageType = "Muay Thai", CheckInTime = today.AddDays(-3).AddHours(10),
+				PackageType = "Muay Thai", DateAttendance = today.AddDays(-3), CheckInTime = today.AddHours(10),
 				CheckOutTime = null 
 			},
         
@@ -211,36 +211,36 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			new WalkInPerson
 			{
 				ID = 1006, FirstName = "Marion", LastName = "Dela Roca", Age = 20, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = today.AddDays(-4).AddHours(8), CheckOutTime = null 
+				PackageType = "Boxing", DateAttendance = today.AddDays(-4), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1005, FirstName = "Sianrey", LastName = "Flora", Age = 20, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = today.AddDays(-4).AddHours(9), CheckOutTime = null 
+				PackageType = "Boxing", DateAttendance = today.AddDays(-4), CheckInTime = today.AddHours(9), CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1004, FirstName = "JC", LastName = "Casidor", Age = 30, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = today.AddDays(-4).AddHours(10), CheckOutTime = null 
+				PackageType = "Boxing", DateAttendance = today.AddDays(-4), CheckInTime = today.AddHours(10), CheckOutTime = null 
 			},
         
 			// 5 days ago
 			new WalkInPerson
 			{
 				ID = 1003, FirstName = "Mark", LastName = "Dela Cruz", Age = 21, ContactNumber = "09123456789",
-				PackageType = "Muay Thai", CheckInTime = today.AddDays(-5).AddHours(8),
+				PackageType = "Muay Thai", DateAttendance = today.AddDays(-5), CheckInTime = today.AddHours(8),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1002, FirstName = "Mardie", LastName = "Dela Cruz Jr.", Age = 21, ContactNumber = "09123456789",
-				PackageType = "CrossFit", CheckInTime = today.AddDays(-5).AddHours(9),
+				PackageType = "CrossFit", DateAttendance = today.AddDays(-5), CheckInTime = today.AddHours(9),
 				CheckOutTime = null 
 			},
 			new WalkInPerson
 			{
 				ID = 1001, FirstName = "Marc", LastName = "Torres", Age = 26, ContactNumber = "09123456789",
-				PackageType = "Boxing", CheckInTime = today.AddDays(-5).AddHours(10), CheckOutTime = null 
+				PackageType = "Boxing", DateAttendance = today.AddDays(-5), CheckInTime = today.AddHours(10), CheckOutTime = null 
 			}
 		];
 	}
@@ -255,22 +255,22 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			{
 				ID = 2006, MemberPicture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
 				FirstName = "Mardie", LastName = "Dela Cruz", ContactNumber = "09123456789",
-				MembershipType = "Gym Member", Status = "Active", CheckInTime = today.AddHours(8),
+				MembershipType = "Gym Member", Status = "Active", DateAttendance = today, CheckInTime = today.AddHours(8),
 				CheckOutTime = null 
 			},
 			new MemberPerson
 			{
 				ID = 2005, MemberPicture = null, FirstName = "Cirilo", LastName = "Pagayunan Jr.",
 				ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Active",
-				CheckInTime = today.AddHours(9), CheckOutTime = null 
+				CheckInTime = today.AddHours(9), DateAttendance = today, CheckOutTime = null 
 			},
         
 			// Yesterday's data
 			new MemberPerson
 			{
 				ID = 2004, MemberPicture = null, FirstName = "Raymart", LastName = "Soneja",
-				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive",
-				CheckInTime = today.AddDays(-1).AddHours(8), CheckOutTime = null 
+				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive", 
+				DateAttendance = today.AddDays(-1), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
         
 			// 2 days ago
@@ -278,7 +278,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			{
 				ID = 2003, MemberPicture = null, FirstName = "Xyrus", LastName = "Jawili",
 				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive",
-				CheckInTime = today.AddDays(-2).AddHours(8), CheckOutTime = null 
+				DateAttendance = today.AddDays(-2), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
         
 			// 3 days ago
@@ -286,13 +286,13 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			{
 				ID = 2002, MemberPicture = null, FirstName = "Nash", LastName = "Floralde",
 				ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Terminated",
-				CheckInTime = today.AddDays(-3).AddHours(8), CheckOutTime = null 
+				DateAttendance = today.AddDays(-3), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
 			new MemberPerson
 			{
 				ID = 2001, MemberPicture = null, FirstName = "Ry", LastName = "Estrada", ContactNumber = "09123456789",
-				MembershipType = "Free Trial", Status = "Terminated", CheckInTime = today.AddDays(-3).AddHours(9),
-				CheckOutTime = null 
+				MembershipType = "Free Trial", Status = "Terminated", DateAttendance = today.AddDays(-3), 
+				CheckInTime = today.AddHours(9), CheckOutTime = null 
 			}
 		];
 	}
@@ -460,7 +460,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 	private void FilterDataByDate(DateTime selectedDate)
 	{
 		var filteredWalkInData = OriginalWalkInData
-			.Where(w => w.CheckInTime?.Date == selectedDate.Date)
+			.Where(w => w.DateAttendance?.Date == selectedDate.Date)
 			.ToList();
     
 		CurrentWalkInFilteredData = filteredWalkInData;
@@ -474,7 +474,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 		}
     
 		var filteredMemberData = OriginalMemberData
-			.Where(m => m.CheckInTime?.Date == selectedDate.Date)
+			.Where(m => m.DateAttendance?.Date == selectedDate.Date)
 			.ToList();
     
 		CurrentMemberFilteredData = filteredMemberData;
@@ -519,6 +519,8 @@ public partial class WalkInPerson : ObservableObject
 	public int Age { get; set; }
 	public string ContactNumber { get; set; } = string.Empty;
 	public string PackageType { get; set; } = string.Empty;
+	
+	public DateTime? DateAttendance { get; set; }
 	public DateTime? CheckInTime { get; set; }
 	private DateTime? _checkOutTime;
 
@@ -528,7 +530,7 @@ public partial class WalkInPerson : ObservableObject
 		set => SetProperty(ref _checkOutTime, value);
 	}
 	
-	public string DateFormatted => CheckInTime?.ToString("MMMM dd, yyyy") ?? string.Empty;
+	public string DateFormatted => DateAttendance?.ToString("MMMM dd, yyyy") ?? string.Empty;
 }
 
 public partial class MemberPerson : ViewModelBase
@@ -543,6 +545,8 @@ public partial class MemberPerson : ViewModelBase
 	public string ContactNumber { get; set; } = string.Empty;
 	public string MembershipType { get; set; } = string.Empty;
 	public string Status { get; set; } = string.Empty;
+	
+	public DateTime? DateAttendance { get; set; }
 	public DateTime? CheckInTime { get; set; }
 	private DateTime? _checkOutTime;
 
@@ -552,7 +556,7 @@ public partial class MemberPerson : ViewModelBase
 		set => SetProperty(ref _checkOutTime, value);
 	}
 	
-	public string DateFormatted => CheckInTime?.ToString("MMMM dd, yyyy") ?? string.Empty;
+	public string DateFormatted => DateAttendance?.ToString("MMMM dd, yyyy") ?? string.Empty;
 	public string MemberPicturePath => string.IsNullOrEmpty(MemberPicture) || MemberPicture == "null"
 		? "avares://AHON_TRACK/Assets/MainWindowView/user.png"
 		: MemberPicture;
