@@ -142,7 +142,7 @@
                                 GridLinesVisibility="All"
                                 HeadersVisibility="Column"
                                 IsReadOnly="True"
-                                ItemsSource="{CompiledBinding ScheduledClients}"
+                                ItemsSource="{CompiledBinding ScheduledPeople}"
                                 SelectionMode="Single">
 
                                 <DataGrid.Resources>
