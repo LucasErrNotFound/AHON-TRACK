@@ -86,12 +86,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     {
         var scheduledClients = CreateSampleData();
         OriginalScheduledPeople =  scheduledClients;
-        FilterDataByDate(SelectedDate);
-        
-        /*
-        var sampleConvertedToCollection = new DataGridCollectionView(scheduledClients);
-        ScheduledClients = sampleConvertedToCollection;
-        */
+        FilterDataByPackageAndDate();
     }
 
     private List<ScheduledPerson> CreateSampleData()
@@ -210,11 +205,18 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
             .ShowSuccess();
     }
 
-    private void FilterDataByDate(DateTime selectedDate)
+    private void FilterDataByPackageAndDate()
     {
         var filteredScheduledData = OriginalScheduledPeople 
-            .Where(w => w.ScheduledDate?.Date == selectedDate.Date)
+            .Where(w => w.ScheduledDate?.Date == SelectedDate.Date)
             .ToList();
+
+        if (SelectedPackageFilterItem is not "All")
+        {
+            filteredScheduledData = filteredScheduledData
+                .Where(w => w.PackageType == SelectedPackageFilterItem)
+                .ToList();
+        }
         
         CurrentScheduledPeople = filteredScheduledData;
         ScheduledPeople.Clear();
@@ -238,7 +240,12 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     
     partial void OnSelectedDateChanged(DateTime value)
     {
-        FilterDataByDate(value);
+        FilterDataByPackageAndDate();
+    }
+    
+    partial void OnSelectedPackageFilterItemChanged(string value)
+    {
+        FilterDataByPackageAndDate();
     }
     
     private void UpdateScheduledPeopleCounts()
