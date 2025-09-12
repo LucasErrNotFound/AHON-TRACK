@@ -49,14 +49,16 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly AddTrainingScheduleDialogCardViewModel _addTrainingScheduleDialogCardViewModel;
+    private readonly ChangeScheduleDialogCardViewModel  _changeScheduleDialogCardViewModel;
 
     public TrainingSchedulesViewModel(PageManager pageManager, DialogManager dialogManager, ToastManager toastManager, 
-        AddTrainingScheduleDialogCardViewModel addTrainingScheduleDialogCardViewModel)
+        AddTrainingScheduleDialogCardViewModel addTrainingScheduleDialogCardViewModel,  ChangeScheduleDialogCardViewModel changeScheduleDialogCardViewModel)
     {
         _dialogManager = dialogManager;
         _pageManager = pageManager;
         _toastManager = toastManager;
         _addTrainingScheduleDialogCardViewModel = addTrainingScheduleDialogCardViewModel;
+        _changeScheduleDialogCardViewModel = changeScheduleDialogCardViewModel;
         
         LoadSampleData();
         UpdateScheduledPeopleCounts();
@@ -68,6 +70,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _addTrainingScheduleDialogCardViewModel = new AddTrainingScheduleDialogCardViewModel();
+        _changeScheduleDialogCardViewModel = new ChangeScheduleDialogCardViewModel();
         
         LoadSampleData();
         UpdateScheduledPeopleCounts();
@@ -203,6 +206,26 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
             .WithContent($"Marked {scheduledPerson.FirstName} {scheduledPerson.LastName} as absent!")
             .DismissOnClick()
             .ShowSuccess();
+    }
+
+    [RelayCommand]
+    private void ChangeTrainingSchedule(ScheduledPerson? scheduledPerson)
+    {
+        if (scheduledPerson is null) return;
+        
+        _changeScheduleDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_changeScheduleDialogCardViewModel)
+            .WithSuccessCallback(_ =>
+                _toastManager.CreateToast("Changed training schedule")
+                    .WithContent($"You have changed {scheduledPerson.FirstName} {scheduledPerson.LastName}'s training schedule!")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Changing training schedule cancelled")
+                    .WithContent("Changing training schedule cancelled")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(400)
+            .Show();
     }
 
     private void FilterDataByPackageAndDate()

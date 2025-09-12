@@ -289,7 +289,7 @@
                                                             CommandParameter="{CompiledBinding}" />
                                                         <MenuItem
                                                             Header="Change Schedule"
-                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext), FallbackValue={x:Null}}"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext).ChangeTrainingScheduleCommand, FallbackValue={x:Null}}"
                                                             CommandParameter="{CompiledBinding}" />
                                                         <Separator />
                                                         <MenuItem
