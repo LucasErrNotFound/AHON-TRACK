@@ -111,9 +111,13 @@
                                 HorizontalAlignment="Right"
                                 Margin="0,0,0,20"
                                 Spacing="15">
-                                <ComboBox Width="160">
-                                </ComboBox>
-                                <CalendarDatePicker />
+                                <CalendarDatePicker 
+                                    Width="140"
+                                    SelectedDate="{CompiledBinding SelectedDate}"/>
+                                <ComboBox 
+                                    Width="160"
+                                    ItemsSource="{CompiledBinding PackageFilterItems}"
+                                    SelectedItem="{CompiledBinding SelectedPackageFilterItem}"/>
                                 <Button
                                     Classes="Primary"
                                     Padding="30,0"
@@ -277,11 +281,11 @@
                                                         </shadui:MenuItemAssist.Label>
                                                         <MenuItem
                                                             Header="Mark as Present"
-                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext), FallbackValue={x:Null}}"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext).MarkAsPresentCommand, FallbackValue={x:Null}}"
                                                             CommandParameter="{CompiledBinding}" />
                                                         <MenuItem
                                                             Header="Mark as Absent"
-                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext), FallbackValue={x:Null}}"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:TrainingSchedulesViewModel)DataContext).MarkAsAbsentCommand, FallbackValue={x:Null}}"
                                                             CommandParameter="{CompiledBinding}" />
                                                         <MenuItem
                                                             Header="Change Schedule"
