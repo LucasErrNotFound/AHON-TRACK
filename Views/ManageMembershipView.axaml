@@ -225,7 +225,7 @@
 													Background="{CompiledBinding StatusBackground}"
 													CornerRadius="7"
 													Padding="8,4"
-													Margin="-5,0,0,0"
+													Margin="5,0,0,0"
 													HorizontalAlignment="Left">
 													<TextBlock
 														Text="{CompiledBinding StatusDisplayText}"
@@ -507,21 +507,7 @@
 																Foreground="{DynamicResource SuccessColor}" />
 														</Border>
 														<Border
-															IsVisible="{CompiledBinding IsInactiveVisible}"
-															Background="{DynamicResource PrimaryColor10}"
-															Padding="10,5,10,5"
-															BorderThickness="1"
-															BorderBrush="{DynamicResource PrimaryColor75}"
-															CornerRadius="5"
-															HorizontalAlignment="Right">
-															<TextBlock
-																Text="Inactive"
-																FontSize="16"
-																FontWeight="SemiBold"
-																Foreground="{DynamicResource PrimaryColor}" />
-														</Border>
-														<Border
-															IsVisible="{CompiledBinding IsTerminatedVisible}"
+															IsVisible="{CompiledBinding IsExpiredVisible}"
 															Background="{DynamicResource DestructiveColor10}"
 															Padding="10,5,10,5"
 															BorderThickness="1"
@@ -529,7 +515,7 @@
 															CornerRadius="5"
 															HorizontalAlignment="Right">
 															<TextBlock
-																Text="Terminated"
+																Text="Expired"
 																FontSize="16"
 																FontWeight="SemiBold"
 																Foreground="{DynamicResource DestructiveColor}" />
