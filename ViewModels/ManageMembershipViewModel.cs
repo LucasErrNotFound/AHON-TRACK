@@ -84,12 +84,11 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	private readonly AddNewMemberViewModel _addNewMemberViewModel;
 
 	public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
-	public bool IsInactiveVisible => SelectedMember?.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase) ?? false;
-	public bool IsTerminatedVisible => SelectedMember?.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase) ?? false;
+	public bool IsExpiredVisible => SelectedMember?.Status.Equals("expired", StringComparison.OrdinalIgnoreCase) ?? false;
 	public bool HasSelectedMember => SelectedMember is not null;
 
 	public bool IsUpgradeButtonEnabled =>
-		!new[] { "Inactive", "Terminated" }
+		!new[] { "Expired" }
 			.Any(status => SelectedMember is not null && SelectedMember.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
 
 	public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
@@ -116,8 +115,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	partial void OnSelectedMemberChanged(ManageMembersItem? value)
 	{
 		OnPropertyChanged(nameof(IsActiveVisible));
-		OnPropertyChanged(nameof(IsInactiveVisible));
-		OnPropertyChanged(nameof(IsTerminatedVisible));
+		OnPropertyChanged(nameof(IsExpiredVisible));
 		OnPropertyChanged(nameof(HasSelectedMember));
 		OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
 	}
@@ -175,7 +173,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				Name = "Marc Torres",
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "None",
-				Status = "Inactive",
+				Status = "Expired",
 				Validity = new DateTime(2025, 7, 16)
 			},
 			
@@ -186,7 +184,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				Name = "Mardie Dela Cruz",
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "None",
-				Status = "Inactive",
+				Status = "Expired",
 				Validity = new DateTime(2025, 7, 18)
 			},
 			
@@ -208,7 +206,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				Name = "JL Taberdo",
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "Gym",
-				Status = "Terminated",
+				Status = "Expired",
 				Validity = new DateTime(2025, 4, 18)
 			},
 			
@@ -241,7 +239,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				Name = "Marion James Dela Roca",
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "Gym",
-				Status = "Inactive",
+				Status = "Active",
 				Validity = new DateTime(2025, 4, 18)
 			},
 		];
@@ -346,32 +344,17 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     }
 
     [RelayCommand]
-    private void FilterInactiveStatus()
+    private void FilterExpiredStatus()
     {
-        var filterInactiveStatus = OriginalMemberData.Where(member => member.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase)).ToList();
+        var filterExpiredStatus = OriginalMemberData.Where(member => member.Status.Equals("expired", StringComparison.OrdinalIgnoreCase)).ToList();
         MemberItems.Clear();
 
-        foreach (var member in filterInactiveStatus)
+        foreach (var member in filterExpiredStatus)
         {
             member.PropertyChanged += OnMemberPropertyChanged;
             MemberItems.Add(member);
         }
-        CurrentFilteredData = [.. filterInactiveStatus];
-        UpdateCounts();
-    }
-
-    [RelayCommand]
-    private void FilterTerminatedStatus()
-    {
-        var filterTerminatedStatus = OriginalMemberData.Where(member => member.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase)).ToList();
-        MemberItems.Clear();
-
-        foreach (var member in filterTerminatedStatus)
-        {
-            member.PropertyChanged += OnMemberPropertyChanged;
-            MemberItems.Add(member);
-        }
-        CurrentFilteredData = [.. filterTerminatedStatus];
+        CurrentFilteredData = [.. filterExpiredStatus];
         UpdateCounts();
     }
 
@@ -712,8 +695,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         switch (selectedIndex)
         {
             case 0: FilterActiveStatusCommand.Execute(null); break;
-            case 1: FilterInactiveStatusCommand.Execute(null); break;
-            case 2: FilterTerminatedStatusCommand.Execute(null); break;
+            case 1: FilterExpiredStatusCommand.Execute(null); break;
         }
     }
 
@@ -836,24 +818,21 @@ public partial class ManageMembersItem : ObservableObject
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500
-        "inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)), // Gray-500
-        "terminated" => new SolidColorBrush(Color.FromRgb(239, 68, 68)), // Red-500
+        "expired" => new SolidColorBrush(Color.FromRgb(239, 68, 68)), // Red-500
         _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
     };
 
     public IBrush StatusBackground => Status.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
-        "inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)), // Gray-500 with alpha
-        "terminated" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
+        "expired" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))           // Default Gray-500 with alpha
     };
 
     public string StatusDisplayText => Status.ToLowerInvariant() switch
     {
         "active" => "● Active",
-        "inactive" => "● Inactive",
-        "terminated" => "● Terminated",
+        "expired" => "● Expired",
         _ => Status
     };
 

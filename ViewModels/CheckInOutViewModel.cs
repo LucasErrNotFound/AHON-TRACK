@@ -269,7 +269,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			new MemberPerson
 			{
 				ID = 2004, MemberPicture = null, FirstName = "Raymart", LastName = "Soneja",
-				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive", 
+				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Expired", 
 				DateAttendance = today.AddDays(-1), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
         
@@ -277,7 +277,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			new MemberPerson
 			{
 				ID = 2003, MemberPicture = null, FirstName = "Xyrus", LastName = "Jawili",
-				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive",
+				ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active",
 				DateAttendance = today.AddDays(-2), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
         
@@ -285,13 +285,13 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			new MemberPerson
 			{
 				ID = 2002, MemberPicture = null, FirstName = "Nash", LastName = "Floralde",
-				ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Terminated",
+				ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Expired",
 				DateAttendance = today.AddDays(-3), CheckInTime = today.AddHours(8), CheckOutTime = null 
 			},
 			new MemberPerson
 			{
 				ID = 2001, MemberPicture = null, FirstName = "Ry", LastName = "Estrada", ContactNumber = "09123456789",
-				MembershipType = "Free Trial", Status = "Terminated", DateAttendance = today.AddDays(-3), 
+				MembershipType = "Free Trial", Status = "Expired", DateAttendance = today.AddDays(-3), 
 				CheckInTime = today.AddHours(9), CheckOutTime = null 
 			}
 		];
@@ -561,27 +561,24 @@ public partial class MemberPerson : ViewModelBase
 		? "avares://AHON_TRACK/Assets/MainWindowView/user.png"
 		: MemberPicture;
 
-	public IBrush StatusForeground => Status?.ToLowerInvariant() switch
+	public IBrush StatusForeground => Status.ToLowerInvariant() switch
 	{
-		"active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500
-		"inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)), // Gray-500
-		"terminated" => new SolidColorBrush(Color.FromRgb(239, 68, 68)), // Red-500
-		_ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
+		"active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),  // Green-500
+		"expired" => new SolidColorBrush(Color.FromRgb(239, 68, 68)), // Red-500
+		_ => new SolidColorBrush(Color.FromRgb(100, 116, 139))        // Default Gray-500
 	};
 
-	public IBrush StatusBackground => Status?.ToLowerInvariant() switch
+	public IBrush StatusBackground => Status.ToLowerInvariant() switch
 	{
-		"active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
-		"inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)), // Gray-500 with alpha
-		"terminated" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
-		_ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))           // Default Gray-500 with alpha
+		"active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),  // Green-500 with alpha
+		"expired" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
+		_ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))        // Default Gray-500 with alpha
 	};
 
-	public string StatusDisplayText => Status?.ToLowerInvariant() switch
+	public string StatusDisplayText => Status.ToLowerInvariant() switch
 	{
 		"active" => "● Active",
-		"inactive" => "● Inactive",
-		"terminated" => "● Terminated",
+		"expired" => "● Expired",
 		_ => Status ?? ""
 	};
 	public void OnStatusChanged(string value)
