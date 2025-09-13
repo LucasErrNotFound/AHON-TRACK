@@ -327,14 +327,14 @@
                                             CanUserSort="False"
                                             Header="Status"
                                             Width="Auto"
-                                            MinWidth="130">
+                                            MinWidth="145">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate DataType="viewModels:MemberPerson">
                                                     <Border
                                                         Background="{CompiledBinding StatusBackground}"
                                                         CornerRadius="11"
                                                         Padding="8,4"
-                                                        Margin="0,0,0,0"
+                                                        Margin="5,0,0,0"
                                                         HorizontalAlignment="Left">
                                                         <TextBlock
                                                             Text="{CompiledBinding StatusDisplayText}"
