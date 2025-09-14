@@ -622,6 +622,28 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         _pageManager.Navigate<ManageMembershipViewModel>();
     }
 
+    private string? GetSelectedPaymentMethod()
+    {
+        if (IsCashSelected) return "Cash";
+        if (IsGCashSelected) return "GCash";
+        if (IsMayaSelected) return "Maya";
+        return null;
+    }
+
+    public bool IsActiveSelected { get; set; }
+    public bool IsInactiveSelected { get; set; }
+    public bool IsTerminatedSelected { get; set; }
+
+    private string? GetSelectedStatus()
+    {
+        if (IsActiveSelected) return "Active";
+        if (IsInactiveSelected) return "Inactive";
+        if (IsTerminatedSelected) return "Terminated";
+        return null;
+    }
+
+
+
     [RelayCommand]
     private async void Payment()
     {
@@ -638,7 +660,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 DateOfBirth = MemberBirthDate,
                 Validity = MembershipDuration?.ToString(),
                 Status = MemberStatus,
-                PaymentMethod = null
+                PaymentMethod = GetSelectedPaymentMethod(),
             };
 
             await _memberService.AddMemberAsync(member);
