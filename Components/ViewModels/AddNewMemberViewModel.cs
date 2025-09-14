@@ -1,19 +1,26 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
+using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
 
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("add-member")]
 public partial class AddNewMemberViewModel : ViewModelBase, INavigable
 {
-    [ObservableProperty] 
+
+    private readonly IMemberService _memberService;
+
+    [ObservableProperty]
     private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
     [ObservableProperty]
@@ -21,7 +28,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private string[] _memberStatusItems = ["Active", "Inactive", "Terminated"];
-    
+
     // Personal Details Section
     private string _memberFirstName = string.Empty;
     private string _selectedMiddleInitialItem = string.Empty;
@@ -44,20 +51,20 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
     private int? _membershipDuration;
     private DateTime? _memberDateJoined;
     private string _memberStatus = string.Empty;
-    
+
     // Payment Method
     private bool _isCashSelected;
     private bool _isGCashSelected;
     private bool _isMayaSelected;
-    
+
     public bool IsCashVisible => IsCashSelected;
     public bool IsGCashVisible => IsGCashSelected;
     public bool IsMayaVisible => IsMayaSelected;
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    
+
     [Required(ErrorMessage = "First name is required")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
@@ -247,7 +254,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
-    
+
     [Required(ErrorMessage = "Date joined is required")]
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
     public DateTime? MemberDateJoined
@@ -262,10 +269,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
         get => _memberStatus;
         set => SetProperty(ref _memberStatus, value, true);
     }
-    
+
     [Required(ErrorMessage = "Duration is required")]
     [Range(1, 12, ErrorMessage = "Duration must be between 1 and 12")]
-    public int? MembershipDuration 
+    public int? MembershipDuration
     {
         get => _membershipDuration;
         set
@@ -278,7 +285,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
-    
+
     public bool IsCashSelected
     {
         get => _isCashSelected;
@@ -286,13 +293,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
         {
             if (_isCashSelected == value) return;
             _isCashSelected = value;
-            
+
             if (value)
             {
                 _isGCashSelected = false;
                 _isMayaSelected = false;
             }
-            
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsGCashSelected));
             OnPropertyChanged(nameof(IsMayaSelected));
@@ -310,13 +317,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
         {
             if (_isGCashSelected == value) return;
             _isGCashSelected = value;
-            
+
             if (value)
             {
                 _isCashSelected = false;
                 _isMayaSelected = false;
             }
-            
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsCashSelected));
             OnPropertyChanged(nameof(IsMayaSelected));
@@ -334,13 +341,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
         {
             if (_isMayaSelected == value) return;
             _isMayaSelected = value;
-            
+
             if (value)
             {
                 _isCashSelected = false;
                 _isGCashSelected = false;
             }
-            
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsCashSelected));
             OnPropertyChanged(nameof(IsGCashSelected));
@@ -350,10 +357,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
-    
-    public string MemberFullName 
+
+    public string MemberFullName
     {
-        get 
+        get
         {
             var parts = new List<string>();
 
@@ -371,7 +378,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
     }
 
     public bool IsMembershipPlanVisible => MembershipDuration.HasValue && MembershipDuration > 0;
-    
+
     public string MembershipDurationQuantity
     {
         get
@@ -383,7 +390,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
             return quantity == 1 ? $"{quantity} Month" : $"{quantity} Months";
         }
     }
-    
+
     public string MembershipDurationQuantityHeader
     {
         get
@@ -395,7 +402,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
             return quantity == 1 ? $"{quantity} Month × ₱500.00" : $"{quantity} Months × ₱500.00";
         }
     }
-    
+
     public string MembershipDurationQuantitySummary
     {
         get
@@ -408,14 +415,15 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
         }
     }
 
-    public AddNewMemberViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public AddNewMemberViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
+        _memberService = memberService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
     }
-    
-    public AddNewMemberViewModel() 
+
+    public AddNewMemberViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
@@ -426,21 +434,54 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
     public void Initialize()
     {
     }
-
     [RelayCommand]
     private void Cancel()
     {
         _pageManager.Navigate<ManageMembershipViewModel>();
     }
-    
+
     [RelayCommand]
-    private void Payment() 
+    private async Task Payment()
     {
-        _toastManager.CreateToast("Payment Successful!").ShowSuccess();
-        _pageManager.Navigate<ManageMembershipViewModel>();
+        try
+        {
+            // map your current form fields into the model
+            var member = new ManageMemberModel
+            {
+                FirstName = MemberFirstName.Trim(),
+                MiddleInitial = SelectedMiddleInitialItem,
+                LastName = MemberLastName.Trim(),
+                Gender = MemberGender,
+                ContactNumber = MemberContactNumber,
+                Age = MemberAge,
+                DateOfBirth = MemberBirthDate,
+                MembershipType = MemberPackages,
+                Status = MemberStatus,
+                Validity = MembershipDuration?.ToString() ?? string.Empty,
+                PaymentMethod = IsCashSelected ? "Cash"
+                               : IsGCashSelected ? "GCash"
+                               : "Maya"
+            };
+
+            // save into database
+            await _memberService.AddMemberAsync(member);
+
+            // feedback & navigation
+            _toastManager.CreateToast("Payment Successful!")
+                         .WithContent($"{member.FirstName} added to membership list")
+                         .ShowSuccess();
+
+            _pageManager.Navigate<ManageMembershipViewModel>();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Payment Error")
+                         .WithContent(ex.Message)
+                         .ShowError();
+        }
     }
-    
-    public bool IsPaymentPossible 
+
+    public bool IsPaymentPossible
     {
         get
         {
@@ -457,7 +498,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
             return hasValidInputs && hasValidQuantity && hasPaymentMethod;
         }
     }
-    
+
     private int CalculateAge(DateTime birthDate)
     {
         var today = DateTime.Today;
@@ -466,7 +507,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
         if (birthDate.Date > today.AddYears(-age)) age--;
         return age;
     }
-    
+
     private void ClearAllFields()
     {
         MemberFirstName = string.Empty;
@@ -487,7 +528,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
         MemberStatus = string.Empty;
         ClearAllErrors();
     }
-    
+
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
 }

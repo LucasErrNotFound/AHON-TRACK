@@ -1,9 +1,14 @@
-<<<<<<< HEAD
-﻿using AHON_TRACK.Models;
+using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
-=======
-﻿using System;
+using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -11,282 +16,227 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using AHON_TRACK.Components.ViewModels;
-using Avalonia.Media;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
->>>>>>> 2a3bdf11f555f1d669ec83aaf947ec73d7a523d0
-using HotAvalonia;
-using ShadUI;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Threading.Tasks;
-using Tmds.DBus.Protocol;
-using System.Collections.ObjectModel;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("manage-membership")]
 public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-<<<<<<< HEAD
+    private readonly IMemberService _memberService;
+
+    [ObservableProperty]
+    private List<ManageMembersItem> _originalMemberData = [];
+
+    [ObservableProperty]
+    private ObservableCollection<ManageMembersItem> _memberItems = [];
+
+    [ObservableProperty]
+    private List<ManageMembersItem> _currentFilteredData = [];
+
+    [ObservableProperty]
+    private string _searchStringResult = string.Empty;
+
+    [ObservableProperty]
+    private bool _isSearchingMember;
+
+    [ObservableProperty]
+    private bool _selectAll;
+
+    [ObservableProperty]
+    private int _selectedCount;
+
+    [ObservableProperty]
+    private int _totalCount;
+
+    [ObservableProperty]
+    private bool _showIdColumn = true;
+
+    [ObservableProperty]
+    private bool _showPictureColumn = true;
+
+    [ObservableProperty]
+    private bool _showNameColumn = true;
+
+    [ObservableProperty]
+    private bool _showContactNumberColumn = true;
+
+    [ObservableProperty]
+    private bool _showMembershipTypeColumn = true;
+
+    [ObservableProperty]
+    private bool _showStatusColumn = true;
+
+    [ObservableProperty]
+    private bool _showValidity = true;
+
+    [ObservableProperty]
+    private int _selectedSortIndex = -1;
+
+    [ObservableProperty]
+    private int _selectedFilterIndex = -1;
+
+    [ObservableProperty]
+    private bool _isInitialized;
+
+    private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly IMemberService _memberService;
+    private readonly MemberDialogCardViewModel _memberDialogCardViewModel;
+    private readonly AddNewMemberViewModel _addNewMemberViewModel;
 
-    public ObservableCollection<MemberModel> Members { get; private set; } = new ObservableCollection<MemberModel>();
-
-    public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IMemberService memberService)
+    public ManageMembershipViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
     {
+        _memberService = memberService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _memberService = memberService;
+        _memberDialogCardViewModel = memberDialogCardViewModel;
+        _addNewMemberViewModel = addNewMemberViewModel;
+        LoadMembersFromDatabaseAsync();
+        UpdateCounts();
     }
 
     public ManageMembershipViewModel()
     {
+        _memberService = new MemberService("YourConnectionStringHere", new ToastManager());
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _memberDialogCardViewModel = new MemberDialogCardViewModel();
+        _addNewMemberViewModel = new AddNewMemberViewModel();
     }
 
     [AvaloniaHotReload]
-    public async void Initialize()
+    public async Task Initialize()
+    {
+        if (IsInitialized) return;
+        await LoadMembersFromDatabaseAsync();
+        UpdateCounts();
+        IsInitialized = true;
+    }
+
+    private async Task LoadMembersFromDatabaseAsync()
     {
         try
         {
-            var memberList = await _memberService.GetMemberAsync();
+            var members = await _memberService.GetMemberAsync();
 
-            Members.Clear();
-            if (memberList.Count == 0)
+            var memberItems = members.Select(m => new ManageMembersItem
             {
-                LoadSampleMembers();
-                _toastManager.CreateToast("No members found in DB. Loaded sample data instead.");
-            }
-            else
-            {
-                foreach (var member in memberList)
-                    Members.Add(member);
+                ID = m.MemberID.ToString(),
+                AvatarSource = m.ProfilePicture == null ? DefaultAvatarSource : m.ProfilePicture.ToString() ?? DefaultAvatarSource,
+                Name = m.Name,
+                ContactNumber = m.ContactNumber ?? string.Empty,
+                MembershipType = m.MembershipType ?? string.Empty,
+                Status = m.Status ?? string.Empty,
+                Validity = DateTime.TryParse(m.Validity, out var dt) ? dt : DateTime.MinValue
+            }).ToList();
 
-                _toastManager.CreateToast($"Loaded {Members.Count} members from DB.");
+            OriginalMemberData = memberItems;
+            CurrentFilteredData = [.. memberItems];
+
+            MemberItems.Clear();
+            foreach (var item in memberItems)
+            {
+                item.PropertyChanged += OnMemberPropertyChanged;
+                MemberItems.Add(item);
             }
+
+            TotalCount = MemberItems.Count;
+            UpdateCounts();
         }
-        catch
+        catch (Exception ex)
         {
-            LoadSampleMembers();
-            _toastManager.CreateToast("Error loading DB members. Showing sample data.");
+            _toastManager?.CreateToast("Database Error")
+                .WithContent($"Failed to load members: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+
+            LoadSampleData();
         }
     }
 
-    public void LoadSampleMembers()
+    private void LoadSampleData()
     {
-        Members.Clear();
+        var sampleMembers = GetSampleMembersData();
 
-        Members.Add(new MemberModel
-        {
-            ID = 1,
-            Name = "John Doe",
-            ContactNumber = "09171234567",
-            MembershipType = "Premium",
-            Status = "Active",
-            Validity = "2025-12-31"
-        });
-        Members.Add(new MemberModel
-        {
-            ID = 2,
-            Name = "Jane Smith",
-            ContactNumber = "09281234567",
-            MembershipType = "Basic",
-            Status = "Expired",
-            Validity = "2024-12-31"
-        });
-        Members.Add(new MemberModel
-        {
-            ID = 3,
-            Name = "Mark Johnson",
-            ContactNumber = "09391234567",
-            MembershipType = "VIP",
-            Status = "Active",
-            Validity = "2026-01-15"
-        });
+        // Store original data for filtering/sorting operations
+        OriginalMemberData = sampleMembers;
+        CurrentFilteredData = [.. sampleMembers]; // Initialize current state
 
-        _toastManager.CreateToast($"Loaded {Members.Count} test members.");
+        MemberItems.Clear();
+        foreach (var member in sampleMembers)
+        {
+            member.PropertyChanged += OnMemberPropertyChanged;
+            MemberItems.Add(member);
+        }
+
+        TotalCount = MemberItems.Count;
     }
-}
-=======
-	[ObservableProperty]
-	private List<ManageMembersItem> _originalMemberData = [];
 
-	[ObservableProperty]
-	private ObservableCollection<ManageMembersItem> _memberItems = [];
+    private List<ManageMembersItem> GetSampleMembersData()
+    {
+        return
+        [
+            new ManageMembersItem
+            {
+                ID = "1001",
+                AvatarSource = DefaultAvatarSource,
+                Name = "Jedd Calubayan",
+                ContactNumber = "0975 994 3010",
+                MembershipType = "Monthly",
+                Status = "Active",
+                Validity = new DateTime(2025, 6, 16)
+            },
 
-	[ObservableProperty]
-	private List<ManageMembersItem> _currentFilteredData = [];
+            new ManageMembersItem
+            {
+                ID = "1002",
+                AvatarSource = DefaultAvatarSource,
+                Name = "Marc Torres",
+                ContactNumber = "0975 994 3010",
+                MembershipType = "Monthly",
+                Status = "Inactive",
+                Validity = new DateTime(2025, 7, 16)
+            },
 
-	[ObservableProperty]
-	private string _searchStringResult = string.Empty;
+            new ManageMembersItem
+            {
+                ID = "1003",
+                AvatarSource = DefaultAvatarSource,
+                Name = "Mardie Dela Cruz",
+                ContactNumber = "0975 994 3010",
+                MembershipType = "Monthly",
+                Status = "Inactive",
+                Validity = new DateTime(2025, 7, 18)
+            },
 
-	[ObservableProperty]
-	private bool _isSearchingMember;
+            new ManageMembersItem
+            {
+                ID = "1004",
+                AvatarSource = DefaultAvatarSource,
+                Name = "Mark Dela Cruz",
+                ContactNumber = "0975 994 3010",
+                MembershipType = "Monthly",
+                Status = "Active",
+                Validity = new DateTime(2025, 7, 18)
+            },
 
-	[ObservableProperty]
-	private bool _selectAll;
+            new ManageMembersItem
+            {
+                ID = "1005",
+                AvatarSource = DefaultAvatarSource,
+                Name = "JL Taberdo",
+                ContactNumber = "0975 994 3010",
+                MembershipType = "Monthly",
+                Status = "Terminated",
+                Validity = new DateTime(2025, 4, 18)
+            },
+        ];
+    }
 
-	[ObservableProperty]
-	private int _selectedCount;
-
-	[ObservableProperty]
-	private int _totalCount;
-
-	[ObservableProperty]
-	private bool _showIdColumn = true;
-
-	[ObservableProperty]
-	private bool _showPictureColumn = true;
-
-	[ObservableProperty]
-	private bool _showNameColumn = true;
-
-	[ObservableProperty]
-	private bool _showContactNumberColumn = true;
-	
-	[ObservableProperty]
-	private bool _showMembershipTypeColumn = true;
-
-	[ObservableProperty]
-	private bool _showStatusColumn = true;
-
-	[ObservableProperty]
-	private bool _showValidity = true;
-
-	[ObservableProperty]
-	private int _selectedSortIndex = -1;
-
-	[ObservableProperty]
-	private int _selectedFilterIndex = -1;
-
-	[ObservableProperty]
-	private bool _isInitialized;
-
-	private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
-	
-	private readonly DialogManager _dialogManager;
-	private readonly ToastManager _toastManager;
-	private readonly PageManager _pageManager;
-	private readonly MemberDialogCardViewModel  _memberDialogCardViewModel;
-	private readonly AddNewMemberViewModel _addNewMemberViewModel;
-
-	public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
-	{
-		_dialogManager = dialogManager;
-		_toastManager = toastManager;
-		_pageManager = pageManager;
-		_memberDialogCardViewModel = memberDialogCardViewModel;
-		_addNewMemberViewModel = addNewMemberViewModel;
-		
-		LoadSampleData();
-		UpdateCounts();
-	}
-
-	public ManageMembershipViewModel()
-	{ 
-		_dialogManager = new DialogManager();
-		_toastManager = new ToastManager();
-		_pageManager = new PageManager(new ServiceProvider());
-		_memberDialogCardViewModel = new MemberDialogCardViewModel();
-		_addNewMemberViewModel = new AddNewMemberViewModel();
-	}
-
-	[AvaloniaHotReload]
-	public void Initialize()
-	{
-		if (IsInitialized) return;
-		LoadSampleData();
-		UpdateCounts();
-		IsInitialized = true;
-	}
-	
-	private void LoadSampleData()
-	{
-		var sampleMembers = GetSampleMembersData();
-
-		// Store original data for filtering/sorting operations
-		OriginalMemberData = sampleMembers;
-		CurrentFilteredData = [.. sampleMembers]; // Initialize current state
-
-		MemberItems.Clear();
-		foreach (var member in sampleMembers)
-		{
-			member.PropertyChanged += OnMemberPropertyChanged;
-			MemberItems.Add(member);
-		}
-
-		TotalCount = MemberItems.Count;
-	}
-
-	private List<ManageMembersItem> GetSampleMembersData()
-	{
-		return
-		[
-			new ManageMembersItem
-			{
-				ID = "1001",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Jedd Calubayan",
-				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
-				Status = "Active",
-				Validity = new DateTime(2025, 6, 16)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1002",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Marc Torres",
-				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
-				Status = "Inactive",
-				Validity = new DateTime(2025, 7, 16)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1003",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Mardie Dela Cruz",
-				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
-				Status = "Inactive",
-				Validity = new DateTime(2025, 7, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1004",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Mark Dela Cruz",
-				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
-				Status = "Active",
-				Validity = new DateTime(2025, 7, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1005",
-				AvatarSource = DefaultAvatarSource,
-				Name = "JL Taberdo",
-				ContactNumber = "0975 994 3010",
-				MembershipType = "Monthly",
-				Status = "Terminated",
-				Validity = new DateTime(2025, 4, 18)
-			},
-		];
-	}
-	
     [RelayCommand]
     private void SortReset()
     {
@@ -427,67 +377,67 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         UpdateCounts();
     }
 
-	private void OnMemberPropertyChanged(object? sender, PropertyChangedEventArgs e)
-	{
-		if (e.PropertyName == nameof(ManageMembersItem.IsSelected))
-		{
-			UpdateCounts();
-		}
-	}
-	
-	private void UpdateCounts()
-	{
-		SelectedCount = MemberItems.Count(x => x.IsSelected);
-		TotalCount = MemberItems.Count;
+    private void OnMemberPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ManageMembersItem.IsSelected))
+        {
+            UpdateCounts();
+        }
+    }
 
-		SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
-	}
-	
-	[RelayCommand]
-	private async Task SearchMembers()
-	{
-		if (string.IsNullOrWhiteSpace(SearchStringResult))
-		{
-			// Reset to current filtered data instead of original data
-			MemberItems.Clear();
-			foreach (var member in CurrentFilteredData)
-			{
-				member.PropertyChanged += OnMemberPropertyChanged;
-				MemberItems.Add(member);
-			}
-			UpdateCounts();
-			return;
-		}
-		IsSearchingMember = true;
+    private void UpdateCounts()
+    {
+        SelectedCount = MemberItems.Count(x => x.IsSelected);
+        TotalCount = MemberItems.Count;
 
-		try
-		{
-			await Task.Delay(500);
+        SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
+    }
 
-			// Search within the current filtered data instead of original data
-			var filteredMembers = CurrentFilteredData.Where(emp =>
-				emp.ID.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-				emp.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-				emp.ContactNumber.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-				emp.MembershipType.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-				emp.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-				emp.Validity.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)
-			).ToList();
+    [RelayCommand]
+    private async Task SearchMembers()
+    {
+        if (string.IsNullOrWhiteSpace(SearchStringResult))
+        {
+            // Reset to current filtered data instead of original data
+            MemberItems.Clear();
+            foreach (var member in CurrentFilteredData)
+            {
+                member.PropertyChanged += OnMemberPropertyChanged;
+                MemberItems.Add(member);
+            }
+            UpdateCounts();
+            return;
+        }
+        IsSearchingMember = true;
 
-			MemberItems.Clear();
-			foreach (var members in filteredMembers)
-			{
-				members.PropertyChanged += OnMemberPropertyChanged;
-				MemberItems.Add(members);
-			}
-			UpdateCounts();
-		}
-		finally
-		{
-			IsSearchingMember = false;
-		}
-	}
-	
+        try
+        {
+            await Task.Delay(500);
+
+            // Search within the current filtered data instead of original data
+            var filteredMembers = CurrentFilteredData.Where(emp =>
+                emp.ID.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.ContactNumber.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.MembershipType.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.Validity.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+
+            MemberItems.Clear();
+            foreach (var members in filteredMembers)
+            {
+                members.PropertyChanged += OnMemberPropertyChanged;
+                MemberItems.Add(members);
+            }
+            UpdateCounts();
+        }
+        finally
+        {
+            IsSearchingMember = false;
+        }
+    }
+
     [RelayCommand]
     private async Task ShowCopySingleMemberName(ManageMembersItem? member)
     {
@@ -682,35 +632,69 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     private async Task OnSubmitDeleteSingleItem(ManageMembersItem member)
     {
-        await DeleteMemberFromDatabase(member);
-        member.PropertyChanged -= OnMemberPropertyChanged;
-        MemberItems.Remove(member);
-        UpdateCounts();
+        try
+        {
+            var success = await _memberService.DeleteMemberAsync(member.ID);
+            if (success)
+            {
+                member.PropertyChanged -= OnMemberPropertyChanged;
+                MemberItems.Remove(member);
 
-        _toastManager.CreateToast($"Delete {member.Name} Account")
-            .WithContent($"{member.Name}'s Account deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+                // Also remove from filtered data
+                OriginalMemberData.Remove(member);
+                CurrentFilteredData.Remove(member);
+
+                UpdateCounts();
+
+                _toastManager.CreateToast($"Delete {member.Name} Account")
+                    .WithContent($"{member.Name}'s Account deleted successfully!")
+                    .DismissOnClick()
+                    .WithDelay(6)
+                    .ShowSuccess();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Delete Error")
+                .WithContent($"Failed to delete {member.Name}: {ex.Message}")
+                .ShowError();
+        }
     }
     private async Task OnSubmitDeleteMultipleItems(ManageMembersItem member)
     {
-        var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
-        if (!selectedMembers.Any()) return;
-
-        foreach (var members in selectedMembers)
+        try
         {
-            await DeleteMemberFromDatabase(member);
-            members.PropertyChanged -= OnMemberPropertyChanged;
-            MemberItems.Remove(members);
-        }
-        UpdateCounts();
+            var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
+            if (!selectedMembers.Any()) return;
 
-        _toastManager.CreateToast($"Delete Selected Accounts")
-            .WithContent($"Multiple accounts deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+            var memberIds = selectedMembers.Select(m => m.ID).ToList();
+            var success = await _memberService.DeleteMultipleMembersAsync(memberIds);
+
+            if (success)
+            {
+                foreach (var members in selectedMembers)
+                {
+                    members.PropertyChanged -= OnMemberPropertyChanged;
+                    MemberItems.Remove(members);
+                    OriginalMemberData.Remove(members);
+                    CurrentFilteredData.Remove(members);
+                }
+
+                UpdateCounts();
+
+                _toastManager.CreateToast($"Delete Selected Accounts")
+                    .WithContent($"Multiple accounts deleted successfully!")
+                    .DismissOnClick()
+                    .WithDelay(6)
+                    .ShowSuccess();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Delete Error")
+                .WithContent($"Failed to delete selected members: {ex.Message}")
+                .ShowError();
+        }
     }
 
     // Helper method to delete from database
@@ -778,61 +762,61 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         SearchMembersCommand.Execute(null);
     }
 
-	[RelayCommand]
-	private void OpenAddNewMemberView()
-	{
-		_pageManager.Navigate<AddNewMemberViewModel>();
-	} 
-	
-	[RelayCommand]
-	private void OpenUpgradeMemberView()
-	{
-		_pageManager.Navigate<AddNewMemberViewModel>();
-	} 
-	
-	[RelayCommand]
-	private void OpenRenewMemberView()
-	{
-		_pageManager.Navigate<AddNewMemberViewModel>();
-	} 
-	
-	[RelayCommand]
-	private void ShowDeleteMember()
-	{
-		_dialogManager
-			.CreateDialog(
-				"Are you absolutely sure?",
-				"This action cannot be undone. This will permanently delete and remove this member's data from your server.")
-			.WithPrimaryButton("Continue",
-				() => _toastManager.CreateToast("Delete data")
-					.WithContent("Data deleted successfully!")
-					.DismissOnClick()
-					.ShowSuccess()
-				, DialogButtonStyle.Destructive)
-			.WithCancelButton("Cancel")
-			.WithMaxWidth(512)
-			.Dismissible()
-			.Show();
-	} 
-	
-	[RelayCommand]
-	private void ShowModifyMemberDialog(ManageMembersItem member)
-	{
-		_memberDialogCardViewModel.Initialize();
-		_dialogManager.CreateDialog(_memberDialogCardViewModel)
-			.WithSuccessCallback(_ =>
-				_toastManager.CreateToast("Modified an existing gym member information")
-					.WithContent($"You just modified {member.Name} information!")
-					.DismissOnClick()
-					.ShowSuccess())
-			.WithCancelCallback(() =>
-				_toastManager.CreateToast("Cancellation of modification")
-					.WithContent($"You just cancelled modifying {member.Name} information!")
-					.DismissOnClick()
-					.ShowWarning()).WithMaxWidth(950)
-			.Dismissible()
-			.Show();
-	}
+    [RelayCommand]
+    private void OpenAddNewMemberView()
+    {
+        _pageManager.Navigate<AddNewMemberViewModel>();
+    }
+
+    [RelayCommand]
+    private void OpenUpgradeMemberView()
+    {
+        _pageManager.Navigate<AddNewMemberViewModel>();
+    }
+
+    [RelayCommand]
+    private void OpenRenewMemberView()
+    {
+        _pageManager.Navigate<AddNewMemberViewModel>();
+    }
+
+    [RelayCommand]
+    private void ShowDeleteMember()
+    {
+        _dialogManager
+            .CreateDialog(
+                "Are you absolutely sure?",
+                "This action cannot be undone. This will permanently delete and remove this member's data from your server.")
+            .WithPrimaryButton("Continue",
+                () => _toastManager.CreateToast("Delete data")
+                    .WithContent("Data deleted successfully!")
+                    .DismissOnClick()
+                    .ShowSuccess()
+                , DialogButtonStyle.Destructive)
+            .WithCancelButton("Cancel")
+            .WithMaxWidth(512)
+            .Dismissible()
+            .Show();
+    }
+
+    [RelayCommand]
+    private void ShowModifyMemberDialog(ManageMembersItem member)
+    {
+        _memberDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_memberDialogCardViewModel)
+            .WithSuccessCallback(_ =>
+                _toastManager.CreateToast("Modified an existing gym member information")
+                    .WithContent($"You just modified {member.Name} information!")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Cancellation of modification")
+                    .WithContent($"You just cancelled modifying {member.Name} information!")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(950)
+            .Dismissible()
+            .Show();
+    }
 }
 public partial class ManageMembersItem : ObservableObject
 {
@@ -850,7 +834,7 @@ public partial class ManageMembersItem : ObservableObject
 
     [ObservableProperty]
     private string _contactNumber = string.Empty;
-    
+
     [ObservableProperty]
     private string _membershipType = string.Empty;
 
@@ -892,4 +876,3 @@ public partial class ManageMembersItem : ObservableObject
         OnPropertyChanged(nameof(StatusDisplayText));
     }
 }
->>>>>>> 2a3bdf11f555f1d669ec83aaf947ec73d7a523d0

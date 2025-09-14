@@ -9,6 +9,9 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface IMemberService
     {
-        Task<List<MemberModel>> GetMemberAsync();
+        Task<List<ManageMemberModel>> GetMemberAsync();
+        Task AddMemberAsync(ManageMemberModel member);
+        Task<bool> DeleteMemberAsync(string memberId);
+        Task<bool> DeleteMultipleMembersAsync(List<string> memberIds);
     }
 }
