@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -75,6 +76,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [ObservableProperty]
     private ManageMembersItem? _selectedMember;
 
+    private readonly IMemberService _memberService;
+
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly DialogManager _dialogManager;
@@ -91,8 +94,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         !new[] { "Expired" }
             .Any(status => SelectedMember is not null && SelectedMember.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
 
-    public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
+    public ManageMembershipViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
     {
+        _memberService = memberService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
@@ -121,13 +125,68 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async void Initialize()
     {
         if (IsInitialized) return;
-        LoadSampleData();
+        await LoadMemberDataAsync();
         UpdateCounts();
         IsInitialized = true;
     }
+
+    private async Task LoadMemberDataAsync()
+    {
+        try
+        {
+            var dbMembers = await _memberService.GetMemberAsync();
+
+            if (dbMembers is { Count: > 0 })
+            {
+                // Map ManageMemberModel → ManageMemberItems
+                var memberItems = dbMembers.Select(m => new ManageMembersItem
+                {
+                    ID = m.MemberID.ToString(),
+                    AvatarSource = DefaultAvatarSource, // already processed by service
+                    Name = m.Name,
+                    ContactNumber = m.ContactNumber,
+                    AvailedPackages = m.MembershipType ?? string.Empty,
+                    Status = m.Status,
+                    Validity = DateTime.TryParse(m.Validity, out var parsedDate)
+        ? parsedDate
+        : DateTime.MinValue
+                }).ToList();
+
+                OriginalMemberData = memberItems;
+                CurrentFilteredData = [.. memberItems];
+
+                MemberItems.Clear();
+                foreach (var member in memberItems)
+                {
+                    member.PropertyChanged += OnMemberPropertyChanged;
+                    MemberItems.Add(member);
+                }
+
+                TotalCount = MemberItems.Count;
+                if (MemberItems.Count > 0)
+                    SelectedMember = MemberItems[0];
+
+                UpdateCounts();
+                return; // ✅ loaded successfully
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ManageMembership] Failed to load DB members: {ex.Message}");
+            _toastManager.CreateToast("Database Error")
+                .WithContent("Could not load members from database. Showing sample data instead.")
+                .DismissOnClick()
+                .ShowWarning();
+        }
+
+        // fallback if DB fails
+        LoadSampleData();
+    }
+
+
 
     private void LoadSampleData()
     {

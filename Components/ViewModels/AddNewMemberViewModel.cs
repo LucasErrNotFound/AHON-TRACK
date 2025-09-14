@@ -1,3 +1,9 @@
+using AHON_TRACK.Models;
+using AHON_TRACK.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -5,11 +11,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
-using AHON_TRACK.ViewModels;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using HotAvalonia;
-using ShadUI;
+using AHON_TRACK.Services.Interface;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -73,6 +75,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly IMemberService _memberService;
 
     public string ViewTitle => ViewContext switch
     {
@@ -447,8 +450,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         }
     }
 
-    public AddNewMemberViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public AddNewMemberViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
+        _memberService = memberService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
@@ -619,10 +623,40 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     }
 
     [RelayCommand]
-    private void Payment()
+    private async void Payment()
     {
-        _toastManager.CreateToast("Payment Successful!").ShowSuccess();
-        _pageManager.Navigate<ManageMembershipViewModel>();
+        try
+        {
+            var member = new ManageMemberModel
+            {
+                FirstName = MemberFirstName,
+                MiddleInitial = SelectedMiddleInitialItem,
+                LastName = MemberLastName,
+                Gender = MemberGender,
+                ContactNumber = MemberContactNumber,
+                Age = MemberAge,
+                DateOfBirth = MemberBirthDate,
+                Validity = MembershipDuration?.ToString(),
+                Status = MemberStatus,
+                PaymentMethod = null
+            };
+
+            await _memberService.AddMemberAsync(member);
+
+            _toastManager.CreateToast("Payment Successful!")
+                         .WithContent($"Member {member.FirstName} registered.")
+                         .ShowSuccess();
+
+            ClearAllFields();
+            _pageManager.Navigate<ManageMembershipViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Payment] Error saving member: {ex.Message}");
+            _toastManager.CreateToast("Error")
+                         .WithContent("Failed to save member.")
+                         .ShowError();
+        }
     }
 
     public bool IsPaymentPossible
