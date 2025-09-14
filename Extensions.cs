@@ -2,6 +2,7 @@
 using AHON_TRACK.Components.AddNewEmployeeDialog;
 using AHON_TRACK.Components.AddNewPackageDialog;
 using AHON_TRACK.Components.AddTrainingScheduleDialog;
+using AHON_TRACK.Components.ChangeScheduleDialog;
 using AHON_TRACK.Components.EditPackageDialog;
 using AHON_TRACK.Components.EquipmentDialog;
 using AHON_TRACK.Components.ItemDialog;
@@ -26,6 +27,7 @@ public static class Extensions
         dialogService.Register<ItemDialogCard, ItemDialogCardViewModel>();
         dialogService.Register<SupplierDialogCard, SupplierDialogCardViewModel>();
         dialogService.Register<MemberDialogCard, MemberDialogCardViewModel>();
+        dialogService.Register<ChangeScheduleDialogCard, ChangeScheduleDialogCardViewModel>();
 
         return service;
     }

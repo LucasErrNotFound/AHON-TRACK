@@ -1,13 +1,3 @@
-using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Converters;
-using AHON_TRACK.Models;
-using AHON_TRACK.Services;
-using AHON_TRACK.Services.Interface;
-using Avalonia.Media;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using HotAvalonia;
-using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,14 +6,18 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using AHON_TRACK.Components.ViewModels;
+using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("manage-membership")]
 public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    private readonly IMemberService _memberService;
-
     [ObservableProperty]
     private List<ManageMembersItem> _originalMemberData = [];
 
@@ -61,7 +55,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     private bool _showContactNumberColumn = true;
 
     [ObservableProperty]
-    private bool _showMembershipTypeColumn = true;
+    private bool _showAvailedPackagesColumn = true;
 
     [ObservableProperty]
     private bool _showStatusColumn = true;
@@ -78,6 +72,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [ObservableProperty]
     private bool _isInitialized;
 
+    [ObservableProperty]
+    private ManageMembersItem? _selectedMember;
+
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly DialogManager _dialogManager;
@@ -86,21 +83,28 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     private readonly MemberDialogCardViewModel _memberDialogCardViewModel;
     private readonly AddNewMemberViewModel _addNewMemberViewModel;
 
-    public ManageMembershipViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
+    public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
+    public bool IsExpiredVisible => SelectedMember?.Status.Equals("expired", StringComparison.OrdinalIgnoreCase) ?? false;
+    public bool HasSelectedMember => SelectedMember is not null;
+
+    public bool IsUpgradeButtonEnabled =>
+        !new[] { "Expired" }
+            .Any(status => SelectedMember is not null && SelectedMember.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+
+    public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
     {
-        _memberService = memberService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _memberDialogCardViewModel = memberDialogCardViewModel;
         _addNewMemberViewModel = addNewMemberViewModel;
-        LoadMembersFromDatabaseAsync();
+
+        LoadSampleData();
         UpdateCounts();
     }
 
     public ManageMembershipViewModel()
     {
-        _memberService = new MemberService("YourConnectionStringHere", new ToastManager());
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
@@ -108,61 +112,27 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         _addNewMemberViewModel = new AddNewMemberViewModel();
     }
 
-    [AvaloniaHotReload]
-    public async Task Initialize()
+    partial void OnSelectedMemberChanged(ManageMembersItem? value)
     {
-        if (IsInitialized) return;
-        await LoadMembersFromDatabaseAsync();
-        UpdateCounts();
-        IsInitialized = true;
+        OnPropertyChanged(nameof(IsActiveVisible));
+        OnPropertyChanged(nameof(IsExpiredVisible));
+        OnPropertyChanged(nameof(HasSelectedMember));
+        OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
     }
 
-    private async Task LoadMembersFromDatabaseAsync()
+    [AvaloniaHotReload]
+    public void Initialize()
     {
-        try
-        {
-            var members = await _memberService.GetMemberAsync();
-
-            var memberItems = members.Select(m => new ManageMembersItem
-            {
-                ID = m.MemberID.ToString(),
-                AvatarSource = m.ProfilePicture == null ? DefaultAvatarSource : m.ProfilePicture.ToString() ?? DefaultAvatarSource,
-                Name = m.Name,
-                ContactNumber = m.ContactNumber ?? string.Empty,
-                MembershipType = m.MembershipType ?? string.Empty,
-                Status = m.Status ?? string.Empty,
-                Validity = DateTime.TryParse(m.Validity, out var dt) ? dt : DateTime.MinValue
-            }).ToList();
-
-            OriginalMemberData = memberItems;
-            CurrentFilteredData = [.. memberItems];
-
-            MemberItems.Clear();
-            foreach (var item in memberItems)
-            {
-                item.PropertyChanged += OnMemberPropertyChanged;
-                MemberItems.Add(item);
-            }
-
-            TotalCount = MemberItems.Count;
-            UpdateCounts();
-        }
-        catch (Exception ex)
-        {
-            _toastManager?.CreateToast("Database Error")
-                .WithContent($"Failed to load members: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-
-            LoadSampleData();
-        }
+        if (IsInitialized) return;
+        LoadSampleData();
+        UpdateCounts();
+        IsInitialized = true;
     }
 
     private void LoadSampleData()
     {
         var sampleMembers = GetSampleMembersData();
 
-        // Store original data for filtering/sorting operations
         OriginalMemberData = sampleMembers;
         CurrentFilteredData = [.. sampleMembers]; // Initialize current state
 
@@ -174,6 +144,11 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         }
 
         TotalCount = MemberItems.Count;
+
+        if (MemberItems.Count > 0)
+        {
+            SelectedMember = MemberItems[0];
+        }
     }
 
     private List<ManageMembersItem> GetSampleMembersData()
@@ -186,7 +161,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 AvatarSource = DefaultAvatarSource,
                 Name = "Jedd Calubayan",
                 ContactNumber = "0975 994 3010",
-                MembershipType = "Monthly",
+                AvailedPackages = "Boxing",
                 Status = "Active",
                 Validity = new DateTime(2025, 6, 16)
             },
@@ -197,8 +172,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 AvatarSource = DefaultAvatarSource,
                 Name = "Marc Torres",
                 ContactNumber = "0975 994 3010",
-                MembershipType = "Monthly",
-                Status = "Inactive",
+                AvailedPackages = "None",
+                Status = "Expired",
                 Validity = new DateTime(2025, 7, 16)
             },
 
@@ -208,8 +183,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 AvatarSource = DefaultAvatarSource,
                 Name = "Mardie Dela Cruz",
                 ContactNumber = "0975 994 3010",
-                MembershipType = "Monthly",
-                Status = "Inactive",
+                AvailedPackages = "None",
+                Status = "Expired",
                 Validity = new DateTime(2025, 7, 18)
             },
 
@@ -219,7 +194,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 AvatarSource = DefaultAvatarSource,
                 Name = "Mark Dela Cruz",
                 ContactNumber = "0975 994 3010",
-                MembershipType = "Monthly",
+                AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
                 Status = "Active",
                 Validity = new DateTime(2025, 7, 18)
             },
@@ -230,8 +205,41 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 AvatarSource = DefaultAvatarSource,
                 Name = "JL Taberdo",
                 ContactNumber = "0975 994 3010",
-                MembershipType = "Monthly",
-                Status = "Terminated",
+                AvailedPackages = "Gym",
+                Status = "Expired",
+                Validity = new DateTime(2025, 4, 18)
+            },
+
+            new ManageMembersItem
+            {
+                ID = "1006",
+                AvatarSource = DefaultAvatarSource,
+                Name = "Robert Xyz B. Lucas",
+                ContactNumber = "0975 994 3010",
+                AvailedPackages = "Gym",
+                Status = "Active",
+                Validity = new DateTime(2025, 4, 18)
+            },
+
+            new ManageMembersItem
+            {
+                ID = "1007",
+                AvatarSource = DefaultAvatarSource,
+                Name = "Sianrey V. Flora",
+                ContactNumber = "0975 994 3010",
+                AvailedPackages = "Gym",
+                Status = "Active",
+                Validity = new DateTime(2025, 4, 18)
+            },
+
+            new ManageMembersItem
+            {
+                ID = "1008",
+                AvatarSource = DefaultAvatarSource,
+                Name = "Marion James Dela Roca",
+                ContactNumber = "0975 994 3010",
+                AvailedPackages = "Gym",
+                Status = "Active",
                 Validity = new DateTime(2025, 4, 18)
             },
         ];
@@ -336,32 +344,17 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     }
 
     [RelayCommand]
-    private void FilterInactiveStatus()
+    private void FilterExpiredStatus()
     {
-        var filterInactiveStatus = OriginalMemberData.Where(member => member.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase)).ToList();
+        var filterExpiredStatus = OriginalMemberData.Where(member => member.Status.Equals("expired", StringComparison.OrdinalIgnoreCase)).ToList();
         MemberItems.Clear();
 
-        foreach (var member in filterInactiveStatus)
+        foreach (var member in filterExpiredStatus)
         {
             member.PropertyChanged += OnMemberPropertyChanged;
             MemberItems.Add(member);
         }
-        CurrentFilteredData = [.. filterInactiveStatus];
-        UpdateCounts();
-    }
-
-    [RelayCommand]
-    private void FilterTerminatedStatus()
-    {
-        var filterTerminatedStatus = OriginalMemberData.Where(member => member.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase)).ToList();
-        MemberItems.Clear();
-
-        foreach (var member in filterTerminatedStatus)
-        {
-            member.PropertyChanged += OnMemberPropertyChanged;
-            MemberItems.Add(member);
-        }
-        CurrentFilteredData = [.. filterTerminatedStatus];
+        CurrentFilteredData = [.. filterExpiredStatus];
         UpdateCounts();
     }
 
@@ -419,7 +412,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 emp.ID.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                 emp.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                 emp.ContactNumber.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                emp.MembershipType.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.AvailedPackages.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                 emp.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                 emp.Validity.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)
             ).ToList();
@@ -632,69 +625,35 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     private async Task OnSubmitDeleteSingleItem(ManageMembersItem member)
     {
-        try
-        {
-            var success = await _memberService.DeleteMemberAsync(member.ID);
-            if (success)
-            {
-                member.PropertyChanged -= OnMemberPropertyChanged;
-                MemberItems.Remove(member);
+        await DeleteMemberFromDatabase(member);
+        member.PropertyChanged -= OnMemberPropertyChanged;
+        MemberItems.Remove(member);
+        UpdateCounts();
 
-                // Also remove from filtered data
-                OriginalMemberData.Remove(member);
-                CurrentFilteredData.Remove(member);
-
-                UpdateCounts();
-
-                _toastManager.CreateToast($"Delete {member.Name} Account")
-                    .WithContent($"{member.Name}'s Account deleted successfully!")
-                    .DismissOnClick()
-                    .WithDelay(6)
-                    .ShowSuccess();
-            }
-        }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Delete Error")
-                .WithContent($"Failed to delete {member.Name}: {ex.Message}")
-                .ShowError();
-        }
+        _toastManager.CreateToast($"Delete {member.Name} Account")
+            .WithContent($"{member.Name}'s Account deleted successfully!")
+            .DismissOnClick()
+            .WithDelay(6)
+            .ShowSuccess();
     }
     private async Task OnSubmitDeleteMultipleItems(ManageMembersItem member)
     {
-        try
+        var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
+        if (!selectedMembers.Any()) return;
+
+        foreach (var members in selectedMembers)
         {
-            var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
-            if (!selectedMembers.Any()) return;
-
-            var memberIds = selectedMembers.Select(m => m.ID).ToList();
-            var success = await _memberService.DeleteMultipleMembersAsync(memberIds);
-
-            if (success)
-            {
-                foreach (var members in selectedMembers)
-                {
-                    members.PropertyChanged -= OnMemberPropertyChanged;
-                    MemberItems.Remove(members);
-                    OriginalMemberData.Remove(members);
-                    CurrentFilteredData.Remove(members);
-                }
-
-                UpdateCounts();
-
-                _toastManager.CreateToast($"Delete Selected Accounts")
-                    .WithContent($"Multiple accounts deleted successfully!")
-                    .DismissOnClick()
-                    .WithDelay(6)
-                    .ShowSuccess();
-            }
+            await DeleteMemberFromDatabase(member);
+            members.PropertyChanged -= OnMemberPropertyChanged;
+            MemberItems.Remove(members);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Delete Error")
-                .WithContent($"Failed to delete selected members: {ex.Message}")
-                .ShowError();
-        }
+        UpdateCounts();
+
+        _toastManager.CreateToast($"Delete Selected Accounts")
+            .WithContent($"Multiple accounts deleted successfully!")
+            .DismissOnClick()
+            .WithDelay(6)
+            .ShowSuccess();
     }
 
     // Helper method to delete from database
@@ -736,8 +695,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         switch (selectedIndex)
         {
             case 0: FilterActiveStatusCommand.Execute(null); break;
-            case 1: FilterInactiveStatusCommand.Execute(null); break;
-            case 2: FilterTerminatedStatusCommand.Execute(null); break;
+            case 1: FilterExpiredStatusCommand.Execute(null); break;
         }
     }
 
@@ -765,19 +723,32 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [RelayCommand]
     private void OpenAddNewMemberView()
     {
-        _pageManager.Navigate<AddNewMemberViewModel>();
+        _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+        {
+            ["Context"] = MemberViewContext.AddNew
+        });
     }
 
     [RelayCommand]
     private void OpenUpgradeMemberView()
     {
-        _pageManager.Navigate<AddNewMemberViewModel>();
+        if (SelectedMember == null) return;
+        _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+        {
+            ["Context"] = MemberViewContext.Upgrade,
+            ["SelectedMember"] = SelectedMember
+        });
     }
 
     [RelayCommand]
     private void OpenRenewMemberView()
     {
-        _pageManager.Navigate<AddNewMemberViewModel>();
+        if (SelectedMember == null) return;
+        _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+        {
+            ["Context"] = MemberViewContext.Renew,
+            ["SelectedMember"] = SelectedMember
+        });
     }
 
     [RelayCommand]
@@ -836,7 +807,7 @@ public partial class ManageMembersItem : ObservableObject
     private string _contactNumber = string.Empty;
 
     [ObservableProperty]
-    private string _membershipType = string.Empty;
+    private string _availedPackages = string.Empty;
 
     [ObservableProperty]
     private string _status = string.Empty;
@@ -847,28 +818,24 @@ public partial class ManageMembersItem : ObservableObject
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500
-        "inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)), // Gray-500
-        "terminated" => new SolidColorBrush(Color.FromRgb(239, 68, 68)), // Red-500
+        "expired" => new SolidColorBrush(Color.FromRgb(239, 68, 68)), // Red-500
         _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
     };
 
     public IBrush StatusBackground => Status.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
-        "inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)), // Gray-500 with alpha
-        "terminated" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
+        "expired" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))           // Default Gray-500 with alpha
     };
 
     public string StatusDisplayText => Status.ToLowerInvariant() switch
     {
         "active" => "● Active",
-        "inactive" => "● Inactive",
-        "terminated" => "● Terminated",
+        "expired" => "● Expired",
         _ => Status
     };
 
-    // Notify when status changes to update colors
     partial void OnStatusChanged(string value)
     {
         OnPropertyChanged(nameof(StatusForeground));

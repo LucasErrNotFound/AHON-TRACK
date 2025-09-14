@@ -26,6 +26,7 @@
         <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
         <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
         <converters:DateToStringConverter x:Key="DateToStringConverter" />
+        <converters:NullableDateTimeToStringConverter x:Key="NullableDateTimeToStringConverter"/>
     </UserControl.Resources>
 
     <DockPanel LastChildFill="True">
@@ -67,8 +68,8 @@
                                     VerticalAlignment="Top"
                                     Margin="0,-2"
                                     shadui:ControlAssist.Label="Date Today"
-                                    SelectedDate="{x:Static system:DateTime.Today}"
-                                    IsEnabled="False" />
+                                    SelectedDate="{CompiledBinding SelectedDate}"
+                                    IsEnabled="True" />
                                 <Button
                                     Classes="Primary"
                                     Padding="30,0,30,0"
@@ -89,6 +90,7 @@
                             <Grid RowDefinitions="Auto *">
                                 <DataGrid
                                     MaxHeight="660"
+                                    MinHeight="500"
                                     Grid.Row="1"
                                     AutoGenerateColumns="False"
                                     CanUserReorderColumns="False"
@@ -97,7 +99,7 @@
                                     GridLinesVisibility="All"
                                     HeadersVisibility="Column"
                                     IsReadOnly="True"
-                                    ItemsSource="{CompiledBinding WalkInGroupedPeople}"
+                                    ItemsSource="{CompiledBinding WalkInPersons}"
                                     SelectionMode="Single">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn
@@ -147,17 +149,21 @@
                                             MinWidth="100"
                                             Header="Check-out"
                                             x:DataType="viewModels:WalkInPerson"
-                                            Binding="{CompiledBinding CheckOutTime, StringFormat='h:mm tt'}" />
+                                            Binding="{CompiledBinding CheckOutTime, Converter={StaticResource NullableDateTimeToStringConverter}}" />
                                         <DataGridTemplateColumn Header="Actions">
                                             <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate x:DataType="viewModels:CheckInOutViewModel">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8" Width="120"
-                                                                Height="25">
+                                                <DataTemplate x:DataType="viewModels:WalkInPerson">
+                                                    <StackPanel 
+                                                        Orientation="Horizontal" 
+                                                        Spacing="8" Width="120"
+                                                        Height="25">
                                                         <Button
                                                             Height="20"
                                                             Classes="Icon"
                                                             ToolTip.Tip="Delete from table"
-                                                            VerticalAlignment="Center">
+                                                            VerticalAlignment="Center"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).ShowWalkInItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                            CommandParameter="{CompiledBinding}">
                                                             <shadui:ButtonAssist.Icon>
                                                                 <Svg
                                                                     Path="avares://AHON_TRACK/Assets/CheckInOutView/delete-icon.svg"
@@ -189,11 +195,16 @@
                                                                         Height="18" />
                                                                 </MenuItem.Header>
                                                                 <shadui:MenuItemAssist.Label>
-                                                                    <TextBlock Text="Actions" FontSize="15"
-                                                                               FontWeight="Regular"
-                                                                               Foreground="{DynamicResource MutedColor}" />
+                                                                    <TextBlock 
+                                                                        Text="Actions" 
+                                                                        FontSize="15"
+                                                                        FontWeight="Regular"
+                                                                        Foreground="{DynamicResource MutedColor}" />
                                                                 </shadui:MenuItemAssist.Label>
-                                                                <MenuItem Header="Stamp Check-out" />
+                                                                <MenuItem 
+                                                                    Header="Stamp Check-out" 
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).StampWalkInCheckOutCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
                                                             </MenuItem>
                                                         </Menu>
                                                     </StackPanel>
@@ -223,8 +234,8 @@
                                     VerticalAlignment="Top"
                                     Margin="0,-2"
                                     shadui:ControlAssist.Label="Date Today"
-                                    SelectedDate="{x:Static system:DateTime.Today}"
-                                    IsEnabled="False" />
+                                    SelectedDate="{CompiledBinding SelectedDate}"
+                                    IsEnabled="True" />
                                 <Button
                                     Classes="Primary"
                                     Padding="25,0,25,0"
@@ -245,13 +256,15 @@
                             <Grid RowDefinitions="Auto *">
                                 <DataGrid
                                     Grid.Row="1"
+                                    MaxHeight="660"
+                                    MinHeight="500"
                                     CanUserReorderColumns="False"
                                     CanUserResizeColumns="False"
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
                                     HeadersVisibility="Column"
                                     IsReadOnly="True"
-                                    ItemsSource="{CompiledBinding MemberGroupedPeople}"
+                                    ItemsSource="{CompiledBinding MemberPersons}"
                                     SelectionMode="Single">
                                     <DataGrid.Resources>
                                         <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
@@ -314,14 +327,14 @@
                                             CanUserSort="False"
                                             Header="Status"
                                             Width="Auto"
-                                            MinWidth="130">
+                                            MinWidth="145">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate DataType="viewModels:MemberPerson">
                                                     <Border
                                                         Background="{CompiledBinding StatusBackground}"
                                                         CornerRadius="11"
                                                         Padding="8,4"
-                                                        Margin="0,0,0,0"
+                                                        Margin="5,0,0,0"
                                                         HorizontalAlignment="Left">
                                                         <TextBlock
                                                             Text="{CompiledBinding StatusDisplayText}"
@@ -345,17 +358,22 @@
                                             MinWidth="80"
                                             Header="Check-out"
                                             x:DataType="viewModels:MemberPerson"
-                                            Binding="{CompiledBinding CheckOutTime, StringFormat='h:mm tt'}" />
+                                            Binding="{CompiledBinding CheckOutTime, Converter={StaticResource NullableDateTimeToStringConverter}}" />
                                         <DataGridTemplateColumn Header="Actions">
                                             <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate x:DataType="viewModels:CheckInOutViewModel">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8" Width="120"
-                                                                Height="25">
+                                                <DataTemplate x:DataType="viewModels:MemberPerson">
+                                                    <StackPanel 
+                                                        Orientation="Horizontal" 
+                                                        Spacing="8" 
+                                                        Width="120"
+                                                        Height="25">
                                                         <Button
                                                             Height="20"
                                                             Classes="Icon"
                                                             ToolTip.Tip="Delete from table"
-                                                            VerticalAlignment="Center">
+                                                            VerticalAlignment="Center"
+                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).ShowMemberItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                            CommandParameter="{CompiledBinding}">
                                                             <shadui:ButtonAssist.Icon>
                                                                 <Svg
                                                                     Path="avares://AHON_TRACK/Assets/CheckInOutView/delete-icon.svg"
@@ -387,11 +405,16 @@
                                                                         Height="18" />
                                                                 </MenuItem.Header>
                                                                 <shadui:MenuItemAssist.Label>
-                                                                    <TextBlock Text="Actions" FontSize="15"
-                                                                               FontWeight="Regular"
-                                                                               Foreground="{DynamicResource MutedColor}" />
+                                                                    <TextBlock 
+                                                                        Text="Actions" 
+                                                                        FontSize="15"
+                                                                        FontWeight="Regular"
+                                                                        Foreground="{DynamicResource MutedColor}" />
                                                                 </shadui:MenuItemAssist.Label>
-                                                                <MenuItem Header="Stamp Check-out" />
+                                                                <MenuItem 
+                                                                    Header="Stamp Check-out" 
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).StampMemberInCheckOutCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
                                                                 <MenuItem
                                                                     Header="View Profile"
                                                                     Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).OpenViewMemberProfileCommand, FallbackValue={x:Null}}"

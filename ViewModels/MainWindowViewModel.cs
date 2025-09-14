@@ -207,6 +207,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ToastManager.CreateToast("You have signed in! Welcome back!")
             .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                 .WithDelay(8)
+                .DismissOnClick()
                 .ShowSuccess();
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }

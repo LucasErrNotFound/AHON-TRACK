@@ -1,27 +1,36 @@
-using AHON_TRACK.Services.Interface;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.RegularExpressions;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using AHON_TRACK.Models;
-using AHON_TRACK.Services;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-[Page("add-member")]
-public partial class AddNewMemberViewModel : ViewModelBase, INavigable
+public enum MemberViewContext
 {
+    AddNew,
+    Upgrade,
+    Renew
+}
 
-    private readonly IMemberService _memberService;
+[Page("add-member")]
+public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigableWithParameters
+{
+    [ObservableProperty]
+    private MemberViewContext _viewContext = MemberViewContext.AddNew;
 
     [ObservableProperty]
-    private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+    private string[] _middleInitialItems =
+        ["A", "B", "C", "D", "E", "F", "G", "H",
+            "I", "J", "K", "L", "M", "N", "O", "P",
+            "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]; // Revert change because of char to string issue
 
     [ObservableProperty]
     private string[] _memberPackageItems = ["Boxing", "Muay Thai", "Crossfit", "Zumba"];
@@ -64,6 +73,29 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+
+    public string ViewTitle => ViewContext switch
+    {
+        MemberViewContext.AddNew => "Add New Member",
+        MemberViewContext.Upgrade => "Upgrade Existing Member",
+        MemberViewContext.Renew => "Renew Member",
+        _ => "Add New Member"
+    };
+
+    public string ViewDescription => ViewContext switch
+    {
+        MemberViewContext.AddNew => "Add a new gym member by filling out the forms",
+        MemberViewContext.Upgrade => "Upgrade an existing member's package and benefits",
+        MemberViewContext.Renew => "Renew an existing member's subscription",
+        _ => "Add a new gym member by filling out the forms"
+    };
+
+    public void SetViewContext(MemberViewContext context)
+    {
+        ViewContext = context;
+        OnPropertyChanged(nameof(ViewTitle));
+        OnPropertyChanged(nameof(ViewDescription));
+    }
 
     [Required(ErrorMessage = "First name is required")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
@@ -415,9 +447,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
         }
     }
 
-    public AddNewMemberViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public AddNewMemberViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
-        _memberService = memberService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
@@ -434,6 +465,153 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
     public void Initialize()
     {
     }
+
+    public void SetNavigationParameters(Dictionary<string, object> parameters)
+    {
+        if (parameters.TryGetValue("Context", out var context))
+        {
+            SetViewContext((MemberViewContext)context);
+        }
+
+        if (!parameters.TryGetValue("SelectedMember", out var member)) return;
+        var selectedMember = (ManageMembersItem)member;
+        PopulateFormWithMemberData(selectedMember);
+    }
+
+    private void PopulateFormWithMemberData(ManageMembersItem member)
+    {
+        // Remove whitespaces from contact number
+        MemberContactNumber = member.ContactNumber.Replace(" ", "");
+
+        // Parse the name using the enhanced algorithm
+        var nameResult = ParseFullName(member.Name);
+
+        MemberFirstName = nameResult.FirstName;
+        SelectedMiddleInitialItem = nameResult.MiddleInitial;
+        MemberLastName = nameResult.LastName;
+
+        MemberPackages = member.AvailedPackages;
+        MemberStatus = member.Status;
+    }
+
+    private (string FirstName, string MiddleInitial, string LastName) ParseFullName(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return (string.Empty, string.Empty, string.Empty);
+
+        var nameParts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (nameParts.Length == 0)
+            return (string.Empty, string.Empty, string.Empty);
+
+        if (nameParts.Length == 1)
+        {
+            // Only one part - treat as first name
+            return (nameParts[0], string.Empty, string.Empty);
+        }
+
+        // Look for middle initial (single character with optional dot, not at first or last position)
+        int middleInitialIndex = FindMiddleInitialIndex(nameParts);
+
+        if (middleInitialIndex != -1)
+        {
+            // Found middle initial - everything before is first name, everything after is last name
+            string firstName = string.Join(" ", nameParts.Take(middleInitialIndex));
+            string middleInitial = nameParts[middleInitialIndex].TrimEnd('.');
+            string lastName = string.Join(" ", nameParts.Skip(middleInitialIndex + 1));
+
+            return (firstName, middleInitial, lastName);
+        }
+
+        // No middle initial found - use strategy to split first and last name
+        return SplitFirstAndLastName(nameParts);
+    }
+
+    private int FindMiddleInitialIndex(string[] nameParts)
+    {
+        // Look for middle initial (not at first or last position)
+        for (int i = 1; i < nameParts.Length - 1; i++)
+        {
+            string part = nameParts[i];
+
+            // Check if it's a single character or single character with dot
+            if (part.Length == 1 || (part.Length == 2 && part.EndsWith(".")))
+            {
+                return i;
+            }
+        }
+
+        return -1; // No middle initial found
+    }
+
+    private (string FirstName, string MiddleInitial, string LastName) SplitFirstAndLastName(string[] nameParts)
+    {
+        // Strategy for ambiguous cases without middle initial
+        // This addresses the "Juan Dela Cruz" ambiguity
+
+        if (nameParts.Length == 2)
+        {
+            // Simple case: First Last
+            return (nameParts[0], string.Empty, nameParts[1]);
+        }
+
+        // For 3+ parts without middle initial, we need a strategy
+        // Option 1: Favor compound last names (common in Filipino names like "Dela Cruz", "De Leon")
+        if (HasCompoundLastNamePattern(nameParts))
+        {
+            return SplitWithCompoundLastName(nameParts);
+        }
+
+        // Option 2: Default strategy - first part is first name, rest is last name
+        return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
+    }
+
+    private bool HasCompoundLastNamePattern(string[] nameParts)
+    {
+        // Common Filipino compound last name prefixes
+        var compoundPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "de", "del", "dela", "delos", "delas", "van", "von", "da", "di", "du",
+            "san", "santa", "santo", "mc", "mac", "o'"
+        };
+
+        // Check if any part (except the first) starts with a compound prefix
+        for (int i = 1; i < nameParts.Length; i++)
+        {
+            if (compoundPrefixes.Contains(nameParts[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private (string FirstName, string MiddleInitial, string LastName) SplitWithCompoundLastName(string[] nameParts)
+    {
+        var compoundPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "de", "del", "dela", "delos", "delas", "van", "von", "da", "di", "du",
+            "san", "santa", "santo", "mc", "mac", "o'"
+        };
+
+        // Find the first compound prefix
+        for (int i = 1; i < nameParts.Length; i++)
+        {
+            if (compoundPrefixes.Contains(nameParts[i]))
+            {
+                // Everything before this index is first name
+                // Everything from this index onwards is last name
+                string firstName = string.Join(" ", nameParts.Take(i));
+                string lastName = string.Join(" ", nameParts.Skip(i));
+                return (firstName, string.Empty, lastName);
+            }
+        }
+
+        // Fallback - shouldn't reach here if HasCompoundLastNamePattern returned true
+        return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
+    }
+
     [RelayCommand]
     private void Cancel()
     {
@@ -441,44 +619,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private async Task Payment()
+    private void Payment()
     {
-        try
-        {
-            // map your current form fields into the model
-            var member = new ManageMemberModel
-            {
-                FirstName = MemberFirstName.Trim(),
-                MiddleInitial = SelectedMiddleInitialItem,
-                LastName = MemberLastName.Trim(),
-                Gender = MemberGender,
-                ContactNumber = MemberContactNumber,
-                Age = MemberAge,
-                DateOfBirth = MemberBirthDate,
-                MembershipType = MemberPackages,
-                Status = MemberStatus,
-                Validity = MembershipDuration?.ToString() ?? string.Empty,
-                PaymentMethod = IsCashSelected ? "Cash"
-                               : IsGCashSelected ? "GCash"
-                               : "Maya"
-            };
-
-            // save into database
-            await _memberService.AddMemberAsync(member);
-
-            // feedback & navigation
-            _toastManager.CreateToast("Payment Successful!")
-                         .WithContent($"{member.FirstName} added to membership list")
-                         .ShowSuccess();
-
-            _pageManager.Navigate<ManageMembershipViewModel>();
-        }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Payment Error")
-                         .WithContent(ex.Message)
-                         .ShowError();
-        }
+        _toastManager.CreateToast("Payment Successful!").ShowSuccess();
+        _pageManager.Navigate<ManageMembershipViewModel>();
     }
 
     public bool IsPaymentPossible

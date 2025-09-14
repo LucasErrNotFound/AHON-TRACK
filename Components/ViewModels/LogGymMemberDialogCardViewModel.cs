@@ -4,11 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Avalonia.Media;
 using ShadUI;
 
 namespace AHON_TRACK.Components.ViewModels;
@@ -16,22 +14,22 @@ namespace AHON_TRACK.Components.ViewModels;
 public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
 {
 	[ObservableProperty]
-	private ObservableCollection<MemberPerson> allMembers = new();
+	private ObservableCollection<MemberPerson> _allMembers = [];
 
 	[ObservableProperty]
-	private ObservableCollection<MemberPerson> filteredMembers = new();
+	private ObservableCollection<MemberPerson> _filteredMembers = [];
 
 	[ObservableProperty]
-	private ObservableCollection<string> memberSuggestions = new();
+	private ObservableCollection<string> _memberSuggestions = [];
 
 	[ObservableProperty]
-	private string searchText = string.Empty;
+	private string _searchText = string.Empty;
 
 	[ObservableProperty]
-	private MemberPerson? selectedMember;
+	private MemberPerson? _selectedMember;
 
 	[ObservableProperty]
-	private bool isSearching = false;
+	private bool _isSearching;
 
 	private readonly DialogManager _dialogManager;
 
@@ -72,7 +70,7 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
 		UpdateSuggestions();
 	}
 
-	public void LoadMembers(List<MemberPerson> members)
+	private void LoadMembers(List<MemberPerson> members)
 	{
 		AllMembers.Clear();
 		FilteredMembers.Clear();
@@ -143,13 +141,13 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
 
 			var searchTerm = SearchText.ToLowerInvariant();
 			var filteredResults = AllMembers.Where(member =>
-				member.FirstName.ToLowerInvariant().Contains(searchTerm) ||
-				member.LastName.ToLowerInvariant().Contains(searchTerm) ||
-				$"{member.FirstName} {member.LastName}".ToLowerInvariant().Contains(searchTerm) ||
+				member.FirstName.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+				member.LastName.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+                $"{member.FirstName} {member.LastName}".Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
 				member.ID.ToString().Contains(searchTerm) ||
-				member.MembershipType.ToLowerInvariant().Contains(searchTerm) ||
-				member.Status.ToLowerInvariant().Contains(searchTerm)
-			).ToList();
+				member.MembershipType.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+				member.Status.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase)
+            ).ToList();
 
 			FilteredMembers.Clear();
 			foreach (var member in filteredResults)
@@ -181,15 +179,13 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
 	// This method is called when a member is selected from the suggestion
 	partial void OnSelectedMemberChanged(MemberPerson? value)
 	{
-		if (value != null)
-		{
-			// Update the search text to match the selected member
-			SearchText = $"{value.FirstName} {value.LastName}";
+		if (value == null) return;
+		// Update the search text to match the selected member
+		SearchText = $"{value.FirstName} {value.LastName}";
 
-			// Show only the selected member in the grid
-			FilteredMembers.Clear();
-			FilteredMembers.Add(value);
-		}
+		// Show only the selected member in the grid
+		FilteredMembers.Clear();
+		FilteredMembers.Add(value);
 	}
 
 	[RelayCommand]
@@ -216,16 +212,17 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
 		ClearSearch();
 		_dialogManager.Close(this);
 	}
+	
+	public MemberPerson? LastSelectedMember { get; private set; } // I think this line makes it so that it remembers what you selected (and I know it's stupid but hey it works)
 
 	[RelayCommand]
 	private void Submit()
 	{
-		if (SelectedMember != null)
-		{
-			// Process the selected member for check-in/out
-			// You can add your business logic here
-			ClearSearch();
-			_dialogManager.Close(this, new CloseDialogOptions { Success = true });
-		}
+		if (SelectedMember == null) return;
+		// Process the selected member for check-in/out
+		LastSelectedMember = SelectedMember;
+		
+		ClearSearch();
+		_dialogManager.Close(this, new CloseDialogOptions { Success = true });
 	}
 }

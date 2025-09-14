@@ -73,12 +73,12 @@
                 Foreground="{DynamicResource FontForeground}"
                 FontSize="30"
                 FontWeight="SemiBold"
-                Text="Add New Member"
+                Text="{CompiledBinding ViewTitle}"
                 Margin="90,30,0,0" />
             <TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
-                Text="Add a new gym member by filling out the forms"
+                Text="{CompiledBinding ViewDescription}"
                 TextWrapping="Wrap"
                 Margin="90,0" />
         </StackPanel>

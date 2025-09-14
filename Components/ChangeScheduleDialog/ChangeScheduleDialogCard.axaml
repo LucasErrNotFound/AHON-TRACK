@@ -1,0 +1,87 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:viewModels="using:AHON_TRACK.Components.ViewModels"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    x:DataType="viewModels:ChangeScheduleDialogCardViewModel"
+    mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="480"
+    Width="400"
+    Height="480"
+    x:Class="AHON_TRACK.Components.ChangeScheduleDialog.ChangeScheduleDialogCard">
+    
+    <Design.DataContext>
+        <viewModels:ChangeScheduleDialogCardViewModel />
+    </Design.DataContext>
+    
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+    </UserControl.Resources>
+
+    <DockPanel LastChildFill="True">
+        <Border
+            DockPanel.Dock="Top"
+            Background="{DynamicResource BackgroundColor}"
+            BorderBrush="{DynamicResource BorderColor}"
+            Padding="30">
+            <StackPanel>
+                <shadui:CardTitle Content="Change Training Schedule" />
+                <shadui:CardDescription Content="This will update the current schedule with a new one" />
+                <StackPanel Width="280" Spacing="20" Margin="0,30,0,0" HorizontalAlignment="Center">
+                    <CalendarDatePicker
+                        shadui:ControlAssist.Label="Scheduled Date"
+                        SelectedDate="{CompiledBinding SelectedTrainingDate}" />
+                    <TimePicker
+                        shadui:ControlAssist.Label="Start Time"
+                        SelectedTime="{CompiledBinding StartTime, Converter={x:Static converters:TimeOnlyToTimeSpanConverter.Instance}}" />
+                    <TimePicker
+                        shadui:ControlAssist.Label="End Time"
+                        SelectedTime="{CompiledBinding EndTime, Converter={x:Static converters:TimeOnlyToTimeSpanConverter.Instance}}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        <StackPanel
+            DockPanel.Dock="Bottom"
+            Orientation="Horizontal"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Spacing="15"
+            Margin="0,0,30,15">
+            <Button
+                Classes="Destructive"
+                Command="{CompiledBinding DiscardCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <Svg
+                        Width="20"
+                        Height="20"
+                        Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/discard-icon.svg"
+                        Margin="0,0,7,0"
+                        VerticalAlignment="Center" />
+                    <TextBlock Text="Discard" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Button
+                Classes="Primary"
+                Command="{CompiledBinding SaveCommand}">
+                <StackPanel Orientation="Horizontal">
+                    <Svg
+                        Width="20"
+                        Height="20"
+                        Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/save-icon.svg"
+                        Margin="0,0,7,0"
+                        VerticalAlignment="Center" />
+                    <TextBlock Text="Save" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </DockPanel>
+</UserControl>
