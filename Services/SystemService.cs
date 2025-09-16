@@ -21,6 +21,32 @@ namespace AHON_TRACK.Services
             _toastManager = toastManager;
         }
 
+        // Logs user actions to SystemLogs table
+        private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool? success = null)
+        {
+            try
+            {
+                using var logCmd = new SqlCommand(
+                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime) 
+              VALUES (@username, @role, @actionType, @description, @success, GETDATE())", conn);
+
+                logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
+                logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
+                logCmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
+                logCmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
+                logCmd.Parameters.AddWithValue("@success", success.HasValue ? success.Value : (object)DBNull.Value);
+
+                await logCmd.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Log Error")
+                    .WithContent($"Failed to save log: {ex.Message}")
+                    .WithDelay(10)
+                    .ShowError();
+            }
+        }
+
         // Package Service Methods
 
         // Simple method with minimal parameters (2 parameters)
@@ -58,6 +84,9 @@ namespace AHON_TRACK.Services
 
                         await command.ExecuteNonQueryAsync();
                     }
+
+                    // Log successful action
+                    await LogActionAsync(connection, "Added new package", $"Added new package: '{packageName}' with price ${price:F2}", true);
                 }
 
                 // Show success toast
@@ -65,12 +94,26 @@ namespace AHON_TRACK.Services
             }
             catch (SqlException ex)
             {
+                // Log failed action
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    await LogActionAsync(connection, "Failed to add package", $"Failed to add package: '{packageName}' - SQL Error: {ex.Message}", false);
+                }
+
                 // Handle SQL-specific errors
                 _toastManager.CreateToast($"Database error: {ex.Message}");
                 throw;
             }
             catch (Exception ex)
             {
+                // Log failed action
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    await LogActionAsync(connection, "Failed to add package", $"Failed to add package: '{packageName}' - Error: {ex.Message}", false);
+                }
+
                 // Handle general errors
                 _toastManager.CreateToast($"Error adding package: {ex.Message}");
                 throw;
@@ -128,17 +171,40 @@ namespace AHON_TRACK.Services
 
                         await command.ExecuteNonQueryAsync();
                     }
+
+                    // Log successful action with detailed information
+                    var logDescription = $"Added package: '{packageName}' - Price: ${price:F2}, Duration: {duration} days";
+                    if (discount > 0)
+                    {
+                        logDescription += $", Discount: {discount}{(discountType?.ToLower() == "percentage" ? "%" : " fixed")}, Final Price: ${discountedPrice:F2}";
+                    }
+
+                    await LogActionAsync(connection, "Add new package", logDescription, true);
                 }
 
                 _toastManager.CreateToast($"Package '{packageName}' added successfully!");
             }
             catch (SqlException ex)
             {
+                // Log failed action
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    await LogActionAsync(connection, "Failed to add package", $"Failed to add package: '{packageName}' - SQL Error: {ex.Message}", false);
+                }
+
                 _toastManager.CreateToast($"Database error: {ex.Message}");
                 throw;
             }
             catch (Exception ex)
             {
+                // Log failed action
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    await LogActionAsync(connection, "Failed to add package", $"Failed to add package: '{packageName}' - Error: {ex.Message}", false);
+                }
+
                 _toastManager.CreateToast($"Error adding package: {ex.Message}");
                 throw;
             }
