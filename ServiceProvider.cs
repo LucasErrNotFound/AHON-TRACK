@@ -50,6 +50,7 @@ namespace AHON_TRACK;
 [Singleton<IEmployeeService, EmployeeService>]
 [Singleton<IDashboardService, DashboardService>]
 [Singleton<IMemberService, MemberService>]
+[Singleton<ISystemService, SystemService>]
 
 public partial class ServiceProvider
 {

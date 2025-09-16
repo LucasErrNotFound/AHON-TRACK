@@ -7,6 +7,8 @@ using AHON_TRACK.Models;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
+using AHON_TRACK.Services.Interface;
+
 
 namespace AHON_TRACK.ViewModels;
 
@@ -19,9 +21,11 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly AddNewPackageDialogCardViewModel _addNewPackageDialogCardViewModel;
     private readonly EditPackageDialogCardViewModel _editPackageDialogCardViewModel;
     private ObservableCollection<RecentActivity> _recentActivities = [];
+    private readonly ISystemService _systemService;
 
-    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel,  EditPackageDialogCardViewModel editPackageDialogCardViewModel)
+    public ManageBillingViewModel(DialogManager dialogManager, ISystemService systemService, ToastManager toastManager, PageManager pageManager, AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel, EditPackageDialogCardViewModel editPackageDialogCardViewModel)
     {
+        _systemService = systemService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
@@ -32,6 +36,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     public ManageBillingViewModel()
     {
+        _systemService = null!;
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
@@ -44,7 +49,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     public void Initialize()
     {
     }
-    
+
     public ObservableCollection<RecentActivity> RecentActivity
     {
         get => _recentActivities;
@@ -54,13 +59,13 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             OnPropertyChanged();
         }
     }
-    
+
     private void LoadSampleSalesData()
     {
         var sampleData = GetSampleSalesData();
         RecentActivity = new ObservableCollection<RecentActivity>(sampleData);
     }
-    
+
     private List<RecentActivity> GetSampleSalesData()
     {
         return
@@ -77,20 +82,60 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private void OpenAddNewPackage()
+    private async void OpenAddNewPackage() // Made async
     {
         _addNewPackageDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_addNewPackageDialogCardViewModel)
-            .WithSuccessCallback(_ =>
-                _toastManager.CreateToast("Added a new package")
-                    .WithContent($"You just added a new package to the database!")
-                    .DismissOnClick()
-                    .ShowSuccess())
+            .WithSuccessCallback(async _ => // Made async
+            {
+                try
+                {
+                    // Get the package data from the dialog view model
+                    var packageData = _addNewPackageDialogCardViewModel.GetPackageData();
+
+                    if (packageData != null && _systemService != null)
+                    {
+                        // Save to database using the service
+                        await _systemService.AddPackageAsync(packageData);
+
+                        // Show additional success feedback
+                        _toastManager.CreateToast("Package Created Successfully")
+                            .WithContent($"Package '{packageData.packageName}' has been added to the database!")
+                            .DismissOnClick()
+                            .ShowSuccess();
+                    }
+                    else if (packageData == null)
+                    {
+                        // Show validation error
+                        _toastManager.CreateToast("Validation Error")
+                            .WithContent("Please fill in all required fields (Package Name and Price).")
+                            .DismissOnClick()
+                            .ShowError();
+                    }
+                    else
+                    {
+                        // Show error if service is null
+                        _toastManager.CreateToast("Service Error")
+                            .WithContent("Database service is not available.")
+                            .DismissOnClick()
+                            .ShowError();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handle any errors that occur during saving
+                    _toastManager.CreateToast("Database Error")
+                        .WithContent($"Failed to save package: {ex.Message}")
+                        .DismissOnClick()
+                        .ShowError();
+                }
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new package cancelled")
                     .WithContent("If you want to add a new package, please try again.")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(550)
+                    .ShowWarning())
+            .WithMaxWidth(550)
             .Dismissible()
             .Show();
     }
