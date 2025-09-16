@@ -255,8 +255,7 @@
                                                                 HorizontalAlignment="Right"
                                                                 Margin="0,-20"
                                                                 shadui:ControlAssist.Label="Date Today"
-                                                                SelectedDate="{x:Static system:DateTime.Today}"
-                                                                IsEnabled="False" />
+                                                                SelectedDate="{CompiledBinding SelectedDate}" />
                                                         </Grid>
                                                         <StackPanel>
                                                             <Grid ColumnDefinitions="Auto Auto Auto" ColumnSpacing="10">
@@ -277,12 +276,6 @@
                                                                             Path="/Assets/ManageEmployeesView/search-icon.svg"/>
                                                                     </TextBox.InnerRightContent>
                                                                 </TextBox>
-                                                                <ComboBox 
-                                                                    Grid.Column="1"
-                                                                    VerticalAlignment="Center"
-                                                                    Width="150"
-                                                                    PlaceholderText="-">
-                                                                </ComboBox>
                                                                 <Button 
                                                                     Grid.Column="2"
                                                                     Classes="Primary"
@@ -303,7 +296,7 @@
                                                                 CanUserReorderColumns="False"
                                                                 CanUserSortColumns="False"
                                                                 GridLinesVisibility="All"
-                                                                ItemsSource="{CompiledBinding }"
+                                                                ItemsSource="{CompiledBinding InvoiceList}"
                                                                 SelectionMode="Single"
                                                                 Background="{DynamicResource CardBackgroundColor}"
                                                                 RowBackground="{DynamicResource CardBackgroundColor}"
@@ -319,37 +312,32 @@
                                                                         Width="Auto"
                                                                         MinWidth="80"
                                                                         Header="ID"
-                                                                        Binding="{CompiledBinding }" />
+                                                                        Binding="{CompiledBinding ID}" />
                                                                     <DataGridTextColumn
                                                                         Width="*"
                                                                         MinWidth="120"
                                                                         Header="Customer"
-                                                                        Binding="{CompiledBinding }" />
+                                                                        Binding="{CompiledBinding CustomerName}" />
                                                                     <DataGridTextColumn
                                                                         Width="*"
                                                                         MinWidth="120"
                                                                         Header="Purchased Item"
-                                                                        Binding="{CompiledBinding }" />
+                                                                        Binding="{CompiledBinding PurchasedItem}" />
                                                                     <DataGridTextColumn
-                                                                        Width="*"
-                                                                        MinWidth="120"
+                                                                        Width="Auto"
+                                                                        MinWidth="150"
+                                                                        Header="Quantity"
+                                                                        Binding="{CompiledBinding Quantity}" />
+                                                                    <DataGridTextColumn
+                                                                        Width="Auto"
+                                                                        MinWidth="150"
                                                                         Header="Amount"
-                                                                        Binding="{CompiledBinding }" />
+                                                                        Binding="{CompiledBinding Amount}" />
                                                                     <DataGridTextColumn
                                                                         Width="*"
                                                                         MinWidth="120"
                                                                         Header="Date Purchased"
-                                                                        Binding="{CompiledBinding }" />
-                                                                    <DataGridTextColumn
-                                                                        Width="*"
-                                                                        MinWidth="120"
-                                                                        Header="Status"
-                                                                        Binding="{CompiledBinding }" />
-                                                                    <DataGridTextColumn
-                                                                        Width="Auto"
-                                                                        MinWidth="20"
-                                                                        Header="Actions"
-                                                                        Binding="{CompiledBinding }" />
+                                                                        Binding="{CompiledBinding DateFormatted}" />
                                                                 </DataGrid.Columns>
                                                             </DataGrid>
                                                         </StackPanel>
