@@ -94,8 +94,7 @@
 									Width="150"
 									SelectedIndex="{CompiledBinding SelectedFilterIndex}">
 									<ComboBoxItem Content="By active" />
-									<ComboBoxItem Content="By inactive" />
-									<ComboBoxItem Content="By terminated" />
+									<ComboBoxItem Content="By expired" />
 								</ComboBox>
 								<Button
 									HorizontalAlignment="Right"
