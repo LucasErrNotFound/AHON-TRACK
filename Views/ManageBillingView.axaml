@@ -258,39 +258,23 @@
                                                                 SelectedDate="{CompiledBinding SelectedDate}" />
                                                         </Grid>
                                                         <StackPanel>
-                                                            <Grid ColumnDefinitions="Auto Auto Auto" ColumnSpacing="10">
-                                                                <TextBox 
-                                                                    Grid.Column="0"
-                                                                    Width="400"
-                                                                    HorizontalAlignment="Left"
-                                                                    shadui:ControlAssist.ShowProgress="{CompiledBinding }"
-                                                                    shadui:ControlAssist.Height="40"
-                                                                    Classes="Clearable"
-                                                                    Text="{CompiledBinding  Mode=TwoWay}"
-                                                                    FontSize="15"
-                                                                    Watermark="Search invoices...">
-                                                                    <TextBox.InnerRightContent>
-                                                                        <Svg
-                                                                            Width="20"
-                                                                            Opacity="0.75"
-                                                                            Path="/Assets/ManageEmployeesView/search-icon.svg"/>
-                                                                    </TextBox.InnerRightContent>
-                                                                </TextBox>
-                                                                <Button 
-                                                                    Grid.Column="2"
-                                                                    Classes="Primary"
-                                                                    Background="{DynamicResource InfoColor}">
-                                                                    <StackPanel Orientation="Horizontal">
-                                                                        <Svg
-                                                                            Width="20"
-                                                                            Height="20"
-                                                                            Margin="0,0,10,0"
-                                                                            VerticalAlignment="Center"
-                                                                            Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
-                                                                        <TextBlock Text="Download Invoice" Foreground="White" VerticalAlignment="Center" />
-                                                                    </StackPanel>
-                                                                </Button>
-                                                            </Grid>
+                                                            <Button
+                                                                Classes="Primary"
+                                                                Background="{DynamicResource InfoColor}"
+                                                                HorizontalAlignment="Left">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Svg
+                                                                        Width="20"
+                                                                        Height="20"
+                                                                        Margin="0,0,10,0"
+                                                                        VerticalAlignment="Center"
+                                                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
+                                                                    <TextBlock 
+                                                                        Text="Download Invoice"
+                                                                        Foreground="White"
+                                                                        VerticalAlignment="Center" />
+                                                                </StackPanel>
+                                                            </Button>
                                                             <DataGrid
                                                                 Height="315"
                                                                 CanUserReorderColumns="False"
