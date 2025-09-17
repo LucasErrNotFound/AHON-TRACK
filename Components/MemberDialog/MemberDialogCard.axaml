@@ -6,9 +6,9 @@
     xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     x:DataType="viewModel:MemberDialogCardViewModel"
-    mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="900"
+    mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="580"
     Width="950"
-    Height="810"
+    Height="580"
     x:Class="AHON_TRACK.Components.MemberDialog.MemberDialogCard">
     
     <Design.DataContext>
@@ -190,94 +190,6 @@
 							HorizontalAlignment="Left"
 							SelectedDate="{CompiledBinding MemberBirthDate}"/>
 					</StackPanel>
-				</Grid>
-
-				<!-- Address Section -->
-				<TextBlock Text="Address Details" Classes="h4" Margin="0,10"/>
-				<Grid
-					RowDefinitions="Auto, Auto, Auto"
-					ColumnDefinitions="3*, 1*">
-
-					<!-- Row 1: House Address and Number -->
-					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,15">
-						<TextBox
-							Text="{CompiledBinding MemberHouseAddress, Mode=TwoWay}"
-							Width="500"
-							FontSize="15"
-							Classes="Clearable"
-							UseFloatingWatermark="True"
-							Watermark="House Address"
-							HorizontalAlignment="Left"/>
-					</StackPanel>
-
-					<!-- House Number -->
-					<StackPanel Grid.Row="0" Grid.Column="1" Margin="-140,0,0,15">
-						<TextBox
-							Text="{CompiledBinding MemberHouseNumber, Mode=TwoWay}"
-							Width="220"
-							FontSize="15"
-							Classes="Clearable"
-							UseFloatingWatermark="True"
-							Watermark="House Number"
-							HorizontalAlignment="Left"/>
-					</StackPanel>
-
-					<!-- Row 2: Location Details -->
-					<Grid
-						Grid.Row="1"
-						Grid.Column="0"
-						Grid.ColumnSpan="2" 
-						ColumnDefinitions="1*, 1*, 1*, 1*"
-						Margin="0,20,0,0">
-
-						<!-- Street -->
-						<StackPanel Grid.Column="0" Margin="0,-20,15,0">
-							<TextBox
-								Text="{CompiledBinding MemberStreet, Mode=TwoWay}"
-								Width="150"
-								FontSize="15"
-								Classes="Clearable"
-								UseFloatingWatermark="True"
-								Watermark="Street"
-								HorizontalAlignment="Left"/>
-						</StackPanel>
-
-						<!-- Barangay -->
-						<StackPanel Grid.Column="1" Margin="-40,-20,15,0">
-							<TextBox
-								Text="{CompiledBinding MemberBarangay, Mode=TwoWay}"
-								Width="150"
-								FontSize="15"
-								Classes="Clearable"
-								UseFloatingWatermark="True"
-								Watermark="Barangay"
-								HorizontalAlignment="Left"/>
-						</StackPanel>
-
-						<!-- City/Town -->
-						<StackPanel Grid.Column="2" Margin="-80,-20,15,0">
-							<TextBox
-								Text="{CompiledBinding MemberCityTown, Mode=TwoWay}"
-								Width="150"
-								FontSize="15"
-								Classes="Clearable"
-								UseFloatingWatermark="True"
-								Watermark="City/Town"
-								HorizontalAlignment="Left"/>
-						</StackPanel>
-
-						<!-- Province -->
-						<StackPanel Grid.Column="3" Margin="-120,-20,15,0">
-							<TextBox
-								Text="{CompiledBinding MemberProvince, Mode=TwoWay}"
-								Width="170"
-								FontSize="15"
-								Classes="Clearable"
-								UseFloatingWatermark="True"
-								Watermark="Province"
-								HorizontalAlignment="Left"/>
-						</StackPanel>
-					</Grid>
 				</Grid>
 
 				<TextBlock Text="Membership Details" Classes="h4" Margin="0,30"/>
