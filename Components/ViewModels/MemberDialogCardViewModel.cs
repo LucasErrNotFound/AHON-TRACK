@@ -40,14 +40,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private int? _memberAge;
     private DateTime? _memberBirthDate;
 
-    // Address Section
-    private string _memberHouseAddress = string.Empty;
-    private string _memberHouseNumber = string.Empty;
-    private string _memberStreet = string.Empty;
-    private string _memberBarangay = string.Empty;
-    private string _memberCityTown = string.Empty;
-    private string _memberProvince = string.Empty;
-
     // Account Section
     private DateTime? _memberDateJoined;
     private string _memberStatus = string.Empty;
@@ -149,60 +141,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             }
         }
     }
-
-    [Required(ErrorMessage = "House address is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string MemberHouseAddress
-    {
-        get => _memberHouseAddress;
-        set => SetProperty(ref _memberHouseAddress, value, true);
-    }
-
-    [Required(ErrorMessage = "House number is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 character long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
-    public string MemberHouseNumber
-    {
-        get => _memberHouseNumber;
-        set => SetProperty(ref _memberHouseNumber, value, true);
-    }
-
-    [Required(ErrorMessage = "Street is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberStreet
-    {
-        get => _memberStreet;
-        set => SetProperty(ref _memberStreet, value, true);
-    }
-
-    [Required(ErrorMessage = "Barangay is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberBarangay
-    {
-        get => _memberBarangay;
-        set => SetProperty(ref _memberBarangay, value, true);
-    }
-
-    [Required(ErrorMessage = "City/Town is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberCityTown
-    {
-        get => _memberCityTown;
-        set => SetProperty(ref _memberCityTown, value, true);
-    }
-
-    [Required(ErrorMessage = "Province is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberProvince
-    {
-        get => _memberProvince;
-        set => SetProperty(ref _memberProvince, value, true);
-    }
     
     [Required(ErrorMessage = "Date joined is required")]
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
@@ -267,14 +205,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         Debug.WriteLine($"Age: {MemberAge}");
         Debug.WriteLine($"Date of Birth: {MemberBirthDate?.ToString("MMMM d, yyyy")}");
 
-        // Address Details Debugging
-        Debug.WriteLine($"\nHouse Adress: {MemberHouseAddress}");
-        Debug.WriteLine($"House Number: {MemberHouseNumber}");
-        Debug.WriteLine($"Street: {MemberStreet}");
-        Debug.WriteLine($"Barangay: {MemberBarangay}");
-        Debug.WriteLine($"City/Town: {MemberCityTown}");
-        Debug.WriteLine($"Province: {MemberProvince}");
-
         // Member Data Details Debugging
         Debug.WriteLine($"Date Joined: {MemberDateJoined?.ToString("MMMM d, yyyy")}");
         Debug.WriteLine($"Status: {MemberStatus}");
@@ -298,12 +228,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         MemberPackages = string.Empty;
         MemberAge = null;
         MemberBirthDate = null;
-        MemberHouseAddress = string.Empty;
-        MemberHouseNumber = string.Empty;
-        MemberStreet = string.Empty;
-        MemberBarangay = string.Empty;
-        MemberCityTown = string.Empty;
-        MemberProvince = string.Empty;
         MemberDateJoined = null;
         MemberStatus = string.Empty;
         ClearAllErrors();
