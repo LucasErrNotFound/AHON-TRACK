@@ -332,7 +332,7 @@
                                     <Image
                                         Width="250"
                                         Height="250"
-                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/protein-powder-display.png"/>
+                                        Source="avares://AHON_TRACK/Assets/ProductPurchaseView/protein-powder-display.png"/>
                                     <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
                                         <TextBlock 
                                             Grid.Row="0" 
@@ -390,7 +390,7 @@
                                     <Image
                                         Width="250"
                                         Height="250"
-                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/creatine-display.png"/>
+                                        Source="avares://AHON_TRACK/Assets/ProductPurchaseView/creatine-display.png"/>
                                     <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
                                         <TextBlock 
                                             Grid.Row="0" 
@@ -448,7 +448,7 @@
                                     <Image
                                         Width="250"
                                         Height="250"
-                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/preworkout-display.png"/>
+                                        Source="avares://AHON_TRACK/Assets/ProductPurchaseView/preworkout-display.png"/>
                                     <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
                                         <TextBlock 
                                             Grid.Row="0" 
@@ -507,7 +507,7 @@
                                     <Image
                                         Width="250"
                                         Height="250"
-                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/cobra-yellow-drink-display.png"/>
+                                        Source="avares://AHON_TRACK/Assets/ProductPurchaseView/cobra-yellow-drink-display.png"/>
                                     <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
                                         <TextBlock 
                                             Grid.Row="0" 
@@ -565,7 +565,7 @@
                                     <Image
                                         Width="250"
                                         Height="250"
-                                        Source="avares://AHON_TRACK/Assets/ItemPurchaseView/cobra-yellow-drink-display.png"/>
+                                        Source="avares://AHON_TRACK/Assets/ProductPurchaseView/cobra-yellow-drink-display.png"/>
                                     <Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
                                         <TextBlock 
                                             Grid.Row="0" 
