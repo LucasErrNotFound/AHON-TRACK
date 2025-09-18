@@ -16,7 +16,7 @@ namespace AHON_TRACK
             { "EmployeeProfileInformationViewModel", "EmployeeProfile" },
             { "MemberProfileInformationViewModel", "MemberProfile" },
             { "LogWalkInPurchaseViewModel", "LogWalkInPurchase" },
-            { "AddNewProductViewModel", "AddNewProduct" },
+            { "AddEditProductViewModel", "AddEditProduct" },
             { "AddNewMemberViewModel", "AddNewMember" },
         };
 
