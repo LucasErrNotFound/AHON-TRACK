@@ -133,7 +133,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         set => SetProperty(ref _duration, value, true);
     }
 
-    [MaxLength(30, ErrorMessage = "Must not exceed 30 characters")]
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription1
     {
         get => _featureDescription1;
@@ -141,7 +141,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     }
     
     
-    [MaxLength(30, ErrorMessage = "Must not exceed 30 characters")]
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription2
     {
         get => _featureDescription2;
@@ -149,7 +149,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     }
     
     
-    [MaxLength(30, ErrorMessage = "Must not exceed 30 characters")]
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription3
     {
         get => _featureDescription3;
@@ -157,15 +157,14 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     }
     
     
-    [MaxLength(30, ErrorMessage = "Must not exceed 30 characters")]
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription4
     {
         get => _featureDescription4;
         set => SetProperty(ref _featureDescription4, value, true);
     }
     
-    
-    [MaxLength(30, ErrorMessage = "Must not exceed 30 characters")]
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription5
     {
         get => _featureDescription5;
@@ -317,6 +316,8 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         // Reset discount settings when editing existing package
         EnableDiscount = package.IsDiscountChecked;
         DiscountValue = package.DiscountValue;
+        SelectedDiscountForItem = package.SelectedDiscountFor;
+        SelectedDiscountTypeItem = package.SelectedDiscountType;
         ValidFrom = package.DiscountValidFrom;
         ValidTo = package.DiscountValidTo;
     
@@ -342,6 +343,8 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             Features = features,
             IsDiscountChecked = EnableDiscount,
             DiscountValue = DiscountValue,
+            SelectedDiscountFor = SelectedDiscountForItem,
+            SelectedDiscountType = SelectedDiscountTypeItem,
             DiscountValidFrom = ValidFrom,
             DiscountValidTo = ValidTo   
         };
