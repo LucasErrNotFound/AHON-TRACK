@@ -30,7 +30,7 @@ namespace AHON_TRACK;
 [Transient<AddTrainingScheduleDialogCardViewModel>]
 [Transient<AddNewPackageDialogCardViewModel>]
 [Transient<EditPackageDialogCardViewModel>]
-[Transient<AddNewProductViewModel>]
+[Transient<AddEditProductViewModel>]
 [Transient<EquipmentDialogCardViewModel>]
 [Transient<ItemDialogCardViewModel>]
 [Transient<SupplierDialogCardViewModel>]
