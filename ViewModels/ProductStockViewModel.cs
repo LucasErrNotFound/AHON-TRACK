@@ -12,14 +12,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly ItemDialogCardViewModel  _itemDialogCardViewModel;
 
-    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  ItemDialogCardViewModel itemDialogCardViewModel)
+    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _itemDialogCardViewModel = itemDialogCardViewModel;
     }
 
     public ProductStockViewModel()
@@ -27,7 +25,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _itemDialogCardViewModel = new ItemDialogCardViewModel();
     }
 
     [AvaloniaHotReload]
@@ -38,19 +35,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     [RelayCommand]
     private void ShowAddProductDialog()
     {
-        _itemDialogCardViewModel.Initialize();
-        _dialogManager.CreateDialog(_itemDialogCardViewModel)
-            .WithSuccessCallback(_ =>
-                _toastManager.CreateToast("Added a new item")
-                    .WithContent($"You just added a new item to the database!")
-                    .DismissOnClick()
-                    .ShowSuccess())
-            .WithCancelCallback(() =>
-                _toastManager.CreateToast("Adding new item cancelled")
-                    .WithContent("If you want to add a new item, please try again.")
-                    .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(650)
-            .Dismissible()
-            .Show();
+        _pageManager.Navigate<AddEditProductViewModel>();
     }
 }
