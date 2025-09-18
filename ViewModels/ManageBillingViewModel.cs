@@ -170,6 +170,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 ],
                 IsDiscountChecked = false,
                 DiscountValue = null,
+                SelectedDiscountFor = "All",
+                SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = null,
                 DiscountValidTo = null 
             },
@@ -189,6 +191,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 ],
                 IsDiscountChecked = false,
                 DiscountValue = null,
+                SelectedDiscountFor = "All",
+                SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = null,
                 DiscountValidTo = null 
             },
@@ -208,6 +212,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 ],
                 IsDiscountChecked = false,
                 DiscountValue = null,
+                SelectedDiscountFor = "All",
+                SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = null,
                 DiscountValidTo = null 
             },
@@ -225,9 +231,11 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                     "Burns high calories fast",
                     "Builds confidence and discipline"
                 ],
-                IsDiscountChecked = false,
-                DiscountValue = null,
-                DiscountValidFrom = null,
+                IsDiscountChecked = true,
+                DiscountValue = 100,
+                SelectedDiscountFor = "Gym Members",
+                SelectedDiscountType = "Fixed Amount (₱)",
+                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
                 DiscountValidTo = null 
             },
             new Package
@@ -244,9 +252,11 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                     "Culturally rich experience",
                     "Great for strength and stamina"
                 ],
-                IsDiscountChecked = false,
-                DiscountValue = null,
-                DiscountValidFrom = null,
+                IsDiscountChecked = true,
+                DiscountValue = 100,
+                SelectedDiscountFor = "Gym Members",
+                SelectedDiscountType = "Fixed Amount (₱)",
+                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
                 DiscountValidTo = null 
             },
             new Package
@@ -263,9 +273,11 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                     "Encourages community support",
                     "Suitable for all fitness levels"
                 ],
-                IsDiscountChecked = false,
-                DiscountValue = null,
-                DiscountValidFrom = null,
+                IsDiscountChecked = true,
+                DiscountValue = 50,
+                SelectedDiscountFor = "Gym Members",
+                SelectedDiscountType = "Fixed Amount (₱)",
+                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
                 DiscountValidTo = null 
             },
             new Package
@@ -282,28 +294,32 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                     "Motivation and accountability",
                     "Focus on your specific goals"
                 ],
-                IsDiscountChecked = false,
-                DiscountValue = null,
-                DiscountValidFrom = null,
+                IsDiscountChecked = true,
+                DiscountValue = 50,
+                SelectedDiscountFor = "Gym Members",
+                SelectedDiscountType = "Fixed Amount (₱)",
+                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
                 DiscountValidTo = null 
             },
             new Package
             {
-                Title = "Zumba",
-                Description = "Dance-based workouts with energetic music",
-                Price = "₱210.00",
+                Title = "Thai Massage",
+                Description = "Massage therapy for relaxation and healing",
+                Price = "₱350.00",
                 PriceUnit = "/session",
                 Features = 
                 [
-                    "Fun and dance-filled sessions",
-                    "Easy to follow routines",
-                    "Great for weight loss",
-                    "Uplifts mood and energy",
-                    "No experience needed"
+                    "Relieves muscle tension and stiffness",
+                    "Enhances flexibility and circulation",
+                    "Promotes deep relaxation",
+                    "Reduces stress and fatigue",
+                    "Supports overall wellness"
                 ],
-                IsDiscountChecked = false,
-                DiscountValue = null,
-                DiscountValidFrom = null,
+                IsDiscountChecked = true,
+                DiscountValue = 50,
+                SelectedDiscountFor = "Gym Members",
+                SelectedDiscountType = "Fixed Amount (₱)",
+                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
                 DiscountValidTo = null 
             }
         ];
@@ -455,6 +471,8 @@ public class Package
     public List<string> Features { get; set; } = [];
     public bool IsDiscountChecked { get; set; }
     public int? DiscountValue { get; set; }
+    public string SelectedDiscountFor { get; set; } =  string.Empty;
+    public string SelectedDiscountType { get; set; } =  string.Empty;
     public DateOnly? DiscountValidFrom { get; set; }
     public DateOnly? DiscountValidTo { get; set; }
 }
