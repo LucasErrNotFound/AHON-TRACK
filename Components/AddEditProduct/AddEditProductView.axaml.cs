@@ -9,9 +9,9 @@ using Avalonia.Platform.Storage;
 
 namespace AHON_TRACK.Components.AddNewProduct;
 
-public partial class AddNewProductView : UserControl
+public partial class AddEditProductView : UserControl
 {
-    public AddNewProductView()
+    public AddEditProductView()
     {
         InitializeComponent();
     }
