@@ -14,17 +14,21 @@ namespace AHON_TRACK.Components.ViewModels;
 public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private string[] _productStatusItems = ["Draft", "Active", "Archived"];
-    private string _selectedProductStatusItem = "Draft";
+    private string[] _productStatusItems = ["In Stock", "Out of Stock"];
+    private string _selectedProductStatusItem = "In Stock";
     
     [ObservableProperty]
     private string[] _productCategoryItems = ["Drinks", "Supplements", "Apparel", "Products"];
     private string  _selectedProductCategoryItem = "Drinks";
     
+    [ObservableProperty]
+    private string[] _productSupplierItems = ["None", "San Miguel Foods", "Tender Juicy", "AHON Factory", "Nike"];
+    private string  _selectedSupplierCategoryItem = "Tender Juicy";
+    
     private string _productName = string.Empty;
     private string _productSKU = string.Empty;
-    private string _productBarcode = string.Empty;
     private string _productDescription = string.Empty;
+    private DateTime? _productExpiry;
     private Image _productImage;
 
     private int? _price;
@@ -33,6 +37,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
 
     private string _productStatus;
     private string _productCategory;
+    private string _productSupplier;
     
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -72,7 +77,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
             .WithContent("Product published successfully")
             .DismissOnClick()
             .ShowSuccess();
-        _pageManager.Navigate<ManageBillingViewModel>();
+        _pageManager.Navigate<ProductStockViewModel>();
     }
 
     [RelayCommand]
@@ -95,7 +100,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
             .WithContent("Product discarded successfully")
             .DismissOnClick()
             .ShowSuccess();
-        _pageManager.Navigate<ManageBillingViewModel>();
+        _pageManager.Navigate<ProductStockViewModel>();
     }
 
     [Required(ErrorMessage = "Product Name is required")]
@@ -114,15 +119,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
     {
         get => _productSKU;
         set => SetProperty(ref _productSKU, value, true);
-    }
-    
-    [Required(ErrorMessage = "Product Barcode is required")]
-    [MinLength(12, ErrorMessage = "Must be at least 12 characters long")]
-    [MaxLength(12, ErrorMessage = "Must not exceed 12 characters")]
-    public string ProductBarcode
-    {
-        get => _productBarcode;
-        set => SetProperty(ref _productBarcode, value, true);
     }
     
     public string ProductDescription 
@@ -145,22 +141,28 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
         get => _discountedPrice;
         set => SetProperty(ref _discountedPrice, value, true);
     }
-
-    public bool? IsProductInStock
-    {
-        get => _inStock;
-        set => SetProperty(ref _inStock, value, true);
-    }
     
     public string SelectedProductStatus 
     {
         get => _selectedProductStatusItem;
         set =>  SetProperty(ref _selectedProductStatusItem, value, true);
     }
+
+    public DateTime? ProductExpiry
+    {
+        get => _productExpiry;
+        set => SetProperty(ref _productExpiry, value, true);
+    }
     
     public string SelectedProductCategory
     {
         get => _selectedProductCategoryItem;
         set =>  SetProperty(ref _selectedProductCategoryItem, value, true);
+    }
+    
+    public string SelectedProductSupplier
+    {
+        get => _selectedSupplierCategoryItem;
+        set =>  SetProperty(ref _selectedSupplierCategoryItem, value, true);
     }
 }
