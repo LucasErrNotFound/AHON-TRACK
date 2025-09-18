@@ -36,7 +36,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     }
     
     [RelayCommand]
-    private void ShowAddItemDialog()
+    private void ShowAddProductDialog()
     {
         _itemDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_itemDialogCardViewModel)
