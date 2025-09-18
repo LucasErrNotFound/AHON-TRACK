@@ -26,6 +26,9 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private List<Invoices> _currentInvoiceData = [];
     
     [ObservableProperty]
+    private ObservableCollection<Package> _packageOptions = [];
+    
+    [ObservableProperty]
     private bool _isInitialized;
     
     [ObservableProperty]
@@ -56,6 +59,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _editPackageDialogCardViewModel = editPackageDialogCardViewModel;
         LoadSampleSalesData();
         LoadInvoiceData();
+        LoadPackageOptions();
+        UpdateInvoiceDataCounts();
     }
 
     public ManageBillingViewModel()
@@ -67,6 +72,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _editPackageDialogCardViewModel = new EditPackageDialogCardViewModel();
         LoadSampleSalesData();
         LoadInvoiceData();
+        LoadPackageOptions();
+        UpdateInvoiceDataCounts();
     }
 
     [AvaloniaHotReload]
@@ -75,6 +82,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         if (IsInitialized) return;
         LoadSampleSalesData();
         LoadInvoiceData();
+        LoadPackageOptions();
         UpdateInvoiceDataCounts();
         IsInitialized = true;
     }
@@ -100,6 +108,12 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         var sampleData = GetInvoiceData();
         OriginalInvoiceData = sampleData;
         FilterInvoiceDataByPackageAndDate();
+    }
+
+    private void LoadPackageOptions()
+    {
+        var packages = GetPackageData();
+        PackageOptions = new ObservableCollection<Package>(packages);
     }
     
     private List<RecentActivity> GetSampleSalesData()
@@ -136,6 +150,165 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         ];
     }
 
+    private List<Package> GetPackageData()
+    {
+        return
+        [
+            new Package
+            {
+                Title = "Free Trial",
+                Description = "Try any class or gym session-no charge",
+                Price = "₱0.00",
+                PriceUnit = "/one-time only",
+                Features = 
+                [
+                    "Risk-free first session",
+                    "Explore the gym or class",
+                    "Meet our trainers",
+                    "Decide before committing",
+                    "No hidden charges"
+                ],
+                IsDiscountChecked = false,
+                DiscountValue = null,
+                DiscountValidFrom = null,
+                DiscountValidTo = null 
+            },
+            new Package
+            {
+                Title = "Walk-In",
+                Description = "Pay per session with no commitment",
+                Price = "₱150.00",
+                PriceUnit = "/session",
+                Features = 
+                [
+                    "Unlimited time",
+                    "Perfect for casual visits",
+                    "Pay only when you train",
+                    "No membership needed",
+                    "Great for one-time guests"
+                ],
+                IsDiscountChecked = false,
+                DiscountValue = null,
+                DiscountValidFrom = null,
+                DiscountValidTo = null 
+            },
+            new Package
+            {
+                Title = "Monthly Membership",
+                Description = "Unlimited gym access for 30 days",
+                Price = "₱500.00",
+                PriceUnit = "/month",
+                Features = 
+                [
+                    "Unlimited gym sessions",
+                    "Best value for regulars",
+                    "Discounted charges",
+                    "30 days of full access",
+                    "Unli health checkups"
+                ],
+                IsDiscountChecked = false,
+                DiscountValue = null,
+                DiscountValidFrom = null,
+                DiscountValidTo = null 
+            },
+            new Package
+            {
+                Title = "Boxing",
+                Description = "High-intensity training focused on boxing",
+                Price = "₱450.00",
+                PriceUnit = "/session",
+                Features = 
+                [
+                    "Boosts cardio and strength",
+                    "Learn real boxing skills",
+                    "Stress relieving workouts",
+                    "Burns high calories fast",
+                    "Builds confidence and discipline"
+                ],
+                IsDiscountChecked = false,
+                DiscountValue = null,
+                DiscountValidFrom = null,
+                DiscountValidTo = null 
+            },
+            new Package
+            {
+                Title = "Muay Thai",
+                Description = "Training for strength and endurance",
+                Price = "₱500.00",
+                PriceUnit = "/session",
+                Features = 
+                [
+                    "Full body conditioning",
+                    "Improves flexibility and balance",
+                    "Learn about self-defense",
+                    "Culturally rich experience",
+                    "Great for strength and stamina"
+                ],
+                IsDiscountChecked = false,
+                DiscountValue = null,
+                DiscountValidFrom = null,
+                DiscountValidTo = null 
+            },
+            new Package
+            {
+                Title = "CrossFit",
+                Description = "Functional workouts with high-intensity moves",
+                Price = "₱300.00",
+                PriceUnit = "/session",
+                Features = 
+                [
+                    "Builds functional strength",
+                    "Constantly varied workouts",
+                    "Time efficient and intense",
+                    "Encourages community support",
+                    "Suitable for all fitness levels"
+                ],
+                IsDiscountChecked = false,
+                DiscountValue = null,
+                DiscountValidFrom = null,
+                DiscountValidTo = null 
+            },
+            new Package
+            {
+                Title = "Personal Training",
+                Description = "One-on-one session to reach your fitness goal",
+                Price = "₱200.00",
+                PriceUnit = "/session",
+                Features = 
+                [
+                    "Personalized workout plans",
+                    "One-on-one coaching",
+                    "Faster progress tracking",
+                    "Motivation and accountability",
+                    "Focus on your specific goals"
+                ],
+                IsDiscountChecked = false,
+                DiscountValue = null,
+                DiscountValidFrom = null,
+                DiscountValidTo = null 
+            },
+            new Package
+            {
+                Title = "Zumba",
+                Description = "Dance-based workouts with energetic music",
+                Price = "₱210.00",
+                PriceUnit = "/session",
+                Features = 
+                [
+                    "Fun and dance-filled sessions",
+                    "Easy to follow routines",
+                    "Great for weight loss",
+                    "Uplifts mood and energy",
+                    "No experience needed"
+                ],
+                IsDiscountChecked = false,
+                DiscountValue = null,
+                DiscountValidFrom = null,
+                DiscountValidTo = null 
+            }
+        ];
+    }
+
     [RelayCommand]
     private void OpenAddNewPackage()
     {
@@ -156,15 +329,23 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private void OpenEditPackage()
+    private void OpenEditPackage(Package package)
     {
         _editPackageDialogCardViewModel.Initialize();
+        _editPackageDialogCardViewModel.PopulateFromPackage(package);
         _dialogManager.CreateDialog(_editPackageDialogCardViewModel)
             .WithSuccessCallback(_ =>
-                _toastManager.CreateToast("Edit an existing package")
-                    .WithContent($"You just edited an existing package!")
+            {
+                var index = PackageOptions.IndexOf(package);
+                if (index >= 0)
+                {
+                    PackageOptions[index] = _editPackageDialogCardViewModel.ToPackageOption();
+                }
+                _toastManager.CreateToast("Package updated")
+                    .WithContent($"You just updated the {package.Title} package!")
                     .DismissOnClick()
-                    .ShowSuccess())
+                    .ShowSuccess();
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Editing an existing package cancelled")
                     .WithContent("If you want to edit an existing package, please try again.")
@@ -263,4 +444,17 @@ public partial class Invoices : ObservableObject
     
     public DateTime? DatePurchased { get; set; }
     public string DateFormatted => DatePurchased?.ToString("MMMM dd, yyyy dddd") ?? string.Empty;
+}
+
+public class Package
+{
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Price { get; set; } = string.Empty;
+    public string PriceUnit { get; set; } = string.Empty;
+    public List<string> Features { get; set; } = [];
+    public bool IsDiscountChecked { get; set; }
+    public int? DiscountValue { get; set; }
+    public DateOnly? DiscountValidFrom { get; set; }
+    public DateOnly? DiscountValidTo { get; set; }
 }
