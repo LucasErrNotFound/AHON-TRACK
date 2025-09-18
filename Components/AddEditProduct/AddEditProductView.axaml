@@ -9,11 +9,11 @@
     d:DesignWidth="1683"
     d:DesignHeight="1080"
     xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
-    x:DataType="viewModel:AddNewProductViewModel"
-    x:Class="AHON_TRACK.Components.AddNewProduct.AddEditProductView">
+    x:DataType="viewModel:AddEditProductViewModel"
+    x:Class="AHON_TRACK.Components.AddEditProduct.AddEditProductView">
 
     <Design.DataContext>
-        <viewModel:AddNewPackageDialogCardViewModel />
+        <viewModel:AddEditProductViewModel />
     </Design.DataContext>
 
     <UserControl.Resources>

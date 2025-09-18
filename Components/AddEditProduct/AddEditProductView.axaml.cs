@@ -1,13 +1,11 @@
 using System;
 using System.Diagnostics;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 
-namespace AHON_TRACK.Components.AddNewProduct;
+namespace AHON_TRACK.Components.AddEditProduct;
 
 public partial class AddEditProductView : UserControl
 {

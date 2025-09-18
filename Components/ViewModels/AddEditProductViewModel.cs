@@ -11,7 +11,7 @@ using HotAvalonia;
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("add-new-product")]
-public partial class AddNewProductViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
     private string[] _productStatusItems = ["Draft", "Active", "Archived"];
@@ -38,14 +38,14 @@ public partial class AddNewProductViewModel : ViewModelBase, INavigable, INotify
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     
-    public AddNewProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
     }
     
-    public AddNewProductViewModel()
+    public AddEditProductViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
