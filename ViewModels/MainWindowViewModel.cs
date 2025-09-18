@@ -21,7 +21,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 	private readonly ManageMembershipViewModel _manageMembershipViewModel;
     private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
     private readonly ManageBillingViewModel _manageBillingViewModel;
-    private readonly ItemPurchaseViewModel _itemPurchaseViewModel;
+    private readonly ProductPurchaseViewModel _productPurchaseViewModel;
     private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
     private readonly ProductStockViewModel  _productStockViewModel;
     private readonly SupplierManagementViewModel _supplierManagementViewModel;
@@ -39,7 +39,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		ManageMembershipViewModel manageMembershipViewModel,
         TrainingSchedulesViewModel trainingSchedulesViewModel,
         ManageBillingViewModel billingViewModel,
-        ItemPurchaseViewModel itemPurchaseViewModel,
+        ProductPurchaseViewModel productPurchaseViewModel,
         EquipmentInventoryViewModel equipmentInventoryViewModel,
         ProductStockViewModel productStockViewModel,
         SupplierManagementViewModel supplierManagementViewModel,
@@ -53,7 +53,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 		_manageMembershipViewModel = manageMembershipViewModel;
         _trainingSchedulesViewModel = trainingSchedulesViewModel;
         _manageBillingViewModel = billingViewModel;
-        _itemPurchaseViewModel = itemPurchaseViewModel;
+        _productPurchaseViewModel = productPurchaseViewModel;
         _equipmentInventoryViewModel = equipmentInventoryViewModel;
         _productStockViewModel = productStockViewModel;
         _supplierManagementViewModel = supplierManagementViewModel;
@@ -77,7 +77,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
         _manageBillingViewModel = new ManageBillingViewModel();
-        _itemPurchaseViewModel = new ItemPurchaseViewModel();
+        _productPurchaseViewModel = new ProductPurchaseViewModel();
         _equipmentInventoryViewModel = new EquipmentInventoryViewModel();
         _productStockViewModel = new ProductStockViewModel();
         _supplierManagementViewModel = new SupplierManagementViewModel();
@@ -155,7 +155,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
     
     [RelayCommand]
-    private void OpenItemPurchase() => SwitchPage(_itemPurchaseViewModel);
+    private void OpenProductPurchase() => SwitchPage(_productPurchaseViewModel);
 
     [RelayCommand]
     private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
