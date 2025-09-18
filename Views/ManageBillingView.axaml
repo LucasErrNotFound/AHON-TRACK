@@ -567,7 +567,6 @@
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </TabItem>
-                                                <TabItem Header="Reports"></TabItem>
                                             </TabControl.Items>
                                         </TabControl>
                                     </StackPanel>
