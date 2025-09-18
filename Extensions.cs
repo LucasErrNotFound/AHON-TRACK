@@ -5,7 +5,6 @@ using AHON_TRACK.Components.AddTrainingScheduleDialog;
 using AHON_TRACK.Components.ChangeScheduleDialog;
 using AHON_TRACK.Components.EditPackageDialog;
 using AHON_TRACK.Components.EquipmentDialog;
-using AHON_TRACK.Components.ItemDialog;
 using AHON_TRACK.Components.LogGymMemberDialog;
 using AHON_TRACK.Components.MemberDialog;
 using AHON_TRACK.Components.SupplierDialog;
