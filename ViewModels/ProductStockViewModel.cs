@@ -7,14 +7,14 @@ using ShadUI;
 namespace AHON_TRACK.ViewModels;
 
 [Page("item-stock")]
-public sealed partial class ItemStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly ItemDialogCardViewModel  _itemDialogCardViewModel;
 
-    public ItemStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  ItemDialogCardViewModel itemDialogCardViewModel)
+    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  ItemDialogCardViewModel itemDialogCardViewModel)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
@@ -22,7 +22,7 @@ public sealed partial class ItemStockViewModel : ViewModelBase, INavigable, INot
         _itemDialogCardViewModel = itemDialogCardViewModel;
     }
 
-    public ItemStockViewModel()
+    public ProductStockViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
