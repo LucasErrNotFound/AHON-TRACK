@@ -99,8 +99,8 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     }
     
     [Required(ErrorMessage = "Package name is required")]
-    [MinLength(2, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 30 characters")]
+    [MinLength(5, ErrorMessage = "Must be at least 5 characters long")]
+    [MaxLength(25, ErrorMessage = "Must not exceed 25 characters")]
     public string PackageName 
     {
         get => _packageName;
@@ -108,8 +108,8 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     }
     
     [Required(ErrorMessage = "Description is required")]
-    [MinLength(2, ErrorMessage = "Must be at least 10 characters long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 50 characters")]
+    [MinLength(6, ErrorMessage = "Must be at least 6 characters long")]
+    [MaxLength(45, ErrorMessage = "Must not exceed 45 characters")]
     public string Description
     {
         get => _description;
@@ -117,7 +117,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     }
     
     [Required(ErrorMessage = "Price must be set")]
-    [Range(50, 5000, ErrorMessage = "Price must be between 50 and 5,000")]
+    [Range(0, 5000, ErrorMessage = "Price must be between 0 and 5,000")]
     public int? Price
     {
         get => _price;
@@ -125,38 +125,48 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     }
     
     [Required(ErrorMessage = "Duration is required")]
-    [MinLength(2, ErrorMessage = "Must be at least 10 characters long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 30 characters")]
+    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
+    [MaxLength(14, ErrorMessage = "Must not exceed 14 characters")]
     public string Duration
     {
         get => _duration;
         set => SetProperty(ref _duration, value, true);
     }
 
+    
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription1
     {
         get => _featureDescription1;
         set => SetProperty(ref _featureDescription1, value, true);
     }
     
+    
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription2
     {
         get => _featureDescription2;
         set => SetProperty(ref _featureDescription2, value, true);
     }
     
+    
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription3
     {
         get => _featureDescription3;
         set => SetProperty(ref _featureDescription3, value, true);
     }
     
+    
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription4
     {
         get => _featureDescription4;
         set => SetProperty(ref _featureDescription4, value, true);
     }
     
+    
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription5
     {
         get => _featureDescription5;
