@@ -24,7 +24,6 @@ public static class Extensions
         dialogService.Register<AddNewPackageDialogCard, AddNewPackageDialogCardViewModel>();
         dialogService.Register<EditPackageDialogCard, EditPackageDialogCardViewModel>();
         dialogService.Register<EquipmentDialogCard, EquipmentDialogCardViewModel>();
-        dialogService.Register<ItemDialogCard, ItemDialogCardViewModel>();
         dialogService.Register<SupplierDialogCard, SupplierDialogCardViewModel>();
         dialogService.Register<MemberDialogCard, MemberDialogCardViewModel>();
         dialogService.Register<ChangeScheduleDialogCard, ChangeScheduleDialogCardViewModel>();
