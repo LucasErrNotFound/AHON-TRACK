@@ -4,9 +4,9 @@ using Avalonia.Markup.Xaml;
 
 namespace AHON_TRACK.Views;
 
-public partial class ItemPurchaseView : UserControl
+public partial class ProductPurchaseView : UserControl
 {
-    public ItemPurchaseView()
+    public ProductPurchaseView()
     {
         InitializeComponent();
     }

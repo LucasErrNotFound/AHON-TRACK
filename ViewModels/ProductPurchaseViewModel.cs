@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 namespace AHON_TRACK.ViewModels;
 
 [Page("item-purchase")]
-public sealed partial class ItemPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -20,14 +20,14 @@ public sealed partial class ItemPurchaseViewModel : ViewModelBase, INavigable, I
     private bool _isApparelChecked;
     private bool _isProductsChecked;
 
-    public ItemPurchaseViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public ProductPurchaseViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
     }
 
-    public ItemPurchaseViewModel()
+    public ProductPurchaseViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();

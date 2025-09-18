@@ -8,12 +8,12 @@
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
     xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
     xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
-    x:DataType="viewModels:ItemPurchaseViewModel"
+    x:DataType="viewModels:ProductPurchaseViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
-    x:Class="AHON_TRACK.Views.ItemPurchaseView">
+    x:Class="AHON_TRACK.Views.ProductPurchaseView">
 
     <Design.DataContext>
-        <viewModels:ItemPurchaseViewModel />
+        <viewModels:ProductPurchaseViewModel />
     </Design.DataContext>
 
     <UserControl.Resources>
@@ -162,7 +162,7 @@
                                                 <Svg
                                                     Width="25"
                                                     Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/package-icon.svg" />
+                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/package-icon.svg" />
                                             </Border>
                                             <TextBlock
                                                 Text="All Items"
@@ -192,7 +192,7 @@
                                                 <Svg
                                                     Width="25"
                                                     Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/drink-icon.svg" />
+                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/drink-icon.svg" />
                                             </Border>
                                             <TextBlock
                                                 Text="Drinks"
@@ -222,7 +222,7 @@
                                                 <Svg
                                                     Width="25"
                                                     Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/supplement-icon.svg" />
+                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/supplement-icon.svg" />
                                             </Border>
                                             <TextBlock
                                                 Text="Supplements"
@@ -252,7 +252,7 @@
                                                 <Svg
                                                     Width="25"
                                                     Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/apparel-icon.svg" />
+                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/apparel-icon.svg" />
                                             </Border>
                                             <TextBlock
                                                 Text="Apparel"
@@ -282,7 +282,7 @@
                                                 <Svg
                                                     Width="25"
                                                     Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ItemPurchaseView/product-icon.svg" />
+                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/product-icon.svg" />
                                             </Border>
                                             <TextBlock
                                                 Text="Products"
@@ -379,7 +379,7 @@
                                                 Height="18"
                                                 Margin="0,0,10,0"
                                                 VerticalAlignment="Center"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                                Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
                                             <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
@@ -437,7 +437,7 @@
                                                 Height="18"
                                                 Margin="0,0,10,0"
                                                 VerticalAlignment="Center"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                                Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
                                             <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
@@ -496,7 +496,7 @@
                                                 Height="18"
                                                 Margin="0,0,10,0"
                                                 VerticalAlignment="Center"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                                Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
                                             <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
@@ -554,7 +554,7 @@
                                                 Height="18"
                                                 Margin="0,0,10,0"
                                                 VerticalAlignment="Center"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                                Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
                                             <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
@@ -612,7 +612,7 @@
                                                 Height="18"
                                                 Margin="0,0,10,0"
                                                 VerticalAlignment="Center"
-                                                Path="avares://AHON_TRACK/Assets/ItemPurchaseView/shopping-cart-icon.svg" />
+                                                Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
                                             <TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
