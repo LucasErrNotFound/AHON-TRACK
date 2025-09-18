@@ -370,12 +370,6 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             .Dismissible()
             .Show();
     }
-
-    [RelayCommand]
-    private void OpenAddNewProduct()
-    {
-        _pageManager.Navigate<AddNewProductViewModel>();
-    }
     
     private void FilterInvoiceDataByPackageAndDate()
     {
