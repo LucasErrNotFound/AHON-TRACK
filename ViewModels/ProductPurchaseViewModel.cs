@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace AHON_TRACK.ViewModels;
 
-[Page("item-purchase")]
+[Page("product-purchase")]
 public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     private readonly DialogManager _dialogManager;
