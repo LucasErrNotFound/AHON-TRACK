@@ -18,7 +18,7 @@ namespace AHON_TRACK;
 [Transient<ManageMembershipViewModel>]
 [Transient<TrainingSchedulesViewModel>]
 [Transient<ManageBillingViewModel>]
-[Transient<ItemPurchaseViewModel>]
+[Transient<ProductPurchaseViewModel>]
 [Transient<EquipmentInventoryViewModel>]
 [Transient<ProductStockViewModel>]
 [Transient<SupplierManagementViewModel>]
