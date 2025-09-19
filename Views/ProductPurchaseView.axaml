@@ -29,12 +29,6 @@
         <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
         <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
         <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
-        
-        <SolidColorBrush x:Key="blue-500" Color="#3B82F6" />
-        <SolidColorBrush x:Key="green-500" Color="#22C55E" />
-        <SolidColorBrush x:Key="orange-500" Color="#F97316" />
-        <SolidColorBrush x:Key="purple-500" Color="#A855F7" />
-        <SolidColorBrush x:Key="red-500" Color="#EF4444" />
 
         <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
         <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
@@ -70,7 +64,7 @@
                 <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
             </Interaction.Behaviors>
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,48,24" Spacing="16">
-                <Grid ColumnDefinitions="Auto *" ColumnSpacing="30">
+                <Grid ColumnDefinitions="* *" ColumnSpacing="30">
                     <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="480">
                         <StackPanel>
                             <shadui:CardTitle Content="Select a customer" />
@@ -82,7 +76,7 @@
                                     shadui:ControlAssist.ShowProgress="{CompiledBinding }"
                                     shadui:ControlAssist.Height="40"
                                     Classes="Clearable"
-                                    Text="{CompiledBinding  Mode=TwoWay}"
+                                    Text="{}"
                                     FontSize="15"
                                     Watermark="Search customers...">
                                     <TextBox.InnerRightContent>
@@ -96,10 +90,9 @@
                                     Grid.Column="1"
                                     Width="150"
                                     VerticalAlignment="Center"
-                                    PlaceholderText="Filter">
-                                    <ComboBoxItem Content="Gym Member" />
-                                    <ComboBoxItem Content="Walk-in" />
-                                </ComboBox>
+                                    PlaceholderText="Filter"
+                                    ItemsSource="{CompiledBinding CustomerTypeFilterItems}"
+                                    SelectedItem="{CompiledBinding SelectedCustomerTypeFilterItem}"/>
                             </Grid>
                             <ScrollViewer HorizontalScrollBarVisibility="Auto">
                                 <Interaction.Behaviors>
@@ -107,11 +100,12 @@
                                 </Interaction.Behaviors>
                                 <DataGrid
                                     Height="335"
-                                    MaxWidth="648"
+                                    Width="695"
+                                    IsReadOnly="True"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
-                                    ItemsSource="{CompiledBinding }"
+                                    ItemsSource="{CompiledBinding CustomerList}"
                                     SelectionMode="Single"
                                     Background="{DynamicResource CardBackgroundColor}"
                                     RowBackground="{DynamicResource CardBackgroundColor}"
@@ -123,182 +117,66 @@
                                             Width="Auto"
                                             MinWidth="80"
                                             Header="ID"
-                                            Binding="{CompiledBinding }" />
-                                        <DataGridTextColumn
-                                            Width="*"
-                                            MinWidth="120"
-                                            Header="First Name"
-                                            Binding="{CompiledBinding }" />
-                                        <DataGridTextColumn
-                                            Width="*"
-                                            MinWidth="120"
-                                            Header="Last Name"
-                                            Binding="{CompiledBinding }" />
+                                            Binding="{CompiledBinding ID}" />
                                         <DataGridTextColumn
                                             Width="Auto"
-                                            MinWidth="80"
-                                            Header="Type"
-                                            Binding="{CompiledBinding }" />
+                                            MinWidth="185"
+                                            Header="First Name"
+                                            Binding="{CompiledBinding FirstName}" />
+                                        <DataGridTextColumn
+                                            Width="Auto"
+                                            MinWidth="185"
+                                            Header="Last Name"
+                                            Binding="{CompiledBinding LastName}" />
+                                        <DataGridTextColumn
+                                            Width="Auto"
+                                            MinWidth="250"
+                                            Header="Customer Type"
+                                            Binding="{CompiledBinding CustomerType}" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </ScrollViewer>
                         </StackPanel>
                     </shadui:Card>
-                    <shadui:Card Grid.Column="1" Margin="0,0,150,0">
-                        <StackPanel>
-                            <shadui:CardTitle Content="Categories" />
-                            <StackPanel Margin="0,20,0,0" Spacing="28">
-                                <ToggleButton
-                                    Classes="Outline"
-                                    HorizontalContentAlignment="Stretch"
-                                    IsChecked="{CompiledBinding IsAllItemsChecked}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Border 
-                                                Background="{StaticResource blue-500}" 
-                                                CornerRadius="8"
-                                                Width="35"
-                                                Height="35">
-                                                <Svg
-                                                    Width="25"
-                                                    Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/package-icon.svg" />
-                                            </Border>
-                                            <TextBlock
-                                                Text="All Items"
-                                                FontSize="14"
-                                                FontWeight="Medium"
-                                                VerticalAlignment="Center" />
-                                        </StackPanel>
+                    <shadui:Card Grid.Column="1" Margin="0,0,100,0">
+                        <DockPanel>
+                            <shadui:CardTitle Content="Purchase Summary"  DockPanel.Dock="Top"/>
+                            <!-- Customer Details -->
+                            <Grid RowDefinitions="Auto" ColumnDefinitions="Auto" DockPanel.Dock="Left">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,20,0,5" Spacing="15">
+                                        <Svg
+                                            Path="avares://AHON_TRACK/Assets/ProductPurchaseView/user-icon.svg"
+                                            Width="28"
+                                            Height="28"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"/>
                                         <TextBlock
-                                            Grid.Column="2"
-                                            Text="23"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center" />
-                                    </Grid>
-                                </ToggleButton>
-
-                                <ToggleButton
-                                    Classes="Outline"
-                                    HorizontalContentAlignment="Stretch"
-                                    IsChecked="{CompiledBinding IsDrinksChecked}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Border 
-                                                Background="{StaticResource green-500}" 
-                                                CornerRadius="8"
-                                                Width="35"
-                                                Height="35">
-                                                <Svg
-                                                    Width="25"
-                                                    Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/drink-icon.svg" />
-                                            </Border>
-                                            <TextBlock
-                                                Text="Drinks"
-                                                FontSize="14"
-                                                FontWeight="Medium"
-                                                VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                            Classes="Caption Muted"
+                                            FontSize="16"
+                                            Text="Customer Details"
+                                            VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Vertical" Margin="0,0,0,0">
                                         <TextBlock
-                                            Grid.Column="2"
-                                            Text="23"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center" />
-                                    </Grid>
-                                </ToggleButton>
-
-                                <ToggleButton
-                                    Classes="Outline"
-                                    HorizontalContentAlignment="Stretch"
-                                    IsChecked="{CompiledBinding IsSupplementsChecked}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Border 
-                                                Background="{StaticResource orange-500}" 
-                                                CornerRadius="8"
-                                                Width="35"
-                                                Height="35">
-                                                <Svg
-                                                    Width="25"
-                                                    Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/supplement-icon.svg" />
-                                            </Border>
-                                            <TextBlock
-                                                Text="Supplements"
-                                                FontSize="14"
-                                                FontWeight="Medium"
-                                                VerticalAlignment="Center" />
-                                        </StackPanel>
+                                            Text="Robert Xyz B. Lucas"
+                                            Classes="h4"/>
                                         <TextBlock
-                                            Grid.Column="2"
-                                            Text="15"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center" />
-                                    </Grid>
-                                </ToggleButton>
-
-                                <ToggleButton
-                                    Classes="Outline"
-                                    HorizontalContentAlignment="Stretch"
-                                    IsChecked="{CompiledBinding IsApparelChecked}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Border 
-                                                Background="{StaticResource purple-500}" 
-                                                CornerRadius="8"
-                                                Width="35"
-                                                Height="35">
-                                                <Svg
-                                                    Width="25"
-                                                    Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/apparel-icon.svg" />
-                                            </Border>
-                                            <TextBlock
-                                                Text="Apparel"
-                                                FontSize="14"
-                                                FontWeight="Medium"
-                                                VerticalAlignment="Center" />
-                                        </StackPanel>
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Text="8"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center" />
-                                    </Grid>
-                                </ToggleButton>
-
-                                <ToggleButton
-                                    Classes="Outline"
-                                    HorizontalContentAlignment="Stretch"
-                                    IsChecked="{CompiledBinding IsProductsChecked}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                            <Border 
-                                                Background="{StaticResource red-500}" 
-                                                CornerRadius="8"
-                                                Width="35"
-                                                Height="35">
-                                                <Svg
-                                                    Width="25"
-                                                    Height="25"
-                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/product-icon.svg" />
-                                            </Border>
-                                            <TextBlock
-                                                Text="Products"
-                                                FontSize="14"
-                                                FontWeight="Medium"
-                                                VerticalAlignment="Center" />
-                                        </StackPanel>
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Text="12"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center" />
-                                    </Grid>
-                                </ToggleButton>
-                            </StackPanel>
-                        </StackPanel>
+                                            Text="ID: GM-2025-001234"
+                                            FontSize="15"
+                                            Classes="Caption Muted"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                            <Separator 
+                                Width="700" 
+                                Background="{StaticResource ForegroundColor}"
+                                Margin="0,-90,0,0"/>
+                        </DockPanel>
+                        <shadui:Card.Footer>
+                            <Button Classes="Primary" Content="Pay $4,500" HorizontalAlignment="Right">
+                            </Button>
+                        </shadui:Card.Footer>
                     </shadui:Card>
                 </Grid>
                 <shadui:Card MaxHeight="900">
@@ -310,7 +188,7 @@
                                 shadui:ControlAssist.ShowProgress="{CompiledBinding }"
                                 shadui:ControlAssist.Height="40"
                                 Classes="Clearable"
-                                Text="{CompiledBinding  Mode=TwoWay}"
+                                Text="{}"
                                 FontSize="15"
                                 Watermark="Search products..">
                                 <TextBox.InnerRightContent>
@@ -320,6 +198,11 @@
                                         Path="/Assets/ManageEmployeesView/search-icon.svg" />
                                 </TextBox.InnerRightContent>
                             </TextBox>
+                            <ComboBox
+                                ItemsSource="{CompiledBinding ProductFilterItems}"
+                                SelectedItem="{CompiledBinding SelectedProductFilterItem}"
+                                shadui:ControlAssist.Height="40"
+                                Width="160" />
                         </StackPanel>
                         <Grid 
                             RowDefinitions="Auto Auto Auto Auto" 
