@@ -282,6 +282,7 @@
                                                                 GridLinesVisibility="All"
                                                                 ItemsSource="{CompiledBinding InvoiceList}"
                                                                 SelectionMode="Single"
+                                                                IsReadOnly="True"
                                                                 Background="{DynamicResource CardBackgroundColor}"
                                                                 RowBackground="{DynamicResource CardBackgroundColor}"
                                                                 HeadersVisibility="Column"
