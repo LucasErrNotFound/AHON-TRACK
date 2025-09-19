@@ -26,10 +26,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     [ObservableProperty] 
     private string _selectedCustomerTypeFilterItem = "All";
 
-    private readonly DialogManager _dialogManager;
-    private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
-
     [ObservableProperty] 
     private ObservableCollection<Customer> _customerList = [];
 
@@ -56,6 +52,16 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private int _totalCount;
+
+    [ObservableProperty]
+    private Customer? _selectedCustomer;
+    
+    [ObservableProperty]
+    private string _customerFullName = "Customer Name";
+    
+    private readonly DialogManager _dialogManager;
+    private readonly ToastManager _toastManager;
+    private readonly PageManager _pageManager;
 
     public ProductPurchaseViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
@@ -269,6 +275,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     partial void OnSelectedCustomerTypeFilterItemChanged(string value)
     {
         ApplyCustomerFilter();
+    }
+    
+    partial void OnSelectedCustomerChanged(Customer? value)
+    {
+        CustomerFullName = value != null ? $"{value.FirstName} {value.LastName}" : "Customer Name";
     }
 }
 

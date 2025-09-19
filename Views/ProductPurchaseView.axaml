@@ -106,6 +106,7 @@
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
                                     ItemsSource="{CompiledBinding CustomerList}"
+                                    SelectedItem="{CompiledBinding SelectedCustomer, Mode=TwoWay}"
                                     SelectionMode="Single"
                                     Background="{DynamicResource CardBackgroundColor}"
                                     RowBackground="{DynamicResource CardBackgroundColor}"
@@ -159,7 +160,7 @@
                                     </StackPanel>
                                     <StackPanel Orientation="Vertical" Margin="0,0,0,0">
                                         <TextBlock
-                                            Text="Robert Xyz B. Lucas"
+                                            Text="{CompiledBinding CustomerFullName}"
                                             Classes="h4"/>
                                         <TextBlock
                                             Text="ID: GM-2025-001234"
