@@ -166,14 +166,14 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     #region Initialization Methods
 
-    private void InitializeViewModel()
+    private async Task InitializeViewModel()
     {
         InitializeAvailableYears();
         InitializeAxes();
         InitializeChart();
         InitializeSalesData();
         InitializeTrainingSessionsData();
-        _ = InitializeRecentLogsData(); //calls db info
+        await RefreshRecentLogs();
     }
 
     private void InitializeAvailableYears()
@@ -194,13 +194,9 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         UpcomingTrainingSessions = new ObservableCollection<TrainingSession>(sessionsData);
     }
 
-    private async Task InitializeRecentLogsData()
+    public async Task RefreshRecentLogs()
     {
-        var logsData = await _dashboardModel.GetRecentLogsFromDatabaseAsync(
-            DashboardModel.connectionString
-        );
-
-        RecentLogs = new ObservableCollection<RecentLog>(logsData);
+        await LoadRecentLogsFromDatabaseAsync();
     }
 
     private void InitializeAxes()
@@ -294,6 +290,8 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
             {
                 RecentLogs.Add(log);
             }
+
+            UpdateRecentLogsSummary(); // This will call the GenerateRecentLogsSummary method
         }
         catch (Exception ex)
         {
@@ -352,7 +350,6 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         RecentLogs.Remove(log);
         UpdateRecentLogsSummary();
     }
-
     #endregion
 
     #region Chart Operations

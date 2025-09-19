@@ -278,9 +278,6 @@ public class DashboardModel
         return logs;
     }
 
-
-
-
     public string GenerateRecentLogsSummary(int logCount) => $"You have {logCount} recent action logs today";
 
     #endregion
