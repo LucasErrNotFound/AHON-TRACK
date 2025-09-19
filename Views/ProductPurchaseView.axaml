@@ -73,10 +73,10 @@
                                     Grid.Column="0"
                                     Width="300"
                                     HorizontalAlignment="Left"
-                                    shadui:ControlAssist.ShowProgress="{CompiledBinding }"
+                                    shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingCustomer}"
                                     shadui:ControlAssist.Height="40"
                                     Classes="Clearable"
-                                    Text="{}"
+                                    Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
                                     FontSize="15"
                                     Watermark="Search customers...">
                                     <TextBox.InnerRightContent>
