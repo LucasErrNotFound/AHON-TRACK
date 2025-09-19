@@ -78,6 +78,7 @@ public partial class LoginViewModel : ViewModelBase
             ToastManager.CreateToast("Wrong Credentials! Try Again")
                 .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                 .WithDelay(5)
+                .DismissOnClick()
                 .ShowError();
             return;
         }
