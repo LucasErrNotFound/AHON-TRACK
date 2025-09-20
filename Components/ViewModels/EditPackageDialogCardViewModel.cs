@@ -42,6 +42,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     private DateOnly? _validTo;
     
     public bool IsDiscountEnabled => EnableDiscount;
+    public bool IsDeleteAction { get; private set; }
     
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -73,7 +74,14 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     }
     
     [RelayCommand]
-    private void SavePackage()
+    private void Delete()
+    {
+        IsDeleteAction = true;
+        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+    }
+    
+    [RelayCommand]
+    private void SaveDetails()
     {        
         ValidateAllProperties();
 
@@ -91,9 +99,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         }
 
         if (HasErrors) return;
-        Debug.WriteLine($"ValidFrom: {ValidFrom}");
-        Debug.WriteLine($"ValidTo: {ValidTo}");
-        Debug.WriteLine($"Discount Value: {GetFormattedValue(DiscountValue)}");
+        IsDeleteAction = false;
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
     
@@ -155,7 +161,6 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         get => _featureDescription3;
         set => SetProperty(ref _featureDescription3, value, true);
     }
-    
     
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription4
