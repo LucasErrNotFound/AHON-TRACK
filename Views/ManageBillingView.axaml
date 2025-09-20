@@ -374,7 +374,7 @@
                                                                                     <TextBlock 
                                                                                         FontSize="35"
                                                                                         FontWeight="Bold"
-                                                                                        Text="{CompiledBinding Price}"
+                                                                                        Text="{CompiledBinding FormattedPrice}"
                                                                                         VerticalAlignment="Bottom" />
                                                                                     <TextBlock
                                                                                         Classes="Caption Muted"
