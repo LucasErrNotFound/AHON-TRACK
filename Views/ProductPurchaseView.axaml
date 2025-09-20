@@ -284,7 +284,7 @@
                                 IsVisible="{CompiledBinding PackageList.Count}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <UniformGrid Columns="4" RowSpacing="30" ColumnSpacing="30" />
+                                        <UniformGrid Columns="4" RowSpacing="30" ColumnSpacing="30" Margin="-7,0,0,0"/>
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
