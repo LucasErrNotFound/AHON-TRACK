@@ -386,6 +386,7 @@ public class Product
     public string Category { get; set; } = string.Empty;
     public int Price { get; set; }
     public string FormattedPrice => $"₱{Price:N2}";
+    public string FormattedStockCount => $"{StockCount} Left";
     public int StockCount { get; set; }
     public Bitmap Poster { get; set; }
 }

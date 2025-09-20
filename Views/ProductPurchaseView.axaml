@@ -252,7 +252,7 @@
                                                         Margin="0,15,0,0"
                                                         HorizontalAlignment="Left">
                                                         <TextBlock
-                                                            Text="{CompiledBinding StockCount}"
+                                                            Text="{CompiledBinding FormattedStockCount}"
                                                             FontSize="13"
                                                             FontWeight="SemiBold"
                                                             Foreground="{DynamicResource SuccessColor}" />
