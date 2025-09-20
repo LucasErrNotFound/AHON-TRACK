@@ -3,6 +3,8 @@ using AHON_TRACK.Components.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using System;
 using System.IO;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
 using ShadUI;
 using Jab;
 using Serilog;
@@ -39,6 +41,7 @@ namespace AHON_TRACK;
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
+[Singleton<IPackageService, PackageService>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
 public partial class ServiceProvider
