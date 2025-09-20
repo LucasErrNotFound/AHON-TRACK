@@ -6,6 +6,7 @@ using ShadUI;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -245,7 +246,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 Description = "Yellow Blast Flavor",
                 Category = "Drinks",
                 Price = 35,
-                StockCount = 5,
+                StockCount = 3,
                 Poster = GetCachedImage("cobra-yellow-drink-display.png")
             }
         ];
@@ -379,14 +380,53 @@ public partial class Customer : ObservableObject
     private string _customerType = string.Empty;
 }
 
-public class Product
+public partial class Product : ObservableObject
 {
-    public string Title { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
-    public int Price { get; set; }
+    [ObservableProperty]
+    private string _title = string.Empty;
+    
+    [ObservableProperty]
+    private string _description = string.Empty;
+    
+    [ObservableProperty]
+    private string _category = string.Empty;
+
+    [ObservableProperty] 
+    private int _price;
+
+    [ObservableProperty] 
+    private int _stockCount;
+
+    [ObservableProperty] 
+    private Bitmap _poster; 
+    
     public string FormattedPrice => $"₱{Price:N2}";
     public string FormattedStockCount => $"{StockCount} Left";
-    public int StockCount { get; set; }
-    public Bitmap Poster { get; set; }
+    
+    public IBrush StockForeground => StockCount switch
+    {
+        < 5 => new SolidColorBrush(Color.FromRgb(239, 68, 68)),   // Red-500 (Critical)
+        < 10 => new SolidColorBrush(Color.FromRgb(245, 158, 11)), // Amber-500 (Warning)
+        _ => new SolidColorBrush(Color.FromRgb(34, 197, 94))      // Green-500 (Good)
+    };
+
+    public IBrush StockBackground => StockCount switch
+    {
+        < 5 => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),   // Red-500 with alpha
+        < 10 => new SolidColorBrush(Color.FromArgb(25, 245, 158, 11)), // Amber-500 with alpha
+        _ => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94))      // Green-500 with alpha
+    };
+    
+    public IBrush StockBorder => StockCount switch
+    {
+        < 5 => new SolidColorBrush(Color.FromRgb(239, 68, 68)),   // Red-500 (Critical)
+        < 10 => new SolidColorBrush(Color.FromRgb(245, 158, 11)), // Amber-500 (Warning)
+        _ => new SolidColorBrush(Color.FromRgb(34, 197, 94))      // Green-500 (Good)
+    };
+
+    partial void OnStockCountChanged(int value)
+    {
+        OnPropertyChanged(nameof(StockForeground));
+        OnPropertyChanged(nameof(StockBackground));
+    }
 }

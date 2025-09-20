@@ -244,10 +244,10 @@
                                                         Grid.Row="2"
                                                         Grid.Column="1"
                                                         IsVisible="{CompiledBinding }"
-                                                        Background="{DynamicResource SuccessColor10}"
+                                                        Background="{CompiledBinding StockBackground}"
                                                         Padding="10,5,10,5"
                                                         BorderThickness="1"
-                                                        BorderBrush="{DynamicResource SuccessColor60}"
+                                                        BorderBrush="{CompiledBinding StockBorder}"
                                                         CornerRadius="6"
                                                         Margin="0,15,0,0"
                                                         HorizontalAlignment="Left">
@@ -255,7 +255,7 @@
                                                             Text="{CompiledBinding FormattedStockCount}"
                                                             FontSize="13"
                                                             FontWeight="SemiBold"
-                                                            Foreground="{DynamicResource SuccessColor}" />
+                                                            Foreground="{CompiledBinding StockForeground}" />
                                                     </Border>
                                                 </Grid>
                                                 <Button
