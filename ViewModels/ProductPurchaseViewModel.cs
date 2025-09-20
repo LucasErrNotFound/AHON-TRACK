@@ -6,6 +6,8 @@ using ShadUI;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -46,6 +48,12 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private List<Product> _currentProductList = [];
+    
+    [ObservableProperty] 
+    private ObservableCollection<Package> _packageList = [];
+
+    [ObservableProperty]
+    private List<Package> _originalPackageList = [];
 
     [ObservableProperty] 
     private string _customerSearchStringResult = string.Empty;
@@ -82,15 +90,21 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly IPackageService _packageService;
 
-    public ProductPurchaseViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public ProductPurchaseViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager, 
+        PageManager pageManager, IPackageService packageService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _packageService = packageService;
 
         LoadCustomerList();
         LoadProductOptions();
+        LoadPackageOptions();
     }
 
     public ProductPurchaseViewModel()
@@ -98,9 +112,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _packageService = new PackageService();
 
         LoadCustomerList();
         LoadProductOptions();
+        LoadPackageOptions();
     }
 
     [AvaloniaHotReload]
@@ -109,6 +125,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         if (IsInitialized) return;
         LoadCustomerList();
         LoadProductOptions();
+        LoadPackageOptions();
         IsInitialized = true;
     }
 
@@ -141,6 +158,13 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             ProductList.Add(product);
         }
         ApplyProductFilter();
+    }
+    
+    private void LoadPackageOptions()
+    {
+        var packages = _packageService.GetPackages();
+        OriginalPackageList = packages;
+        ApplyProductFilter(); // This will handle package filtering
     }
 
     private List<Customer> GetCustomerData()
@@ -311,29 +335,42 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     
     private void ApplyProductFilter()
     {
-        if (OriginalProductList == null || OriginalProductList.Count == 0) return;
-
-        List<Product> filteredList;
-
-        if (SelectedProductFilterItem == "All")
+        ProductList.Clear();
+        PackageList.Clear();
+    
+        if (SelectedProductFilterItem == "Gym Packages")
         {
-            filteredList = OriginalProductList.ToList();
+            if (_originalPackageList != null && _originalPackageList.Count > 0)
+            {
+                foreach (var package in _originalPackageList)
+                {
+                    PackageList.Add(package);
+                }
+            }
         }
         else
         {
-            filteredList = OriginalProductList
-                .Where(product => product.Category == SelectedProductFilterItem)
-                .ToList();
-        }
-        CurrentProductList = filteredList;
+            if (OriginalProductList == null || OriginalProductList.Count == 0) return;
 
-        ProductList.Clear();
-        foreach (var product in filteredList)
-        {
-            ProductList.Add(product);
-        }
+            List<Product> filteredList;
+
+            if (SelectedProductFilterItem == "All")
+            {
+                filteredList = OriginalProductList.ToList();
+            }
+            else
+            {
+                filteredList = OriginalProductList
+                    .Where(product => product.Category == SelectedProductFilterItem)
+                    .ToList();
+            }
         
-        // Clear product search when filter changes
+            CurrentProductList = filteredList;
+            foreach (var product in filteredList)
+            {
+                ProductList.Add(product);
+            }
+        }
         ProductSearchStringResult = string.Empty;
     }
 

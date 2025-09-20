@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.Linq;
 using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -43,6 +45,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly IPackageService _packageService;
     private readonly AddNewPackageDialogCardViewModel _addNewPackageDialogCardViewModel;
     private readonly EditPackageDialogCardViewModel _editPackageDialogCardViewModel;
     private ObservableCollection<RecentActivity> _recentActivities = [];
@@ -50,13 +53,16 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     [ObservableProperty]
     private ObservableCollection<Invoices> _invoiceList = [];
 
-    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel,  EditPackageDialogCardViewModel editPackageDialogCardViewModel)
+    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  
+        AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel,  EditPackageDialogCardViewModel editPackageDialogCardViewModel, 
+        IPackageService packageService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _addNewPackageDialogCardViewModel = addNewPackageDialogCardViewModel;
         _editPackageDialogCardViewModel = editPackageDialogCardViewModel;
+        _packageService = packageService;
         LoadSampleSalesData();
         LoadInvoiceData();
         LoadPackageOptions();
@@ -70,6 +76,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _pageManager = new PageManager(new ServiceProvider());
         _addNewPackageDialogCardViewModel = new AddNewPackageDialogCardViewModel();
         _editPackageDialogCardViewModel = new EditPackageDialogCardViewModel();
+        _packageService = new PackageService();
         LoadSampleSalesData();
         LoadInvoiceData();
         LoadPackageOptions();
@@ -112,7 +119,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     private void LoadPackageOptions()
     {
-        var packages = GetPackageData();
+        var packages = _packageService.GetPackages();
         PackageOptions = new ObservableCollection<Package>(packages);
     }
     
@@ -147,181 +154,6 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             new Invoices { ID = 1009, CustomerName = "John Maverick Lim", PurchasedItem = "Red Bull", Quantity = 7, Amount = 880, DatePurchased = today.AddHours(19) },
             new Invoices { ID = 1010, CustomerName = "Raymart Soneja", PurchasedItem = "Protein Powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddDays(-1).AddHours(17) },
             new Invoices { ID = 1011, CustomerName = "Vince Abellada", PurchasedItem = "Protein Powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddDays(-1).AddHours(18) }
-        ];
-    }
-
-    private List<Package> GetPackageData()
-    {
-        return
-        [
-            new Package
-            {
-                Title = "Free Trial",
-                Description = "Try any class or gym session-no charge",
-                Price = 0,
-                PriceUnit = "/one-time only",
-                Features = 
-                [
-                    "Risk-free first session",
-                    "Explore the gym or class",
-                    "Meet our trainers",
-                    "Decide before committing",
-                    "No hidden charges"
-                ],
-                IsDiscountChecked = false,
-                DiscountValue = null,
-                SelectedDiscountFor = "All",
-                SelectedDiscountType = "Fixed Amount (₱)",
-                DiscountValidFrom = null,
-                DiscountValidTo = null 
-            },
-            new Package
-            {
-                Title = "Walk-In",
-                Description = "Pay per session with no commitment",
-                Price = 150,
-                PriceUnit = "/session",
-                Features = 
-                [
-                    "Unlimited time",
-                    "Perfect for casual visits",
-                    "Pay only when you train",
-                    "No membership needed",
-                    "Great for one-time guests"
-                ],
-                IsDiscountChecked = false,
-                DiscountValue = null,
-                SelectedDiscountFor = "All",
-                SelectedDiscountType = "Fixed Amount (₱)",
-                DiscountValidFrom = null,
-                DiscountValidTo = null 
-            },
-            new Package
-            {
-                Title = "Monthly Membership",
-                Description = "Unlimited gym access for 30 days",
-                Price = 500,
-                PriceUnit = "/month",
-                Features = 
-                [
-                    "Unlimited gym sessions",
-                    "Best value for regulars",
-                    "Discounted charges",
-                    "30 days of full access",
-                    "Unli health checkups"
-                ],
-                IsDiscountChecked = false,
-                DiscountValue = null,
-                SelectedDiscountFor = "All",
-                SelectedDiscountType = "Fixed Amount (₱)",
-                DiscountValidFrom = null,
-                DiscountValidTo = null 
-            },
-            new Package
-            {
-                Title = "Boxing",
-                Description = "High-intensity training focused on boxing",
-                Price = 450,
-                PriceUnit = "/session",
-                Features = 
-                [
-                    "Boosts cardio and strength",
-                    "Learn real boxing skills",
-                    "Stress relieving workouts",
-                    "Burns high calories fast",
-                    "Builds confidence and discipline"
-                ],
-                IsDiscountChecked = true,
-                DiscountValue = 100,
-                SelectedDiscountFor = "Gym Members",
-                SelectedDiscountType = "Fixed Amount (₱)",
-                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
-            },
-            new Package
-            {
-                Title = "Muay Thai",
-                Description = "Training for strength and endurance",
-                Price = 500,
-                PriceUnit = "/session",
-                Features = 
-                [
-                    "Full body conditioning",
-                    "Improves flexibility and balance",
-                    "Learn about self-defense",
-                    "Culturally rich experience",
-                    "Great for strength and stamina"
-                ],
-                IsDiscountChecked = true,
-                DiscountValue = 100,
-                SelectedDiscountFor = "Gym Members",
-                SelectedDiscountType = "Fixed Amount (₱)",
-                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
-            },
-            new Package
-            {
-                Title = "CrossFit",
-                Description = "Functional workouts with high-intensity moves",
-                Price = 300,
-                PriceUnit = "/session",
-                Features = 
-                [
-                    "Builds functional strength",
-                    "Constantly varied workouts",
-                    "Time efficient and intense",
-                    "Encourages community support",
-                    "Suitable for all fitness levels"
-                ],
-                IsDiscountChecked = true,
-                DiscountValue = 50,
-                SelectedDiscountFor = "Gym Members",
-                SelectedDiscountType = "Fixed Amount (₱)",
-                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
-            },
-            new Package
-            {
-                Title = "Personal Training",
-                Description = "One-on-one session to reach your fitness goal",
-                Price = 200,
-                PriceUnit = "/session",
-                Features = 
-                [
-                    "Personalized workout plans",
-                    "One-on-one coaching",
-                    "Faster progress tracking",
-                    "Motivation and accountability",
-                    "Focus on your specific goals"
-                ],
-                IsDiscountChecked = true,
-                DiscountValue = 50,
-                SelectedDiscountFor = "Gym Members",
-                SelectedDiscountType = "Fixed Amount (₱)",
-                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
-            },
-            new Package
-            {
-                Title = "Thai Massage",
-                Description = "Massage therapy for relaxation and healing",
-                Price = 350,
-                PriceUnit = "/session",
-                Features = 
-                [
-                    "Relieves muscle tension and stiffness",
-                    "Enhances flexibility and circulation",
-                    "Promotes deep relaxation",
-                    "Reduces stress and fatigue",
-                    "Supports overall wellness"
-                ],
-                IsDiscountChecked = true,
-                DiscountValue = 50,
-                SelectedDiscountFor = "Gym Members",
-                SelectedDiscountType = "Fixed Amount (₱)",
-                DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
-            }
         ];
     }
 
