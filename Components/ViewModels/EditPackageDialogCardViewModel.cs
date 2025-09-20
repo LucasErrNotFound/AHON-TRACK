@@ -297,12 +297,8 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     {
         PackageName = package.Title;
         Description = package.Description;
-    
-        // Convert price string to int (remove ₱ and .00, convert to int)
-        if (decimal.TryParse(package.Price.Replace("₱", "").Replace(",", ""), out var priceDecimal))
-        {
-            Price = (int)priceDecimal;
-        }
+
+        Price = package.Price;
     
         Duration = package.PriceUnit;
     
@@ -338,7 +334,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         {
             Title = PackageName,
             Description = Description,
-            Price = Price.HasValue ? $"₱{Price.Value:N2}" : "₱0.00",
+            Price = Price ?? 0,
             PriceUnit = Duration,
             Features = features,
             IsDiscountChecked = EnableDiscount,
