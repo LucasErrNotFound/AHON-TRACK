@@ -6,4 +6,5 @@ namespace AHON_TRACK.Services.Interface;
 public interface IPackageService
 {
     List<Package> GetPackages();
+    void AddPackage(Package package);
 }

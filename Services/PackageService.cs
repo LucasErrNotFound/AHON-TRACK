@@ -7,6 +7,7 @@ namespace AHON_TRACK.Services;
 
 public class PackageService : IPackageService
 {
+    private List<Package> _packages = [];
     public List<Package> GetPackages()
     {
         return
@@ -180,5 +181,10 @@ public class PackageService : IPackageService
                 DiscountValidTo = null 
             }
         ];
+    }
+
+    public void AddPackage(Package package)
+    {
+        _packages.Add(package);
     }
 }
