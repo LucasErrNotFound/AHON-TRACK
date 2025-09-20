@@ -6,6 +6,8 @@ using ShadUI;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -15,7 +17,7 @@ namespace AHON_TRACK.ViewModels;
 public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty] 
-    private string[] _productFilterItems = ["Products", "Gym Packages"];
+    private string[] _productFilterItems = ["Products", "Gym Packages", "Supplements"];
 
     [ObservableProperty] 
     private string _selectedProductFilterItem = "Products";
@@ -28,6 +30,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty] 
     private ObservableCollection<Customer> _customerList = [];
+    
+    [ObservableProperty] 
+    private ObservableCollection<Product> _productList = [];
 
     [ObservableProperty] 
     private List<Customer> _originalCustomerList = [];
@@ -59,6 +64,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     [ObservableProperty]
     private string _customerFullName = "Customer Name";
     
+    private readonly Dictionary<string, Bitmap> _imageCache = new();
+    
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -70,6 +77,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _pageManager = pageManager;
 
         LoadCustomerList();
+        LoadProductOptions();
     }
 
     public ProductPurchaseViewModel()
@@ -79,6 +87,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _pageManager = new PageManager(new ServiceProvider());
 
         LoadCustomerList();
+        LoadProductOptions();
     }
 
     [AvaloniaHotReload]
@@ -86,6 +95,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     {
         if (IsInitialized) return;
         LoadCustomerList();
+        LoadProductOptions();
         IsInitialized = true;
     }
 
@@ -104,6 +114,12 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
         ApplyCustomerFilter();
         UpdateCustomerCounts();
+    }
+
+    private void LoadProductOptions()
+    {
+        var products = GetProductData();
+        ProductList = new ObservableCollection<Product>(products);
     }
 
     private List<Customer> GetCustomerData()
@@ -181,6 +197,68 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 CustomerType = "Gym Member"
             }
         ];
+    }
+
+    private List<Product> GetProductData()
+    {
+        return
+        [
+            new Product
+            {
+                Title = "Gold Standard Whey Protein",
+                Description = "5lbs Premium Whey Protein",
+                Category = "Supplements",
+                Price = 2500,
+                StockCount = 15,
+                Poster = GetCachedImage("protein-powder-display.png")
+            },
+            new Product
+            {
+                Title = "Creatine XPLODE Powder",
+                Description = "1.1lbs Creatine Monohydrate",
+                Category = "Supplements",
+                Price = 1050,
+                StockCount = 8,
+                Poster = GetCachedImage("creatine-display.png")
+            },
+            new Product
+            {
+                Title = "Insane Labz PSYCHOTIC",
+                Description = "7.6oz PreWorkout Peaches & Cream",
+                Category = "Supplements",
+                Price = 900,
+                StockCount = 7,
+                Poster = GetCachedImage("preworkout-display.png")
+            },
+            new Product
+            {
+                Title = "Cobra Energy Drink",
+                Description = "Yellow Blast Flavor",
+                Category = "Drinks",
+                Price = 35,
+                StockCount = 5,
+                Poster = GetCachedImage("cobra-yellow-drink-display.png")
+            },
+            new Product
+            {
+                Title = "Cobra Energy Drink",
+                Description = "Yellow Blast Flavor",
+                Category = "Drinks",
+                Price = 35,
+                StockCount = 5,
+                Poster = GetCachedImage("cobra-yellow-drink-display.png")
+            }
+        ];
+    }
+    
+    private Bitmap GetCachedImage(string imageName)
+    {
+        if (!_imageCache.ContainsKey(imageName))
+        {
+            var uri = new Uri($"avares://AHON_TRACK/Assets/ProductPurchaseView/{imageName}");
+            _imageCache[imageName] = new Bitmap(AssetLoader.Open(uri));
+        }
+        return _imageCache[imageName];
     }
     
     private void ApplyCustomerFilter()
@@ -299,4 +377,15 @@ public partial class Customer : ObservableObject
     
     [ObservableProperty] 
     private string _customerType = string.Empty;
+}
+
+public class Product
+{
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public int Price { get; set; }
+    public string FormattedPrice => $"₱{Price:N2}";
+    public int StockCount { get; set; }
+    public Bitmap Poster { get; set; }
 }
