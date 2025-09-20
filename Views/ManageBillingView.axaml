@@ -356,7 +356,7 @@
                                                             <ItemsControl ItemsSource="{CompiledBinding PackageOptions}">
                                                                 <ItemsControl.ItemsPanel>
                                                                     <ItemsPanelTemplate>
-                                                                        <UniformGrid Rows="3" Columns="3" RowSpacing="30"/>
+                                                                        <UniformGrid Columns="3" RowSpacing="30"/>
                                                                     </ItemsPanelTemplate>
                                                                 </ItemsControl.ItemsPanel>
                                                                 <ItemsControl.ItemTemplate>
