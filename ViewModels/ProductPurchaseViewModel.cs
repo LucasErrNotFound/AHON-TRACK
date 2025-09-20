@@ -420,29 +420,42 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     {
         if (string.IsNullOrWhiteSpace(ProductSearchStringResult))
         {
-            ProductList.Clear();
-            foreach (var product in CurrentProductList)
-            {
-                ProductList.Add(product);
-            }
+            ApplyProductFilter();
             return;
         }
-        
+    
         IsSearchingProduct = true;
-        
+    
         try
         {
             await Task.Delay(300);
 
-            var filteredProducts = CurrentProductList.Where(product =>
-                product.Title.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                product.Description.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase)
-            ).ToList();
-
             ProductList.Clear();
-            foreach (var product in filteredProducts)
+            PackageList.Clear();
+
+            if (SelectedProductFilterItem == "Gym Packages")
             {
-                ProductList.Add(product);
+                var filteredPackages = OriginalPackageList.Where(package =>
+                    package.Title.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                    package.Description.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+
+                foreach (var package in filteredPackages)
+                {
+                    PackageList.Add(package);
+                }
+            }
+            else
+            {
+                var filteredProducts = CurrentProductList.Where(product =>
+                    product.Title.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                    product.Description.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+
+                foreach (var product in filteredProducts)
+                {
+                    ProductList.Add(product);
+                }
             }
         }
         finally
