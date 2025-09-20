@@ -116,7 +116,6 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         set => SetProperty(ref _description, value, true);
     }
     
-    [Required(ErrorMessage = "Price must be set")]
     [Range(0, 5000, ErrorMessage = "Price must be between 0 and 5,000")]
     public int? Price
     {
