@@ -102,6 +102,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _pageManager = pageManager;
         _packageService = packageService;
 
+        _packageService.PackagesChanged += OnPackagesChanged;
+
         LoadCustomerList();
         LoadProductOptions();
         LoadPackageOptions();
@@ -503,6 +505,22 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     partial void OnSelectedCustomerChanged(Customer? value)
     {
         CustomerFullName = value != null ? $"{value.FirstName} {value.LastName}" : "Customer Name";
+    }
+    
+    private void OnPackagesChanged()
+    {
+        LoadPackageOptions();
+    
+        if (SelectedProductFilterItem == "Gym Packages")
+        {
+            ApplyProductFilter();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_packageService != null)
+            _packageService.PackagesChanged -= OnPackagesChanged;
     }
 }
 

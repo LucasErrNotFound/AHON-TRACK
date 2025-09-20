@@ -191,6 +191,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 if (_editPackageDialogCardViewModel.IsDeleteAction)
                 {
                     PackageOptions.Remove(package);
+                    _packageService.RemovePackage(package);
                     _toastManager.CreateToast("Package deleted")
                         .WithContent($"The {package.Title} package has been successfully deleted!")
                         .DismissOnClick()
@@ -201,7 +202,9 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                     var index = PackageOptions.IndexOf(package);
                     if (index >= 0)
                     {
-                        PackageOptions[index] = _editPackageDialogCardViewModel.ToPackageOption();
+                        var updatedPackage = _editPackageDialogCardViewModel.ToPackageOption();
+                        PackageOptions[index] = updatedPackage;
+                        _packageService.UpdatePackage(package, updatedPackage);
                     }
                     _toastManager.CreateToast("Package updated")
                         .WithContent($"You just updated the {package.Title} package!")
