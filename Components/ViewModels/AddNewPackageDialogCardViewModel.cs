@@ -294,4 +294,31 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
             ? $"{value.Value}%" 
             : $"₱{value.Value:N2}";
     }
+    
+    public Package ToPackage()
+    {
+        var features = new List<string>();
+    
+        // Add non-empty feature descriptions to the list
+        if (!string.IsNullOrWhiteSpace(FeatureDescription1)) features.Add(FeatureDescription1);
+        if (!string.IsNullOrWhiteSpace(FeatureDescription2)) features.Add(FeatureDescription2);
+        if (!string.IsNullOrWhiteSpace(FeatureDescription3)) features.Add(FeatureDescription3);
+        if (!string.IsNullOrWhiteSpace(FeatureDescription4)) features.Add(FeatureDescription4);
+        if (!string.IsNullOrWhiteSpace(FeatureDescription5)) features.Add(FeatureDescription5);
+
+        return new Package
+        {
+            Title = PackageName,
+            Description = Description,
+            Price = Price ?? 0,
+            PriceUnit = Duration,
+            Features = features,
+            IsDiscountChecked = EnableDiscount,
+            DiscountValue = EnableDiscount ? DiscountValue : null,
+            SelectedDiscountFor = EnableDiscount ? SelectedDiscountForItem : string.Empty,
+            SelectedDiscountType = EnableDiscount ? SelectedDiscountTypeItem : string.Empty,
+            DiscountValidFrom = EnableDiscount ? ValidFrom : null,
+            DiscountValidTo = EnableDiscount ? ValidTo : null
+        };
+    }
 }
