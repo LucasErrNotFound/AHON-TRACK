@@ -18,10 +18,10 @@ namespace AHON_TRACK.ViewModels;
 public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty] 
-    private string[] _productFilterItems = ["Products", "Gym Packages", "Supplements"];
+    private string[] _productFilterItems = ["Supplements", "Drinks", "Products", "Gym Packages"];
 
     [ObservableProperty] 
-    private string _selectedProductFilterItem = "Products";
+    private string _selectedProductFilterItem = "Supplements";
 
     [ObservableProperty] 
     private string[] _customerTypeFilterItems = ["All", "Walk-in", "Gym Member"];
@@ -40,12 +40,24 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty] 
     private List<Customer> _currentCustomerList = [];
+    
+    [ObservableProperty]
+    private List<Product> _originalProductList = [];
+
+    [ObservableProperty]
+    private List<Product> _currentProductList = [];
 
     [ObservableProperty] 
-    private string _searchStringResult = string.Empty;
+    private string _customerSearchStringResult = string.Empty;
+    
+    [ObservableProperty]
+    private string _productSearchStringResult = string.Empty;
 
     [ObservableProperty] 
     private bool _isSearchingCustomer;
+    
+    [ObservableProperty]
+    private bool _isSearchingProduct;
 
     [ObservableProperty] 
     private bool _isInitialized;
@@ -120,7 +132,15 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     private void LoadProductOptions()
     {
         var products = GetProductData();
-        ProductList = new ObservableCollection<Product>(products);
+        OriginalProductList = products;
+        CurrentProductList = products.ToList();
+        
+        ProductList.Clear();
+        foreach (var product in CurrentProductList)
+        {
+            ProductList.Add(product);
+        }
+        ApplyProductFilter();
     }
 
     private List<Customer> GetCustomerData()
@@ -288,11 +308,39 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
         UpdateCustomerCounts();
     }
+    
+    private void ApplyProductFilter()
+    {
+        if (OriginalProductList == null || OriginalProductList.Count == 0) return;
+
+        List<Product> filteredList;
+
+        if (SelectedProductFilterItem == "All")
+        {
+            filteredList = OriginalProductList.ToList();
+        }
+        else
+        {
+            filteredList = OriginalProductList
+                .Where(product => product.Category == SelectedProductFilterItem)
+                .ToList();
+        }
+        CurrentProductList = filteredList;
+
+        ProductList.Clear();
+        foreach (var product in filteredList)
+        {
+            ProductList.Add(product);
+        }
+        
+        // Clear product search when filter changes
+        ProductSearchStringResult = string.Empty;
+    }
 
     [RelayCommand]
     private async Task SearchCustomers()
     {
-        if (string.IsNullOrWhiteSpace(SearchStringResult))
+        if (string.IsNullOrWhiteSpace(CustomerSearchStringResult))
         {
             CustomerList.Clear();
             foreach (var customer in CurrentCustomerList)
@@ -311,9 +359,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             await Task.Delay(500);
 
             var filteredCustomers = CurrentCustomerList.Where(customer =>
-                customer.FirstName.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                customer.LastName.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                customer.CustomerType.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)
+                customer.FirstName.Contains(CustomerSearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                customer.LastName.Contains(CustomerSearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                customer.CustomerType.Contains(CustomerSearchStringResult, StringComparison.OrdinalIgnoreCase)
             ).ToList();
 
             CustomerList.Clear();
@@ -330,6 +378,42 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
     }
     
+    [RelayCommand]
+    private async Task SearchProducts()
+    {
+        if (string.IsNullOrWhiteSpace(ProductSearchStringResult))
+        {
+            ProductList.Clear();
+            foreach (var product in CurrentProductList)
+            {
+                ProductList.Add(product);
+            }
+            return;
+        }
+        
+        IsSearchingProduct = true;
+        
+        try
+        {
+            await Task.Delay(300);
+
+            var filteredProducts = CurrentProductList.Where(product =>
+                product.Title.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                product.Description.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+
+            ProductList.Clear();
+            foreach (var product in filteredProducts)
+            {
+                ProductList.Add(product);
+            }
+        }
+        finally
+        {
+            IsSearchingProduct = false;
+        }
+    }
+    
     private void UpdateCustomerCounts()
     {
         SelectedCount = CustomerList.Count(x => x.IsSelected);
@@ -338,9 +422,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         SelectAll = CustomerList.Count > 0 && CustomerList.All(x => x.IsSelected);
     }
     
-    partial void OnSearchStringResultChanged(string value)
+    partial void OnCustomerSearchStringResultChanged(string value)
     {
         SearchCustomersCommand.Execute(null);
+    }
+    
+    partial void OnProductSearchStringResultChanged(string value)
+    {
+        SearchProductsCommand.Execute(null);
     }
     
     private void OnCustomerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -354,6 +443,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     partial void OnSelectedCustomerTypeFilterItemChanged(string value)
     {
         ApplyCustomerFilter();
+    }
+    
+    partial void OnSelectedProductFilterItemChanged(string value)
+    {
+        ApplyProductFilter();
     }
     
     partial void OnSelectedCustomerChanged(Customer? value)
