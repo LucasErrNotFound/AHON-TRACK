@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -163,10 +161,16 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _addNewPackageDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_addNewPackageDialogCardViewModel)
             .WithSuccessCallback(_ =>
+            {
+                var newPackage = _addNewPackageDialogCardViewModel.ToPackage();
+                PackageOptions.Add(newPackage);
+                _packageService.AddPackage(newPackage);
+            
                 _toastManager.CreateToast("Added a new package")
-                    .WithContent($"You just added a new package to the database!")
+                    .WithContent($"You just added '{newPackage.Title}' package to the database!")
                     .DismissOnClick()
-                    .ShowSuccess())
+                    .ShowSuccess();
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new package cancelled")
                     .WithContent("If you want to add a new package, please try again.")
@@ -184,15 +188,26 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _dialogManager.CreateDialog(_editPackageDialogCardViewModel)
             .WithSuccessCallback(_ =>
             {
-                var index = PackageOptions.IndexOf(package);
-                if (index >= 0)
+                if (_editPackageDialogCardViewModel.IsDeleteAction)
                 {
-                    PackageOptions[index] = _editPackageDialogCardViewModel.ToPackageOption();
+                    PackageOptions.Remove(package);
+                    _toastManager.CreateToast("Package deleted")
+                        .WithContent($"The {package.Title} package has been successfully deleted!")
+                        .DismissOnClick()
+                        .ShowSuccess();
                 }
-                _toastManager.CreateToast("Package updated")
-                    .WithContent($"You just updated the {package.Title} package!")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                else
+                {
+                    var index = PackageOptions.IndexOf(package);
+                    if (index >= 0)
+                    {
+                        PackageOptions[index] = _editPackageDialogCardViewModel.ToPackageOption();
+                    }
+                    _toastManager.CreateToast("Package updated")
+                        .WithContent($"You just updated the {package.Title} package!")
+                        .DismissOnClick()
+                        .ShowSuccess();
+                }
             })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Editing an existing package cancelled")
