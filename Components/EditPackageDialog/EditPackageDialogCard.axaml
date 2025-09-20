@@ -242,10 +242,17 @@
                         </StackPanel>
                     </Button>
                     <Button
-                        Classes="Primary"
-                        Command="{CompiledBinding SavePackageCommand}">
+                        Classes="Destructive"
+                        Command="{CompiledBinding DeleteCommand}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Edit Package" />
+                            <TextBlock Text="Delete" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        Classes="Primary"
+                        Command="{CompiledBinding SaveDetailsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Save Details" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
