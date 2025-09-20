@@ -158,7 +158,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 Title = "Free Trial",
                 Description = "Try any class or gym session-no charge",
-                Price = "₱0.00",
+                Price = 0,
                 PriceUnit = "/one-time only",
                 Features = 
                 [
@@ -179,7 +179,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 Title = "Walk-In",
                 Description = "Pay per session with no commitment",
-                Price = "₱150.00",
+                Price = 150,
                 PriceUnit = "/session",
                 Features = 
                 [
@@ -200,7 +200,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 Title = "Monthly Membership",
                 Description = "Unlimited gym access for 30 days",
-                Price = "₱500.00",
+                Price = 500,
                 PriceUnit = "/month",
                 Features = 
                 [
@@ -221,7 +221,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 Title = "Boxing",
                 Description = "High-intensity training focused on boxing",
-                Price = "₱450.00",
+                Price = 450,
                 PriceUnit = "/session",
                 Features = 
                 [
@@ -242,7 +242,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 Title = "Muay Thai",
                 Description = "Training for strength and endurance",
-                Price = "₱500.00",
+                Price = 500,
                 PriceUnit = "/session",
                 Features = 
                 [
@@ -263,7 +263,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 Title = "CrossFit",
                 Description = "Functional workouts with high-intensity moves",
-                Price = "₱300.00",
+                Price = 300,
                 PriceUnit = "/session",
                 Features = 
                 [
@@ -284,7 +284,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 Title = "Personal Training",
                 Description = "One-on-one session to reach your fitness goal",
-                Price = "₱200.00",
+                Price = 200,
                 PriceUnit = "/session",
                 Features = 
                 [
@@ -305,7 +305,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 Title = "Thai Massage",
                 Description = "Massage therapy for relaxation and healing",
-                Price = "₱350.00",
+                Price = 350,
                 PriceUnit = "/session",
                 Features = 
                 [
@@ -460,7 +460,8 @@ public class Package
 {
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string Price { get; set; } = string.Empty;
+    public int Price { get; set; }
+    public string FormattedPrice => $"₱{Price:N2}";
     public string PriceUnit { get; set; } = string.Empty;
     public List<string> Features { get; set; } = [];
     public bool IsDiscountChecked { get; set; }
