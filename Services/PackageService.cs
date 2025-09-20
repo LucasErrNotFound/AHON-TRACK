@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 
@@ -8,7 +9,20 @@ namespace AHON_TRACK.Services;
 public class PackageService : IPackageService
 {
     private List<Package> _packages = [];
+    private readonly HashSet<string> _deletedPackageIds = [];
+    public event Action? PackagesChanged; // Implement the event
+
     public List<Package> GetPackages()
+    {
+        var defaultPackages = GetDefaultPackages()
+            .Where(p => !_deletedPackageIds.Contains(p.Title))
+            .ToList();
+        defaultPackages.AddRange(_packages);
+        
+        return defaultPackages;
+    }
+
+    private List<Package> GetDefaultPackages()
     {
         return
         [
@@ -186,5 +200,31 @@ public class PackageService : IPackageService
     public void AddPackage(Package package)
     {
         _packages.Add(package);
+        PackagesChanged?.Invoke();
+    }
+
+    public void RemovePackage(Package package)
+    {
+        var existingPackage = _packages.FirstOrDefault(p => p.Title == package.Title);
+        if (existingPackage != null)
+        {
+            _packages.Remove(existingPackage);
+        }
+        else
+        {
+            _deletedPackageIds.Add(package.Title);
+        }
+        PackagesChanged?.Invoke();
+    }
+
+    public void UpdatePackage(Package oldPackage, Package newPackage)
+    {
+        var existingPackage = _packages.FirstOrDefault(p => p.Title == oldPackage.Title);
+        if (existingPackage != null)
+        {
+            var index = _packages.IndexOf(existingPackage);
+            _packages[index] = newPackage;
+            PackagesChanged?.Invoke();
+        }
     }
 }
