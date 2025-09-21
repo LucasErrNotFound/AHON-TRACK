@@ -102,7 +102,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     [Required(ErrorMessage = "Package name is required")]
     [MinLength(5, ErrorMessage = "Must be at least 5 characters long")]
     [MaxLength(25, ErrorMessage = "Must not exceed 25 characters")]
-    public string PackageName 
+    public string PackageName
     {
         get => _packageName;
         set => SetProperty(ref _packageName, value, true);
@@ -116,7 +116,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         get => _description;
         set => SetProperty(ref _description, value, true);
     }
-    
+
     [Required(ErrorMessage = "Price must be set")]
     [Range(50, 5000, ErrorMessage = "Price must be between 50 and 5,000")]
     public int? Price
@@ -134,32 +134,32 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         set => SetProperty(ref _duration, value, true);
     }
 
-    
+
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription1
     {
         get => _featureDescription1;
         set => SetProperty(ref _featureDescription1, value, true);
     }
-    
+
     public string FeatureDescription2
     {
         get => _featureDescription2;
         set => SetProperty(ref _featureDescription2, value, true);
     }
-    
+
     public string FeatureDescription3
     {
         get => _featureDescription3;
         set => SetProperty(ref _featureDescription3, value, true);
     }
-    
+
     public string FeatureDescription4
     {
         get => _featureDescription4;
         set => SetProperty(ref _featureDescription4, value, true);
     }
-    
+
     public string FeatureDescription5
     {
         get => _featureDescription5;
@@ -286,5 +286,36 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         return SelectedDiscountTypeItem == "Percentage (%)"
             ? $"{value.Value}%"
             : $"₱{value.Value:N2}";
+    }
+    public Package ToPackage()
+    {
+        var features = new List<string>();
+
+        // Add non-empty feature descriptions to the list
+        if (!string.IsNullOrWhiteSpace(FeatureDescription1))
+            features.Add(FeatureDescription1);
+        if (!string.IsNullOrWhiteSpace(FeatureDescription2))
+            features.Add(FeatureDescription2);
+        if (!string.IsNullOrWhiteSpace(FeatureDescription3))
+            features.Add(FeatureDescription3);
+        if (!string.IsNullOrWhiteSpace(FeatureDescription4))
+            features.Add(FeatureDescription4);
+        if (!string.IsNullOrWhiteSpace(FeatureDescription5))
+            features.Add(FeatureDescription5);
+
+        return new Package
+        {
+            Title = PackageName,
+            Description = Description,
+            Price = Price ?? 0,
+            PriceUnit = Duration,
+            Features = features,
+            IsDiscountChecked = EnableDiscount,
+            DiscountValue = DiscountValue,
+            SelectedDiscountFor = SelectedDiscountForItem,
+            SelectedDiscountType = SelectedDiscountTypeItem,
+            DiscountValidFrom = ValidFrom,
+            DiscountValidTo = ValidTo
+        };
     }
 }
