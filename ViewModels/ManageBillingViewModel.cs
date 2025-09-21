@@ -10,8 +10,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
-using AHON_TRACK.Services.Interface;
-
 
 namespace AHON_TRACK.ViewModels;
 
@@ -20,28 +18,28 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
     private DateTime _selectedDate = DateTime.Today;
-    
+
     [ObservableProperty]
     private List<Invoices> _originalInvoiceData = [];
-    
+
     [ObservableProperty]
     private List<Invoices> _currentInvoiceData = [];
-    
+
     [ObservableProperty]
     private ObservableCollection<Package> _packageOptions = [];
-    
+
     [ObservableProperty]
     private bool _isInitialized;
-    
+
     [ObservableProperty]
     private bool _selectAll;
 
     [ObservableProperty]
     private int _selectedCount;
-    
+
     [ObservableProperty]
     private int _totalCount;
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -50,9 +48,13 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly EditPackageDialogCardViewModel _editPackageDialogCardViewModel;
     private ObservableCollection<RecentActivity> _recentActivities = [];
 
-    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel,  EditPackageDialogCardViewModel editPackageDialogCardViewModel)
+    [ObservableProperty]
+    private ObservableCollection<Invoices> _invoiceList = [];
+
+    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
+        AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel, EditPackageDialogCardViewModel editPackageDialogCardViewModel,
+        IPackageService packageService)
     {
-        _systemService = systemService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
@@ -67,7 +69,6 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     public ManageBillingViewModel()
     {
-        _systemService = null!;
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
@@ -106,7 +107,20 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         var sampleData = GetSampleSalesData();
         RecentActivity = new ObservableCollection<RecentActivity>(sampleData);
     }
-    
+
+    private void LoadInvoiceData()
+    {
+        var sampleData = GetInvoiceData();
+        OriginalInvoiceData = sampleData;
+        FilterInvoiceDataByPackageAndDate();
+    }
+
+    private void LoadPackageOptions()
+    {
+        var packages = _packageService.GetPackages();
+        PackageOptions = new ObservableCollection<Package>(packages);
+    }
+
     private List<RecentActivity> GetSampleSalesData()
     {
         return
@@ -125,7 +139,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private List<Invoices> GetInvoiceData()
     {
         var today = DateTime.Today;
-        return 
+        return
         [
             new Invoices { ID = 1001, CustomerName = "Mardie Dela Cruz", PurchasedItem = "Red Horse Mucho", Quantity = 2, Amount = 280, DatePurchased = today.AddHours(15) },
             new Invoices { ID = 1002, CustomerName = "JL Taberdo", PurchasedItem = "Cobra yellow", Quantity = 3, Amount = 80, DatePurchased = today.AddHours(16) },
@@ -142,21 +156,26 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private async void OpenAddNewPackage() // Made async
+    private void OpenAddNewPackage()
     {
         _addNewPackageDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_addNewPackageDialogCardViewModel)
             .WithSuccessCallback(_ =>
+            {
+                var newPackage = _addNewPackageDialogCardViewModel.ToPackage();
+                PackageOptions.Add(newPackage);
+                _packageService.AddPackage(newPackage);
+
                 _toastManager.CreateToast("Added a new package")
-                    .WithContent($"You just added a new package to the database!")
+                    .WithContent($"You just added '{newPackage.Title}' package to the database!")
                     .DismissOnClick()
-                    .ShowSuccess())
+                    .ShowSuccess();
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new package cancelled")
                     .WithContent("If you want to add a new package, please try again.")
                     .DismissOnClick()
-                    .ShowWarning())
-            .WithMaxWidth(550)
+                    .ShowWarning()).WithMaxWidth(550)
             .Dismissible()
             .Show();
     }
@@ -201,16 +220,16 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             .Dismissible()
             .Show();
     }
-    
+
     private void FilterInvoiceDataByPackageAndDate()
     {
-        var filteredInvoiceData = OriginalInvoiceData 
+        var filteredInvoiceData = OriginalInvoiceData
             .Where(w => w.DatePurchased?.Date == SelectedDate.Date)
             .ToList();
-        
+
         CurrentInvoiceData = filteredInvoiceData;
         InvoiceList.Clear();
-        
+
         foreach (var schedule in filteredInvoiceData)
         {
             schedule.PropertyChanged -= OnDatePurchasedChanged;
@@ -219,7 +238,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         }
         UpdateInvoiceDataCounts();
     }
-    
+
     private void UpdateInvoiceDataCounts()
     {
         SelectedCount = InvoiceList.Count(x => x.IsSelected);
@@ -227,7 +246,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
         SelectAll = InvoiceList.Count > 0 && InvoiceList.All(x => x.IsSelected);
     }
-    
+
     private void OnDatePurchasedChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Invoices.IsSelected))
@@ -235,7 +254,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             UpdateInvoiceDataCounts();
         }
     }
-    
+
     partial void OnSelectedDateChanged(DateTime value)
     {
         FilterInvoiceDataByPackageAndDate();
@@ -262,27 +281,27 @@ public class RecentActivity
 
 public partial class Invoices : ObservableObject
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private int? _iD;
-    
+
     [ObservableProperty]
     private string _customerName = string.Empty;
-    
+
     [ObservableProperty]
-    private string _purchasedItem  = string.Empty;
-    
+    private string _purchasedItem = string.Empty;
+
     [ObservableProperty]
     private int? _quantity;
-    
+
     [ObservableProperty]
     private int? _amount;
-    
+
     [ObservableProperty]
     private string _status = string.Empty;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private bool _isSelected;
-    
+
     public DateTime? DatePurchased { get; set; }
     public string DateFormatted => DatePurchased?.ToString("MMMM dd, yyyy dddd") ?? string.Empty;
 }
@@ -297,8 +316,8 @@ public class Package
     public List<string> Features { get; set; } = [];
     public bool IsDiscountChecked { get; set; }
     public int? DiscountValue { get; set; }
-    public string SelectedDiscountFor { get; set; } =  string.Empty;
-    public string SelectedDiscountType { get; set; } =  string.Empty;
+    public string SelectedDiscountFor { get; set; } = string.Empty;
+    public string SelectedDiscountType { get; set; } = string.Empty;
     public DateOnly? DiscountValidFrom { get; set; }
     public DateOnly? DiscountValidTo { get; set; }
 }
