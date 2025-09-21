@@ -612,23 +612,86 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = "DELETE FROM Employees WHERE EmployeeId=@EmployeeId";
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@EmployeeId", id);
+                // Start a transaction to ensure all deletions succeed or fail together
+                using var transaction = conn.BeginTransaction();
 
-                int rows = await cmd.ExecuteNonQueryAsync();
-                if (rows > 0)
+                try
                 {
-                    await LogActionAsync(conn, "Delete Employee", $"Deleted employee ID: {id}", true);
-                    return true;
+                    // Get employee details for logging before deletion
+                    string employeeName = "";
+                    string getEmployeeQuery = "SELECT FirstName, LastName FROM Employees WHERE EmployeeId = @EmployeeId";
+                    using (var getCmd = new SqlCommand(getEmployeeQuery, conn, transaction))
+                    {
+                        getCmd.Parameters.AddWithValue("@EmployeeId", id);
+                        using var reader = await getCmd.ExecuteReaderAsync();
+                        if (await reader.ReadAsync())
+                        {
+                            employeeName = $"{reader["FirstName"]} {reader["LastName"]}";
+                        }
+                    }
+
+                    // 1. Delete from Staffs table first (if exists)
+                    string deleteStaffQuery = "DELETE FROM Staffs WHERE EmployeeID = @EmployeeId";
+                    using (var staffCmd = new SqlCommand(deleteStaffQuery, conn, transaction))
+                    {
+                        staffCmd.Parameters.AddWithValue("@EmployeeId", id);
+                        await staffCmd.ExecuteNonQueryAsync();
+                    }
+
+                    // 2. Delete from Admins table (if exists)
+                    string deleteAdminQuery = "DELETE FROM Admins WHERE EmployeeID = @EmployeeId";
+                    using (var adminCmd = new SqlCommand(deleteAdminQuery, conn, transaction))
+                    {
+                        adminCmd.Parameters.AddWithValue("@EmployeeId", id);
+                        await adminCmd.ExecuteNonQueryAsync();
+                    }
+
+                    // 3. Finally, delete from Employees table
+                    string deleteEmployeeQuery = "DELETE FROM Employees WHERE EmployeeId = @EmployeeId";
+                    using (var empCmd = new SqlCommand(deleteEmployeeQuery, conn, transaction))
+                    {
+                        empCmd.Parameters.AddWithValue("@EmployeeId", id);
+                        int rows = await empCmd.ExecuteNonQueryAsync();
+
+                        if (rows > 0)
+                        {
+                            // Commit the transaction
+                            transaction.Commit();
+
+                            // Log success
+                            using var conn2 = new SqlConnection(_connectionString);
+                            await conn2.OpenAsync();
+                            await LogActionAsync(conn2, "Delete Employee", $"Successfully deleted employee: {employeeName} (ID: {id})", true);
+
+                            // Show success toast
+                            _toastManager?.CreateToast("Success")
+                                .WithContent($"Employee {employeeName} deleted successfully!")
+                                .DismissOnClick()
+                                .ShowSuccess();
+
+                            return true;
+                        }
+                        else
+                        {
+                            // Rollback if no employee was found
+                            transaction.Rollback();
+
+                            _toastManager?.CreateToast("Warning")
+                                .WithContent("Employee not found or already deleted.")
+                                .DismissOnClick()
+                                .ShowWarning();
+
+                            return false;
+                        }
+                    }
                 }
-                else
+                catch
                 {
-                    await LogActionAsync(conn, "Delete Employee", $"Failed to delete employee ID: {id}", false);
-                    return false;
+                    // Rollback transaction on any error
+                    transaction.Rollback();
+                    throw; // Re-throw to be caught by outer catch block
                 }
             }
-
             catch (Exception ex)
             {
                 _toastManager?.CreateToast("Database Error")
@@ -637,6 +700,16 @@ namespace AHON_TRACK.Services
                     .ShowError();
 
                 System.Diagnostics.Debug.WriteLine($"DeleteEmployeeAsync Error: {ex}");
+
+                // Log the error
+                try
+                {
+                    using var conn2 = new SqlConnection(_connectionString);
+                    await conn2.OpenAsync();
+                    await LogActionAsync(conn2, "Delete Employee", $"Failed to delete employee ID: {id} - {ex.Message}", false);
+                }
+                catch { /* Ignore logging errors */ }
+
                 return false;
             }
         }
