@@ -20,6 +20,7 @@ namespace AHON_TRACK.Models
         public string features5 { get; set; }
         public decimal discount { get; set; }
         public string discountType { get; set; }
+        public string discountFor { get; set; }
         public decimal discountedPrice { get; set; }
         public DateTime validFrom { get; set; }
         public DateTime validTo { get; set; }
