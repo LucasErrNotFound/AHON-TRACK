@@ -8,9 +8,11 @@ namespace AHON_TRACK.Services;
 
 public class PackageService : IPackageService
 {
-    private List<Package> _packages = [];
+    private readonly List<Package> _packages = [];
     private readonly HashSet<string> _deletedPackageIds = [];
-    public event Action? PackagesChanged; // Implement the event
+    private readonly Dictionary<Package, string> _originalTitles = [];
+    
+    public event Action? PackagesChanged;
 
     public List<Package> GetPackages()
     {
@@ -205,26 +207,72 @@ public class PackageService : IPackageService
 
     public void RemovePackage(Package package)
     {
-        var existingPackage = _packages.FirstOrDefault(p => p.Title == package.Title);
+        // Check if this package exists in the custom packages list
+        var existingPackage = _packages.FirstOrDefault(p => ReferenceEquals(p, package));
         if (existingPackage != null)
         {
             _packages.Remove(existingPackage);
+            // Clean up tracking
+            _originalTitles.Remove(existingPackage);
         }
         else
         {
-            _deletedPackageIds.Add(package.Title);
+            // If not in custom packages list, check if we're tracking its original title
+            var originalTitle = _originalTitles.TryGetValue(package, out var title) 
+                ? title 
+                : package.Title;
+            
+            _deletedPackageIds.Add(originalTitle);
+            
+            // Clean up tracking
+            _originalTitles.Remove(package);
         }
+        
         PackagesChanged?.Invoke();
     }
 
     public void UpdatePackage(Package oldPackage, Package newPackage)
     {
-        var existingPackage = _packages.FirstOrDefault(p => p.Title == oldPackage.Title);
+        // Check if this is a default package being updated for the first time
+        var isDefaultPackage = GetDefaultPackages().Any(p => p.Title == oldPackage.Title);
+        
+        if (isDefaultPackage && !_originalTitles.ContainsKey(oldPackage))
+        {
+            // Track the original title before first modification
+            _originalTitles[oldPackage] = oldPackage.Title;
+        }
+        
+        var existingPackage = _packages.FirstOrDefault(p => ReferenceEquals(p, oldPackage));
         if (existingPackage != null)
         {
+            // Update existing custom package
             var index = _packages.IndexOf(existingPackage);
             _packages[index] = newPackage;
-            PackagesChanged?.Invoke();
+            
+            // Transfer original title tracking if it exists
+            if (_originalTitles.Remove(oldPackage, out var originalTitle))
+            {
+                _originalTitles[newPackage] = originalTitle;
+            }
         }
+        else
+        {
+            // This is a default package being modified
+            _packages.Add(newPackage);
+            
+            // Mark original as deleted
+            var originalTitle = _originalTitles.TryGetValue(oldPackage, out var title) 
+                ? title 
+                : oldPackage.Title;
+            
+            _deletedPackageIds.Add(originalTitle);
+            
+            // Track the new package with its original title
+            _originalTitles[newPackage] = originalTitle;
+            
+            // Clean up old tracking
+            _originalTitles.Remove(oldPackage);
+        }
+        PackagesChanged?.Invoke();
     }
 }
