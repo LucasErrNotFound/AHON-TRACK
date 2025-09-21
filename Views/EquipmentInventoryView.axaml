@@ -11,7 +11,7 @@
     x:Class="AHON_TRACK.Views.EquipmentInventoryView">
     
     <Design.DataContext>
-        <viewModels:ItemPurchaseViewModel />
+        <viewModels:EquipmentInventoryViewModel />
     </Design.DataContext>
     
     <UserControl.Resources>

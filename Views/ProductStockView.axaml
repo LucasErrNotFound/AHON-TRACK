@@ -6,12 +6,12 @@
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
-    x:DataType="viewModels:ItemStockViewModel"
+    x:DataType="viewModels:ProductStockViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
-    x:Class="AHON_TRACK.Views.ItemStockView">
+    x:Class="AHON_TRACK.Views.ProductStockView">
 
     <Design.DataContext>
-        <viewModels:ItemStockViewModel />
+        <viewModels:ProductStockViewModel />
     </Design.DataContext>
 
     <UserControl.Resources>
@@ -47,12 +47,12 @@
             <TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
-                Text="Item Stock"
+                Text="Product Stock"
                 Margin="90,30,0,0" />
             <TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
-                Text="Track item inventory levels and manage restocking"
+                Text="Track product inventory levels and manage restocking"
                 TextWrapping="Wrap"
                 Margin="90,0" />
         </StackPanel>
@@ -64,7 +64,7 @@
                             <TextBox
                                 Grid.Column="0"
                                 HorizontalAlignment="Left"
-                                Watermark="Search Items..."
+                                Watermark="Search products..."
                                 shadui:ControlAssist.ShowProgress="{CompiledBinding }"
                                 Text=""
                                 shadui:ControlAssist.Height="40"
@@ -74,7 +74,7 @@
                                     <Svg
                                         Width="20"
                                         Opacity="0.75"
-                                        Path="avares://AHON_TRACK/Assets/ItemStockView/search-icon.svg" />
+                                        Path="avares://AHON_TRACK/Assets/ProductStockView/search-icon.svg" />
                                 </TextBox.InnerRightContent>
                             </TextBox>
                             <ComboBox
@@ -97,7 +97,7 @@
                                         Height="20"
                                         VerticalAlignment="Center"
                                         Margin="0,0,8,0"
-                                        Path="avares://AHON_TRACK/Assets/ItemStockView/export-icon.svg" />
+                                        Path="avares://AHON_TRACK/Assets/ProductStockView/export-icon.svg" />
                                     <TextBlock Text="Export" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
@@ -107,15 +107,15 @@
                                 Margin="20,0,0,0"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
-                                Command="{CompiledBinding ShowAddItemDialogCommand}">
+                                Command="{CompiledBinding ShowAddProductDialogCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Svg
                                         Width="20"
                                         Height="20"
                                         VerticalAlignment="Center"
                                         Margin="0,0,8,0"
-                                        Path="avares://AHON_TRACK/Assets/ItemStockView/add-item-icon.svg" />
-                                    <TextBlock Text="Add Item" Foreground="White" VerticalAlignment="Center" />
+                                        Path="avares://AHON_TRACK/Assets/ProductStockView/add-item-icon.svg" />
+                                    <TextBlock Text="Add Product" Foreground="White" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
                         </Grid>
@@ -141,17 +141,17 @@
                                     </DataGridCheckBoxColumn.Header>
                                 </DataGridCheckBoxColumn>
 
-                                <!-- Item ID -->
+                                <!-- Product ID -->
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="80"
                                     Header="ID"
                                     Binding="{CompiledBinding }" />
 
-                                <!-- Item Name -->
+                                <!-- Product Name -->
                                 <DataGridTextColumn
                                     Width="*"
-                                    Header="Item Name"
+                                    Header="Product Name"
                                     Binding="{CompiledBinding }" />
 
                                 <!-- Category -->

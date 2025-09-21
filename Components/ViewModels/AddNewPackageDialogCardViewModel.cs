@@ -100,23 +100,23 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     }
 
     [Required(ErrorMessage = "Package name is required")]
-    [MinLength(2, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 30 characters")]
-    public string PackageName
+    [MinLength(5, ErrorMessage = "Must be at least 5 characters long")]
+    [MaxLength(25, ErrorMessage = "Must not exceed 25 characters")]
+    public string PackageName 
     {
         get => _packageName;
         set => SetProperty(ref _packageName, value, true);
     }
 
     [Required(ErrorMessage = "Description is required")]
-    [MinLength(2, ErrorMessage = "Must be at least 10 characters long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 50 characters")]
+    [MinLength(6, ErrorMessage = "Must be at least 6 characters long")]
+    [MaxLength(45, ErrorMessage = "Must not exceed 45 characters")]
     public string Description
     {
         get => _description;
         set => SetProperty(ref _description, value, true);
     }
-
+    
     [Required(ErrorMessage = "Price must be set")]
     [Range(50, 5000, ErrorMessage = "Price must be between 50 and 5,000")]
     public int? Price
@@ -126,38 +126,40 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     }
 
     [Required(ErrorMessage = "Duration is required")]
-    [MinLength(2, ErrorMessage = "Must be at least 10 characters long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 30 characters")]
+    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
+    [MaxLength(14, ErrorMessage = "Must not exceed 14 characters")]
     public string Duration
     {
         get => _duration;
         set => SetProperty(ref _duration, value, true);
     }
 
+    
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription1
     {
         get => _featureDescription1;
         set => SetProperty(ref _featureDescription1, value, true);
     }
-
+    
     public string FeatureDescription2
     {
         get => _featureDescription2;
         set => SetProperty(ref _featureDescription2, value, true);
     }
-
+    
     public string FeatureDescription3
     {
         get => _featureDescription3;
         set => SetProperty(ref _featureDescription3, value, true);
     }
-
+    
     public string FeatureDescription4
     {
         get => _featureDescription4;
         set => SetProperty(ref _featureDescription4, value, true);
     }
-
+    
     public string FeatureDescription5
     {
         get => _featureDescription5;
@@ -284,70 +286,5 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         return SelectedDiscountTypeItem == "Percentage (%)"
             ? $"{value.Value}%"
             : $"₱{value.Value:N2}";
-    }
-
-    // ADD THIS METHOD - This is what you're missing!
-    public PackageModel? GetPackageData()
-    {
-        // Validate required fields
-        if (string.IsNullOrWhiteSpace(PackageName) || !Price.HasValue || Price.Value <= 0)
-        {
-            return null;
-        }
-
-        // Parse duration from string (assuming it's in format like "30 days" or just "30")
-        int durationValue = 30; // Default
-        if (!string.IsNullOrWhiteSpace(Duration))
-        {
-            var durationText = Duration.Split(' ')[0]; // Take first part if it's "30 days"
-            if (int.TryParse(durationText, out int parsedDuration))
-            {
-                durationValue = parsedDuration;
-            }
-        }
-
-        // Get discount information
-        decimal discountAmount = 0;
-        string discountType = "none";
-        decimal originalPrice = Price.Value;
-        decimal discountedPrice = originalPrice;
-
-        if (EnableDiscount && DiscountValue.HasValue)
-        {
-            discountAmount = DiscountValue.Value;
-            discountType = SelectedDiscountTypeItem == "Percentage (%)" ? "percentage" : "fixed";
-
-            if (discountType == "percentage")
-            {
-                discountedPrice = originalPrice - (originalPrice * discountAmount / 100);
-            }
-            else
-            {
-                discountedPrice = originalPrice - discountAmount;
-                if (discountedPrice < 0) discountedPrice = 0;
-            }
-        }
-
-        DateTime validFromDate = ValidFrom?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Now;
-        DateTime validToDate = ValidTo?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Now.AddDays(365);
-
-        return new PackageModel
-        {
-            packageName = PackageName.Trim(),
-            price = originalPrice,
-            description = Description?.Trim() ?? string.Empty,
-            duration = durationValue,
-            // Individual features
-            features1 = !string.IsNullOrWhiteSpace(FeatureDescription1) ? FeatureDescription1.Trim() : null,
-            features2 = !string.IsNullOrWhiteSpace(FeatureDescription2) ? FeatureDescription2.Trim() : null,
-            features3 = !string.IsNullOrWhiteSpace(FeatureDescription3) ? FeatureDescription3.Trim() : null,
-            features4 = !string.IsNullOrWhiteSpace(FeatureDescription4) ? FeatureDescription4.Trim() : null,
-            features5 = !string.IsNullOrWhiteSpace(FeatureDescription5) ? FeatureDescription5.Trim() : null,
-            discount = discountAmount,
-            discountType = discountType,
-            discountedPrice = discountedPrice,
-            validFrom = validFromDate,
-            validTo = validToDate
-        };
     }
 }

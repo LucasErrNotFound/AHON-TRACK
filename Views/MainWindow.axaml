@@ -195,10 +195,10 @@
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
-						Command="{CompiledBinding OpenItemPurchaseCommand}"
-						Content="Item Purchase"
+						Command="{CompiledBinding OpenProductPurchaseCommand}"
+						Content="Product Purchase"
 						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Item Purchase'}">
+						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Product Purchase'}">
 						<shadui:SidebarItem.Icon>
 							<Viewbox>
 								<Svg
@@ -231,8 +231,8 @@
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
-						Command="{CompiledBinding OpenItemStockViewModelCommand}"
-						Content="Item Stock"
+						Command="{CompiledBinding OpenProductStockViewModelCommand}"
+						Content="Product Stock"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Product/Supplement Stock'}">
 						<shadui:SidebarItem.Icon>

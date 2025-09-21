@@ -4,6 +4,9 @@ using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
+using System;
+using System.IO;
+using ShadUI;
 using Jab;
 using Serilog;
 using ShadUI;
@@ -21,9 +24,9 @@ namespace AHON_TRACK;
 [Transient<ManageMembershipViewModel>]
 [Transient<TrainingSchedulesViewModel>]
 [Transient<ManageBillingViewModel>]
-[Transient<ItemPurchaseViewModel>]
+[Transient<ProductPurchaseViewModel>]
 [Transient<EquipmentInventoryViewModel>]
-[Transient<ItemStockViewModel>]
+[Transient<ProductStockViewModel>]
 [Transient<SupplierManagementViewModel>]
 [Transient<AddNewEmployeeDialogCardViewModel>]
 [Transient<EmployeeProfileInformationViewModel>]
@@ -33,9 +36,8 @@ namespace AHON_TRACK;
 [Transient<AddTrainingScheduleDialogCardViewModel>]
 [Transient<AddNewPackageDialogCardViewModel>]
 [Transient<EditPackageDialogCardViewModel>]
-[Transient<AddNewProductViewModel>]
+[Transient<AddEditProductViewModel>]
 [Transient<EquipmentDialogCardViewModel>]
-[Transient<ItemDialogCardViewModel>]
 [Transient<SupplierDialogCardViewModel>]
 [Transient<DashboardModel>]
 [Transient<MemberDialogCardViewModel>]
@@ -44,6 +46,7 @@ namespace AHON_TRACK;
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
+[Singleton<IPackageService, PackageService>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
 [Singleton<string>(Factory = nameof(ConnectionStringFactory))]

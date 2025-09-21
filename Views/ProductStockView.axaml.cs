@@ -4,9 +4,9 @@ using Avalonia.Markup.Xaml;
 
 namespace AHON_TRACK.Views;
 
-public partial class ItemStockView : UserControl
+public partial class ProductStockView : UserControl
 {
-    public ItemStockView()
+    public ProductStockView()
     {
         InitializeComponent();
     }

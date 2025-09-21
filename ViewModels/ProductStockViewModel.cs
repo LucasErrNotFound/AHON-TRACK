@@ -1,25 +1,26 @@
 using System.ComponentModel;
-using AHON_TRACK.ViewModels;
+using AHON_TRACK.Components.ViewModels;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
 
-namespace AHON_TRACK.Components.ViewModels;
+namespace AHON_TRACK.ViewModels;
 
-public partial class ItemDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+[Page("item-stock")]
+public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
 
-    public ItemDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
     }
 
-    public ItemDialogCardViewModel()
+    public ProductStockViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
@@ -30,19 +31,10 @@ public partial class ItemDialogCardViewModel : ViewModelBase, INavigable, INotif
     public void Initialize()
     {
     }
-
-    [RelayCommand]
-    private void Cancel()
-    {
-        _dialogManager.Close(this);
-    }
     
     [RelayCommand]
-    private void AddItem()
+    private void ShowAddProductDialog()
     {
-        ValidateAllProperties();
-        
-        if (HasErrors) return;
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+        _pageManager.Navigate<AddEditProductViewModel>();
     }
 }
