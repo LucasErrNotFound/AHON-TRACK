@@ -592,3 +592,7 @@ public partial class Product : ObservableObject
         OnPropertyChanged(nameof(StockBackground));
     }
 }
+
+public class CartList : ObservableObject
+{
+}

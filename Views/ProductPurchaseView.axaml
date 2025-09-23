@@ -65,7 +65,7 @@
             </Interaction.Behaviors>
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,48,24" Spacing="16">
                 <Grid ColumnDefinitions="* *" ColumnSpacing="30">
-                    <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="480">
+                    <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="850">
                         <StackPanel>
                             <shadui:CardTitle Content="Select a customer" />
                             <Grid ColumnDefinitions="Auto Auto" ColumnSpacing="10">
@@ -99,7 +99,7 @@
                                     <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
                                 </Interaction.Behaviors>
                                 <DataGrid
-                                    Height="335"
+                                    Height="700"
                                     Width="695"
                                     IsReadOnly="True"
                                     CanUserReorderColumns="False"
@@ -140,43 +140,138 @@
                         </StackPanel>
                     </shadui:Card>
                     <shadui:Card Grid.Column="1" Margin="0,0,100,0">
-                        <DockPanel>
-                            <shadui:CardTitle Content="Purchase Summary"  DockPanel.Dock="Top"/>
-                            <!-- Customer Details -->
-                            <Grid RowDefinitions="Auto" ColumnDefinitions="Auto" DockPanel.Dock="Left">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,20,0,5" Spacing="15">
-                                        <Svg
-                                            Path="avares://AHON_TRACK/Assets/ProductPurchaseView/user-icon.svg"
-                                            Width="28"
-                                            Height="28"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"/>
-                                        <TextBlock
-                                            Classes="Caption Muted"
-                                            FontSize="16"
-                                            Text="Customer Details"
-                                            VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                    <StackPanel Orientation="Vertical" Margin="0,0,0,0">
-                                        <TextBlock
-                                            Text="{CompiledBinding CustomerFullName}"
-                                            Classes="h4"/>
-                                        <TextBlock
-                                            Text="ID: GM-2025-001234"
-                                            FontSize="15"
-                                            Classes="Caption Muted"/>
-                                    </StackPanel>
+                        <StackPanel Spacing="20">
+                            <!-- Header -->
+                            <shadui:CardTitle Content="Purchase Summary" />
+        
+                            <!-- Customer Details Section -->
+                            <StackPanel Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="15">
+                                    <Svg
+                                        Path="avares://AHON_TRACK/Assets/ProductPurchaseView/user-icon.svg"
+                                        Width="28"
+                                        Height="28"
+                                        VerticalAlignment="Center" />
+                                    <TextBlock
+                                        Text="Customer Details"
+                                        Classes="Caption Muted"
+                                        FontSize="16"
+                                        VerticalAlignment="Center" />
                                 </StackPanel>
-                            </Grid>
-                            <Separator 
-                                Width="700" 
-                                Background="{StaticResource ForegroundColor}"
-                                Margin="0,-90,0,0"/>
-                        </DockPanel>
+            
+                                <StackPanel Margin="43,0,0,0">
+                                    <TextBlock
+                                        Text="{CompiledBinding CustomerFullName}"
+                                        Classes="h4" />
+                                    <TextBlock
+                                        Text="ID: GM-2025-001234"
+                                        Classes="Caption Muted"
+                                        FontSize="15" />
+                                </StackPanel>
+                            </StackPanel>
+                            <Separator Background="{StaticResource ForegroundColor}" />
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Your Cart" FontSize="17" FontWeight="SemiBold"/>
+                                <!-- Cart items will go here -->
+                                <StackPanel Orientation="Vertical">
+                                    <ItemsControl>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Columns="4" RowSpacing="30" ColumnSpacing="30" Margin="-4.5,20,0,0"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <shadui:Card>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border
+                                                            Grid.Column="0"
+                                                            BorderThickness="1"
+                                                            BorderBrush="DarkGray"
+                                                            Background="Transparent"
+                                                            CornerRadius="8"
+                                                            Padding="4"
+                                                            VerticalAlignment="Top">
+                                                            <Image
+                                                                Width="80"
+                                                                Height="80"
+                                                                Source="/Assets/ProductPurchaseView/protein-powder-display.png"
+                                                                Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel
+                                                            Grid.Column="1"
+                                                            Orientation="Vertical"
+                                                            Margin="12,0,12,0"
+                                                            VerticalAlignment="Center"
+                                                            Spacing="6">
+                                                            <TextBlock
+                                                                Text="Gold Standard Whey Protein"
+                                                                FontSize="14"
+                                                                FontWeight="SemiBold"
+                                                                TextWrapping="Wrap"
+                                                                MaxWidth="280"
+                                                                TextTrimming="CharacterEllipsis" />
+                                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                                <TextBlock
+                                                                    Text="x2"
+                                                                    Classes="Muted Caption"
+                                                                    FontSize="13"
+                                                                    FontWeight="Bold"
+                                                                    VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                            <TextBlock
+                                                                Text="$2,500.00"
+                                                                Classes="Muted Caption"
+                                                                Foreground="{DynamicResource SuccessColor60}"
+                                                                FontSize="13"
+                                                                FontWeight="Bold"
+                                                                VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <StackPanel
+                                                            Grid.Column="2"
+                                                            Orientation="Vertical"
+                                                            VerticalAlignment="Center"
+                                                            HorizontalAlignment="Right"
+                                                            Spacing="8">
+                                                            <Button
+                                                                Classes="Icon"
+                                                                Width="36"
+                                                                Height="36"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top"
+                                                                ToolTip.Tip="Remove item">
+                                                                <Svg
+                                                                    Width="18"
+                                                                    Height="18"
+                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/trash-2.svg" />
+                                                            </Button>
+                                                            <NumericUpDown
+                                                                MaxWidth="120"
+                                                                FormatString="N0"
+                                                                Minimum="1"
+                                                                Maximum="10"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top"
+                                                                Value="2" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </shadui:Card>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
                         <shadui:Card.Footer>
-                            <Button Classes="Primary" Content="Pay $4,500" HorizontalAlignment="Right">
-                            </Button>
+                            <Button 
+                                Classes="Primary" 
+                                Content="Pay $4,500" 
+                                HorizontalAlignment="Right" />
                         </shadui:Card.Footer>
                     </shadui:Card>
                 </Grid>
