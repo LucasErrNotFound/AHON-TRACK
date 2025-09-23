@@ -12,7 +12,7 @@ namespace AHON_TRACK.Models
         public string packageName { get; set; }
         public decimal price { get; set; }
         public string description { get; set; }
-        public int duration { get; set; }
+        public string duration { get; set; }
         public string features1 { get; set; }
         public string features2 { get; set; }
         public string features3 { get; set; }

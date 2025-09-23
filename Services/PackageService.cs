@@ -18,7 +18,7 @@ public class PackageService : IPackageService
             .Where(p => !_deletedPackageIds.Contains(p.Title))
             .ToList();
         defaultPackages.AddRange(_packages);
-        
+
         return defaultPackages;
     }
 
@@ -31,8 +31,8 @@ public class PackageService : IPackageService
                 Title = "Free Trial",
                 Description = "Try any class or gym session-no charge",
                 Price = 0,
-                PriceUnit = "/one-time only",
-                Features = 
+                Duration = "first-time only",
+                Features =
                 [
                     "Risk-free first session",
                     "Explore the gym or class",
@@ -45,15 +45,15 @@ public class PackageService : IPackageService
                 SelectedDiscountFor = "All",
                 SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = null,
-                DiscountValidTo = null 
+                DiscountValidTo = null
             },
             new Package
             {
                 Title = "Walk-In",
                 Description = "Pay per session with no commitment",
                 Price = 150,
-                PriceUnit = "/session",
-                Features = 
+                Duration = "/Sessiom",
+                Features =
                 [
                     "Unlimited time",
                     "Perfect for casual visits",
@@ -66,15 +66,15 @@ public class PackageService : IPackageService
                 SelectedDiscountFor = "All",
                 SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = null,
-                DiscountValidTo = null 
+                DiscountValidTo = null
             },
             new Package
             {
                 Title = "Monthly Membership",
                 Description = "Unlimited gym access for 30 days",
                 Price = 500,
-                PriceUnit = "/month",
-                Features = 
+                Duration = "/Monthly",
+                Features =
                 [
                     "Unlimited gym sessions",
                     "Best value for regulars",
@@ -87,15 +87,15 @@ public class PackageService : IPackageService
                 SelectedDiscountFor = "All",
                 SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = null,
-                DiscountValidTo = null 
+                DiscountValidTo = null
             },
             new Package
             {
                 Title = "Boxing",
                 Description = "High-intensity training focused on boxing",
                 Price = 450,
-                PriceUnit = "/session",
-                Features = 
+                Duration = "/Session",
+                Features =
                 [
                     "Boosts cardio and strength",
                     "Learn real boxing skills",
@@ -108,15 +108,15 @@ public class PackageService : IPackageService
                 SelectedDiscountFor = "Gym Members",
                 SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
+                DiscountValidTo = null
             },
             new Package
             {
                 Title = "Muay Thai",
                 Description = "Training for strength and endurance",
                 Price = 500,
-                PriceUnit = "/session",
-                Features = 
+                Duration = "/Session",
+                Features =
                 [
                     "Full body conditioning",
                     "Improves flexibility and balance",
@@ -129,15 +129,15 @@ public class PackageService : IPackageService
                 SelectedDiscountFor = "Gym Members",
                 SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
+                DiscountValidTo = null
             },
             new Package
             {
                 Title = "CrossFit",
                 Description = "Functional workouts with high-intensity moves",
                 Price = 300,
-                PriceUnit = "/session",
-                Features = 
+                Duration = "/Session",
+                Features =
                 [
                     "Builds functional strength",
                     "Constantly varied workouts",
@@ -150,15 +150,15 @@ public class PackageService : IPackageService
                 SelectedDiscountFor = "Gym Members",
                 SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
+                DiscountValidTo = null
             },
             new Package
             {
                 Title = "Personal Training",
                 Description = "One-on-one session to reach your fitness goal",
                 Price = 200,
-                PriceUnit = "/session",
-                Features = 
+                Duration = "/Session",
+                Features =
                 [
                     "Personalized workout plans",
                     "One-on-one coaching",
@@ -171,15 +171,15 @@ public class PackageService : IPackageService
                 SelectedDiscountFor = "Gym Members",
                 SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
+                DiscountValidTo = null
             },
             new Package
             {
                 Title = "Thai Massage",
                 Description = "Massage therapy for relaxation and healing",
                 Price = 350,
-                PriceUnit = "/session",
-                Features = 
+                Duration = "/Session",
+                Features =
                 [
                     "Relieves muscle tension and stiffness",
                     "Enhances flexibility and circulation",
@@ -192,7 +192,7 @@ public class PackageService : IPackageService
                 SelectedDiscountFor = "Gym Members",
                 SelectedDiscountType = "Fixed Amount (₱)",
                 DiscountValidFrom = DateOnly.FromDateTime(DateTime.Now.AddYears(-1)),
-                DiscountValidTo = null 
+                DiscountValidTo = null
             }
         ];
     }

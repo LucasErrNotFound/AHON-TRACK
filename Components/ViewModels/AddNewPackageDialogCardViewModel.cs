@@ -27,7 +27,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
 
     private string _packageName = string.Empty;
     private string _description = string.Empty;
-    private int? _price;
+    private decimal? _price;
     private string _duration = string.Empty;
 
     private string _featureDescription1 = string.Empty;
@@ -78,7 +78,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     }
 
     [RelayCommand]
-    private async void CreatePackage()
+    private void CreatePackage()
     {
         ValidateAllProperties();
 
@@ -97,50 +97,16 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
 
         if (HasErrors) return;
 
-        try
+        var packageData = GetPackageData();
+        if (packageData == null)
         {
-            // Get the package data
-            var packageData = GetPackageData();
-
-            if (packageData == null)
-            {
-                _toastManager.CreateToast("Validation Error")
-                    .WithContent("Please fill in all required fields (Package Name and Price).")
-                    .DismissOnClick()
-                    .ShowError();
-                return;
-            }
-
-            // Save to database using SystemService
-            if (_systemService != null)
-            {
-                await _systemService.AddPackageAsync(packageData);
-
-                // Show success message
-                _toastManager.CreateToast("Package Created Successfully")
-                    .WithContent($"Package '{packageData.packageName}' has been added to the database!")
-                    .DismissOnClick()
-                    .ShowSuccess();
-
-                // Close dialog with success
-                _dialogManager.Close(this, new CloseDialogOptions { Success = true });
-            }
-            else
-            {
-                _toastManager.CreateToast("Service Error")
-                    .WithContent("Database service is not available.")
-                    .DismissOnClick()
-                    .ShowError();
-            }
-        }
-        catch (Exception ex)
-        {
-            // Handle any errors that occur during saving
-            _toastManager.CreateToast("Database Error")
-                .WithContent($"Failed to save package: {ex.Message}")
+            _toastManager.CreateToast("Validation Error")
+                .WithContent("Please ensure all required fields are filled out correctly.")
                 .DismissOnClick()
                 .ShowError();
+            return;
         }
+        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
 
     [Required(ErrorMessage = "Package name is required")]
@@ -163,15 +129,15 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
 
     [Required(ErrorMessage = "Price must be set")]
     [Range(50, 5000, ErrorMessage = "Price must be between 50 and 5,000")]
-    public int? Price
+    public decimal? Price
     {
         get => _price;
         set => SetProperty(ref _price, value, true);
     }
 
     [Required(ErrorMessage = "Duration is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(14, ErrorMessage = "Must not exceed 14 characters")]
+    [MinLength(5, ErrorMessage = "Must be at least 5 character long")]
+    [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string Duration
     {
         get => _duration;
@@ -340,27 +306,18 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
             return null;
         }
 
-        // Parse duration from string (assuming it's in format like "30 days" or just "30")
-        int durationValue = 30; // Default
-        if (!string.IsNullOrWhiteSpace(Duration))
-        {
-            var durationText = Duration.Split(' ')[0]; // Take first part if it's "30 days"
-            if (int.TryParse(durationText, out int parsedDuration))
-            {
-                durationValue = parsedDuration;
-            }
-        }
-
         // Get discount information
         decimal discountAmount = 0;
         string discountType = "none";
+        string discountFor = ""; // Add this line
         decimal originalPrice = Price.Value;
-        decimal discountedPrice = originalPrice; // Start with original price
+        decimal discountedPrice = originalPrice;
 
         if (EnableDiscount && DiscountValue.HasValue)
         {
             discountAmount = DiscountValue.Value;
             discountType = SelectedDiscountTypeItem == "Percentage (%)" ? "percentage" : "fixed";
+            discountFor = SelectedDiscountForItem; // Add this line
 
             // Calculate discounted price
             if (discountType == "percentage")
@@ -370,7 +327,6 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
             else // fixed amount
             {
                 discountedPrice = originalPrice - discountAmount;
-                // Make sure discounted price doesn't go below 0
                 if (discountedPrice < 0) discountedPrice = 0;
             }
         }
@@ -381,12 +337,10 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
 
         return new PackageModel
         {
-            // packageID will be set automatically by the database (IDENTITY column)
             packageName = PackageName.Trim(),
             price = originalPrice,
             description = Description?.Trim() ?? string.Empty,
-            duration = durationValue,
-            // Map each feature individually to its own property
+            duration = Duration,
             features1 = FeatureDescription1?.Trim() ?? string.Empty,
             features2 = FeatureDescription2?.Trim() ?? string.Empty,
             features3 = FeatureDescription3?.Trim() ?? string.Empty,
@@ -394,6 +348,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
             features5 = FeatureDescription5?.Trim() ?? string.Empty,
             discount = discountAmount,
             discountType = discountType,
+            discountFor = discountFor, // Add this line
             discountedPrice = discountedPrice,
             validFrom = validFromDate,
             validTo = validToDate

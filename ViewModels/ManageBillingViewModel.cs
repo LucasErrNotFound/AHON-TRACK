@@ -1,15 +1,18 @@
+using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Services.Interface;
+using Avalonia;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Services;
-using AHON_TRACK.Services.Interface;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using HotAvalonia;
-using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -43,27 +46,27 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly IPackageService _packageService;
     private readonly AddNewPackageDialogCardViewModel _addNewPackageDialogCardViewModel;
     private readonly EditPackageDialogCardViewModel _editPackageDialogCardViewModel;
     private ObservableCollection<RecentActivity> _recentActivities = [];
+    private readonly ISystemService _systemService;
 
     [ObservableProperty]
     private ObservableCollection<Invoices> _invoiceList = [];
 
     public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
         AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel, EditPackageDialogCardViewModel editPackageDialogCardViewModel,
-        IPackageService packageService)
+        ISystemService systemService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _addNewPackageDialogCardViewModel = addNewPackageDialogCardViewModel;
         _editPackageDialogCardViewModel = editPackageDialogCardViewModel;
-        _packageService = packageService;
+        _systemService = systemService;
         LoadSampleSalesData();
         LoadInvoiceData();
-        LoadPackageOptions();
+        LoadPackageOptionsAsync();
         UpdateInvoiceDataCounts();
     }
 
@@ -74,10 +77,9 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _pageManager = new PageManager(new ServiceProvider());
         _addNewPackageDialogCardViewModel = new AddNewPackageDialogCardViewModel();
         _editPackageDialogCardViewModel = new EditPackageDialogCardViewModel();
-        _packageService = new PackageService();
         LoadSampleSalesData();
         LoadInvoiceData();
-        LoadPackageOptions();
+        LoadPackageOptionsAsync();
         UpdateInvoiceDataCounts();
     }
 
@@ -87,7 +89,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         if (IsInitialized) return;
         LoadSampleSalesData();
         LoadInvoiceData();
-        LoadPackageOptions();
+        LoadPackageOptionsAsync();
         UpdateInvoiceDataCounts();
         IsInitialized = true;
     }
@@ -115,10 +117,13 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         FilterInvoiceDataByPackageAndDate();
     }
 
-    private void LoadPackageOptions()
+    private async void LoadPackageOptionsAsync()
     {
-        var packages = _packageService.GetPackages();
-        PackageOptions = new ObservableCollection<Package>(packages);
+        if (_systemService != null)
+        {
+            var packages = await _systemService.GetPackagesAsync();
+            PackageOptions = new ObservableCollection<Package>(packages);
+        }
     }
 
     private List<RecentActivity> GetSampleSalesData()
@@ -156,70 +161,181 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private void OpenAddNewPackage()
+    private async void OpenAddNewPackage()
     {
         _addNewPackageDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_addNewPackageDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
             {
-                var newPackage = _addNewPackageDialogCardViewModel.ToPackage();
-                PackageOptions.Add(newPackage);
-                _packageService.AddPackage(newPackage);
+                try
+                {
+                    // Get the package data for database
+                    var packageData = _addNewPackageDialogCardViewModel.GetPackageData();
+                    if (packageData != null && _systemService != null)
+                    {
+                        // Save to database using SystemService
+                        await _systemService.AddPackageAsync(packageData);
 
-                _toastManager.CreateToast("Added a new package")
-                    .WithContent($"You just added '{newPackage.Title}' package to the database!")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                        LoadPackageOptionsAsync();
+
+                        // Show success message
+                        _toastManager.CreateToast("Package Created Successfully")
+                            .WithContent($"Package '{packageData.packageName}' has been added to the database!")
+                            .DismissOnClick()
+                            .ShowSuccess();
+                    }
+                    else if (packageData == null)
+                    {
+                        _toastManager.CreateToast("Validation Error")
+                            .WithContent("Please fill in all required fields.")
+                            .DismissOnClick()
+                            .ShowError();
+                    }
+                    else
+                    {
+                        _toastManager.CreateToast("Service Error")
+                            .WithContent("Database service is not available.")
+                            .DismissOnClick()
+                            .ShowError();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _toastManager.CreateToast("Database Error")
+                        .WithContent($"Failed to save package: {ex.Message}")
+                        .DismissOnClick()
+                        .ShowError();
+                }
             })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new package cancelled")
                     .WithContent("If you want to add a new package, please try again.")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(550)
+                    .ShowWarning())
+            .WithMaxWidth(550)
             .Dismissible()
             .Show();
     }
 
     [RelayCommand]
-    private void OpenEditPackage(Package package)
+    private async void OpenEditPackage(Package package)
     {
         _editPackageDialogCardViewModel.Initialize();
         _editPackageDialogCardViewModel.PopulateFromPackage(package);
         _dialogManager.CreateDialog(_editPackageDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
             {
                 if (_editPackageDialogCardViewModel.IsDeleteAction)
                 {
-                    PackageOptions.Remove(package);
-                    _packageService.RemovePackage(package);
-                    _toastManager.CreateToast("Package deleted")
-                        .WithContent($"The {package.Title} package has been successfully deleted!")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    if (_systemService != null)
+                    {
+                        var success = await _systemService.DeletePackageAsync(package.PackageId);
+                        if (success)
+                        {
+                            PackageOptions.Remove(package);
+                            _toastManager.CreateToast("Package deleted")
+                                .WithContent($"The {package.Title} package has been successfully deleted!")
+                                .DismissOnClick()
+                                .ShowSuccess();
+                        }
+                        else
+                        {
+                            _toastManager.CreateToast("Deletion failed")
+                                .WithContent("Failed to delete the package from the database.")
+                                .DismissOnClick()
+                                .ShowError();
+                        }
+                    }
                 }
                 else
                 {
-                    var index = PackageOptions.IndexOf(package);
-                    if (index >= 0)
+                    if (_systemService != null)
                     {
-                        var updatedPackage = _editPackageDialogCardViewModel.ToPackageOption();
-                        PackageOptions[index] = updatedPackage;
-                        _packageService.UpdatePackage(package, updatedPackage);
+                        // Convert updated VM data into PackageModel
+                        var updatedModel = _editPackageDialogCardViewModel.ToPackageModel(package.PackageId);
+
+                        try
+                        {
+                            var success = await _systemService.UpdatePackageAsync(updatedModel);
+                            if (success)
+                            {
+                                // Convert back to display Package
+                                var updatedPackage = ConvertToDisplayPackage(updatedModel);
+
+                                // Update local collection
+                                var index = PackageOptions.IndexOf(package);
+                                if (index >= 0)
+                                    PackageOptions[index] = updatedPackage;
+
+                                _toastManager.CreateToast("Package updated")
+                                    .WithContent($"You just updated the {package.Title} package!")
+                                    .DismissOnClick()
+                                    .ShowSuccess();
+                            }
+                            else
+                            {
+                                _toastManager.CreateToast("Update failed")
+                                    .WithContent("Could not update package in database.")
+                                    .DismissOnClick()
+                                    .ShowError();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _toastManager.CreateToast("Database Error")
+                                .WithContent($"Failed to update package: {ex.Message}")
+                                .DismissOnClick()
+                                .ShowError();
+                        }
                     }
-                    _toastManager.CreateToast("Package updated")
-                        .WithContent($"You just updated the {package.Title} package!")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    else
+                    {
+                        _toastManager.CreateToast("Service Error")
+                            .WithContent("Database service is not available.")
+                            .DismissOnClick()
+                            .ShowError();
+                    }
                 }
             })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Editing an existing package cancelled")
                     .WithContent("If you want to edit an existing package, please try again.")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(550)
+                    .ShowWarning())
+            .WithMaxWidth(550)
             .Dismissible()
             .Show();
     }
+
+    private Package ConvertToDisplayPackage(PackageModel packageModel)
+    {
+        var features = new List<string>();
+
+        // Add non-empty features to the list
+        if (!string.IsNullOrWhiteSpace(packageModel.features1)) features.Add(packageModel.features1.Trim());
+        if (!string.IsNullOrWhiteSpace(packageModel.features2)) features.Add(packageModel.features2.Trim());
+        if (!string.IsNullOrWhiteSpace(packageModel.features3)) features.Add(packageModel.features3.Trim());
+        if (!string.IsNullOrWhiteSpace(packageModel.features4)) features.Add(packageModel.features4.Trim());
+        if (!string.IsNullOrWhiteSpace(packageModel.features5)) features.Add(packageModel.features5.Trim());
+
+        return new Package
+        {
+            PackageId = packageModel.packageID,
+            Title = packageModel.packageName,
+            Description = packageModel.description,
+            Price = (int)packageModel.price, // Convert decimal to int
+            DiscountedPrice = (int)packageModel.discountedPrice, // Convert decimal to int
+            Duration = packageModel.duration,
+            Features = features,
+            IsDiscountChecked = packageModel.discount > 0,
+            DiscountValue = packageModel.discount > 0 ? (int)packageModel.discount : null,
+            SelectedDiscountFor = packageModel.discountFor ?? string.Empty,
+            SelectedDiscountType = packageModel.discountType ?? string.Empty,
+            DiscountValidFrom = packageModel.validFrom != default(DateTime) ? DateOnly.FromDateTime(packageModel.validFrom) : null,
+            DiscountValidTo = packageModel.validTo != default(DateTime) ? DateOnly.FromDateTime(packageModel.validTo) : null
+        };
+    }
+
 
     private void FilterInvoiceDataByPackageAndDate()
     {
@@ -308,11 +424,15 @@ public partial class Invoices : ObservableObject
 
 public class Package
 {
+    public int PackageId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public int Price { get; set; }
-    public string FormattedPrice => $"₱{Price:N2}";
-    public string PriceUnit { get; set; } = string.Empty;
+    public int DiscountedPrice { get; set; } // Add this
+    public string FormattedPrice => IsDiscountChecked
+        ? $"₱{DiscountedPrice:N2}"
+        : $"₱{Price:N2}"; // Show discounted price when discount is active
+    public string Duration { get; set; } = string.Empty;
     public List<string> Features { get; set; } = [];
     public bool IsDiscountChecked { get; set; }
     public int? DiscountValue { get; set; }

@@ -49,6 +49,12 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
         };
         var validationResults = new List<ValidationResult>();
 
+        object valueToValidate = value;
+        if (value == null && typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(Nullable<>))
+        {
+            valueToValidate = null;
+        }
+
         if (Validator.TryValidateProperty(value, validationContext, validationResults)) return;
 
         foreach (var validationResult in validationResults)

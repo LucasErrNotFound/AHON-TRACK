@@ -11,17 +11,22 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface ISystemService
     {
+        #region Package Settings
         // Basic method with minimal parameters (2 parameters)
         Task AddPackageAsync(string packageName, decimal price);
 
         // Overloaded method with all parameters (13 parameters)
         Task AddPackageAsync(string packageName, decimal price, string description,
-            int duration, string features1, string features2, string features3,
-            string features4, string features5, decimal discount, string discountType,
+            string duration, string features1, string features2, string features3,
+            string features4, string features5, decimal discount, string discountType, string discountFor,
             DateTime validFrom, DateTime validTo);
 
-        // Method using model (1 parameter)
         Task AddPackageAsync(PackageModel package);
+        Task<List<Package>> GetPackagesAsync();
+        Task<bool> UpdatePackageAsync(PackageModel package);
+        Task<bool> DeletePackageAsync(int packageId);
+
+        #endregion
 
         #region Chckin/out Settings
 
