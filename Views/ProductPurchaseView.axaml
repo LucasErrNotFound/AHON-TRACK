@@ -189,7 +189,7 @@
                                         IsVisible="{CompiledBinding !IsCartEmpty}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <shadui:Card>
+                                                <shadui:Card Margin="0,4">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto" />
