@@ -7,7 +7,6 @@
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
     xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
-    x:Name="RootUserControl"
     x:DataType="viewModels:ProductPurchaseViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
     x:Class="AHON_TRACK.Views.ProductPurchaseView">
@@ -252,7 +251,7 @@
                                                                 HorizontalAlignment="Right"
                                                                 VerticalAlignment="Top"
                                                                 ToolTip.Tip="Remove item"
-                                                                Command="{Binding DataContext.RemoveFromCartCommand, ElementName=RootUserControl}"
+                                                                Command="{CompiledBinding $parent[UserControl].((viewModels:ProductPurchaseViewModel)DataContext).RemoveFromCartCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{Binding}">
                                                                 <Svg
                                                                     Width="18"
@@ -368,7 +367,7 @@
                                                     Width="260"
                                                     Margin="0,30,0,0"
                                                     IsEnabled="{CompiledBinding !IsAddedToCart}"
-                                                    Command="{Binding DataContext.AddToCartCommand, ElementName=RootUserControl}"
+                                                    Command="{CompiledBinding $parent[UserControl].((viewModels:ProductPurchaseViewModel)DataContext).AddToCartCommand, FallbackValue={x:Null}}"
                                                     CommandParameter="{Binding}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <Svg
@@ -438,7 +437,7 @@
                                                         Padding="65,0" 
                                                         Margin="0,30,0,0"
                                                         IsEnabled="{CompiledBinding !IsAddedToCart}"
-                                                        Command="{Binding DataContext.AddToCartCommand, ElementName=RootUserControl}"
+                                                        Command="{CompiledBinding $parent[UserControl].((viewModels:ProductPurchaseViewModel)DataContext).AddToCartCommand, FallbackValue={x:Null}}"
                                                         CommandParameter="{Binding}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <Svg 
