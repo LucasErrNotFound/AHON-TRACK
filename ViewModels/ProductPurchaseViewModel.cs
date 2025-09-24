@@ -85,6 +85,21 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     [ObservableProperty]
     private string _customerFullName = "Customer Name";
     
+    [ObservableProperty]
+    private ObservableCollection<CartItem> _cartItems = [];
+
+    [ObservableProperty]
+    private decimal _totalPrice;
+
+    [ObservableProperty]
+    private string _formattedTotalPrice = "₱0.00";
+
+    [ObservableProperty]
+    private bool _isCartEmpty = true;
+
+    [ObservableProperty]
+    private string _emptyCartMessage = "Customer Name's cart is currently empty";
+    
     private readonly Dictionary<string, Bitmap> _imageCache = new();
     
     private readonly DialogManager _dialogManager;
@@ -166,7 +181,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     {
         var packages = _packageService.GetPackages();
         OriginalPackageList = packages;
-        ApplyProductFilter(); // This will handle package filtering
+        ApplyProductFilter();
     }
 
     private List<Customer> GetCustomerData()
@@ -466,6 +481,72 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
     }
     
+    [RelayCommand]
+    private void AddToCart(object item)
+    {
+        CartItem? cartItem = null;
+    
+        if (item is Product product)
+        {
+            cartItem = new CartItem
+            {
+                Id = Guid.NewGuid(),
+                ItemType = CartItemType.Product,
+                Title = product.Title,
+                Description = product.Description,
+                Price = product.Price,
+                MaxQuantity = product.StockCount,
+                Quantity = 1,
+                Poster = product.Poster,
+                SourceProduct = product
+            };
+            product.IsAddedToCart = true;
+        }
+        else if (item is Package package)
+        {
+            cartItem = new CartItem
+            {
+                Id = Guid.NewGuid(),
+                ItemType = CartItemType.Package,
+                Title = package.Title,
+                Description = package.Description,
+                Price = package.Price,
+                MaxQuantity = 999, // Packages typically don't have stock limits
+                Quantity = 1,
+                Poster = null, // Packages don't have posters in your current setup
+                SourcePackage = package
+            };
+            package.IsAddedToCart = true;
+        }
+    
+        if (cartItem != null)
+        {
+            cartItem.PropertyChanged += OnCartItemPropertyChanged;
+            CartItems.Add(cartItem);
+            UpdateCartTotals();
+            UpdateCartEmptyState();
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveFromCart(CartItem cartItem)
+    {
+        if (cartItem.SourceProduct != null)
+        {
+            cartItem.SourceProduct.IsAddedToCart = false;
+        }
+    
+        if (cartItem.SourcePackage != null)
+        {
+            cartItem.SourcePackage.IsAddedToCart = false;
+        }
+    
+        cartItem.PropertyChanged -= OnCartItemPropertyChanged;
+        CartItems.Remove(cartItem);
+        UpdateCartTotals();
+        UpdateCartEmptyState();
+    }
+    
     private void UpdateCustomerCounts()
     {
         SelectedCount = CustomerList.Count(x => x.IsSelected);
@@ -505,6 +586,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     partial void OnSelectedCustomerChanged(Customer? value)
     {
         CustomerFullName = value != null ? $"{value.FirstName} {value.LastName}" : "Customer Name";
+        UpdateCartEmptyState(); // Update empty cart message when customer changes
     }
     
     private void OnPackagesChanged()
@@ -515,6 +597,28 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             ApplyProductFilter();
         }
+    }
+    
+    private void OnCartItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(CartItem.Quantity))
+        {
+            UpdateCartTotals();
+        }
+    }
+
+    private void UpdateCartTotals()
+    {
+        TotalPrice = CartItems.Sum(item => item.TotalPrice);
+        FormattedTotalPrice = $"₱{TotalPrice:N2}";
+    }
+
+    private void UpdateCartEmptyState()
+    {
+        IsCartEmpty = !CartItems.Any();
+        EmptyCartMessage = SelectedCustomer != null 
+            ? $"{SelectedCustomer.FirstName} {SelectedCustomer.LastName}'s cart is currently empty"
+            : "Customer Name's cart is currently empty";
     }
 
     public void Dispose()
@@ -562,6 +666,9 @@ public partial class Product : ObservableObject
     [ObservableProperty] 
     private Bitmap _poster; 
     
+    [ObservableProperty]
+    private bool _isAddedToCart;
+    
     public string FormattedPrice => $"₱{Price:N2}";
     public string FormattedStockCount => $"{StockCount} Left";
     
@@ -593,6 +700,55 @@ public partial class Product : ObservableObject
     }
 }
 
-public class CartList : ObservableObject
+public partial class CartItem : ObservableObject
 {
+    [ObservableProperty]
+    private Guid _id;
+    
+    [ObservableProperty]
+    private CartItemType _itemType;
+    
+    [ObservableProperty]
+    private string _title = string.Empty;
+    
+    [ObservableProperty]
+    private string _description = string.Empty;
+    
+    [ObservableProperty]
+    private decimal _price;
+    
+    [ObservableProperty]
+    private int _quantity = 1;
+    
+    [ObservableProperty]
+    private int _maxQuantity = 1;
+    
+    [ObservableProperty]
+    private Bitmap? _poster;
+    
+    public Product? SourceProduct { get; set; }
+    public Package? SourcePackage { get; set; }
+    
+    public decimal TotalPrice => Price * Quantity;
+    public string FormattedPrice => $"₱{Price:N2}";
+    public string FormattedTotalPrice => $"₱{TotalPrice:N2}";
+    
+    partial void OnQuantityChanged(int value)
+    {
+        OnPropertyChanged(nameof(TotalPrice));
+        OnPropertyChanged(nameof(FormattedTotalPrice));
+    }
+    
+    partial void OnPriceChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(TotalPrice));
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(FormattedTotalPrice));
+    }
+}
+
+public enum CartItemType
+{
+    Product,
+    Package
 }

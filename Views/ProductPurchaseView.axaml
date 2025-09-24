@@ -7,7 +7,6 @@
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
     xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
-    xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
     x:DataType="viewModels:ProductPurchaseViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
     x:Class="AHON_TRACK.Views.ProductPurchaseView">
@@ -172,14 +171,21 @@
                             <Separator Background="{StaticResource ForegroundColor}" />
                             <StackPanel Spacing="10">
                                 <TextBlock Text="Your Cart" FontSize="17" FontWeight="SemiBold"/>
+                                
+                                <!-- Empty Cart Message -->
+                                <TextBlock 
+                                    Text="{CompiledBinding EmptyCartMessage}"
+                                    IsVisible="{CompiledBinding IsCartEmpty}"
+                                    HorizontalAlignment="Center"
+                                    FontSize="14"
+                                    Classes="Caption Muted"
+                                    Margin="0,40" />
+                                
                                 <!-- Cart items will go here -->
                                 <StackPanel Orientation="Vertical">
-                                    <ItemsControl>
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <UniformGrid Columns="4" RowSpacing="30" ColumnSpacing="30" Margin="-4.5,20,0,0"/>
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
+                                    <ItemsControl 
+                                        ItemsSource="{CompiledBinding CartItems}"
+                                        IsVisible="{CompiledBinding !IsCartEmpty}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <shadui:Card>
@@ -200,7 +206,7 @@
                                                             <Image
                                                                 Width="80"
                                                                 Height="80"
-                                                                Source="/Assets/ProductPurchaseView/protein-powder-display.png"
+                                                                Source="{CompiledBinding Poster}"
                                                                 Stretch="Uniform" />
                                                         </Border>
                                                         <StackPanel
@@ -210,7 +216,7 @@
                                                             VerticalAlignment="Center"
                                                             Spacing="6">
                                                             <TextBlock
-                                                                Text="Gold Standard Whey Protein"
+                                                                Text="{CompiledBinding Title}"
                                                                 FontSize="14"
                                                                 FontWeight="SemiBold"
                                                                 TextWrapping="Wrap"
@@ -218,14 +224,14 @@
                                                                 TextTrimming="CharacterEllipsis" />
                                                             <StackPanel Orientation="Horizontal" Spacing="12">
                                                                 <TextBlock
-                                                                    Text="x2"
+                                                                    Text="{CompiledBinding Quantity, StringFormat='x{0}'}"
                                                                     Classes="Muted Caption"
                                                                     FontSize="13"
                                                                     FontWeight="Bold"
                                                                     VerticalAlignment="Center" />
                                                             </StackPanel>
                                                             <TextBlock
-                                                                Text="$2,500.00"
+                                                                Text="{CompiledBinding FormattedTotalPrice}"
                                                                 Classes="Muted Caption"
                                                                 Foreground="{DynamicResource SuccessColor60}"
                                                                 FontSize="13"
@@ -244,7 +250,9 @@
                                                                 Height="36"
                                                                 HorizontalAlignment="Right"
                                                                 VerticalAlignment="Top"
-                                                                ToolTip.Tip="Remove item">
+                                                                ToolTip.Tip="Remove item"
+                                                                Command="{Binding DataContext.RemoveFromCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}">
                                                                 <Svg
                                                                     Width="18"
                                                                     Height="18"
@@ -254,10 +262,10 @@
                                                                 MaxWidth="120"
                                                                 FormatString="N0"
                                                                 Minimum="1"
-                                                                Maximum="10"
+                                                                Maximum="{CompiledBinding MaxQuantity}"
                                                                 HorizontalAlignment="Right"
                                                                 VerticalAlignment="Top"
-                                                                Value="2" />
+                                                                Value="{CompiledBinding Quantity, Mode=TwoWay}" />
                                                         </StackPanel>
                                                     </Grid>
                                                 </shadui:Card>
@@ -270,8 +278,9 @@
                         <shadui:Card.Footer>
                             <Button 
                                 Classes="Primary" 
-                                Content="Pay $4,500" 
-                                HorizontalAlignment="Right" />
+                                Content="{CompiledBinding FormattedTotalPrice, StringFormat='Pay {0}'}" 
+                                HorizontalAlignment="Right"
+                                IsEnabled="{CompiledBinding !IsCartEmpty}"/>
                         </shadui:Card.Footer>
                     </shadui:Card>
                 </Grid>
@@ -356,7 +365,10 @@
                                                 <Button
                                                     Classes="Primary"
                                                     Width="260"
-                                                    Margin="0,30,0,0">
+                                                    Margin="0,30,0,0"
+                                                    IsEnabled="{CompiledBinding !IsAddedToCart}"
+                                                    Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <Svg
                                                             Width="18"
@@ -419,12 +431,14 @@
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
-
                                                     <Button 
                                                         Classes="Primary" 
                                                         HorizontalAlignment="Center"
                                                         Padding="65,0" 
-                                                        Margin="0,30,0,0">
+                                                        Margin="0,30,0,0"
+                                                        IsEnabled="{CompiledBinding !IsAddedToCart}"
+                                                        Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <Svg 
                                                                 Width="18" 
