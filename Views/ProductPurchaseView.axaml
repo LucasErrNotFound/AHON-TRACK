@@ -7,6 +7,7 @@
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
     xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
+    x:Name="RootUserControl"
     x:DataType="viewModels:ProductPurchaseViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
     x:Class="AHON_TRACK.Views.ProductPurchaseView">
@@ -170,7 +171,7 @@
                             </StackPanel>
                             <Separator Background="{StaticResource ForegroundColor}" />
                             <StackPanel Spacing="10">
-                                <TextBlock Text="Your Cart" FontSize="17" FontWeight="SemiBold"/>
+                                <TextBlock Text="Cart" FontSize="17" FontWeight="SemiBold"/>
                                 
                                 <!-- Empty Cart Message -->
                                 <TextBlock 
@@ -251,7 +252,7 @@
                                                                 HorizontalAlignment="Right"
                                                                 VerticalAlignment="Top"
                                                                 ToolTip.Tip="Remove item"
-                                                                Command="{Binding DataContext.RemoveFromCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                Command="{Binding DataContext.RemoveFromCartCommand, ElementName=RootUserControl}"
                                                                 CommandParameter="{Binding}">
                                                                 <Svg
                                                                     Width="18"
@@ -367,7 +368,7 @@
                                                     Width="260"
                                                     Margin="0,30,0,0"
                                                     IsEnabled="{CompiledBinding !IsAddedToCart}"
-                                                    Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    Command="{Binding DataContext.AddToCartCommand, ElementName=RootUserControl}"
                                                     CommandParameter="{Binding}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <Svg
@@ -437,7 +438,7 @@
                                                         Padding="65,0" 
                                                         Margin="0,30,0,0"
                                                         IsEnabled="{CompiledBinding !IsAddedToCart}"
-                                                        Command="{Binding DataContext.AddToCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Command="{Binding DataContext.AddToCartCommand, ElementName=RootUserControl}"
                                                         CommandParameter="{Binding}">
                                                         <StackPanel Orientation="Horizontal">
                                                             <Svg 
