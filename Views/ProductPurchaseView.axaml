@@ -356,6 +356,7 @@
                                 Content="{CompiledBinding FormattedTotalPrice, StringFormat='Pay {0}'}" 
                                 HorizontalAlignment="Right"
                                 Padding="15,0"
+                                Command="{CompiledBinding PaymentCommand}"
                                 IsEnabled="{CompiledBinding IsPaymentPossible}"/>
                         </shadui:Card.Footer>
                     </shadui:Card>
