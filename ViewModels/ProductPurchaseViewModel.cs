@@ -5,6 +5,7 @@ using HotAvalonia;
 using ShadUI;
 using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
@@ -99,6 +100,15 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private string _emptyCartMessage = "Customer Name's cart is currently empty";
+    
+    [ObservableProperty]
+    private bool _isCashSelected;
+    
+    [ObservableProperty]
+    private bool _isGCashSelected;
+    
+    [ObservableProperty]
+    private bool _isMayaSelected;
     
     private readonly Dictionary<string, Bitmap> _imageCache = new();
     
@@ -587,6 +597,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     {
         CustomerFullName = value != null ? $"{value.FirstName} {value.LastName}" : "Customer Name";
         UpdateCartEmptyState(); // Update empty cart message when customer changes
+        OnPropertyChanged(nameof(IsPaymentPossible));
     }
     
     private void OnPackagesChanged()
@@ -619,6 +630,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         EmptyCartMessage = SelectedCustomer != null 
             ? $"{SelectedCustomer.FirstName} {SelectedCustomer.LastName}'s cart is currently empty"
             : "Customer Name's cart is currently empty";
+        OnPropertyChanged(nameof(IsPaymentPossible));
     }
 
     public void Dispose()
@@ -626,6 +638,38 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         if (_packageService != null)
             _packageService.PackagesChanged -= OnPackagesChanged;
     }
+    
+    partial void OnIsCashSelectedChanged(bool value)
+    {
+        if (value)
+        {
+            IsGCashSelected = false;
+            IsMayaSelected = false;
+        }
+        OnPropertyChanged(nameof(IsPaymentPossible));
+    }
+
+    partial void OnIsGCashSelectedChanged(bool value)
+    {
+        if (value)
+        {
+            IsCashSelected = false;
+            IsMayaSelected = false;
+        }
+        OnPropertyChanged(nameof(IsPaymentPossible));
+    }
+
+    partial void OnIsMayaSelectedChanged(bool value)
+    {
+        if (value)
+        {
+            IsCashSelected = false;
+            IsGCashSelected = false;
+        }
+        OnPropertyChanged(nameof(IsPaymentPossible));
+    }
+
+    public bool IsPaymentPossible => SelectedCustomer != null && !IsCartEmpty && (IsCashSelected || IsGCashSelected || IsMayaSelected);
 }
 
 public partial class Customer : ObservableObject

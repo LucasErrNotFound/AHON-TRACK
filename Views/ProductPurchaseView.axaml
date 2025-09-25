@@ -138,7 +138,7 @@
                             </ScrollViewer>
                         </StackPanel>
                     </shadui:Card>
-                    <shadui:Card Grid.Column="1" Margin="0,0,100,0">
+                    <shadui:Card Grid.Column="1" Margin="0,0,100,0" Height="822" VerticalAlignment="Top">
                         <StackPanel Spacing="20">
                             <!-- Header -->
                             <shadui:CardTitle Content="Purchase Summary" />
@@ -157,7 +157,6 @@
                                         FontSize="16"
                                         VerticalAlignment="Center" />
                                 </StackPanel>
-            
                                 <StackPanel Margin="43,0,0,0">
                                     <TextBlock
                                         Text="{CompiledBinding CustomerFullName}"
@@ -170,8 +169,83 @@
                             </StackPanel>
                             <Separator Background="{StaticResource ForegroundColor}" />
                             <StackPanel Spacing="10">
-                                <TextBlock Text="Cart" FontSize="17" FontWeight="SemiBold"/>
-                                
+                                <StackPanel Orientation="Horizontal" Spacing="15">
+                                    <Svg
+                                        Width="28"
+                                        Height="28"
+                                        Path="avares://AHON_TRACK/Assets/ProductPurchaseView/payment-method-icon.svg"
+                                        VerticalAlignment="Center" />
+                                    <TextBlock 
+                                        Text="Payment Method" 
+                                        Classes="Caption Muted"
+                                        FontSize="16" 
+                                        VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Grid RowDefinitions="Auto" ColumnDefinitions="Auto Auto Auto" ColumnSpacing="15">
+                                    <StackPanel Grid.Row="0" Grid.Column="0">
+                                        <ToggleButton
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Classes="Outline"
+                                            IsChecked="{CompiledBinding IsCashSelected}">
+                                            <StackPanel Orientation="Vertical">
+                                                <Svg
+                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/cash-logo.svg"
+                                                    Width="60"
+                                                    Height="70"
+                                                    Margin="15,0"
+                                                    HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </ToggleButton>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="0" Grid.Column="1">
+                                        <ToggleButton
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Classes="Outline"
+                                            IsChecked="{CompiledBinding IsGCashSelected}">
+                                            <StackPanel Orientation="Vertical">
+                                                <Svg
+                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/GCash_logo.svg"
+                                                    Width="60"
+                                                    Height="70"
+                                                    Margin="15,0"
+                                                    HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </ToggleButton>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="0" Grid.Column="2">
+                                        <ToggleButton
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Classes="Outline"
+                                            IsChecked="{CompiledBinding IsMayaSelected}">
+                                            <StackPanel Orientation="Vertical">
+                                                <Svg
+                                                    Path="avares://AHON_TRACK/Assets/ProductPurchaseView/Maya_logo.svg"
+                                                    Width="60"
+                                                    Height="70"
+                                                    Margin="15,0"
+                                                    HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </ToggleButton>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            <Separator Background="{StaticResource ForegroundColor}" />
+                            <StackPanel Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="15">
+                                    <Svg
+                                        Width="28"
+                                        Height="28"
+                                        Path="avares://AHON_TRACK/Assets/ProductPurchaseView/cart-icon.svg"
+                                        VerticalAlignment="Center" />
+                                    <TextBlock 
+                                        Text="Cart" 
+                                        FontSize="16" 
+                                        Classes="Caption Muted"
+                                        VerticalAlignment="Center"/>
+                                </StackPanel>
                                 <!-- Empty Cart Message -->
                                 <TextBlock 
                                     Text="{CompiledBinding EmptyCartMessage}"
@@ -274,13 +348,15 @@
                                     </ItemsControl>
                                 </StackPanel>
                             </StackPanel>
+                            <Separator Background="{StaticResource ForegroundColor}" />
                         </StackPanel>
                         <shadui:Card.Footer>
                             <Button 
                                 Classes="Primary" 
                                 Content="{CompiledBinding FormattedTotalPrice, StringFormat='Pay {0}'}" 
                                 HorizontalAlignment="Right"
-                                IsEnabled="{CompiledBinding !IsCartEmpty}"/>
+                                Padding="15,0"
+                                IsEnabled="{CompiledBinding IsPaymentPossible}"/>
                         </shadui:Card.Footer>
                     </shadui:Card>
                 </Grid>
