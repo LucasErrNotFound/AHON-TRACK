@@ -557,6 +557,65 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         UpdateCartEmptyState();
     }
     
+    [RelayCommand]
+    private void Payment()
+    {
+        var customerName = SelectedCustomer != null 
+            ? $"{SelectedCustomer.FirstName} {SelectedCustomer.LastName}"
+            : "No customer selected";
+
+        var paymentMethod = IsCashSelected ? "Cash" :
+            IsGCashSelected ? "GCash" :
+            IsMayaSelected ? "Maya" : 
+            "No payment method selected";
+
+        var cartItemsList = string.Join(", ", CartItems.Select(item => 
+            $"{item.Title} (Qty: {item.Quantity})"));
+
+        /* Alternative: More detailed cart info
+        var detailedCartInfo = string.Join("\n", CartItems.Select(item => 
+            $"• {item.Title} - Qty: {item.Quantity} - {item.FormattedTotalPrice}"));
+        */
+
+        var toastContent = $"Customer: {customerName}\n" +
+                           $"Payment Method: {paymentMethod}\n" +
+                           $"Total: {FormattedTotalPrice}\n" +
+                           $"Items:\n{cartItemsList}"; // or detailedCartInfo
+
+        _toastManager.CreateToast("Gym Purchase")
+            .WithContent(toastContent)
+            .DismissOnClick()
+            .ShowSuccess();
+        ClearCart();
+    }
+    
+    private void ClearCart()
+    {
+        foreach (var cartItem in CartItems.ToList())
+        {
+            if (cartItem.SourceProduct != null)
+            {
+                cartItem.SourceProduct.IsAddedToCart = false;
+            }
+        
+            if (cartItem.SourcePackage != null)
+            {
+                cartItem.SourcePackage.IsAddedToCart = false;
+            }
+        
+            cartItem.PropertyChanged -= OnCartItemPropertyChanged;
+        }
+    
+        CartItems.Clear();
+        UpdateCartTotals();
+        UpdateCartEmptyState();
+    
+        IsCashSelected = false;
+        IsGCashSelected = false;
+        IsMayaSelected = false;
+        SelectedCustomer = null;
+    }
+    
     private void UpdateCustomerCounts()
     {
         SelectedCount = CustomerList.Count(x => x.IsSelected);
