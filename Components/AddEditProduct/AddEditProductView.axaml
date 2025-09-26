@@ -63,21 +63,21 @@
                                     shadui:ControlAssist.Label="Product Name"
                                     Watermark="Enter the product name here"
                                     Margin="0,30,0,0" 
-                                    Text="{CompiledBinding ProductName}"/>
+                                    Text="{CompiledBinding ProductName, Mode=TwoWay}"/>
                                 <Grid ColumnDefinitions="* *" ColumnSpacing="30" Margin="0,20,0,0">
                                     <TextBox
                                         Grid.Column="0"
                                         Classes="Clearable"
                                         Watermark="Enter the product SKU here"
                                         shadui:ControlAssist.Label="SKU"
-                                        Text="{CompiledBinding ProductSKU}"/>
+                                        Text="{CompiledBinding ProductSKU, Mode=TwoWay}"/>
                                     <ComboBox 
                                         Margin="0,-4,0,0"
                                         Grid.Column="1"
                                         PlaceholderText="Select its supplier here"
                                         shadui:ControlAssist.Label="Product Supplier"
                                         ItemsSource="{CompiledBinding ProductSupplierItems}"
-                                        SelectedItem="{CompiledBinding SelectedProductSupplier}" />
+                                        SelectedItem="{CompiledBinding SelectedProductSupplier, Mode=TwoWay}" />
                                 </Grid>
                                 <TextBox
                                     shadui:ControlAssist.Label="Description (Optional)"
@@ -86,7 +86,7 @@
                                     TextWrapping="Wrap"
                                     AcceptsReturn="True"
                                     Margin="0,20,0,0"
-                                    Text="{CompiledBinding ProductDescription}"/>
+                                    Text="{CompiledBinding ProductDescription, Mode=TwoWay}"/>
                             </StackPanel>
                         </shadui:Card>
                         <shadui:Card Grid.Row="1" VerticalAlignment="Top">
@@ -165,7 +165,7 @@
                                     FormatString="N2"
                                     ShowButtonSpinner="False"
                                     Watermark="0.00"
-                                    Value="{CompiledBinding ProductPrice}">
+                                    Value="{CompiledBinding ProductPrice, Mode=TwoWay}">
                                     <NumericUpDown.InnerLeftContent>
                                         <TextBlock Margin="8,0,-8,0" Text="₱" />
                                     </NumericUpDown.InnerLeftContent>
@@ -179,7 +179,7 @@
                                     FormatString="{CompiledBinding DiscountFormat}"
                                     ShowButtonSpinner="False"
                                     Watermark="0"
-                                    Value="{CompiledBinding ProductDiscountedPrice}">
+                                    Value="{CompiledBinding ProductDiscountedPrice, Mode=TwoWay}">
                                     <NumericUpDown.InnerLeftContent>
                                         <TextBlock 
                                             Margin="8,0,-8,0" 
@@ -220,7 +220,7 @@
                                     Margin="0,20,0,0"
                                     shadui:ControlAssist.Hint="Set the product stock status"
                                     ItemsSource="{CompiledBinding ProductStatusItems}"
-                                    SelectedItem="{CompiledBinding SelectedProductStatus}">
+                                    SelectedItem="{CompiledBinding SelectedProductStatus, Mode=TwoWay}">
                                 </ComboBox>
                             </StackPanel>
                         </shadui:Card>
@@ -242,7 +242,7 @@
                                     Margin="0,20,0,0"
                                     shadui:ControlAssist.Hint="Select the appropriate product category"
                                     ItemsSource="{CompiledBinding ProductCategoryItems}"
-                                    SelectedItem="{CompiledBinding SelectedProductCategory}">
+                                    SelectedItem="{CompiledBinding SelectedProductCategory, Mode=TwoWay}">
                                 </ComboBox>
                             </StackPanel>
                         </shadui:Card>
