@@ -161,21 +161,21 @@
                                 <!-- SKU -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="120"
+                                    MinWidth="150"
                                     Header="SKU"
                                     Binding="{CompiledBinding Sku}" />
 
                                 <!-- Category -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="170"
+                                    MinWidth="160"
                                     Header="Category"
                                     Binding="{CompiledBinding Category}" />
 
                                 <!-- Current Stock -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="130"
+                                    MinWidth="100"
                                     Header="Current Stock"
                                     Binding="{CompiledBinding CurrentStock}" />
 
@@ -204,7 +204,7 @@
                                 <DataGridTemplateColumn
                                     CanUserSort="False"
                                     Header="Status"
-                                    Width="180">
+                                    Width="170">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="viewModels:ProductStock">
                                             <Border
