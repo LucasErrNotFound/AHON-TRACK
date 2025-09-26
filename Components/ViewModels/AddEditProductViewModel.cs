@@ -131,6 +131,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductDescription = product.Description;
         ProductPrice = product.Price;
         ProductExpiry = product.Expiry;
+        IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
         ProductSKU = product.Sku;
         

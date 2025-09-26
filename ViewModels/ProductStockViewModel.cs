@@ -121,6 +121,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 Category = "Drinks",
                 CurrentStock = 17,
                 Price = 35,
+                DiscountInPercentage = true,
                 DiscountedPrice = 5,
                 Supplier = "San Miguel",
                 Expiry = today.AddYears(6).AddDays(32),
@@ -135,7 +136,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 Description = "5lbs Premium Whey Protein",
                 Category = "Supplements",
                 CurrentStock = 17,
-                DiscountedPrice = 150,
+                DiscountInPercentage = true,
+                DiscountedPrice = 50,
                 Price = 2500,
                 Supplier = "Optimum",
                 Expiry = today.AddYears(6).AddDays(32),
@@ -150,6 +152,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 Description = "1.1lbs Creatine Monohydrate",
                 Category = "Supplements",
                 CurrentStock = 0,
+                DiscountInPercentage = false,
                 DiscountedPrice = 550,
                 Price = 1050,
                 Supplier = "Optimum",
@@ -165,7 +168,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 Description = "7.6oz PreWorkout Peaches & Cream",
                 Category = "Supplements",
                 CurrentStock = 3,
-                DiscountedPrice = 40,
+                DiscountInPercentage = false,
+                DiscountedPrice = null,
                 Price = 900,
                 Supplier = "Optimum",
                 Expiry = today.AddYears(6).AddDays(32),
@@ -398,6 +402,9 @@ public partial class ProductStock : ObservableObject
     
     [ObservableProperty] 
     private int? _discountedPrice;
+    
+    [ObservableProperty] 
+    private bool _discountInPercentage;
     
     [ObservableProperty] 
     private string? _supplier;
