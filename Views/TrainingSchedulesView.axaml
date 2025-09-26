@@ -117,7 +117,7 @@
                                 <ComboBox 
                                     Width="160"
                                     ItemsSource="{CompiledBinding PackageFilterItems}"
-                                    SelectedItem="{CompiledBinding SelectedPackageFilterItem}"/>
+                                    SelectedItem="{CompiledBinding SelectedPackageFilterItem, Mode=TwoWay}"/>
                                 <Button
                                     Classes="Primary"
                                     Padding="30,0"
