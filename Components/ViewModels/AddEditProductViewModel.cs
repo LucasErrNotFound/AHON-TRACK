@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ShadUI;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -11,8 +12,11 @@ using HotAvalonia;
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("add-new-product")]
-public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters
 {
+    [ObservableProperty] 
+    private ProductViewContext _viewContext = ProductViewContext.AddProduct;
+    
     [ObservableProperty]
     private string[] _productStatusItems = ["In Stock", "Out of Stock"];
     private string _selectedProductStatusItem = "In Stock";
@@ -61,6 +65,18 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
     public void Initialize()
     {
     }
+    
+    public void SetNavigationParameters(Dictionary<string, object> parameters)
+    {
+        if (parameters.TryGetValue("Context", out var context))
+        {
+            SetViewContext((ProductViewContext)context);
+        }
+        
+        if (!parameters.TryGetValue("SelectedProduct", out var product)) return;
+        var selectedProduct = (ProductStock)product;
+        PopulateFormWithProductdata(selectedProduct);
+    }
 
     [RelayCommand]
     private void PublishProduct()
@@ -69,15 +85,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
 
         if (HasErrors) return;
         PublishSwitchBack();
-    }
-    
-    private void PublishSwitchBack()
-    {
-        _toastManager.CreateToast("Publish Product")
-            .WithContent("Product published successfully")
-            .DismissOnClick()
-            .ShowSuccess();
-        _pageManager.Navigate<ProductStockViewModel>();
     }
 
     [RelayCommand]
@@ -93,6 +100,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
             .Dismissible()
             .Show();
     }
+    
+    private void PublishSwitchBack()
+    {
+        _toastManager.CreateToast("Publish Product")
+            .WithContent("Product published successfully")
+            .DismissOnClick()
+            .ShowSuccess();
+        _pageManager.Navigate<ProductStockViewModel>();
+    }
 
     private void DiscardSwitchBack()
     {
@@ -101,6 +117,32 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
             .DismissOnClick()
             .ShowSuccess();
         _pageManager.Navigate<ProductStockViewModel>();
+    }
+
+    private void PopulateFormWithProductdata(ProductStock product)
+    {
+        
+    }
+
+    public string ViewTitle => ViewContext switch
+    {
+        ProductViewContext.AddProduct => "Add Product",
+        ProductViewContext.EditProduct => "Edit Product",
+        _ => "Add Product"
+    };
+    
+    public string ViewDescription => ViewContext switch
+    {
+        ProductViewContext.AddProduct => "Add new gym products with details like name, price, and stock to keep your inventory up to date",
+        ProductViewContext.EditProduct => "Edit existing gym products with details like name, price, and stock to keep your inventory up to date",
+        _ => "Add new gym products with details like name, price, and stock to keep your inventory up to date"
+    };
+    
+    public void SetViewContext(ProductViewContext context)
+    {
+        ViewContext = context;
+        OnPropertyChanged(nameof(ViewTitle));
+        OnPropertyChanged(nameof(ViewDescription));
     }
 
     [Required(ErrorMessage = "Product Name is required")]
@@ -165,4 +207,10 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
         get => _selectedSupplierCategoryItem;
         set =>  SetProperty(ref _selectedSupplierCategoryItem, value, true);
     }
+}
+
+public enum ProductViewContext
+{
+    AddProduct,
+    EditProduct
 }

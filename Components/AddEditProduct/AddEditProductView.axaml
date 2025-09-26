@@ -37,14 +37,14 @@
             <TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
-                Text="Add Product"
+                Text="{CompiledBinding ViewTitle}"
                 Foreground="{StaticResource FontForeground}"
                 Margin="90,30,0,0" />
             <TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
                 HorizontalAlignment="Left"
-                Text="Add new gym products with details like name, price, and stock to keep your inventory up to date"
+                Text="{CompiledBinding ViewDescription}"
                 TextWrapping="Wrap"
                 Margin="90,0" />
         </StackPanel>
