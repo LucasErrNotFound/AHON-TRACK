@@ -116,10 +116,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1001,
                 Name = "Cobra Energy Drink",
+                Sku = "1AU3OTE0923U",
                 Description = "Yellow Blast Flavor",
                 Category = "Drinks",
                 CurrentStock = 17,
                 Price = 35,
+                DiscountedPrice = 5,
                 Supplier = "San Miguel",
                 Expiry = today.AddYears(6).AddDays(32),
                 Status = "In Stock",
@@ -129,9 +131,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1002,
                 Name = "Gold Standard Whey Protein",
+                Sku = "1AU3OTE0923U",
                 Description = "5lbs Premium Whey Protein",
                 Category = "Supplements",
                 CurrentStock = 17,
+                DiscountedPrice = 150,
                 Price = 2500,
                 Supplier = "Optimum",
                 Expiry = today.AddYears(6).AddDays(32),
@@ -142,9 +146,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1003,
                 Name = "Creatine XPLODE Powder",
+                Sku = "1AU3OTE0923U",
                 Description = "1.1lbs Creatine Monohydrate",
                 Category = "Supplements",
                 CurrentStock = 0,
+                DiscountedPrice = 550,
                 Price = 1050,
                 Supplier = "Optimum",
                 Expiry = today.AddYears(6).AddDays(32),
@@ -155,9 +161,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1004,
                 Name = "Insane Labz PSYCHOTIC",
+                Sku = "1AU3OTE0923U",
                 Description = "7.6oz PreWorkout Peaches & Cream",
                 Category = "Supplements",
                 CurrentStock = 3,
+                DiscountedPrice = 40,
                 Price = 900,
                 Supplier = "Optimum",
                 Expiry = today.AddYears(6).AddDays(32),
@@ -374,6 +382,9 @@ public partial class ProductStock : ObservableObject
     private string? _name;
     
     [ObservableProperty] 
+    private string? _sku;
+    
+    [ObservableProperty] 
     private string? _description;
     
     [ObservableProperty] 
@@ -384,6 +395,9 @@ public partial class ProductStock : ObservableObject
     
     [ObservableProperty] 
     private int? _price;
+    
+    [ObservableProperty] 
+    private int? _discountedPrice;
     
     [ObservableProperty] 
     private string? _supplier;
