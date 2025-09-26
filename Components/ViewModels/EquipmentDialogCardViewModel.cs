@@ -15,19 +15,24 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private string[] _equipmentFilterItems = ["All", "Strength", "Cardio", "Machines", "Accessories"];
     
     [ObservableProperty] 
-    private string[] _statusFilterItems = ["Active", "Inactive"];
-    
-    [ObservableProperty] 
-    private string[] _conditionFilterItems = ["Excellent", "Broken"];
+    private string[] _conditionFilterItems = ["Excellent", "Repairing", "Broken"];
     
     [ObservableProperty] 
     private string[] _supplierFilterItems = ["San Miguel", "FitLab", "Optimum"];
+
+    [ObservableProperty]
+    private string _dialogTitle = "Add New Equipment";
+
+    [ObservableProperty]
+    private string _dialogDescription = "Easily register gym equipment with details like brand name, category, quantity, etc.";
     
-    private string _brandName = string.Empty;
-    private string _category = string.Empty;
-    private string _condition = string.Empty;
-    private string _status = string.Empty;
-    private string _supplier = string.Empty;
+    [ObservableProperty] 
+    private bool _isEditMode = false;
+    
+    private string? _brandName = string.Empty;
+    private string? _category = string.Empty;
+    private string? _condition = string.Empty;
+    private string? _supplier = string.Empty;
     private int? _currentStock;
     private int? _purchasePrice;
     private DateTime? _purchaseDate;
@@ -42,35 +47,28 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     [Required(ErrorMessage = "Brand name is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string BrandName 
+    public string? BrandName 
     {
         get => _brandName;
         set => SetProperty(ref _brandName, value, true);
     }
     
     [Required(ErrorMessage = "Select a category")]
-    public string Category
+    public string? Category
     {
         get => _category;
         set => SetProperty(ref _category, value, true);
     }
     
     [Required(ErrorMessage = "Select a condition")]
-    public string Condition 
+    public string? Condition 
     {
         get => _condition;
         set => SetProperty(ref _condition, value, true);
     }
     
-    [Required(ErrorMessage = "Select a status")]
-    public string Status
-    {
-        get => _status;
-        set => SetProperty(ref _status, value, true);
-    }
-    
     [Required(ErrorMessage = "Select a supplier")]
-    public string Supplier 
+    public string? Supplier 
     {
         get => _supplier;
         set => SetProperty(ref _supplier, value, true);
@@ -85,7 +83,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     }
     
     [Required(ErrorMessage = "Price is required")]
-    [Range(1, 500, ErrorMessage = "Price must be between 1 and 15000")]
+    [Range(1, 1000000000, ErrorMessage = "Price must be between 1 and 1000000000")]
     public int? PurchasePrice 
     {
         get => _purchasePrice;
@@ -108,7 +106,6 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         set => SetProperty(ref _warrantyExpiry, value, true);
     }
     
-    [Required(ErrorMessage = "Last maintenance is required")]
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
     public DateTime? LastMaintenance
     {
@@ -116,7 +113,6 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         set => SetProperty(ref _lastMaintenance, value, true);
     }
     
-    [Required(ErrorMessage = "Next maintenance is required")]
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
     public DateTime? NextMaintenance
     {
@@ -140,7 +136,31 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
 
     [AvaloniaHotReload]
     public void Initialize()
+    { 
+        DialogTitle = "Add New Equipment";
+        DialogDescription = "Easily register gym equipment with details like brand name, category, quantity, etc.";
+        IsEditMode = false;
+        ClearAllFields();
+    }
+    
+    public void InitializeForEditMode(Equipment? equipment)
     {
+        IsEditMode = true;
+        DialogTitle = "Edit Equipment Details";
+        DialogDescription = "Edit gym equipment with details like brand name, category, quantity, etc.";
+        
+        ClearAllErrors();
+
+        BrandName = equipment?.BrandName;
+        Category = equipment?.Category;
+        Condition = equipment?.Condition;
+        Supplier = equipment?.Supplier;
+        CurrentStock = equipment?.CurrentStock;
+        PurchasePrice = equipment?.PurchasedPrice;
+        PurchasedDate = equipment?.PurchasedDate;
+        WarrantyExpiry = equipment?.Warranty;
+        LastMaintenance = equipment?.LastMaintenance;
+        NextMaintenance = equipment?.NextMaintenance;
     }
     
     [RelayCommand]
@@ -156,5 +176,20 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         
         if (HasErrors) return;
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+    }
+
+    private void ClearAllFields()
+    {
+        BrandName = string.Empty;
+        Category = string.Empty;
+        Condition = string.Empty;
+        Supplier = string.Empty;
+        CurrentStock = null;
+        PurchasePrice = null;
+        PurchasedDate = null;
+        WarrantyExpiry = null;
+        LastMaintenance = null;
+        NextMaintenance = null;
+        ClearAllErrors();
     }
 }

@@ -61,11 +61,11 @@
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <StackPanel Spacing="0" Margin="0,0,10,0">
                 <TextBlock
-                    Text="Add New Equipment"
+                    Text="{CompiledBinding DialogTitle}"
                     Foreground="{DynamicResource FontForeground}"
                     Classes="h4" />
                 <TextBlock
-                    Text="Easily register new gym equipment with details like name, type, and quantity"
+                    Text="{CompiledBinding DialogDescription}"
                     Classes="Muted" />
                 <shadui:Card>
                     <StackPanel>
@@ -172,7 +172,7 @@
                                 VerticalAlignment="Center"
                                 Margin="10,0,0,0"/>
                         </StackPanel>
-                        <Grid RowDefinitions="Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+                        <Grid RowDefinitions="Auto Auto" Margin="0,20,0,0" RowSpacing="20">
                             <StackPanel Grid.Row="0">
                                 <CalendarDatePicker 
                                     shadui:ControlAssist.ReadOnly="True"
@@ -185,14 +185,6 @@
                                     PlaceholderText="Select condition"
                                     ItemsSource="{CompiledBinding ConditionFilterItems}"
                                     SelectedItem="{CompiledBinding Condition}">
-                                </ComboBox>
-                            </StackPanel>
-                            <StackPanel Grid.Row="2">
-                                <ComboBox
-                                    shadui:ControlAssist.Label="Status"
-                                    PlaceholderText="Select status"
-                                    ItemsSource="{CompiledBinding StatusFilterItems}"
-                                    SelectedItem="{CompiledBinding Status}">
                                 </ComboBox>
                             </StackPanel>
                         </Grid>
