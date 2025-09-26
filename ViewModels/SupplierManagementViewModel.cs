@@ -66,6 +66,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _supplierDialogCardViewModel = supplierDialogCardViewModel;
         
         LoadSupplierData();
+        UpdateSupplierCounts();
     }
 
     public SupplierManagementViewModel()
@@ -76,6 +77,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
         
         LoadSupplierData();
+        UpdateSupplierCounts();
     }
 
     [AvaloniaHotReload]
@@ -83,6 +85,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         if (IsInitialized) return;
         LoadSupplierData();
+        UpdateSupplierCounts();
         IsInitialized = true;
     }
 
