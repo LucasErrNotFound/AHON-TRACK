@@ -304,6 +304,15 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	{
 		if (OriginalMemberData.Count == 0) return;
 
+		if (SelectedSortFilterItem == "Reset Data")
+		{
+			SelectedStatusFilterItem = "All";
+			SelectedSortFilterItem = "By ID";
+			CurrentFilteredData = OriginalMemberData.OrderBy(m => m.ID).ToList();
+			RefreshMemberItems(CurrentFilteredData);
+			return;
+		}
+
 		// First apply status filter to get the base filtered data
 		List<ManageMembersItem> baseFilteredData;
 		if (SelectedStatusFilterItem == "All")
@@ -325,10 +334,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 			"Names by Z-A" => baseFilteredData.OrderByDescending(m => m.Name).ToList(),
 			"By newest to oldest" => baseFilteredData.OrderByDescending(m => m.Validity).ToList(),
 			"By oldest to newest" => baseFilteredData.OrderBy(m => m.Validity).ToList(),
-			"Reset Data" => OriginalMemberData.ToList(), // Reset ignores status filter
 			_ => baseFilteredData.ToList()
 		};
-
 		CurrentFilteredData = sortedList;
 		RefreshMemberItems(sortedList);
 	}
