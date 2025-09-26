@@ -157,6 +157,13 @@
                                     Width="*"
                                     Header="Product Name"
                                     Binding="{CompiledBinding Name}" />
+                                
+                                <!-- SKU -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="120"
+                                    Header="SKU"
+                                    Binding="{CompiledBinding Sku}" />
 
                                 <!-- Category -->
                                 <DataGridTextColumn
