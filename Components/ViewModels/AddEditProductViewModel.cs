@@ -28,6 +28,9 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     [ObservableProperty]
     private string[] _productSupplierItems = ["None", "San Miguel", "Optimum", "AHON Factory", "Nike"];
     private string?  _selectedSupplierCategoryItem = "Tender Juicy";
+
+    [ObservableProperty] 
+    private bool _isPercentageModeOn;
     
     private string? _productName = string.Empty;
     private string? _productSKU = string.Empty;
@@ -46,6 +49,9 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    
+    public string DiscountSymbol => IsPercentageModeOn ? "%" : "₱";
+    public string DiscountFormat => IsPercentageModeOn ? "N2" : "N0";
     
     public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
@@ -189,7 +195,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _price, value, true);
     }
     
-    [Range(5, 15000, ErrorMessage = "Price must be between 5 and 15,000")]
+    [Range(1, 15000, ErrorMessage = "Price must be between 1 and 15,000")]
     public int? ProductDiscountedPrice
     {
         get => _discountedPrice;
@@ -224,6 +230,12 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     {
         get => _productImage;
         set => SetProperty(ref _productImage, value, true);
+    }
+    
+    partial void OnIsPercentageModeOnChanged(bool value)
+    {
+        OnPropertyChanged(nameof(DiscountSymbol));
+        OnPropertyChanged(nameof(DiscountFormat));
     }
 }
 
