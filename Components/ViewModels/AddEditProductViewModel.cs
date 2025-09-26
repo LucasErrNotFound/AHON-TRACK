@@ -19,29 +19,29 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     
     [ObservableProperty]
     private string[] _productStatusItems = ["In Stock", "Out of Stock"];
-    private string _selectedProductStatusItem = "In Stock";
+    private string? _selectedProductStatusItem = "In Stock";
     
     [ObservableProperty]
-    private string[] _productCategoryItems = ["Drinks", "Supplements", "Apparel", "Products"];
-    private string  _selectedProductCategoryItem = "Drinks";
+    private string[] _productCategoryItems = ["None", "Drinks", "Supplements", "Apparel", "Products"];
+    private string?  _selectedProductCategoryItem = "None";
     
     [ObservableProperty]
-    private string[] _productSupplierItems = ["None", "San Miguel Foods", "Tender Juicy", "AHON Factory", "Nike"];
-    private string  _selectedSupplierCategoryItem = "Tender Juicy";
+    private string[] _productSupplierItems = ["None", "San Miguel", "Optimum", "AHON Factory", "Nike"];
+    private string?  _selectedSupplierCategoryItem = "Tender Juicy";
     
-    private string _productName = string.Empty;
-    private string _productSKU = string.Empty;
-    private string _productDescription = string.Empty;
+    private string? _productName = string.Empty;
+    private string? _productSKU = string.Empty;
+    private string? _productDescription = string.Empty;
     private DateTime? _productExpiry;
-    private Image _productImage;
+    private Image? _productImage;
 
     private int? _price;
     private int? _discountedPrice;
     private bool? _inStock;
 
-    private string _productStatus;
-    private string _productCategory;
-    private string _productSupplier;
+    private string? _productStatus;
+    private string? _productCategory;
+    private string? _productSupplier;
     
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -121,7 +121,17 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private void PopulateFormWithProductdata(ProductStock product)
     {
+        ProductName = product.Name;
+        ProductDescription = product.Description;
+        ProductPrice = product.Price;
+        ProductExpiry = product.Expiry;
+        ProductDiscountedPrice = product.DiscountedPrice;
+        ProductSKU = product.Sku;
         
+        SelectedProductSupplier = product.Supplier;
+        SelectedProductStatus = product.Status;
+        SelectedProductCategory = product.Category;
+        // ProductImage = product.Poster; // Don't know how to do this
     }
 
     public string ViewTitle => ViewContext switch
@@ -148,7 +158,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     [Required(ErrorMessage = "Product Name is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string ProductName
+    public string? ProductName
     {
         get => _productName;
         set => SetProperty(ref _productName, value, true);
@@ -157,13 +167,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     [Required(ErrorMessage = "Product SKU is required")]
     [MinLength(8, ErrorMessage = "Must be at least 8-12 characters long")]
     [MaxLength(12, ErrorMessage = "Must not exceed 12 characters")]
-    public string ProductSKU
+    public string? ProductSKU
     {
         get => _productSKU;
         set => SetProperty(ref _productSKU, value, true);
     }
     
-    public string ProductDescription 
+    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
+    [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
+    public string? ProductDescription 
     {
         get => _productDescription;
         set => SetProperty(ref _productDescription, value, true);
@@ -184,7 +196,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _discountedPrice, value, true);
     }
     
-    public string SelectedProductStatus 
+    public string? SelectedProductStatus 
     {
         get => _selectedProductStatusItem;
         set =>  SetProperty(ref _selectedProductStatusItem, value, true);
@@ -196,16 +208,22 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _productExpiry, value, true);
     }
     
-    public string SelectedProductCategory
+    public string? SelectedProductCategory
     {
         get => _selectedProductCategoryItem;
         set =>  SetProperty(ref _selectedProductCategoryItem, value, true);
     }
     
-    public string SelectedProductSupplier
+    public string? SelectedProductSupplier
     {
         get => _selectedSupplierCategoryItem;
         set =>  SetProperty(ref _selectedSupplierCategoryItem, value, true);
+    }
+
+    public Image? ProductImage
+    {
+        get => _productImage;
+        set => SetProperty(ref _productImage, value, true);
     }
 }
 

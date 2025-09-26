@@ -74,7 +74,7 @@
                                     <ComboBox 
                                         Margin="0,-4,0,0"
                                         Grid.Column="1"
-                                        PlaceholderText="Select the product's supplier here"
+                                        PlaceholderText="Select its supplier here"
                                         shadui:ControlAssist.Label="Product Supplier"
                                         ItemsSource="{CompiledBinding ProductSupplierItems}"
                                         SelectedItem="{CompiledBinding SelectedProductSupplier}" />
