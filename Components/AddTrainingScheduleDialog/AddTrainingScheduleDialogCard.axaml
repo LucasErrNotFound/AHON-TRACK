@@ -9,7 +9,7 @@
     x:DataType="viewModels:AddTrainingScheduleDialogCardViewModel"
     mc:Ignorable="d"
     Width="1550"
-    Height="720"
+    MaxHeight="720"
     d:DesignWidth="1550"
     d:DesignHeight="650"
     x:Class="AHON_TRACK.Components.AddTrainingScheduleDialog.AddTrainingScheduleDialogCard">
