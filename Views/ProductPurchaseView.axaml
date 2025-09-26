@@ -406,18 +406,25 @@
                                                         Grid.Row="0" 
                                                         Grid.Column="0"
                                                         Text="{CompiledBinding Title}"
+                                                        HorizontalAlignment="Left"
+                                                        Width="300"
+                                                        TextWrapping="WrapWithOverflow"
                                                         FontSize="17"
                                                         FontWeight="SemiBold"/>
                                                     <TextBlock 
                                                         Grid.Row="1" 
                                                         Grid.Column="0"
+                                                        HorizontalAlignment="Left"
                                                         Text="{CompiledBinding Description}"
+                                                        Width="280"
+                                                        TextWrapping="WrapWithOverflow"
                                                         FontSize="14"
                                                         Classes="Caption Muted"/>
                                                     <TextBlock 
                                                         Grid.Row="2" 
                                                         Grid.Column="0"
                                                         Margin="0,15,0,0"
+                                                        HorizontalAlignment="Left"
                                                         Text="{CompiledBinding FormattedPrice}"
                                                         FontWeight="Bold"
                                                         Classes="h4"/>
