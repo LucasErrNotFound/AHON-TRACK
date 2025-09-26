@@ -9,7 +9,7 @@
     d:DesignWidth="650"
     d:DesignHeight="1130"
     Width="650"
-    Height="830"
+    MaxHeight="900"
     xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
     x:DataType="viewModel:SupplierDialogCardViewModel"
     x:Class="AHON_TRACK.Components.SupplierDialog.SupplierDialogCard">
@@ -61,11 +61,11 @@
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <StackPanel Spacing="0" Margin="0,0,10,0">
                 <TextBlock
-                    Text="Add Supplier Contact"
+                    Text="{CompiledBinding DialogTitle}"
                     Foreground="{DynamicResource FontForeground}"
                     Classes="h4" />
                 <TextBlock
-                    Text="Register new suppliers with their contact to maintain reliable supply management"
+                    Text="{CompiledBinding DialogDescription}"
                     Classes="Muted" />
                 <shadui:Card>
                     <StackPanel>
@@ -81,53 +81,53 @@
                                 VerticalAlignment="Center"
                                 Margin="10,0,0,0"/>
                         </StackPanel>
-                        <Grid RowDefinitions="Auto Auto Auto Auto Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+                        <Grid RowDefinitions="Auto Auto Auto Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
                             <StackPanel Grid.Row="0">
                                 <TextBox
                                     Classes="Clearable"
                                     shadui:ControlAssist.Label="Supplier Name"
-                                    Watermark="e.g., Cobra Yellow Blast">
+                                    Watermark="e.g., Cobra Yellow Blast"
+                                    Text="{CompiledBinding SupplierName, Mode=TwoWay}">
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Grid.Row="1">
                                 <TextBox
                                     Classes="Clearable"
-                                    shadui:ControlAssist.Label="Supplier ID"
-                                    Watermark="e.g., SU-001">
+                                    shadui:ControlAssist.Label="Contact Person"
+                                    Watermark="e.g., Marc Torres"
+                                    Text="{CompiledBinding ContactPerson, Mode=TwoWay}">
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Grid.Row="2">
                                 <TextBox
                                     Classes="Clearable"
-                                    shadui:ControlAssist.Label="Contact Person"
-                                    Watermark="e.g., Marc Torres">
+                                    shadui:ControlAssist.Label="Email"
+                                    Watermark="e.g., mardie.delacruz@yahoo.com"
+                                    Text="{CompiledBinding Email, Mode=TwoWay}">
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Grid.Row="3">
                                 <TextBox
                                     Classes="Clearable"
-                                    shadui:ControlAssist.Label="Email"
-                                    Watermark="e.g., mardie.delacruz@yahoo.com">
+                                    shadui:ControlAssist.Label="Phone"
+                                    Watermark="e.g., 09182273847"
+                                    Text="{CompiledBinding PhoneNumber, Mode=TwoWay}">
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Grid.Row="4">
                                 <TextBox
                                     Classes="Clearable"
-                                    shadui:ControlAssist.Label="Phone"
-                                    Watermark="e.g., 09182273847">
+                                    shadui:ControlAssist.Label="Products"
+                                    Watermark="e.g., Cobra Energy Drink"
+                                    Text="{CompiledBinding Products, Mode=TwoWay}">
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Grid.Row="5">
-                                <TextBox
-                                    Classes="Clearable"
-                                    shadui:ControlAssist.Label="Products"
-                                    Watermark="e.g., Cobra Energy Drink">
-                                </TextBox>
-                            </StackPanel>
-                            <StackPanel Grid.Row="6">
                                 <ComboBox
                                     shadui:ControlAssist.Label="Status"
-                                    PlaceholderText="Select status">
+                                    PlaceholderText="Select status"
+                                    ItemsSource="{CompiledBinding StatusFilterItems, Mode=TwoWay}"
+                                    SelectedItem="{CompiledBinding Status}">
                                 </ComboBox>
                             </StackPanel>
                         </Grid>
@@ -161,7 +161,7 @@
                                 VerticalAlignment="Center"
                                 Margin="0,0,8,0"
                                 Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/plus-icon.svg" />
-                            <TextBlock Text="Add Item" VerticalAlignment="Center" />
+                            <TextBlock Text="Save Item" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
