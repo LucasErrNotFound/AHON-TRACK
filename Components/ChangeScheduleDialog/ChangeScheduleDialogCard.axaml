@@ -9,7 +9,7 @@
     x:DataType="viewModels:ChangeScheduleDialogCardViewModel"
     mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="480"
     Width="400"
-    Height="480"
+    MaxHeight="480"
     x:Class="AHON_TRACK.Components.ChangeScheduleDialog.ChangeScheduleDialogCard">
     
     <Design.DataContext>
@@ -55,7 +55,7 @@
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
             Spacing="15"
-            Margin="0,0,30,15">
+            Margin="0,15,30,30">
             <Button
                 Classes="Destructive"
                 Command="{CompiledBinding DiscardCommand}">
