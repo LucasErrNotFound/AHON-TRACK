@@ -126,8 +126,8 @@
                                 <ComboBox
                                     shadui:ControlAssist.Label="Status"
                                     PlaceholderText="Select status"
-                                    ItemsSource="{CompiledBinding StatusFilterItems, Mode=TwoWay}"
-                                    SelectedItem="{CompiledBinding Status}">
+                                    ItemsSource="{CompiledBinding StatusFilterItems}"
+                                    SelectedItem="{CompiledBinding Status, Mode=TwoWay}">
                                 </ComboBox>
                             </StackPanel>
                         </Grid>
