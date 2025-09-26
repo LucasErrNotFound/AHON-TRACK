@@ -162,7 +162,7 @@
                                 <!-- Category -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="150"
+                                    MinWidth="130"
                                     Header="Category"
                                     Binding="{CompiledBinding Category}" />
                                 
@@ -173,50 +173,57 @@
                                     Header="Current Stock"
                                     Binding="{CompiledBinding CurrentStock}" />
                                 
-                                <!-- Purchase Date -->
+                                <!-- Purchased Price -->
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="160"
-                                    Header="Purchase Date"
-                                    Binding="{CompiledBinding PurchaseDate}" />
+                                    Header="Purchased Price"
+                                    Binding="{CompiledBinding FormattedPurchasedPrice}" />
+                                
+                                <!-- Purchased Date -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="100"
+                                    Header="Purchased Date"
+                                    Binding="{CompiledBinding FormattedPurchasedDate}" />
                                 
                                 <!-- Warranty -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="150"
+                                    MinWidth="120"
                                     Header="Warranty"
-                                    Binding="{CompiledBinding Warranty}" />
+                                    Binding="{CompiledBinding FormattedWarranty}" />
                                 
-                                <!-- Condition -->
+                                <!-- Last Maintenance -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="150"
-                                    Header="Condition"
-                                    Binding="{CompiledBinding Condition}" />
+                                    MinWidth="120"
+                                    Header="Last Maintenance"
+                                    Binding="{CompiledBinding FormattedLastMaintenance}" />
                                 
-                                <!-- Maintenance -->
+                                <!-- Next Maintenance -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="150"
-                                    Header="Maintenance"
-                                    Binding="{CompiledBinding Maintenance}" />
+                                    MinWidth="120"
+                                    Header="Next Maintenance"
+                                    Binding="{CompiledBinding FormattedNextMaintenance}" />
                                 
-                                <!--Status Header Column with Custom Template-->
+                                <!-- Condition Header Column with Custom Template -->
                                 <DataGridTemplateColumn
                                     CanUserSort="False"
-                                    Header="Status"
+                                    Header="Condition"
                                     Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="viewModels:Equipment">
                                             <Border
-                                                Background="{CompiledBinding StatusBackground}"
+                                                Background="{CompiledBinding ConditionBackground}"
                                                 CornerRadius="7"
                                                 Padding="8,4"
                                                 Margin="5,0,0,0"
                                                 HorizontalAlignment="Left">
                                                 <TextBlock
-                                                    Text="{CompiledBinding StatusDisplayText}"
-                                                    Foreground="{CompiledBinding StatusForeground}"
+                                                    Text="{CompiledBinding ConditionDisplayText}"
+                                                    Foreground="{CompiledBinding ConditionForeground}"
                                                     FontSize="13"
                                                     FontWeight="Medium"
                                                     HorizontalAlignment="Center"
@@ -251,7 +258,7 @@
                                                     </shadui:MenuItemAssist.Label>
                                                     <MenuItem
                                                         Header="Edit Equipment"
-                                                        Command="{CompiledBinding}"
+                                                        Command="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).ShowEditEquipmentDialogCommand, FallbackValue={x:Null}}"
                                                         CommandParameter="{CompiledBinding}" />
                                                     <Separator />
                                                     <MenuItem
