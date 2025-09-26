@@ -33,12 +33,6 @@
         <converters:DateToStringConverter x:Key="DateToStringConverter" />
     </UserControl.Resources>
     
-    <UserControl.Styles>
-        <Style Selector="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource FontForeground}"/>
-        </Style>
-    </UserControl.Styles>
-    
     <DockPanel LastChildFill="True">
         <StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
@@ -65,8 +59,8 @@
                                 Grid.Column="0"
                                 HorizontalAlignment="Left"
                                 Watermark="Search Equipment..."
-                                shadui:ControlAssist.ShowProgress="{CompiledBinding }"
-                                Text=""
+                                shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingEquipment}"
+                                Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
                                 shadui:ControlAssist.Height="40"
                                 Classes="Clearable"
                                 Width="400">
@@ -83,7 +77,9 @@
                                 Margin="20,0,0,0"
                                 PlaceholderText="Filter"
                                 HorizontalAlignment="Left"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                ItemsSource="{CompiledBinding EquipmentFilterItems}"
+                                SelectedItem="{CompiledBinding SelectedEquipmentFilterItem}">
                             </ComboBox>
                             <Button
                                 Grid.Column="2"
@@ -122,21 +118,30 @@
                         <DataGrid
                             Height="650"
                             Margin="0,20,0,0"
+                            IsReadOnly="True"
+                            ItemsSource="{CompiledBinding EquipmentItems}"
+                            SelectedItem="{CompiledBinding SelectedEquipment}"
                             CanUserReorderColumns="False"
                             CanUserSortColumns="False"
                             GridLinesVisibility="All"
                             SelectionMode="Single"
                             HeadersVisibility="Column"><!-- The Height property should be MaxHeight in the future -->
+                            
+                            <DataGrid.Styles>
+                                <Style Selector="TextBlock">
+                                    <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+                                </Style>
+                            </DataGrid.Styles>
 
                             <DataGrid.Columns>
-                                <DataGridCheckBoxColumn Binding="{CompiledBinding }" CanUserSort="False" Width="60">
+                                <DataGridCheckBoxColumn Binding="{CompiledBinding IsSelected}" CanUserSort="False" Width="60">
                                     <!--CheckBox Header Column-->
                                     <DataGridCheckBoxColumn.Header>
                                         <CheckBox
                                             x:Name="SelectToggler"
-                                            Command="{CompiledBinding }"
+                                            Command="{CompiledBinding ToggleSelectionCommand}"
                                             CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
-                                            IsChecked="{CompiledBinding }"
+                                            IsChecked="{CompiledBinding SelectAll}"
                                             Margin="8,0"/>
                                     </DataGridCheckBoxColumn.Header>
                                 </DataGridCheckBoxColumn>
@@ -146,69 +151,133 @@
                                     Width="Auto"
                                     MinWidth="80"
                                     Header="ID"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding ID}" />
                                 
                                 <!-- Equipment Name -->
                                 <DataGridTextColumn
                                     Width="*"
-                                    Header="Equipment Name"
-                                    Binding="{CompiledBinding }" />
+                                    Header="Brand Name"
+                                    Binding="{CompiledBinding BrandName}" />
                                 
                                 <!-- Category -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="150"
+                                    MinWidth="130"
                                     Header="Category"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding Category}" />
                                 
                                 <!-- Current Stock -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="90"
+                                    MaxWidth="80"
                                     Header="Current Stock"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding CurrentStock}" />
                                 
-                                <!-- Purchase Date -->
+                                <!-- Purchased Price -->
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="160"
-                                    Header="Purchase Date"
-                                    Binding="{CompiledBinding }" />
+                                    Header="Purchased Price"
+                                    Binding="{CompiledBinding FormattedPurchasedPrice}" />
+                                
+                                <!-- Purchased Date -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="100"
+                                    Header="Purchased Date"
+                                    Binding="{CompiledBinding FormattedPurchasedDate}" />
                                 
                                 <!-- Warranty -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="150"
+                                    MinWidth="120"
                                     Header="Warranty"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding FormattedWarranty}" />
                                 
-                                <!-- Condition -->
-                                <DataGridTextColumn
-                                    Width="Auto"
-                                    MinWidth="150"
-                                    Header="Condition"
-                                    Binding="{CompiledBinding }" />
-                                
-                                <!-- Maintenance -->
-                                <DataGridTextColumn
-                                    Width="Auto"
-                                    MinWidth="150"
-                                    Header="Maintenance"
-                                    Binding="{CompiledBinding }" />
-                                
-                                <!-- Status -->
+                                <!-- Last Maintenance -->
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="120"
-                                    Header="Status"
-                                    Binding="{CompiledBinding }" />
+                                    Header="Last Maintenance"
+                                    Binding="{CompiledBinding FormattedLastMaintenance}" />
                                 
-                                <!-- Action -->
+                                <!-- Next Maintenance -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="80"
-                                    Header="Action"
-                                    Binding="{CompiledBinding }" />
+                                    MinWidth="120"
+                                    Header="Next Maintenance"
+                                    Binding="{CompiledBinding FormattedNextMaintenance}" />
+                                
+                                <!-- Condition Header Column with Custom Template -->
+                                <DataGridTemplateColumn
+                                    CanUserSort="False"
+                                    Header="Condition"
+                                    Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="viewModels:Equipment">
+                                            <Border
+                                                Background="{CompiledBinding ConditionBackground}"
+                                                CornerRadius="7"
+                                                Padding="8,4"
+                                                Margin="5,0,0,0"
+                                                HorizontalAlignment="Left">
+                                                <TextBlock
+                                                    Text="{CompiledBinding ConditionDisplayText}"
+                                                    Foreground="{CompiledBinding ConditionForeground}"
+                                                    FontSize="13"
+                                                    FontWeight="Medium"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                
+                                <!-- Action -->
+                                <DataGridTemplateColumn CanUserResize="False" CanUserSort="False" Width="60">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="viewModels:Equipment">
+                                            <Menu>
+                                                <MenuItem
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Classes="Icon Grid"
+                                                    shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+                                                    <MenuItem.Header>
+                                                        <Svg
+                                                            Width="24"
+                                                            Height="24"
+                                                            Path="/Assets/EquipmentInventoryView/three-dots-icon.svg"/>
+                                                    </MenuItem.Header>
+                                                    <shadui:MenuItemAssist.Label>
+                                                        <TextBlock 
+                                                            Text="Actions" 
+                                                            FontSize="15" 
+                                                            FontWeight="Regular" 
+                                                            Foreground="{DynamicResource MutedColor}"/>
+                                                    </shadui:MenuItemAssist.Label>
+                                                    <MenuItem
+                                                        Header="Edit Equipment"
+                                                        Command="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).ShowEditEquipmentDialogCommand, FallbackValue={x:Null}}"
+                                                        CommandParameter="{CompiledBinding}" />
+                                                    <Separator />
+                                                    <MenuItem
+                                                        Header="Delete"
+                                                        Foreground="{DynamicResource DestructiveColor}"
+                                                        Command="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                        CommandParameter="{CompiledBinding}"
+                                                        IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"/>
+                                                    <MenuItem
+                                                        Header="Delete Selected"
+                                                        Foreground="{DynamicResource DestructiveColor}"
+                                                        Command="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                        CommandParameter="{CompiledBinding}"
+                                                        IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
+                                                </MenuItem>
+                                            </Menu>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </StackPanel>

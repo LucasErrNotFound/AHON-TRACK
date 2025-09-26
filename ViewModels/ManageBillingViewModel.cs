@@ -387,7 +387,6 @@ public class RecentActivity
     public decimal Amount { get; init; }
     public string AvatarSource { get; set; } = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
-    // Formatted currency for display
     public string FormattedAmount => $"+₱{Amount:F2}";
     public string DateFormatted => PurchaseDate?.ToString("MMMM dd, yyyy dddd") ?? string.Empty;
     public string PicturePath => string.IsNullOrEmpty(AvatarSource) || AvatarSource == "null"
@@ -422,7 +421,7 @@ public partial class Invoices : ObservableObject
     public string DateFormatted => DatePurchased?.ToString("MMMM dd, yyyy dddd") ?? string.Empty;
 }
 
-public class Package
+public partial class Package : ObservableObject
 {
     public int PackageId { get; set; }
     public string Title { get; set; } = string.Empty;
@@ -440,4 +439,7 @@ public class Package
     public string SelectedDiscountType { get; set; } = string.Empty;
     public DateOnly? DiscountValidFrom { get; set; }
     public DateOnly? DiscountValidTo { get; set; }
+    
+    [ObservableProperty]
+    private bool _isAddedToCart;
 }

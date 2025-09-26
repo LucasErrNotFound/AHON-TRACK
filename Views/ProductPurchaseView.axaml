@@ -7,7 +7,6 @@
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
     xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
-    xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
     x:DataType="viewModels:ProductPurchaseViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
     x:Class="AHON_TRACK.Views.ProductPurchaseView">
@@ -58,18 +57,18 @@
                 Text="Manage customer purchases of gym products and supplements"
                 TextWrapping="Wrap"
                 Margin="90,0" />
-		</StackPanel>
-		<ScrollViewer VerticalScrollBarVisibility="Auto">
-			<Interaction.Behaviors>
-				<scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
-			</Interaction.Behaviors>
-			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,48,24" Spacing="16">
-				<Grid ColumnDefinitions="* *" ColumnSpacing="30">
-					<shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="480">
-						<StackPanel>
-							<shadui:CardTitle Content="Select a customer" />
-							<Grid ColumnDefinitions="Auto Auto" ColumnSpacing="10">
-								<TextBox
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Interaction.Behaviors>
+                <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+            </Interaction.Behaviors>
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,48,24" Spacing="16">
+                <Grid ColumnDefinitions="* *" ColumnSpacing="30">
+                    <shadui:Card Grid.Column="0" VerticalAlignment="Top" MaxHeight="850">
+                        <StackPanel>
+                            <shadui:CardTitle Content="Select a customer" />
+                            <Grid ColumnDefinitions="Auto Auto" ColumnSpacing="10">
+                                <TextBox
                                     Grid.Column="0"
                                     Width="300"
                                     HorizontalAlignment="Left"
@@ -93,12 +92,12 @@
                                     PlaceholderText="Filter"
                                     ItemsSource="{CompiledBinding CustomerTypeFilterItems}"
                                     SelectedItem="{CompiledBinding SelectedCustomerTypeFilterItem}"/>
-							</Grid>
-							<ScrollViewer HorizontalScrollBarVisibility="Auto">
-								<Interaction.Behaviors>
-									<scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
-								</Interaction.Behaviors>
-								<DataGrid
+                            </Grid>
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                                <Interaction.Behaviors>
+                                    <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+                                </Interaction.Behaviors>
+                                <DataGrid
                                     Height="335"
                                     Width="695"
                                     IsReadOnly="True"
@@ -134,56 +133,56 @@
                                             MinWidth="250"
                                             Header="Customer Type"
                                             Binding="{CompiledBinding CustomerType}" />
-									</DataGrid.Columns>
-								</DataGrid>
-							</ScrollViewer>
-						</StackPanel>
-					</shadui:Card>
-					<shadui:Card Grid.Column="1" Margin="0,0,100,0">
-						<DockPanel>
-							<shadui:CardTitle Content="Purchase Summary"  DockPanel.Dock="Top"/>
-							<!-- Customer Details -->
-							<Grid RowDefinitions="Auto" ColumnDefinitions="Auto" DockPanel.Dock="Left">
-								<StackPanel>
-									<StackPanel Orientation="Horizontal" Margin="0,20,0,5" Spacing="15">
-										<Svg
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </shadui:Card>
+                    <shadui:Card Grid.Column="1" Margin="0,0,100,0">
+                        <DockPanel>
+                            <shadui:CardTitle Content="Purchase Summary"  DockPanel.Dock="Top"/>
+                            <!-- Customer Details -->
+                            <Grid RowDefinitions="Auto" ColumnDefinitions="Auto" DockPanel.Dock="Left">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,20,0,5" Spacing="15">
+                                        <Svg
                                             Path="avares://AHON_TRACK/Assets/ProductPurchaseView/user-icon.svg"
                                             Width="28"
                                             Height="28"
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Center"/>
-										<TextBlock
+                                        <TextBlock
                                             Classes="Caption Muted"
                                             FontSize="16"
                                             Text="Customer Details"
                                             VerticalAlignment="Center"/>
-									</StackPanel>
-									<StackPanel Orientation="Vertical" Margin="0,0,0,0">
-										<TextBlock
+                                    </StackPanel>
+                                    <StackPanel Orientation="Vertical" Margin="0,0,0,0">
+                                        <TextBlock
                                             Text="{CompiledBinding CustomerFullName}"
                                             Classes="h4"/>
-										<TextBlock
+                                        <TextBlock
                                             Text="ID: GM-2025-001234"
                                             FontSize="15"
                                             Classes="Caption Muted"/>
-									</StackPanel>
-								</StackPanel>
-							</Grid>
-							<Separator
-                                Width="700"
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                            <Separator 
+                                Width="700" 
                                 Background="{StaticResource ForegroundColor}"
                                 Margin="0,-90,0,0"/>
-						</DockPanel>
-						<shadui:Card.Footer>
-							<Button Classes="Primary" Content="Pay $4,500" HorizontalAlignment="Right">
-							</Button>
-						</shadui:Card.Footer>
-					</shadui:Card>
-				</Grid>
-				<shadui:Card MaxHeight="900">
-					<StackPanel>
-						<StackPanel Orientation="Horizontal" Spacing="20">
-							<TextBox
+                        </DockPanel>
+                        <shadui:Card.Footer>
+                            <Button Classes="Primary" Content="Pay $4,500" HorizontalAlignment="Right">
+                            </Button>
+                        </shadui:Card.Footer>
+                    </shadui:Card>
+                </Grid>
+                <shadui:Card MaxHeight="900">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="20">
+                            <TextBox
                                 Width="400"
                                 HorizontalAlignment="Left"
                                 shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingProduct}"
@@ -262,8 +261,8 @@
                                                     Classes="Primary"
                                                     Width="260"
                                                     Margin="0,30,0,0">
-													<StackPanel Orientation="Horizontal">
-														<Svg
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Svg
                                                             Width="18"
                                                             Height="18"
                                                             Margin="0,0,10,0"
@@ -320,20 +319,20 @@
                                                                         Text="{CompiledBinding }"
                                                                         FontSize="14"
                                                                         Margin="0,4" VerticalAlignment="Center" />
-																</StackPanel>
-															</DataTemplate>
-														</ItemsControl.ItemTemplate>
-													</ItemsControl>
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
 
-													<Button
-                                                        Classes="Primary"
+                                                    <Button 
+                                                        Classes="Primary" 
                                                         HorizontalAlignment="Center"
-                                                        Padding="65,0"
+                                                        Padding="65,0" 
                                                         Margin="0,30,0,0">
-														<StackPanel Orientation="Horizontal">
-															<Svg
-                                                                Width="18"
-                                                                Height="18"
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Svg 
+                                                                Width="18" 
+                                                                Height="18" 
                                                                 Margin="0,0,10,0"
                                                                 VerticalAlignment="Center"
                                                                 Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
