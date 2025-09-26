@@ -121,11 +121,13 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 BrandName = "Exterminator Smith Machine",
                 Category = "Machines",
                 CurrentStock = 3,
-                PurchaseDate = DateOnly.FromDateTime(today),
-                Warranty = DateOnly.FromDateTime(today.AddMonths(36)),
+                Supplier = "Optimum",
+                PurchasedPrice = 185000,
+                PurchasedDate = today,
+                Warranty = today.AddMonths(36),
                 Condition = "Excellent",
-                Maintenance = DateOnly.FromDateTime(today.AddDays(24)),
-                Status = "Active"
+                LastMaintenance = today.AddDays(-8),
+                NextMaintenance = today.AddDays(24)
             },
             new Equipment
             {
@@ -133,11 +135,13 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 BrandName = "Ricky Hatt Dumbells",
                 Category = "Strength",
                 CurrentStock = 20,
-                PurchaseDate = DateOnly.FromDateTime(today),
-                Warranty = DateOnly.FromDateTime(today.AddMonths(48)),
-                Condition = "Excellent",
-                Maintenance = DateOnly.FromDateTime(today.AddDays(24)),
-                Status = "Inactive"
+                Supplier = "FitLab",
+                PurchasedPrice = 65000,
+                PurchasedDate = today,
+                Warranty = today.AddMonths(48),
+                Condition = "Repairing",
+                LastMaintenance = today.AddDays(-8),
+                NextMaintenance = today.AddDays(24)
             },
             new Equipment
             {
@@ -145,11 +149,13 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 BrandName = "Pacquiao Boxing Gloves",
                 Category = "Accessories",
                 CurrentStock = 4,
-                PurchaseDate = DateOnly.FromDateTime(today),
-                Warranty = DateOnly.FromDateTime(today.AddMonths(36)),
-                Condition = "Excellent",
-                Maintenance = DateOnly.FromDateTime(today.AddDays(24)),
-                Status = "Active"
+                Supplier = "San Miguel",
+                PurchasedPrice = 25000,
+                PurchasedDate = today,
+                Warranty = today.AddMonths(36),
+                Condition = "Broken",
+                LastMaintenance = today.AddDays(-8),
+                NextMaintenance = today.AddDays(24)
             },
         ];
     }
@@ -233,11 +239,10 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             await Task.Delay(500);
 
             var filteredEquipments = CurrentFilteredEquipmentData.Where(equipment =>
-                equipment is { BrandName: not null, Category: not null, Condition: not null, Status: not null } && 
+                equipment is { BrandName: not null, Category: not null, Condition: not null, Condition: not null } && 
                 (equipment.BrandName.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) || 
                  equipment.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                 equipment.Condition.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                 equipment.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
+                 equipment.Condition.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             EquipmentItems.Clear();
@@ -252,6 +257,28 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         {
             IsSearchingEquipment = false;
         }
+    }
+
+    [RelayCommand]
+    private void ShowEditEquipmentDialog(Equipment? equipment)
+    {
+        if (equipment == null) return;
+
+        _equipmentDialogCardViewModel.InitializeForEditMode(equipment);
+        _dialogManager.CreateDialog(_equipmentDialogCardViewModel)
+            .WithSuccessCallback(_ =>
+            {
+                _toastManager.CreateToast("Modified equipment details")
+                    .WithContent($"You have successfully modified {equipment.BrandName}!")
+                    .DismissOnClick()
+                    .ShowSuccess();
+            })
+            .WithCancelCallback(() => 
+                _toastManager.CreateToast("Modifying Employee Details Cancelled")
+                    .WithContent("Click the three-dots if you want to modify your employees' details")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(950)
+            .Show();
     }
 
     [RelayCommand]
@@ -359,51 +386,66 @@ public partial class Equipment : ObservableObject
     private string? _category;
     
     [ObservableProperty] 
+    private string? _supplier;
+    
+    [ObservableProperty] 
     private int? _currentStock;
     
     [ObservableProperty] 
-    private DateOnly? _purchaseDate;
+    private int? _purchasedPrice;
     
     [ObservableProperty] 
-    private DateOnly? _warranty;
+    private DateTime? _purchasedDate;
+    
+    [ObservableProperty] 
+    private DateTime? _warranty;
     
     [ObservableProperty] 
     private string? _condition;
     
     [ObservableProperty] 
-    private DateOnly? _maintenance;
+    private DateTime? _lastMaintenance;
     
     [ObservableProperty] 
-    private string? _status;
+    private DateTime? _nextMaintenance;
     
     [ObservableProperty] 
     private bool _isSelected;
+
+    public string FormattedWarranty => Warranty.HasValue ? $"{Warranty.Value:MM/dd/yyyy}" : string.Empty;
+    public string FormattedPurchasedDate => PurchasedDate.HasValue ? $"{PurchasedDate.Value:MM/dd/yyyy}" : string.Empty;
+    public string FormattedLastMaintenance => LastMaintenance.HasValue ? $"{LastMaintenance.Value:MM/dd/yyyy}" : string.Empty;
+    public string FormattedNextMaintenance => NextMaintenance.HasValue ? $"{NextMaintenance.Value:MM/dd/yyyy}" : string.Empty;
+    public string FormattedPurchasedPrice => $"₱{PurchasedPrice:N2}";
     
-    public IBrush StatusForeground => Status.ToLowerInvariant() switch
+    public IBrush ConditionForeground => Condition?.ToLowerInvariant() switch
     {
-        "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500
-        "inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)), // Gray-500
-        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
+        "excellent" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),           // Green-500
+        "repairing" => new SolidColorBrush(Color.FromRgb(100, 116, 139)), // Gray-500
+        "broken" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),              // Red-500
+        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))                    // Default Gray-500
     };
 
-    public IBrush StatusBackground => Status.ToLowerInvariant() switch
+    public IBrush ConditionBackground => Condition?.ToLowerInvariant() switch
     {
-        "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
-        "inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)), // Gray-500 with alpha
+        "excellent" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),   // Green-500 with alpha
+        "repairing" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)), // Gray-500 with alpha
+        "broken" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),             // Red-500 with alpha
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))           // Default Gray-500 with alpha
     };
 
-    public string StatusDisplayText => Status.ToLowerInvariant() switch
+    public string? ConditionDisplayText => Condition?.ToLowerInvariant() switch
     {
-        "active" => "● Active",
-        "inactive" => "● Inactive",
-        _ => Status
+        "excellent" => "● Excellent",
+        "repairing" => "● Repairing",
+        "broken" => "● Broken",
+        _ => Condition
     };
 
-    partial void OnStatusChanged(string value)
+    partial void OnConditionChanged(string value)
     {
-        OnPropertyChanged(nameof(StatusForeground));
-        OnPropertyChanged(nameof(StatusBackground));
-        OnPropertyChanged(nameof(StatusDisplayText));
+        OnPropertyChanged(nameof(ConditionForeground));
+        OnPropertyChanged(nameof(ConditionBackground));
+        OnPropertyChanged(nameof(ConditionDisplayText));
     }
 }
