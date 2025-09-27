@@ -39,7 +39,13 @@
 				FontWeight="SemiBold"
 				Text="Manage Employees"
 				Foreground="{StaticResource FontForeground}"
-				Margin="90,30"/>
+				Margin="90,30,0,0"/>
+			<TextBlock
+				Classes="Caption Muted"
+				FontSize="14"
+				Text="Track and manage employees, with options to add, edit, or remove admin and staff accounts"
+				TextWrapping="Wrap"
+				Margin="90,0" />
 		</StackPanel>
 		<ScrollViewer HorizontalScrollBarVisibility="Auto">
 			<Interaction.Behaviors>
