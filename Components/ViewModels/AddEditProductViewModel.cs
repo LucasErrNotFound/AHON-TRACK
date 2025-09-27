@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ShadUI;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -11,37 +12,46 @@ using HotAvalonia;
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("add-new-product")]
-public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters
 {
+    [ObservableProperty] 
+    private ProductViewContext _viewContext = ProductViewContext.AddProduct;
+    
     [ObservableProperty]
     private string[] _productStatusItems = ["In Stock", "Out of Stock"];
-    private string _selectedProductStatusItem = "In Stock";
+    private string? _selectedProductStatusItem = "In Stock";
     
     [ObservableProperty]
-    private string[] _productCategoryItems = ["Drinks", "Supplements", "Apparel", "Products"];
-    private string  _selectedProductCategoryItem = "Drinks";
+    private string[] _productCategoryItems = ["None", "Drinks", "Supplements", "Apparel", "Products"];
+    private string?  _selectedProductCategoryItem = "None";
     
     [ObservableProperty]
-    private string[] _productSupplierItems = ["None", "San Miguel Foods", "Tender Juicy", "AHON Factory", "Nike"];
-    private string  _selectedSupplierCategoryItem = "Tender Juicy";
+    private string[] _productSupplierItems = ["None", "San Miguel", "Optimum", "AHON Factory", "Nike"];
+    private string?  _selectedSupplierCategoryItem = "Tender Juicy";
+
+    [ObservableProperty] 
+    private bool _isPercentageModeOn;
     
-    private string _productName = string.Empty;
-    private string _productSKU = string.Empty;
-    private string _productDescription = string.Empty;
+    private string? _productName = string.Empty;
+    private string? _productSKU = string.Empty;
+    private string? _productDescription = string.Empty;
     private DateTime? _productExpiry;
-    private Image _productImage;
+    private Image? _productImage;
 
     private int? _price;
     private int? _discountedPrice;
     private bool? _inStock;
 
-    private string _productStatus;
-    private string _productCategory;
-    private string _productSupplier;
+    private string? _productStatus;
+    private string? _productCategory;
+    private string? _productSupplier;
     
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    
+    public string DiscountSymbol => IsPercentageModeOn ? "%" : "₱";
+    public string DiscountFormat => IsPercentageModeOn ? "N2" : "N0";
     
     public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
@@ -61,6 +71,18 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
     public void Initialize()
     {
     }
+    
+    public void SetNavigationParameters(Dictionary<string, object> parameters)
+    {
+        if (parameters.TryGetValue("Context", out var context))
+        {
+            SetViewContext((ProductViewContext)context);
+        }
+        
+        if (!parameters.TryGetValue("SelectedProduct", out var product)) return;
+        var selectedProduct = (ProductStock)product;
+        PopulateFormWithProductdata(selectedProduct);
+    }
 
     [RelayCommand]
     private void PublishProduct()
@@ -69,15 +91,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
 
         if (HasErrors) return;
         PublishSwitchBack();
-    }
-    
-    private void PublishSwitchBack()
-    {
-        _toastManager.CreateToast("Publish Product")
-            .WithContent("Product published successfully")
-            .DismissOnClick()
-            .ShowSuccess();
-        _pageManager.Navigate<ProductStockViewModel>();
     }
 
     [RelayCommand]
@@ -93,6 +106,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
             .Dismissible()
             .Show();
     }
+    
+    private void PublishSwitchBack()
+    {
+        _toastManager.CreateToast("Publish Product")
+            .WithContent("Product published successfully")
+            .DismissOnClick()
+            .ShowSuccess();
+        _pageManager.Navigate<ProductStockViewModel>();
+    }
 
     private void DiscardSwitchBack()
     {
@@ -103,10 +125,47 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
         _pageManager.Navigate<ProductStockViewModel>();
     }
 
+    private void PopulateFormWithProductdata(ProductStock product)
+    {
+        ProductName = product.Name;
+        ProductDescription = product.Description;
+        ProductPrice = product.Price;
+        ProductExpiry = product.Expiry;
+        IsPercentageModeOn = product.DiscountInPercentage;
+        ProductDiscountedPrice = product.DiscountedPrice;
+        ProductSKU = product.Sku;
+        
+        SelectedProductSupplier = product.Supplier;
+        SelectedProductStatus = product.Status;
+        SelectedProductCategory = product.Category;
+        // ProductImage = product.Poster; // Don't know how to do this
+    }
+
+    public string ViewTitle => ViewContext switch
+    {
+        ProductViewContext.AddProduct => "Add Product",
+        ProductViewContext.EditProduct => "Edit Product",
+        _ => "Add Product"
+    };
+    
+    public string ViewDescription => ViewContext switch
+    {
+        ProductViewContext.AddProduct => "Add new gym products with details like name, price, and stock to keep your inventory up to date",
+        ProductViewContext.EditProduct => "Edit existing gym products with details like name, price, and stock to keep your inventory up to date",
+        _ => "Add new gym products with details like name, price, and stock to keep your inventory up to date"
+    };
+    
+    public void SetViewContext(ProductViewContext context)
+    {
+        ViewContext = context;
+        OnPropertyChanged(nameof(ViewTitle));
+        OnPropertyChanged(nameof(ViewDescription));
+    }
+
     [Required(ErrorMessage = "Product Name is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string ProductName
+    public string? ProductName
     {
         get => _productName;
         set => SetProperty(ref _productName, value, true);
@@ -115,13 +174,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
     [Required(ErrorMessage = "Product SKU is required")]
     [MinLength(8, ErrorMessage = "Must be at least 8-12 characters long")]
     [MaxLength(12, ErrorMessage = "Must not exceed 12 characters")]
-    public string ProductSKU
+    public string? ProductSKU
     {
         get => _productSKU;
         set => SetProperty(ref _productSKU, value, true);
     }
     
-    public string ProductDescription 
+    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
+    [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
+    public string? ProductDescription 
     {
         get => _productDescription;
         set => SetProperty(ref _productDescription, value, true);
@@ -135,14 +196,14 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
         set => SetProperty(ref _price, value, true);
     }
     
-    [Range(5, 15000, ErrorMessage = "Price must be between 5 and 15,000")]
+    [Range(1, 15000, ErrorMessage = "Price must be between 1 and 15,000")]
     public int? ProductDiscountedPrice
     {
         get => _discountedPrice;
         set => SetProperty(ref _discountedPrice, value, true);
     }
     
-    public string SelectedProductStatus 
+    public string? SelectedProductStatus 
     {
         get => _selectedProductStatusItem;
         set =>  SetProperty(ref _selectedProductStatusItem, value, true);
@@ -154,15 +215,33 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigable, INotif
         set => SetProperty(ref _productExpiry, value, true);
     }
     
-    public string SelectedProductCategory
+    public string? SelectedProductCategory
     {
         get => _selectedProductCategoryItem;
         set =>  SetProperty(ref _selectedProductCategoryItem, value, true);
     }
     
-    public string SelectedProductSupplier
+    public string? SelectedProductSupplier
     {
         get => _selectedSupplierCategoryItem;
         set =>  SetProperty(ref _selectedSupplierCategoryItem, value, true);
     }
+
+    public Image? ProductImage
+    {
+        get => _productImage;
+        set => SetProperty(ref _productImage, value, true);
+    }
+    
+    partial void OnIsPercentageModeOnChanged(bool value)
+    {
+        OnPropertyChanged(nameof(DiscountSymbol));
+        OnPropertyChanged(nameof(DiscountFormat));
+    }
+}
+
+public enum ProductViewContext
+{
+    AddProduct,
+    EditProduct
 }

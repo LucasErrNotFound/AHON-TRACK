@@ -33,12 +33,6 @@
         <converters:DateToStringConverter x:Key="DateToStringConverter" />
     </UserControl.Resources>
 
-    <UserControl.Styles>
-        <Style Selector="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource FontForeground}" />
-        </Style>
-    </UserControl.Styles>
-
     <DockPanel LastChildFill="True">
         <StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
@@ -65,8 +59,8 @@
                                 Grid.Column="0"
                                 HorizontalAlignment="Left"
                                 Watermark="Search products..."
-                                shadui:ControlAssist.ShowProgress="{CompiledBinding }"
-                                Text=""
+                                shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingProduct}"
+                                Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
                                 shadui:ControlAssist.Height="40"
                                 Classes="Clearable"
                                 Width="400">
@@ -83,7 +77,9 @@
                                 Margin="20,0,0,0"
                                 PlaceholderText="Filter"
                                 HorizontalAlignment="Left"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                ItemsSource="{CompiledBinding ProductFilterItems}"
+                                SelectedItem="{CompiledBinding SelectedProductFilterItem}">
                             </ComboBox>
                             <Button
                                 Grid.Column="2"
@@ -107,7 +103,7 @@
                                 Margin="20,0,0,0"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
-                                Command="{CompiledBinding ShowAddProductDialogCommand}">
+                                Command="{CompiledBinding ShowAddProductViewCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Svg
                                         Width="20"
@@ -126,17 +122,25 @@
                             CanUserSortColumns="False"
                             GridLinesVisibility="All"
                             SelectionMode="Single"
-                            HeadersVisibility="Column"><!-- The Height property should be MaxHeight in the future -->
+                            HeadersVisibility="Column"
+                            ItemsSource="{CompiledBinding ProductItems}"
+                            SelectedItem="{CompiledBinding SelectedProduct}"><!-- The Height property should be MaxHeight in the future -->
+                            
+                            <DataGrid.Styles>
+                                <Style Selector="TextBlock">
+                                    <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+                                </Style>
+                            </DataGrid.Styles>
 
                             <DataGrid.Columns>
-                                <DataGridCheckBoxColumn Binding="{CompiledBinding }" CanUserSort="False" Width="60">
+                                <DataGridCheckBoxColumn Binding="{CompiledBinding IsSelected}" CanUserSort="False" Width="60">
                                     <!--CheckBox Header Column-->
                                     <DataGridCheckBoxColumn.Header>
                                         <CheckBox
                                             x:Name="SelectToggler"
-                                            Command="{CompiledBinding }"
+                                            Command="{CompiledBinding ToggleSelectionCommand}"
                                             CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
-                                            IsChecked="{CompiledBinding }"
+                                            IsChecked="{CompiledBinding SelectAll}"
                                             Margin="8,0" />
                                     </DataGridCheckBoxColumn.Header>
                                 </DataGridCheckBoxColumn>
@@ -146,62 +150,126 @@
                                     Width="Auto"
                                     MinWidth="80"
                                     Header="ID"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding ID}" />
 
                                 <!-- Product Name -->
                                 <DataGridTextColumn
                                     Width="*"
                                     Header="Product Name"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding Name}" />
+                                
+                                <!-- SKU -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="150"
+                                    Header="SKU"
+                                    Binding="{CompiledBinding Sku}" />
 
                                 <!-- Category -->
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="160"
                                     Header="Category"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding Category}" />
 
                                 <!-- Current Stock -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="160"
+                                    MinWidth="100"
                                     Header="Current Stock"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding CurrentStock}" />
 
                                 <!-- Price -->
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="130"
                                     Header="Price"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding FormattedPrice}" />
 
                                 <!-- Supplier -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="190"
+                                    MinWidth="150"
                                     Header="Supplier"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding Supplier}" />
                                 
                                 <!-- Expiry -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="120"
+                                    MinWidth="140"
                                     Header="Expiry"
-                                    Binding="{CompiledBinding }" />
+                                    Binding="{CompiledBinding FormattedExpiry}" />
 
                                 <!-- Status -->
-                                <DataGridTextColumn
-                                    Width="Auto"
-                                    MinWidth="170"
+                                <DataGridTemplateColumn
+                                    CanUserSort="False"
                                     Header="Status"
-                                    Binding="{CompiledBinding }" />
+                                    Width="170">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="viewModels:ProductStock">
+                                            <Border
+                                                Background="{CompiledBinding StatusBackground}"
+                                                CornerRadius="7"
+                                                Padding="8,4"
+                                                Margin="5,0,0,0"
+                                                HorizontalAlignment="Left">
+                                                <TextBlock
+                                                    Text="{CompiledBinding StatusDisplayText}"
+                                                    Foreground="{CompiledBinding StatusForeground}"
+                                                    FontSize="13"
+                                                    FontWeight="Medium"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
 
                                 <!-- Action -->
-                                <DataGridTextColumn
-                                    Width="Auto"
-                                    MinWidth="80"
-                                    Header="Action"
-                                    Binding="{CompiledBinding }" />
+                                <DataGridTemplateColumn CanUserResize="False" CanUserSort="False" Width="60">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="viewModels:Equipment">
+                                            <Menu>
+                                                <MenuItem
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Classes="Icon Grid"
+                                                    shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+                                                    <MenuItem.Header>
+                                                        <Svg
+                                                            Width="24"
+                                                            Height="24"
+                                                            Path="/Assets/ProductStockView/three-dots-icon.svg"/>
+                                                    </MenuItem.Header>
+                                                    <shadui:MenuItemAssist.Label>
+                                                        <TextBlock 
+                                                            Text="Actions" 
+                                                            FontSize="15" 
+                                                            FontWeight="Regular" 
+                                                            Foreground="{DynamicResource MutedColor}"/>
+                                                    </shadui:MenuItemAssist.Label>
+                                                    <MenuItem
+                                                        Header="Edit Equipment"
+                                                        Command="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).ShowEditProductViewCommand, FallbackValue={x:Null}}"
+                                                        CommandParameter="{CompiledBinding}" />
+                                                    <Separator />
+                                                    <MenuItem
+                                                        Header="Delete"
+                                                        Foreground="{DynamicResource DestructiveColor}"
+                                                        Command="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                        CommandParameter="{CompiledBinding}"
+                                                        IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"/>
+                                                    <MenuItem
+                                                        Header="Delete Selected"
+                                                        Foreground="{DynamicResource DestructiveColor}"
+                                                        Command="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                        CommandParameter="{CompiledBinding}"
+                                                        IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
+                                                </MenuItem>
+                                            </Menu>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </StackPanel>

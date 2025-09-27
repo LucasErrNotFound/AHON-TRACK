@@ -78,23 +78,16 @@
 									VerticalAlignment="Center"
 									PlaceholderText="Sort Data"
 									Margin="20,0"
-									Width="150"
-									SelectedIndex="{CompiledBinding SelectedSortIndex}">
-									<ComboBoxItem Content="By ID" />
-									<ComboBoxItem Content="Names by A-Z" />
-									<ComboBoxItem Content="Names by Z-A" />
-									<ComboBoxItem Content="By newest to oldest" />
-									<ComboBoxItem Content="By oldest to newest" />
-									<ComboBoxItem Content="Reset Data" />
-								</ComboBox>
+									Width="180"
+									ItemsSource="{CompiledBinding SortFilterItems}"
+									SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
 								<ComboBox
 									HorizontalAlignment="Left"
 									VerticalAlignment="Center"
 									PlaceholderText="Filter"
 									Width="150"
-									SelectedIndex="{CompiledBinding SelectedFilterIndex}">
-									<ComboBoxItem Content="By active" />
-									<ComboBoxItem Content="By expired" />
+									ItemsSource="{CompiledBinding StatusFilterItems}"
+									SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
 								</ComboBox>
 								<Button
 									HorizontalAlignment="Right"

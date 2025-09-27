@@ -75,7 +75,7 @@
                             Watermark="e.g., Free Trial, Monthly Membership"
                             Classes="Clearable"
                             shadui:ControlAssist.Label="Package Name"
-                            Text="{CompiledBinding PackageName}">
+                            Text="{CompiledBinding PackageName, Mode=TwoWay}">
                         </TextBox>
                     </StackPanel>
                     <StackPanel Grid.Row="1">
@@ -85,7 +85,7 @@
                             shadui:ControlAssist.Label="Description"
                             shadui:ControlAssist.Height="100"
                             AcceptsReturn="True"
-                            Text="{CompiledBinding Description}"
+                            Text="{CompiledBinding Description, Mode=TwoWay}"
                             HorizontalAlignment="Left"
                             TextWrapping="Wrap">
                         </TextBox>
@@ -101,7 +101,7 @@
                             ShowButtonSpinner="False"
                             Watermark="0"
                             HorizontalAlignment="Left"
-                            Value="{CompiledBinding Price}">
+                            Value="{CompiledBinding Price, Mode=TwoWay}">
                             <NumericUpDown.InnerLeftContent>
                                 <TextBlock Margin="8,0,-8,0" Text="₱" />
                             </NumericUpDown.InnerLeftContent>
@@ -115,7 +115,7 @@
                             shadui:ControlAssist.Height="38"
                             Margin="0,-4,0,0"
                             HorizontalAlignment="Right"
-                            Text="{CompiledBinding Duration}">
+                            Text="{CompiledBinding Duration, Mode=TwoWay}">
                         </TextBox>
                     </StackPanel>
                 </Grid>
@@ -126,35 +126,35 @@
                         Classes="Clearable"
                         shadui:ControlAssist.Label="Package Features"
                         Watermark="Enter feature description"
-                        Text="{CompiledBinding FeatureDescription1}">
+                        Text="{CompiledBinding FeatureDescription1, Mode=TwoWay}">
                     </TextBox>
                     <TextBox 
                         Grid.Row="1"
                         Width="478"
                         Classes="Clearable"
                         Watermark="Enter feature description"
-                        Text="{CompiledBinding FeatureDescription2}">
+                        Text="{CompiledBinding FeatureDescription2, Mode=TwoWay}">
                     </TextBox>
                     <TextBox 
                         Grid.Row="2"
                         Width="478"
                         Classes="Clearable"
                         Watermark="Enter feature description"
-                        Text="{CompiledBinding FeatureDescription3}">
+                        Text="{CompiledBinding FeatureDescription3, Mode=TwoWay}">
                     </TextBox>
                     <TextBox 
                         Grid.Row="3"
                         Width="478"
                         Classes="Clearable"
                         Watermark="Enter feature description"
-                        Text="{CompiledBinding FeatureDescription4}">
+                        Text="{CompiledBinding FeatureDescription4, Mode=TwoWay}">
                     </TextBox>
                     <TextBox 
                         Grid.Row="4"
                         Width="478"
                         Classes="Clearable"
                         Watermark="Enter feature description"
-                        Text="{CompiledBinding FeatureDescription5}">
+                        Text="{CompiledBinding FeatureDescription5, Mode=TwoWay}">
                     </TextBox>
                 </Grid>
                 <Separator Margin="0,15,0,0"/>
@@ -198,7 +198,7 @@
                             Watermark="0"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Right"
-                            Value="{CompiledBinding DiscountValue}">
+                            Value="{CompiledBinding DiscountValue, Mode=TwoWay}">
                             <NumericUpDown.InnerLeftContent>
                                 <TextBlock Margin="8,0,-8,0" Text="{CompiledBinding DiscountSymbol}" />
                             </NumericUpDown.InnerLeftContent>

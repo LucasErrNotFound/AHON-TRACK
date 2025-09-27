@@ -20,6 +20,20 @@ namespace AHON_TRACK.ViewModels;
 public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
+    private string[] _sortFilterItems = [
+        "By ID", "Names by A-Z", "Names by Z-A", "By newest to oldest", "By oldest to newest", "Reset Data"
+    ];
+
+    [ObservableProperty]
+    private string _selectedSortFilterItem = "By ID";
+
+    [ObservableProperty]
+    private string[] _statusFilterItems = ["All", "Active", "Expired"];
+
+    [ObservableProperty]
+    private string _selectedStatusFilterItem = "All";
+
+    [ObservableProperty]
     private List<ManageMembersItem> _originalMemberData = [];
 
     [ObservableProperty]
@@ -65,19 +79,12 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     private bool _showValidity = true;
 
     [ObservableProperty]
-    private int _selectedSortIndex = -1;
-
-    [ObservableProperty]
-    private int _selectedFilterIndex = -1;
-
-    [ObservableProperty]
     private bool _isInitialized;
 
     [ObservableProperty]
     private ManageMembersItem? _selectedMember;
 
-    private readonly IMemberService _memberService;
-
+    private readonly IMemberService? _memberService;
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly DialogManager _dialogManager;
@@ -94,6 +101,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         !new[] { "Expired" }
             .Any(status => SelectedMember is not null && SelectedMember.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
 
+    // Constructor with dependency injection (for production)
     public ManageMembershipViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
     {
         _memberService = memberService;
@@ -107,6 +115,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         UpdateCounts();
     }
 
+    // Default constructor (for design-time/testing)
     public ManageMembershipViewModel()
     {
         _dialogManager = new DialogManager();
@@ -128,13 +137,25 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     public async void Initialize()
     {
         if (IsInitialized) return;
-        await LoadMemberDataAsync();
+
+        // Try to load from database first, fallback to sample data
+        if (_memberService != null)
+        {
+            await LoadMemberDataAsync();
+        }
+        else
+        {
+            LoadSampleData();
+        }
+
         UpdateCounts();
         IsInitialized = true;
     }
 
     private async Task LoadMemberDataAsync()
     {
+        if (_memberService == null) return;
+
         try
         {
             var dbMembers = await _memberService.GetMemberAsync();
@@ -145,14 +166,12 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 var memberItems = dbMembers.Select(m => new ManageMembersItem
                 {
                     ID = m.MemberID.ToString(),
-                    AvatarSource = DefaultAvatarSource, // already processed by service
+                    AvatarSource = DefaultAvatarSource,
                     Name = m.Name,
                     ContactNumber = m.ContactNumber,
                     AvailedPackages = m.MembershipType ?? string.Empty,
                     Status = m.Status,
-                    Validity = DateTime.TryParse(m.Validity, out var parsedDate)
-        ? parsedDate
-        : DateTime.MinValue
+                    Validity = DateTime.TryParse(m.Validity, out var parsedDate) ? parsedDate : DateTime.MinValue
                 }).ToList();
 
                 OriginalMemberData = memberItems;
@@ -169,8 +188,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 if (MemberItems.Count > 0)
                     SelectedMember = MemberItems[0];
 
-                UpdateCounts();
-                return; // ✅ loaded successfully
+                ApplyMemberStatusFilter();
+                ApplyMemberSort();
+                return; // Successfully loaded from database
             }
         }
         catch (Exception ex)
@@ -182,11 +202,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 .ShowWarning();
         }
 
-        // fallback if DB fails
+        // Fallback to sample data if database fails
         LoadSampleData();
     }
-
-
 
     private void LoadSampleData()
     {
@@ -208,6 +226,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         {
             SelectedMember = MemberItems[0];
         }
+        ApplyMemberStatusFilter();
+        ApplyMemberSort();
     }
 
     private List<ManageMembersItem> GetSampleMembersData()
@@ -305,147 +325,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     }
 
     [RelayCommand]
-    private void SortReset()
-    {
-        MemberItems.Clear();
-        foreach (var member in OriginalMemberData)
-        {
-            member.PropertyChanged += OnMemberPropertyChanged;
-            MemberItems.Add(member);
-        }
-
-        CurrentFilteredData = [.. OriginalMemberData];
-        UpdateCounts();
-
-        SelectedSortIndex = -1;
-        SelectedFilterIndex = -1;
-    }
-
-    [RelayCommand]
-    private void SortById()
-    {
-        var sortedById = MemberItems.OrderBy(member => member.ID).ToList();
-        MemberItems.Clear();
-
-        foreach (var members in sortedById)
-        {
-            MemberItems.Add(members);
-        }
-        // Update current filtered data to match sorted state
-        CurrentFilteredData = [.. sortedById];
-    }
-
-    [RelayCommand]
-    private void SortNamesByAlphabetical()
-    {
-        var sortedNamesInAlphabetical = MemberItems.OrderBy(member => member.Name).ToList();
-        MemberItems.Clear();
-
-        foreach (var members in sortedNamesInAlphabetical)
-        {
-            MemberItems.Add(members);
-        }
-        CurrentFilteredData = [.. sortedNamesInAlphabetical];
-    }
-
-    [RelayCommand]
-    private void SortNamesByReverseAlphabetical()
-    {
-        var sortedReverseNamesInAlphabetical = MemberItems.OrderByDescending(member => member.Name).ToList();
-        MemberItems.Clear();
-
-        foreach (var members in sortedReverseNamesInAlphabetical)
-        {
-            MemberItems.Add(members);
-        }
-        CurrentFilteredData = [.. sortedReverseNamesInAlphabetical];
-    }
-
-    [RelayCommand]
-    private void SortDateByNewestToOldest()
-    {
-        var sortedDates = MemberItems.OrderByDescending(log => log.Validity).ToList();
-        MemberItems.Clear();
-
-        foreach (var logs in sortedDates)
-        {
-            MemberItems.Add(logs);
-        }
-        CurrentFilteredData = [.. sortedDates];
-    }
-
-    [RelayCommand]
-    private void SortDateByOldestToNewest()
-    {
-        var sortedDates = MemberItems.OrderBy(log => log.Validity).ToList();
-        MemberItems.Clear();
-
-        foreach (var logs in sortedDates)
-        {
-            MemberItems.Add(logs);
-        }
-        CurrentFilteredData = [.. sortedDates];
-    }
-
-    [RelayCommand]
-    private void FilterActiveStatus()
-    {
-        var filterActiveStatus = OriginalMemberData.Where(member => member.Status.Equals("active", StringComparison.OrdinalIgnoreCase)).ToList();
-        MemberItems.Clear();
-
-        foreach (var member in filterActiveStatus)
-        {
-            member.PropertyChanged += OnMemberPropertyChanged;
-            MemberItems.Add(member);
-        }
-        CurrentFilteredData = [.. filterActiveStatus];
-        UpdateCounts();
-    }
-
-    [RelayCommand]
-    private void FilterExpiredStatus()
-    {
-        var filterExpiredStatus = OriginalMemberData.Where(member => member.Status.Equals("expired", StringComparison.OrdinalIgnoreCase)).ToList();
-        MemberItems.Clear();
-
-        foreach (var member in filterExpiredStatus)
-        {
-            member.PropertyChanged += OnMemberPropertyChanged;
-            MemberItems.Add(member);
-        }
-        CurrentFilteredData = [.. filterExpiredStatus];
-        UpdateCounts();
-    }
-
-    [RelayCommand]
-    private void ToggleSelection(bool? isChecked)
-    {
-        var shouldSelect = isChecked ?? false;
-
-        foreach (var item in MemberItems)
-        {
-            item.IsSelected = shouldSelect;
-        }
-        UpdateCounts();
-    }
-
-    private void OnMemberPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ManageMembersItem.IsSelected))
-        {
-            UpdateCounts();
-        }
-    }
-
-    private void UpdateCounts()
-    {
-        SelectedCount = MemberItems.Count(x => x.IsSelected);
-        TotalCount = MemberItems.Count;
-
-        SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
-    }
-
-    [RelayCommand]
     private async Task SearchMembers()
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
@@ -488,6 +367,159 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         {
             IsSearchingMember = false;
         }
+    }
+
+    private void ApplyMemberSort()
+    {
+        if (OriginalMemberData.Count == 0) return;
+
+        if (SelectedSortFilterItem == "Reset Data")
+        {
+            SelectedStatusFilterItem = "All";
+            SelectedSortFilterItem = "By ID";
+            CurrentFilteredData = OriginalMemberData.OrderBy(m => m.ID).ToList();
+            RefreshMemberItems(CurrentFilteredData);
+            return;
+        }
+
+        // First apply status filter to get the base filtered data
+        List<ManageMembersItem> baseFilteredData;
+        if (SelectedStatusFilterItem == "All")
+        {
+            baseFilteredData = OriginalMemberData.ToList();
+        }
+        else
+        {
+            baseFilteredData = OriginalMemberData
+                .Where(member => member.Status == SelectedStatusFilterItem)
+                .ToList();
+        }
+
+        // Then apply sorting to the filtered data
+        List<ManageMembersItem> sortedList = SelectedSortFilterItem switch
+        {
+            "By ID" => baseFilteredData.OrderBy(m => m.ID).ToList(),
+            "Names by A-Z" => baseFilteredData.OrderBy(m => m.Name).ToList(),
+            "Names by Z-A" => baseFilteredData.OrderByDescending(m => m.Name).ToList(),
+            "By newest to oldest" => baseFilteredData.OrderByDescending(m => m.Validity).ToList(),
+            "By oldest to newest" => baseFilteredData.OrderBy(m => m.Validity).ToList(),
+            _ => baseFilteredData.ToList()
+        };
+        CurrentFilteredData = sortedList;
+        RefreshMemberItems(sortedList);
+    }
+
+    private void ApplyMemberStatusFilter()
+    {
+        if (OriginalMemberData.Count == 0) return;
+
+        List<ManageMembersItem> filteredList;
+        if (SelectedStatusFilterItem == "All")
+        {
+            filteredList = OriginalMemberData.ToList();
+        }
+        else
+        {
+            filteredList = OriginalMemberData
+                .Where(member => member.Status == SelectedStatusFilterItem)
+                .ToList();
+        }
+
+        // Apply current sorting to the filtered data
+        List<ManageMembersItem> sortedList = SelectedSortFilterItem switch
+        {
+            "By ID" => filteredList.OrderBy(m => m.ID).ToList(),
+            "Names by A-Z" => filteredList.OrderBy(m => m.Name).ToList(),
+            "Names by Z-A" => filteredList.OrderByDescending(m => m.Name).ToList(),
+            "By newest to oldest" => filteredList.OrderByDescending(m => m.Validity).ToList(),
+            "By oldest to newest" => filteredList.OrderBy(m => m.Validity).ToList(),
+            "Reset Data" => filteredList.ToList(),
+            _ => filteredList.ToList()
+        };
+
+        CurrentFilteredData = sortedList;
+        RefreshMemberItems(sortedList);
+    }
+
+    private void RefreshMemberItems(List<ManageMembersItem> items)
+    {
+        MemberItems.Clear();
+        foreach (var item in items)
+        {
+            item.PropertyChanged += OnMemberPropertyChanged;
+            MemberItems.Add(item);
+        }
+        UpdateCounts();
+    }
+
+    [RelayCommand]
+    private void SortReset()
+    {
+        SelectedSortFilterItem = "By ID";
+        SelectedStatusFilterItem = "All";
+    }
+
+    [RelayCommand]
+    private void SortById()
+    {
+        SelectedSortFilterItem = "By ID";
+        ApplyMemberSort();
+    }
+
+    [RelayCommand]
+    private void SortNamesByAlphabetical()
+    {
+        SelectedSortFilterItem = "Names by A-Z";
+        ApplyMemberSort();
+    }
+
+    [RelayCommand]
+    private void SortNamesByReverseAlphabetical()
+    {
+        SelectedSortFilterItem = "Names by Z-A";
+        ApplyMemberSort();
+    }
+
+    [RelayCommand]
+    private void SortDateByNewestToOldest()
+    {
+        SelectedSortFilterItem = "By newest to oldest";
+        ApplyMemberSort();
+    }
+
+    [RelayCommand]
+    private void SortDateByOldestToNewest()
+    {
+        SelectedSortFilterItem = "By oldest to newest";
+        ApplyMemberSort();
+    }
+
+    [RelayCommand]
+    private void ToggleSelection(bool? isChecked)
+    {
+        var shouldSelect = isChecked ?? false;
+
+        foreach (var item in MemberItems)
+        {
+            item.IsSelected = shouldSelect;
+        }
+        UpdateCounts();
+    }
+
+    private void OnMemberPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ManageMembersItem.IsSelected))
+        {
+            UpdateCounts();
+        }
+    }
+
+    private void UpdateCounts()
+    {
+        SelectedCount = MemberItems.Count(x => x.IsSelected);
+        TotalCount = MemberItems.Count;
+
+        SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
     }
 
     [RelayCommand]
@@ -695,6 +727,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             .WithDelay(6)
             .ShowSuccess();
     }
+
     private async Task OnSubmitDeleteMultipleItems(ManageMembersItem member)
     {
         var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
@@ -718,65 +751,26 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     // Helper method to delete from database
     private async Task DeleteMemberFromDatabase(ManageMembersItem member)
     {
+        // TODO: Implement actual database deletion
         // using var connection = new SqlConnection(connectionString);
-        // await connection.ExecuteAsync("DELETE FROM Members WHERE ID = @ID", new { IDI = member.ID });
+        // await connection.ExecuteAsync("DELETE FROM Members WHERE ID = @ID", new { ID = member.ID });
 
         await Task.Delay(100); // Just an animation/simulation of async operation
-    }
-
-    private void ExecuteSortCommand(int selectedIndex)
-    {
-        switch (selectedIndex)
-        {
-            case 0:
-                SortByIdCommand.Execute(null);
-                break;
-            case 1:
-                SortNamesByAlphabeticalCommand.Execute(null);
-                break;
-            case 2:
-                SortNamesByReverseAlphabeticalCommand.Execute(null);
-                break;
-            case 3:
-                SortDateByNewestToOldestCommand.Execute(null);
-                break;
-            case 4:
-                SortDateByOldestToNewestCommand.Execute(null);
-                break;
-            case 5:
-                SortResetCommand.Execute(null);
-                break;
-        }
-    }
-
-    private void ExecuteFilterCommand(int selectedIndex)
-    {
-        switch (selectedIndex)
-        {
-            case 0: FilterActiveStatusCommand.Execute(null); break;
-            case 1: FilterExpiredStatusCommand.Execute(null); break;
-        }
-    }
-
-    partial void OnSelectedSortIndexChanged(int value)
-    {
-        if (value >= 0)
-        {
-            ExecuteSortCommand(value);
-        }
-    }
-
-    partial void OnSelectedFilterIndexChanged(int value)
-    {
-        if (value >= 0)
-        {
-            ExecuteFilterCommand(value);
-        }
     }
 
     partial void OnSearchStringResultChanged(string value)
     {
         SearchMembersCommand.Execute(null);
+    }
+
+    partial void OnSelectedSortFilterItemChanged(string value)
+    {
+        ApplyMemberSort();
+    }
+
+    partial void OnSelectedStatusFilterItemChanged(string value)
+    {
+        ApplyMemberStatusFilter();
     }
 
     [RelayCommand]
@@ -848,6 +842,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             .Show();
     }
 }
+
 public partial class ManageMembersItem : ObservableObject
 {
     [ObservableProperty]

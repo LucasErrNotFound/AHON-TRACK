@@ -87,7 +87,7 @@
                                     Classes="Clearable"
                                     shadui:ControlAssist.Label="Brand Name"
                                     Watermark="e.g., Treadmill Pro X12"
-                                    Text="{CompiledBinding BrandName}">
+                                    Text="{CompiledBinding BrandName, Mode=TwoWay}">
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Grid.Row="1">
@@ -95,7 +95,7 @@
                                     shadui:ControlAssist.Label="Category"
                                     PlaceholderText="Select category"
                                     ItemsSource="{CompiledBinding EquipmentFilterItems}"
-                                    SelectedItem="{CompiledBinding Category}">
+                                    SelectedItem="{CompiledBinding Category, Mode=TwoWay}">
                                 </ComboBox>
                             </StackPanel>
                             <StackPanel Grid.Row="2">
@@ -105,7 +105,7 @@
                                     FormatString="N2"
                                     ShowButtonSpinner="False"
                                     Watermark="0"
-                                    Value="{CompiledBinding CurrentStock}">
+                                    Value="{CompiledBinding CurrentStock, Mode=TwoWay}">
                                     <NumericUpDown.InnerLeftContent>
                                         <TextBlock Margin="8,0,-8,0" Text="×" />
                                     </NumericUpDown.InnerLeftContent>
@@ -142,7 +142,7 @@
                                     FormatString="N2"
                                     ShowButtonSpinner="False"
                                     Watermark="0.00"
-                                    Value="{CompiledBinding PurchasePrice}">
+                                    Value="{CompiledBinding PurchasePrice, Mode=TwoWay}">
                                     <NumericUpDown.InnerLeftContent>
                                         <TextBlock Margin="8,0,-8,0" Text="₱" />
                                     </NumericUpDown.InnerLeftContent>
@@ -153,7 +153,7 @@
                                     shadui:ControlAssist.Label="Supplier"
                                     PlaceholderText="Supplier name"
                                     ItemsSource="{CompiledBinding SupplierFilterItems}"
-                                    SelectedItem="{CompiledBinding Supplier}" />
+                                    SelectedItem="{CompiledBinding Supplier, Mode=TwoWay}" />
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -184,7 +184,7 @@
                                     shadui:ControlAssist.Label="Condition"
                                     PlaceholderText="Select condition"
                                     ItemsSource="{CompiledBinding ConditionFilterItems}"
-                                    SelectedItem="{CompiledBinding Condition}">
+                                    SelectedItem="{CompiledBinding Condition, Mode=TwoWay}">
                                 </ComboBox>
                             </StackPanel>
                         </Grid>
@@ -248,7 +248,7 @@
                                 VerticalAlignment="Center"
                                 Margin="0,0,8,0"
                                 Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/plus-icon.svg" />
-                            <TextBlock Text="Add Equipment" VerticalAlignment="Center" />
+                            <TextBlock Text="Save Equipment" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
