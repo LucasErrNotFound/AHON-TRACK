@@ -45,7 +45,13 @@
 				FontWeight="SemiBold"
 				Text="Manage Membership"
 				Foreground="{StaticResource FontForeground}"
-				Margin="90,30"/>
+				Margin="90,30,0,0"/>
+			<TextBlock
+				Classes="Caption Muted"
+				FontSize="14"
+				Text="Add, edit, or remove members while managing renewals, upgrades, and searching or filtering through the membership list"
+				TextWrapping="Wrap"
+				Margin="90,0" />
 		</StackPanel>
 		<ScrollViewer HorizontalScrollBarVisibility="Auto">
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="50,10,40,0" Spacing="16">
