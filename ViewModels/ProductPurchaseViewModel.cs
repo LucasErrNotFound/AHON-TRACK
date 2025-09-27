@@ -20,57 +20,57 @@ namespace AHON_TRACK.ViewModels;
 [Page("product-purchase")]
 public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private string[] _productFilterItems = ["Supplements", "Drinks", "Products", "Gym Packages"];
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string _selectedProductFilterItem = "Supplements";
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string[] _customerTypeFilterItems = ["All", "Walk-in", "Gym Member"];
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string _selectedCustomerTypeFilterItem = "All";
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private ObservableCollection<Customer> _customerList = [];
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private ObservableCollection<Product> _productList = [];
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private List<Customer> _originalCustomerList = [];
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private List<Customer> _currentCustomerList = [];
-    
+
     [ObservableProperty]
     private List<Product> _originalProductList = [];
 
     [ObservableProperty]
     private List<Product> _currentProductList = [];
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private ObservableCollection<Package> _packageList = [];
 
     [ObservableProperty]
     private List<Package> _originalPackageList = [];
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string _customerSearchStringResult = string.Empty;
-    
+
     [ObservableProperty]
     private string _productSearchStringResult = string.Empty;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private bool _isSearchingCustomer;
-    
+
     [ObservableProperty]
     private bool _isSearchingProduct;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private bool _isInitialized;
-    
+
     [ObservableProperty]
     private bool _selectAll;
 
@@ -82,10 +82,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private Customer? _selectedCustomer;
-    
+
     [ObservableProperty]
     private string _customerFullName = "Customer Name";
-    
+
     [ObservableProperty]
     private ObservableCollection<CartItem> _cartItems = [];
 
@@ -100,34 +100,32 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private string _emptyCartMessage = "Customer Name's cart is currently empty";
-    
+
     [ObservableProperty]
     private bool _isCashSelected;
-    
+
     [ObservableProperty]
     private bool _isGCashSelected;
-    
+
     [ObservableProperty]
     private bool _isMayaSelected;
-    
+
     private readonly Dictionary<string, Bitmap> _imageCache = new();
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly IPackageService _packageService;
 
     public ProductPurchaseViewModel(
-        DialogManager dialogManager, 
-        ToastManager toastManager, 
-        PageManager pageManager, IPackageService packageService)
+        DialogManager dialogManager,
+        ToastManager toastManager,
+        PageManager pageManager)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _packageService = packageService;
 
-        _packageService.PackagesChanged += OnPackagesChanged;
+        // += OnPackagesChanged;
 
         LoadCustomerList();
         LoadProductOptions();
@@ -139,7 +137,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _packageService = new PackageService();
 
         LoadCustomerList();
         LoadProductOptions();
@@ -178,7 +175,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         var products = GetProductData();
         OriginalProductList = products;
         CurrentProductList = products.ToList();
-        
+
         ProductList.Clear();
         foreach (var product in CurrentProductList)
         {
@@ -186,11 +183,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
         ApplyProductFilter();
     }
-    
+
     private void LoadPackageOptions()
     {
-        var packages = _packageService.GetPackages();
-        OriginalPackageList = packages;
+        //var packages = _packageService.GetPackages();
+        //OriginalPackageList = packages;
         ApplyProductFilter();
     }
 
@@ -322,7 +319,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             }
         ];
     }
-    
+
     private Bitmap GetCachedImage(string imageName)
     {
         if (!_imageCache.ContainsKey(imageName))
@@ -332,7 +329,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
         return _imageCache[imageName];
     }
-    
+
     private void ApplyCustomerFilter()
     {
         if (OriginalCustomerList == null || OriginalCustomerList.Count == 0) return;
@@ -359,12 +356,12 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
         UpdateCustomerCounts();
     }
-    
+
     private void ApplyProductFilter()
     {
         ProductList.Clear();
         PackageList.Clear();
-    
+
         if (SelectedProductFilterItem == "Gym Packages")
         {
             if (_originalPackageList != null && _originalPackageList.Count > 0)
@@ -391,7 +388,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                     .Where(product => product.Category == SelectedProductFilterItem)
                     .ToList();
             }
-        
+
             CurrentProductList = filteredList;
             foreach (var product in filteredList)
             {
@@ -415,9 +412,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             UpdateCustomerCounts();
             return;
         }
-        
+
         IsSearchingCustomer = true;
-        
+
         try
         {
             await Task.Delay(500);
@@ -441,7 +438,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             IsSearchingCustomer = false;
         }
     }
-    
+
     [RelayCommand]
     private async Task SearchProducts()
     {
@@ -450,9 +447,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             ApplyProductFilter();
             return;
         }
-    
+
         IsSearchingProduct = true;
-    
+
         try
         {
             await Task.Delay(300);
@@ -490,12 +487,12 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             IsSearchingProduct = false;
         }
     }
-    
+
     [RelayCommand]
     private void AddToCart(object item)
     {
         CartItem? cartItem = null;
-    
+
         if (item is Product product)
         {
             cartItem = new CartItem
@@ -528,7 +525,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             };
             package.IsAddedToCart = true;
         }
-    
+
         if (cartItem != null)
         {
             cartItem.PropertyChanged += OnCartItemPropertyChanged;
@@ -545,31 +542,31 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             cartItem.SourceProduct.IsAddedToCart = false;
         }
-    
+
         if (cartItem.SourcePackage != null)
         {
             cartItem.SourcePackage.IsAddedToCart = false;
         }
-    
+
         cartItem.PropertyChanged -= OnCartItemPropertyChanged;
         CartItems.Remove(cartItem);
         UpdateCartTotals();
         UpdateCartEmptyState();
     }
-    
+
     [RelayCommand]
     private void Payment()
     {
-        var customerName = SelectedCustomer != null 
+        var customerName = SelectedCustomer != null
             ? $"{SelectedCustomer.FirstName} {SelectedCustomer.LastName}"
             : "No customer selected";
 
         var paymentMethod = IsCashSelected ? "Cash" :
             IsGCashSelected ? "GCash" :
-            IsMayaSelected ? "Maya" : 
+            IsMayaSelected ? "Maya" :
             "No payment method selected";
 
-        var cartItemsList = string.Join(", ", CartItems.Select(item => 
+        var cartItemsList = string.Join(", ", CartItems.Select(item =>
             $"{item.Title} (Qty: {item.Quantity})"));
 
         /* Alternative: More detailed cart info
@@ -588,7 +585,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             .ShowSuccess();
         ClearCart();
     }
-    
+
     private void ClearCart()
     {
         foreach (var cartItem in CartItems.ToList())
@@ -597,25 +594,25 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             {
                 cartItem.SourceProduct.IsAddedToCart = false;
             }
-        
+
             if (cartItem.SourcePackage != null)
             {
                 cartItem.SourcePackage.IsAddedToCart = false;
             }
-        
+
             cartItem.PropertyChanged -= OnCartItemPropertyChanged;
         }
-    
+
         CartItems.Clear();
         UpdateCartTotals();
         UpdateCartEmptyState();
-    
+
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
         SelectedCustomer = null;
     }
-    
+
     private void UpdateCustomerCounts()
     {
         SelectedCount = CustomerList.Count(x => x.IsSelected);
@@ -623,17 +620,17 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         SelectAll = CustomerList.Count > 0 && CustomerList.All(x => x.IsSelected);
     }
-    
+
     partial void OnCustomerSearchStringResultChanged(string value)
     {
         SearchCustomersCommand.Execute(null);
     }
-    
+
     partial void OnProductSearchStringResultChanged(string value)
     {
         SearchProductsCommand.Execute(null);
     }
-    
+
     private void OnCustomerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Customer.IsSelected))
@@ -646,29 +643,29 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     {
         ApplyCustomerFilter();
     }
-    
+
     partial void OnSelectedProductFilterItemChanged(string value)
     {
         ApplyProductFilter();
     }
-    
+
     partial void OnSelectedCustomerChanged(Customer? value)
     {
         CustomerFullName = value != null ? $"{value.FirstName} {value.LastName}" : "Customer Name";
         UpdateCartEmptyState(); // Update empty cart message when customer changes
         OnPropertyChanged(nameof(IsPaymentPossible));
     }
-    
+
     private void OnPackagesChanged()
     {
         LoadPackageOptions();
-    
+
         if (SelectedProductFilterItem == "Gym Packages")
         {
             ApplyProductFilter();
         }
     }
-    
+
     private void OnCartItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(CartItem.Quantity))
@@ -686,7 +683,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     private void UpdateCartEmptyState()
     {
         IsCartEmpty = !CartItems.Any();
-        EmptyCartMessage = SelectedCustomer != null 
+        EmptyCartMessage = SelectedCustomer != null
             ? $"{SelectedCustomer.FirstName} {SelectedCustomer.LastName}'s cart is currently empty"
             : "Customer Name's cart is currently empty";
         OnPropertyChanged(nameof(IsPaymentPossible));
@@ -694,10 +691,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     public void Dispose()
     {
-        if (_packageService != null)
-            _packageService.PackagesChanged -= OnPackagesChanged;
+        //if (_packageService != null)
+        //  _packageService.PackagesChanged -= OnPackagesChanged;
     }
-    
+
     partial void OnIsCashSelectedChanged(bool value)
     {
         if (value)
@@ -735,17 +732,17 @@ public partial class Customer : ObservableObject
 {
     [ObservableProperty]
     private bool _isSelected;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private int? _iD;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string _firstName = string.Empty;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string _lastName = string.Empty;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string _customerType = string.Empty;
 }
 
@@ -753,28 +750,28 @@ public partial class Product : ObservableObject
 {
     [ObservableProperty]
     private string _title = string.Empty;
-    
+
     [ObservableProperty]
     private string _description = string.Empty;
-    
+
     [ObservableProperty]
     private string _category = string.Empty;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private int _price;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private int _stockCount;
 
-    [ObservableProperty] 
-    private Bitmap _poster; 
-    
+    [ObservableProperty]
+    private Bitmap _poster;
+
     [ObservableProperty]
     private bool _isAddedToCart;
-    
+
     public string FormattedPrice => $"₱{Price:N2}";
     public string FormattedStockCount => $"{StockCount} Left";
-    
+
     public IBrush StockForeground => StockCount switch
     {
         < 5 => new SolidColorBrush(Color.FromRgb(239, 68, 68)),   // Red-500 (Critical)
@@ -788,7 +785,7 @@ public partial class Product : ObservableObject
         < 10 => new SolidColorBrush(Color.FromArgb(25, 245, 158, 11)), // Amber-500 with alpha
         _ => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94))      // Green-500 with alpha
     };
-    
+
     public IBrush StockBorder => StockCount switch
     {
         < 5 => new SolidColorBrush(Color.FromRgb(239, 68, 68)),   // Red-500 (Critical)
@@ -807,41 +804,41 @@ public partial class CartItem : ObservableObject
 {
     [ObservableProperty]
     private Guid _id;
-    
+
     [ObservableProperty]
     private CartItemType _itemType;
-    
+
     [ObservableProperty]
     private string _title = string.Empty;
-    
+
     [ObservableProperty]
     private string _description = string.Empty;
-    
+
     [ObservableProperty]
     private decimal _price;
-    
+
     [ObservableProperty]
     private int _quantity = 1;
-    
+
     [ObservableProperty]
     private int _maxQuantity = 1;
-    
+
     [ObservableProperty]
     private Bitmap? _poster;
-    
+
     public Product? SourceProduct { get; set; }
     public Package? SourcePackage { get; set; }
-    
+
     public decimal TotalPrice => Price * Quantity;
     public string FormattedPrice => $"₱{Price:N2}";
     public string FormattedTotalPrice => $"₱{TotalPrice:N2}";
-    
+
     partial void OnQuantityChanged(int value)
     {
         OnPropertyChanged(nameof(TotalPrice));
         OnPropertyChanged(nameof(FormattedTotalPrice));
     }
-    
+
     partial void OnPriceChanged(decimal value)
     {
         OnPropertyChanged(nameof(TotalPrice));

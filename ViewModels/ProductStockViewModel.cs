@@ -30,8 +30,9 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     [AvaloniaHotReload]
     public void Initialize()
     {
+
     }
-    
+
     [RelayCommand]
     private void ShowAddProductDialog()
     {
