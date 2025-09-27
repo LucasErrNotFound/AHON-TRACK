@@ -39,13 +39,19 @@
                 FontWeight="SemiBold"
                 Text="Check-in/Check-out"
                 Foreground="{StaticResource FontForeground}"
-                Margin="90,30" />
+                Margin="90,30,0,0" />
+            <TextBlock
+                Classes="Caption Muted"
+                FontSize="14"
+                Text="Handle check-ins and check-outs for both registered gym members and walk-in guests"
+                TextWrapping="Wrap"
+                Margin="90,0" />
         </StackPanel>
         <ScrollViewer>
             <Interaction.Behaviors>
                 <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
             </Interaction.Behaviors>
-            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,25,48,24" Spacing="16">
                 <!--
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
