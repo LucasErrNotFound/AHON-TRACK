@@ -46,7 +46,6 @@ namespace AHON_TRACK;
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
-[Singleton<IPackageService, PackageService>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
 [Singleton<string>(Factory = nameof(ConnectionStringFactory))]
