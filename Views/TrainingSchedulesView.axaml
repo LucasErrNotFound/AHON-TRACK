@@ -44,7 +44,13 @@
                 FontWeight="SemiBold"
                 Text="Training Schedules"
                 Foreground="{StaticResource FontForeground}"
-                Margin="90,30" />
+                Margin="90,30,0,0" />
+            <TextBlock
+                Classes="Caption Muted"
+                FontSize="14"
+                Text="Stay on top of current and upcoming gym sessions with tools to add, edit, or remove training schedules"
+                TextWrapping="Wrap"
+                Margin="90,0" />
         </StackPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel HorizontalAlignment="Center" MaxWidth="{StaticResource PageMaxWidth}" Margin="90,20,48,24" Spacing="16">
@@ -52,7 +58,7 @@
                 <shadui:BreakpointViewPort>
                     <shadui:BreakpointView Breakpoint="XlAndUp">
                     -->
-                <UniformGrid Margin="0, 0,0,0" Columns="4">
+                <UniformGrid Margin="0, 15,0,0" Columns="4">
                     <UniformGrid.Resources>
                         <LinearGradientBrush x:Key="GreenGradient" StartPoint="0%,50%" EndPoint="100%, 50%">
                             <GradientStop Color="#22C55E" Offset="0.0" />
@@ -103,8 +109,8 @@
                 <shadui:BreakpointViewPort>
                     <shadui:BreakpointView Breakpoint="XlAndUp">
                     -->
-                <StackPanel Margin="0,0,50,0" HorizontalAlignment="Center">
-                    <shadui:Card VerticalAlignment="Top" HasShadow="True">
+                <StackPanel Margin="0,15,50,0" HorizontalAlignment="Center">
+                    <shadui:Card VerticalAlignment="Top" HasShadow="True" MaxHeight="800">
                         <StackPanel>
                             <StackPanel
                                 Orientation="Horizontal"
