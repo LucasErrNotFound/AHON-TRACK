@@ -981,11 +981,11 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
                     await connection.OpenAsync();
 
                     const string query = @"
-                SELECT equipmentID, equipmentName, category, currentStock, 
-                       purchaseDate, purchasePrice, supplier, warrantyExpiry, 
-                       condition, status, lastMaintenance, nextMaintenance
-                FROM Equipment 
-                ORDER BY equipmentName";
+        SELECT equipmentID, equipmentName, category, currentStock, 
+               purchaseDate, purchasePrice, supplier, warrantyExpiry, 
+               condition, status, lastMaintenance, nextMaintenance
+        FROM Equipment 
+        ORDER BY equipmentName";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -995,7 +995,7 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
                             {
                                 equipment.Add(new EquipmentModel
                                 {
-                                    EquipmentID = reader["equipmentID"]?.ToString() ?? "",
+                                    EquipmentID = reader["equipmentID"] != DBNull.Value ? reader.GetInt32("equipmentID") : 0,
                                     EquipmentName = reader["equipmentName"]?.ToString() ?? "",
                                     Category = reader["category"]?.ToString() ?? "",
                                     CurrentStock = reader["currentStock"] != DBNull.Value ? reader.GetInt32("currentStock") : 0,
@@ -1025,13 +1025,15 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
 
         public async Task<bool> AddEquipmentAsync(EquipmentModel equipment)
         {
+            // Updated query - removed equipmentID from INSERT, using OUTPUT to get generated ID
             const string query = @"
-        INSERT INTO Equipment (equipmentID, equipmentName, category, currentStock, 
-                              purchaseDate, purchasePrice, supplier, warrantyExpiry, 
-                              condition, status, lastMaintenance, nextMaintenance)
-        VALUES (@equipmentID, @equipmentName, @category, @currentStock, 
-                @purchaseDate, @purchasePrice, @supplier, @warrantyExpiry, 
-                @condition, @status, @lastMaintenance, @nextMaintenance)";
+INSERT INTO Equipment (equipmentName, category, currentStock, 
+                      purchaseDate, purchasePrice, supplier, warrantyExpiry, 
+                      condition, status, lastMaintenance, nextMaintenance)
+OUTPUT INSERTED.equipmentID
+VALUES (@equipmentName, @category, @currentStock, 
+        @purchaseDate, @purchasePrice, @supplier, @warrantyExpiry, 
+        @condition, @status, @lastMaintenance, @nextMaintenance)";
 
             try
             {
@@ -1039,25 +1041,9 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
                 {
                     await connection.OpenAsync();
 
-                    // Check if equipment ID already exists
-                    const string checkQuery = "SELECT COUNT(*) FROM Equipment WHERE equipmentID = @equipmentID";
-                    using (var checkCommand = new SqlCommand(checkQuery, connection))
-                    {
-                        checkCommand.Parameters.AddWithValue("@equipmentID", equipment.EquipmentID);
-                        var exists = (int)await checkCommand.ExecuteScalarAsync() > 0;
-
-                        if (exists)
-                        {
-                            _toastManager?.CreateToast("Duplicate Equipment ID")
-                                .WithContent($"Equipment ID '{equipment.EquipmentID}' already exists")
-                                .ShowError();
-                            return false;
-                        }
-                    }
-
                     using (var command = new SqlCommand(query, connection))
                     {
-                        command.Parameters.AddWithValue("@equipmentID", equipment.EquipmentID);
+                        // No longer adding equipmentID parameter - it will be auto-generated
                         command.Parameters.AddWithValue("@equipmentName", equipment.EquipmentName);
                         command.Parameters.AddWithValue("@category", equipment.Category);
                         command.Parameters.AddWithValue("@currentStock", equipment.CurrentStock);
@@ -1070,10 +1056,13 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
                         command.Parameters.AddWithValue("@lastMaintenance", (object)equipment.LastMaintenance ?? DBNull.Value);
                         command.Parameters.AddWithValue("@nextMaintenance", (object)equipment.NextMaintenance ?? DBNull.Value);
 
-                        var rowsAffected = await command.ExecuteNonQueryAsync();
+                        // ExecuteScalar returns the generated ID
+                        var newId = await command.ExecuteScalarAsync();
 
-                        if (rowsAffected > 0)
+                        if (newId != null && newId != DBNull.Value)
                         {
+                            equipment.EquipmentID = Convert.ToInt32(newId);
+
                             await LogActionAsync(connection, "Add Equipment",
                                 $"Added equipment: '{equipment.EquipmentName}' (ID: {equipment.EquipmentID})", true);
 
@@ -1115,19 +1104,19 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
         public async Task<bool> UpdateEquipmentAsync(EquipmentModel equipment)
         {
             const string query = @"
-        UPDATE Equipment SET 
-            equipmentName = @equipmentName,
-            category = @category,
-            currentStock = @currentStock,
-            purchaseDate = @purchaseDate,
-            purchasePrice = @purchasePrice,
-            supplier = @supplier,
-            warrantyExpiry = @warrantyExpiry,
-            condition = @condition,
-            status = @status,
-            lastMaintenance = @lastMaintenance,
-            nextMaintenance = @nextMaintenance
-        WHERE equipmentID = @equipmentID";
+UPDATE Equipment SET 
+    equipmentName = @equipmentName,
+    category = @category,
+    currentStock = @currentStock,
+    purchaseDate = @purchaseDate,
+    purchasePrice = @purchasePrice,
+    supplier = @supplier,
+    warrantyExpiry = @warrantyExpiry,
+    condition = @condition,
+    status = @status,
+    lastMaintenance = @lastMaintenance,
+    nextMaintenance = @nextMaintenance
+WHERE equipmentID = @equipmentID";
 
             try
             {
@@ -1180,7 +1169,7 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
             return false;
         }
 
-        public async Task<bool> DeleteEquipmentAsync(string equipmentID)
+        public async Task<bool> DeleteEquipmentAsync(int equipmentID)
         {
             const string query = "DELETE FROM Equipment WHERE equipmentID = @equipmentID";
 
@@ -1236,12 +1225,12 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
                     await connection.OpenAsync();
 
                     const string query = @"
-                SELECT equipmentID, equipmentName, category, currentStock, 
-                       purchaseDate, purchasePrice, supplier, warrantyExpiry, 
-                       condition, status, lastMaintenance, nextMaintenance
-                FROM Equipment 
-                WHERE status = @status
-                ORDER BY equipmentName";
+        SELECT equipmentID, equipmentName, category, currentStock, 
+               purchaseDate, purchasePrice, supplier, warrantyExpiry, 
+               condition, status, lastMaintenance, nextMaintenance
+        FROM Equipment 
+        WHERE status = @status
+        ORDER BY equipmentName";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -1252,7 +1241,7 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
                             {
                                 equipment.Add(new EquipmentModel
                                 {
-                                    EquipmentID = reader["equipmentID"]?.ToString() ?? "",
+                                    EquipmentID = reader["equipmentID"] != DBNull.Value ? reader.GetInt32("equipmentID") : 0,
                                     EquipmentName = reader["equipmentName"]?.ToString() ?? "",
                                     Category = reader["category"]?.ToString() ?? "",
                                     CurrentStock = reader["currentStock"] != DBNull.Value ? reader.GetInt32("currentStock") : 0,
@@ -1289,14 +1278,14 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
                     await connection.OpenAsync();
 
                     const string query = @"
-                SELECT equipmentID, equipmentName, category, currentStock, 
-                       purchaseDate, purchasePrice, supplier, warrantyExpiry, 
-                       condition, status, lastMaintenance, nextMaintenance
-                FROM Equipment 
-                WHERE nextMaintenance <= DATEADD(day, 7, GETDATE()) 
-                   AND nextMaintenance IS NOT NULL
-                   AND status = 'Active'
-                ORDER BY nextMaintenance";
+        SELECT equipmentID, equipmentName, category, currentStock, 
+               purchaseDate, purchasePrice, supplier, warrantyExpiry, 
+               condition, status, lastMaintenance, nextMaintenance
+        FROM Equipment 
+        WHERE nextMaintenance <= DATEADD(day, 7, GETDATE()) 
+           AND nextMaintenance IS NOT NULL
+           AND status = 'Active'
+        ORDER BY nextMaintenance";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -1306,7 +1295,7 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
                             {
                                 equipment.Add(new EquipmentModel
                                 {
-                                    EquipmentID = reader["equipmentID"]?.ToString() ?? "",
+                                    EquipmentID = reader["equipmentID"] != DBNull.Value ? reader.GetInt32("equipmentID") : 0,
                                     EquipmentName = reader["equipmentName"]?.ToString() ?? "",
                                     Category = reader["category"]?.ToString() ?? "",
                                     CurrentStock = reader["currentStock"] != DBNull.Value ? reader.GetInt32("currentStock") : 0,
@@ -1333,7 +1322,7 @@ VALUES (@packageName, @price, @description, @duration, @features1, @features2, @
             return equipment;
         }
 
-        private async Task<string> GetEquipmentNameByIdAsync(SqlConnection connection, string equipmentID)
+        private async Task<string> GetEquipmentNameByIdAsync(SqlConnection connection, int equipmentID)
         {
             const string query = "SELECT equipmentName FROM Equipment WHERE equipmentID = @equipmentID";
             using (var command = new SqlCommand(query, connection))

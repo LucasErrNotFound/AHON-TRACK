@@ -243,7 +243,7 @@ public class DashboardModel
             await conn.OpenAsync();
 
             string query = @"
-        SELECT TOP 5 
+        SELECT TOP 10 
         Username, 
         Role AS UserType, 
         ActionType AS ActionLogName, 

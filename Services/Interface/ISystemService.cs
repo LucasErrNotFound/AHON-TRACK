@@ -48,5 +48,14 @@ namespace AHON_TRACK.Services.Interface
         Task<List<ManageMemberModel>> GetAvailableMembersForCheckInAsync();
 
         #endregion
+
+        #region Inventory Settings
+        Task<List<EquipmentModel>> GetEquipmentAsync();
+        Task<bool> AddEquipmentAsync(EquipmentModel equipment);
+        Task<bool> UpdateEquipmentAsync(EquipmentModel equipment);
+        Task<bool> DeleteEquipmentAsync(int equipmentId);
+        Task<List<EquipmentModel>> GetEquipmentByStatusAsync(string status);
+        Task<List<EquipmentModel>> GetEquipmentNeedingMaintenanceAsync();
+        #endregion
     }
 }

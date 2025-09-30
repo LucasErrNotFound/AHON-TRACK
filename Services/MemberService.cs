@@ -89,9 +89,9 @@ namespace AHON_TRACK.Services
                 // First, get member info for logging
                 var memberInfo = await GetMemberByIdAsync(memberId);
 
-                const string deleteQuery = "DELETE FROM Members WHERE MemberId = @MemberId";
+                const string deleteQuery = "DELETE FROM Members WHERE MemberID = @MemberID";
                 await using var command = new SqlCommand(deleteQuery, connection);
-                command.Parameters.AddWithValue("@MemberId", int.Parse(memberId));
+                command.Parameters.AddWithValue("@MemberID", int.Parse(memberId));
 
                 var rowsAffected = await command.ExecuteNonQueryAsync();
 
@@ -147,7 +147,7 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 var idsParam = string.Join(",", memberIds.Select(id => int.Parse(id)));
-                var deleteQuery = $"DELETE FROM Members WHERE MemberId IN ({idsParam})";
+                var deleteQuery = $"DELETE FROM Members WHERE MemberID IN ({idsParam})";
 
                 await using var command = new SqlCommand(deleteQuery, connection);
                 var rowsAffected = await command.ExecuteNonQueryAsync();

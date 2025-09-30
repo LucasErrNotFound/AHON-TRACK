@@ -8,7 +8,7 @@ namespace AHON_TRACK.Models
 {
     public class EquipmentModel
     {
-        public string EquipmentID { get; set; }
+        public int EquipmentID { get; set; }
         public string EquipmentName { get; set; }
         public string Category { get; set; }
         public int CurrentStock { get; set; }

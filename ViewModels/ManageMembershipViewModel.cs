@@ -716,16 +716,28 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     private async Task OnSubmitDeleteSingleItem(ManageMembersItem member)
     {
-        await DeleteMemberFromDatabase(member);
-        member.PropertyChanged -= OnMemberPropertyChanged;
-        MemberItems.Remove(member);
-        UpdateCounts();
+        try
+        {
+            // Delete from database first
+            await DeleteMemberFromDatabase(member);
 
-        _toastManager.CreateToast($"Delete {member.Name} Account")
-            .WithContent($"{member.Name}'s Account deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+            // Remove from all data collections
+            member.PropertyChanged -= OnMemberPropertyChanged;
+            MemberItems.Remove(member);
+
+            // Update the original data and current filtered data
+            OriginalMemberData = OriginalMemberData.Where(m => m.ID != member.ID).ToList();
+            CurrentFilteredData = CurrentFilteredData.Where(m => m.ID != member.ID).ToList();
+
+            UpdateCounts();
+
+            // Don't show toast here - service already handles it
+        }
+        catch (Exception ex)
+        {
+            // Only show error toast if service didn't already handle it
+            Debug.WriteLine($"Error in OnSubmitDeleteSingleItem: {ex.Message}");
+        }
     }
 
     private async Task OnSubmitDeleteMultipleItems(ManageMembersItem member)
@@ -733,30 +745,63 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
         if (!selectedMembers.Any()) return;
 
-        foreach (var members in selectedMembers)
+        try
         {
-            await DeleteMemberFromDatabase(member);
-            members.PropertyChanged -= OnMemberPropertyChanged;
-            MemberItems.Remove(members);
-        }
-        UpdateCounts();
+            // Delete from database first
+            await DeleteMultipleMembersFromDatabase(selectedMembers);
 
-        _toastManager.CreateToast($"Delete Selected Accounts")
-            .WithContent($"Multiple accounts deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+            // Remove from UI and data collections
+            var idsToRemove = selectedMembers.Select(m => m.ID).ToHashSet();
+
+            foreach (var memberToDelete in selectedMembers)
+            {
+                memberToDelete.PropertyChanged -= OnMemberPropertyChanged;
+                MemberItems.Remove(memberToDelete);
+            }
+
+            // Update the original data and current filtered data
+            OriginalMemberData = OriginalMemberData.Where(m => !idsToRemove.Contains(m.ID)).ToList();
+            CurrentFilteredData = CurrentFilteredData.Where(m => !idsToRemove.Contains(m.ID)).ToList();
+
+            UpdateCounts();
+
+            // Don't show toast here - service already handles it
+        }
+        catch (Exception ex)
+        {
+            // Only show error toast if service didn't already handle it  
+            Debug.WriteLine($"Error in OnSubmitDeleteMultipleItems: {ex.Message}");
+        }
     }
 
     // Helper method to delete from database
     private async Task DeleteMemberFromDatabase(ManageMembersItem member)
     {
-        // TODO: Implement actual database deletion
-        // using var connection = new SqlConnection(connectionString);
-        // await connection.ExecuteAsync("DELETE FROM Members WHERE ID = @ID", new { ID = member.ID });
+        if (_memberService == null)
+        {
+            // Fallback for when service is not available (design-time/testing)
+            await Task.Delay(100);
+            return;
+        }
 
-        await Task.Delay(100); // Just an animation/simulation of async operation
+        // Just call the service - it handles its own success/error toasts
+        await _memberService.DeleteMemberAsync(member.ID);
     }
+
+    private async Task DeleteMultipleMembersFromDatabase(List<ManageMembersItem> members)
+    {
+        if (_memberService == null)
+        {
+            // Fallback for when service is not available
+            await Task.Delay(100);
+            return;
+        }
+
+        var memberIds = members.Select(m => m.ID).ToList();
+        // Just call the service - it handles its own success/error toasts
+        await _memberService.DeleteMultipleMembersAsync(memberIds);
+    }
+
 
     partial void OnSearchStringResultChanged(string value)
     {

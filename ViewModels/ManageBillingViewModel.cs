@@ -178,6 +178,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
                         LoadPackageOptionsAsync();
 
+
                         // Show success message
                         _toastManager.CreateToast("Package Created Successfully")
                             .WithContent($"Package '{packageData.packageName}' has been added to the database!")
@@ -439,7 +440,7 @@ public partial class Package : ObservableObject
     public string SelectedDiscountType { get; set; } = string.Empty;
     public DateOnly? DiscountValidFrom { get; set; }
     public DateOnly? DiscountValidTo { get; set; }
-    
+
     [ObservableProperty]
     private bool _isAddedToCart;
 }
