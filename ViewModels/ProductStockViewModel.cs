@@ -10,6 +10,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Models;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -52,17 +54,23 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     [ObservableProperty]
     private ProductStock? _selectedProduct;
 
+    [ObservableProperty]
+    private bool _isLoading;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly ISystemService _systemService;
 
-    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ISystemService systemService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _systemService = systemService;
 
-        LoadProductData();
+        _ = LoadProductDataAsync();
+        // LoadProductData();
         UpdateProductCounts();
     }
 
@@ -71,6 +79,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _systemService = null!;
 
         LoadProductData();
         UpdateProductCounts();
@@ -80,9 +89,50 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     public void Initialize()
     {
         if (IsInitialized) return;
-        LoadProductData();
+        _ = LoadProductDataAsync();
+        //LoadProductData();
         UpdateProductCounts();
         IsInitialized = true;
+    }
+
+    private async Task LoadProductDataAsync()
+    {
+        if (_systemService == null) return;
+
+        IsLoading = true;
+        try
+        {
+            var productModels = await _systemService.GetProductsAsync();
+            var productStocks = productModels.Select(MapToProductStock).ToList();
+
+            OriginalProductData = productStocks;
+            CurrentFilteredProductData = [.. productStocks];
+
+            ProductItems.Clear();
+            foreach (var product in productStocks)
+            {
+                product.PropertyChanged += OnProductPropertyChanged;
+                ProductItems.Add(product);
+            }
+            TotalCount = ProductItems.Count;
+
+            if (ProductItems.Count > 0)
+            {
+                SelectedProduct = ProductItems[0];
+            }
+            ApplyProductFilter();
+            UpdateProductCounts();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Error Loading Products")
+                .WithContent($"Failed to load products: {ex.Message}")
+                .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private void LoadProductData()
@@ -231,17 +281,24 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     {
         if (product == null) return;
 
-        await DeleteProductFromDatabase(product);
-        product.PropertyChanged -= OnProductPropertyChanged;
-        ProductItems.Remove(product);
-        UpdateProductCounts();
+        var success = await DeleteProductFromDatabase(product);
 
-        _toastManager.CreateToast("Delete product")
-            .WithContent($"{product.Name} has been deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+        if (success)
+        {
+            product.PropertyChanged -= OnProductPropertyChanged;
+            ProductItems.Remove(product);
+            OriginalProductData.Remove(product);
+            CurrentFilteredProductData.Remove(product);
+            UpdateProductCounts();
+
+            _toastManager.CreateToast("Delete product")
+                .WithContent($"{product.Name} has been deleted successfully!")
+                .DismissOnClick()
+                .WithDelay(6)
+                .ShowSuccess();
+        }
     }
+
     private async Task OnSubmitDeleteMultipleItems(ProductStock? product)
     {
         if (product == null) return;
@@ -249,24 +306,44 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         var selectedProducts = ProductItems.Where(item => item.IsSelected).ToList();
         if (selectedProducts.Count == 0) return;
 
+        var successCount = 0;
         foreach (var products in selectedProducts)
         {
-            await DeleteProductFromDatabase(products);
-            products.PropertyChanged -= OnProductPropertyChanged;
-            ProductItems.Remove(products);
+            var success = await DeleteProductFromDatabase(products);
+            if (success)
+            {
+                products.PropertyChanged -= OnProductPropertyChanged;
+                ProductItems.Remove(products);
+                OriginalProductData.Remove(products);
+                CurrentFilteredProductData.Remove(products);
+                successCount++;
+            }
         }
+
         UpdateProductCounts();
 
         _toastManager.CreateToast("Delete Selected Products")
-            .WithContent("Multiple products deleted successfully!")
+            .WithContent($"{successCount} product(s) deleted successfully!")
             .DismissOnClick()
             .WithDelay(6)
             .ShowSuccess();
     }
 
-    private async Task DeleteProductFromDatabase(ProductStock? product)
+    private async Task<bool> DeleteProductFromDatabase(ProductStock? product)
     {
-        await Task.Delay(100); // Just an animation/simulation of async operation
+        if (product == null || _systemService == null) return false;
+
+        try
+        {
+            return await _systemService.DeleteProductAsync(product.ID);
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Delete Failed")
+                .WithContent($"Failed to delete product: {ex.Message}")
+                .ShowError();
+            return false;
+        }
     }
 
     [RelayCommand]
@@ -375,12 +452,45 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     {
         ApplyProductFilter();
     }
+
+    private ProductStock MapToProductStock(ProductModel model)
+    {
+        return new ProductStock
+        {
+            ID = model.ProductID,
+            Name = model.ProductName,
+            Sku = model.SKU,
+            Category = model.Category,
+            CurrentStock = model.CurrentStock,
+            Price = (int)model.Price,
+            Supplier = model.ProductSupplier ?? "",
+            Expiry = model.ExpiryDate,
+            Status = model.Status,
+            Description = model.Description ?? "",
+            DiscountedPrice = model.DiscountedPrice.HasValue ? (int)model.DiscountedPrice.Value : null,
+            DiscountInPercentage = model.IsPercentageDiscount,
+            Poster = model.ProductImagePath ?? "avares://AHON_TRACK/Assets/ProductStockView/default-product.png"
+        };
+    }
+
+    public async Task RefreshProductsAsync()
+    {
+        await LoadProductDataAsync();
+    }
+
+    public void SetNavigationParameters(Dictionary<string, object> parameters)
+    {
+        if (parameters.TryGetValue("ShouldRefresh", out var shouldRefresh) && (bool)shouldRefresh)
+        {
+            _ = LoadProductDataAsync();
+        }
+    }
 }
 
 public partial class ProductStock : ObservableObject
 {
     [ObservableProperty]
-    private int? _iD;
+    private int _iD;
 
     [ObservableProperty]
     private string? _name;
@@ -416,7 +526,7 @@ public partial class ProductStock : ObservableObject
     private string? _status;
 
     [ObservableProperty]
-    private string? _poster;
+    private string? _poster; // Image path or URL
 
     [ObservableProperty]
     private bool _isSelected;
