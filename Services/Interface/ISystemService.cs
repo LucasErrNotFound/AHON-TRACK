@@ -57,5 +57,18 @@ namespace AHON_TRACK.Services.Interface
         Task<List<EquipmentModel>> GetEquipmentByStatusAsync(string status);
         Task<List<EquipmentModel>> GetEquipmentNeedingMaintenanceAsync();
         #endregion
+
+        #region Products Settings
+        Task<List<ProductModel>> GetProductsAsync();
+        Task<bool> AddProductAsync(ProductModel product);
+        Task<bool> UpdateProductAsync(ProductModel product);
+        Task<bool> DeleteProductAsync(int productId);
+        Task<List<ProductModel>> GetProductsByCategoryAsync(string category);
+        Task<List<ProductModel>> GetProductsByStatusAsync(string status);
+        Task<List<ProductModel>> GetExpiredProductsAsync();
+        Task<List<ProductModel>> GetProductsExpiringSoonAsync(int daysThreshold = 30);
+        Task<ProductModel?> GetProductByIdAsync(int productId);
+        Task<ProductModel?> GetProductBySKUAsync(string sku);
+        #endregion
     }
 }

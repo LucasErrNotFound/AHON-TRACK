@@ -1,37 +1,43 @@
-using System;
-using System.Collections.Generic;
-using ShadUI;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using ShadUI;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
+using AHON_TRACK.ViewModels;
+using Microsoft.Identity.Client;
 
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("add-new-product")]
 public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private ProductViewContext _viewContext = ProductViewContext.AddProduct;
-    
+
     [ObservableProperty]
     private string[] _productStatusItems = ["In Stock", "Out of Stock"];
     private string? _selectedProductStatusItem = "In Stock";
-    
+
     [ObservableProperty]
     private string[] _productCategoryItems = ["None", "Drinks", "Supplements", "Apparel", "Products"];
-    private string?  _selectedProductCategoryItem = "None";
-    
+    private string? _selectedProductCategoryItem = "None";
+
     [ObservableProperty]
     private string[] _productSupplierItems = ["None", "San Miguel", "Optimum", "AHON Factory", "Nike"];
-    private string?  _selectedSupplierCategoryItem = "Tender Juicy";
+    private string? _selectedSupplierCategoryItem = "Tender Juicy";
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private bool _isPercentageModeOn;
-    
+
+    private int? _productID;
     private string? _productName = string.Empty;
     private string? _productSKU = string.Empty;
     private string? _productDescription = string.Empty;
@@ -45,52 +51,101 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string? _productStatus;
     private string? _productCategory;
     private string? _productSupplier;
-    
+    private int? _productCurrentStock;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    
+    private readonly ISystemService _systemService;
+
     public string DiscountSymbol => IsPercentageModeOn ? "%" : "₱";
     public string DiscountFormat => IsPercentageModeOn ? "N2" : "N0";
-    
-    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+
+    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ISystemService systemService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _systemService = systemService;
     }
-    
+
     public AddEditProductViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _systemService = null!;
     }
 
     [AvaloniaHotReload]
     public void Initialize()
     {
     }
-    
+
     public void SetNavigationParameters(Dictionary<string, object> parameters)
     {
         if (parameters.TryGetValue("Context", out var context))
         {
             SetViewContext((ProductViewContext)context);
         }
-        
+
         if (!parameters.TryGetValue("SelectedProduct", out var product)) return;
         var selectedProduct = (ProductStock)product;
         PopulateFormWithProductdata(selectedProduct);
     }
 
     [RelayCommand]
-    private void PublishProduct()
+    private async Task PublishProduct()
     {
         ValidateAllProperties();
 
-        if (HasErrors) return;
-        PublishSwitchBack();
+        if (HasErrors)
+        {
+            _toastManager?.CreateToast("Validation Error")
+                .WithContent("Please fix all validation errors before saving")
+                .ShowWarning();
+            return;
+        }
+
+        if (_systemService == null) return;
+
+        try
+        {
+            var productModel = new ProductModel
+            {
+                ProductID = ProductID ?? 0,
+                ProductName = ProductName ?? "",
+                SKU = ProductSKU ?? "",
+                ProductSupplier = SelectedProductSupplier,
+                Description = ProductDescription,
+                Price = ProductPrice ?? 0,
+                DiscountedPrice = ProductDiscountedPrice,
+                IsPercentageDiscount = IsPercentageModeOn,
+                ProductImagePath = ProductImage?.Source?.ToString(),
+                ExpiryDate = ProductExpiry,
+                Status = SelectedProductStatus ?? "In Stock",
+                Category = SelectedProductCategory ?? "None",
+                CurrentStock = ProductCurrentStock ?? 0
+            };
+
+            bool success;
+            if (ViewContext == ProductViewContext.EditProduct)
+            {
+                success = await _systemService.UpdateProductAsync(productModel);
+            }
+            else
+            {
+                success = await _systemService.AddProductAsync(productModel);
+            }
+
+            if (success) PublishSwitchBack();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to save product: {ex.Message}")
+                .ShowError();
+        }
     }
 
     [RelayCommand]
@@ -100,20 +155,22 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             .CreateDialog(
                 "Are you absolutely sure?",
                 "This action cannot be undone. This will permanently discard your product creation.")
-            .WithPrimaryButton("Continue", DiscardSwitchBack ,DialogButtonStyle.Destructive)
+            .WithPrimaryButton("Continue", DiscardSwitchBack, DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
     }
-    
+
     private void PublishSwitchBack()
     {
-        _toastManager.CreateToast("Publish Product")
-            .WithContent("Product published successfully")
-            .DismissOnClick()
+        _toastManager.CreateToast("Publish product")
             .ShowSuccess();
-        _pageManager.Navigate<ProductStockViewModel>();
+
+        _pageManager.Navigate<ProductStockViewModel>(new Dictionary<string, object>
+    {
+        { "ShouldRefresh", true }
+    });
     }
 
     private void DiscardSwitchBack()
@@ -127,6 +184,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private void PopulateFormWithProductdata(ProductStock product)
     {
+        ProductID = product.ID;
+
         ProductName = product.Name;
         ProductDescription = product.Description;
         ProductPrice = product.Price;
@@ -134,11 +193,11 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
         ProductSKU = product.Sku;
-        
+        ProductCurrentStock = product.CurrentStock;
+
         SelectedProductSupplier = product.Supplier;
         SelectedProductStatus = product.Status;
         SelectedProductCategory = product.Category;
-        // ProductImage = product.Poster; // Don't know how to do this
     }
 
     public string ViewTitle => ViewContext switch
@@ -147,19 +206,25 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductViewContext.EditProduct => "Edit Product",
         _ => "Add Product"
     };
-    
+
     public string ViewDescription => ViewContext switch
     {
         ProductViewContext.AddProduct => "Add new gym products with details like name, price, and stock to keep your inventory up to date",
         ProductViewContext.EditProduct => "Edit existing gym products with details like name, price, and stock to keep your inventory up to date",
         _ => "Add new gym products with details like name, price, and stock to keep your inventory up to date"
     };
-    
+
     public void SetViewContext(ProductViewContext context)
     {
         ViewContext = context;
         OnPropertyChanged(nameof(ViewTitle));
         OnPropertyChanged(nameof(ViewDescription));
+    }
+
+    public int? ProductID
+    {
+        get => _productID;
+        set => SetProperty(ref _productID, value, true);
     }
 
     [Required(ErrorMessage = "Product Name is required")]
@@ -170,7 +235,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         get => _productName;
         set => SetProperty(ref _productName, value, true);
     }
-    
+
     [Required(ErrorMessage = "Product SKU is required")]
     [MinLength(8, ErrorMessage = "Must be at least 8-12 characters long")]
     [MaxLength(12, ErrorMessage = "Must not exceed 12 characters")]
@@ -179,15 +244,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         get => _productSKU;
         set => SetProperty(ref _productSKU, value, true);
     }
-    
+
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string? ProductDescription 
+    public string? ProductDescription
     {
         get => _productDescription;
         set => SetProperty(ref _productDescription, value, true);
     }
-    
+
     [Required(ErrorMessage = "Price must be set")]
     [Range(20, 5000, ErrorMessage = "Price must be between 20 and 5,000")]
     public int? ProductPrice
@@ -195,18 +260,24 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         get => _price;
         set => SetProperty(ref _price, value, true);
     }
-    
+
     [Range(1, 15000, ErrorMessage = "Price must be between 1 and 15,000")]
     public int? ProductDiscountedPrice
     {
         get => _discountedPrice;
         set => SetProperty(ref _discountedPrice, value, true);
     }
-    
-    public string? SelectedProductStatus 
+
+    public int? ProductCurrentStock
+    {
+        get => _productCurrentStock;
+        set => SetProperty(ref _productCurrentStock, value, true);
+    }
+
+    public string? SelectedProductStatus
     {
         get => _selectedProductStatusItem;
-        set =>  SetProperty(ref _selectedProductStatusItem, value, true);
+        set => SetProperty(ref _selectedProductStatusItem, value, true);
     }
 
     public DateTime? ProductExpiry
@@ -214,17 +285,17 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         get => _productExpiry;
         set => SetProperty(ref _productExpiry, value, true);
     }
-    
+
     public string? SelectedProductCategory
     {
         get => _selectedProductCategoryItem;
-        set =>  SetProperty(ref _selectedProductCategoryItem, value, true);
+        set => SetProperty(ref _selectedProductCategoryItem, value, true);
     }
-    
+
     public string? SelectedProductSupplier
     {
         get => _selectedSupplierCategoryItem;
-        set =>  SetProperty(ref _selectedSupplierCategoryItem, value, true);
+        set => SetProperty(ref _selectedSupplierCategoryItem, value, true);
     }
 
     public Image? ProductImage
@@ -232,7 +303,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         get => _productImage;
         set => SetProperty(ref _productImage, value, true);
     }
-    
+
     partial void OnIsPercentageModeOnChanged(bool value)
     {
         OnPropertyChanged(nameof(DiscountSymbol));
