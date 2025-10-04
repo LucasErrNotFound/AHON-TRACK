@@ -68,22 +68,23 @@
                 <shadui:Card Margin="0,10,0,0" MaxHeight="595" HasShadow="True">
                     <Grid ColumnDefinitions="Auto Auto" ColumnSpacing="30">
                         <StackPanel Grid.Column="0" Spacing="20" HorizontalAlignment="Left">
-                            <TextBox
+                            <AutoCompleteBox
                                 Width="400"
                                 HorizontalAlignment="Left"
-                                shadui:ControlAssist.ShowProgress="{CompiledBinding }"
+                                shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingTrainee}"
+                                ItemsSource="{CompiledBinding TraineesSuggestions}"
+                                Text="{CompiledBinding SearchTraineeText}"
                                 shadui:ControlAssist.Height="40"
                                 Classes="Clearable"
-                                Text="{CompiledBinding  Mode=TwoWay}"
                                 FontSize="15"
                                 Watermark="Search Trainees...">
-                                <TextBox.InnerRightContent>
+                                <AutoCompleteBox.InnerRightContent>
                                     <Svg
                                         Width="20"
                                         Opacity="0.75"
                                         Path="/Assets/ManageEmployeesView/search-icon.svg" />
-                                </TextBox.InnerRightContent>
-                            </TextBox>
+                                </AutoCompleteBox.InnerRightContent>
+                            </AutoCompleteBox>
                             <DataGrid
                                 MaxHeight="380"
                                 AutoGenerateColumns="False"
@@ -94,6 +95,7 @@
                                 HeadersVisibility="Column"
                                 IsReadOnly="True"
                                 ItemsSource="{CompiledBinding TraineeList}"
+                                SelectedItem="{CompiledBinding SelectedTrainee, Mode=OneWayToSource}"
                                 SelectionMode="Single">
 
                                 <DataGrid.Resources>
@@ -222,7 +224,8 @@
                                     </Button>
                                     <Button 
                                         Classes="Primary" 
-                                        Command="{CompiledBinding SubmitCommand}">
+                                        Command="{CompiledBinding SubmitCommand}"
+                                        IsEnabled="{CompiledBinding SelectedTrainee, Mode=TwoWay, Converter={x:Static ObjectConverters.IsNotNull}}">
                                         <StackPanel Orientation="Horizontal">
                                             <Svg
                                                 Width="20"

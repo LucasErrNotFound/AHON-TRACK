@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using AHON_TRACK.ViewModels;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,6 +19,24 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
 {
     [ObservableProperty]
     private string[] _coachItems = ["Coach Jho", "Coach Rey", "Coach Jedd"];
+    
+    [ObservableProperty]
+    private ObservableCollection<Trainees> _allTrainees = [];
+
+    [ObservableProperty]
+    private ObservableCollection<Trainees> _filteredTrainees = [];
+
+    [ObservableProperty]
+    private ObservableCollection<string> _traineesSuggestions = [];
+
+    [ObservableProperty]
+    private string _searchTraineeText = string.Empty;
+
+    [ObservableProperty]
+    private Trainees? _selectedTrainee;
+
+    [ObservableProperty]
+    private bool _isSearchingTrainee;
 
     private TimeOnly? _startTime;
     private TimeOnly? _endTime;
@@ -72,8 +94,9 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        
-        LoadSampleData();
+
+        LoadTraineeData();
+        UpdateSuggestions();
     }
 
     public AddTrainingScheduleDialogCardViewModel()
@@ -82,20 +105,34 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         
-        LoadSampleData();
+        LoadTraineeData();
+        UpdateSuggestions();
     }
 
     [AvaloniaHotReload]
     public void Initialize()
     {
         ClearAllFields();
+        ClearSearch();
+        
+        if (AllTrainees.Count == 0) LoadTraineeData();
+        UpdateSuggestions();
     }
-
-    private void LoadSampleData()
+    
+    private void LoadTraineeData()
     {
         var trainees = CreateSampleData();
-        var sampleConvertedCollection = new DataGridCollectionView(trainees);
-        TraineeList = sampleConvertedCollection;
+    
+        AllTrainees.Clear();
+        FilteredTrainees.Clear();
+    
+        foreach (var trainee in trainees)
+        {
+            AllTrainees.Add(trainee);
+            FilteredTrainees.Add(trainee);
+        }
+    
+        TraineeList = new DataGridCollectionView(FilteredTrainees);
     }
 
     private List<Trainees> CreateSampleData()
@@ -159,6 +196,107 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
             }
         ];
     }
+
+    [RelayCommand]
+    private async Task SearchTrainees()
+    {
+        if (string.IsNullOrWhiteSpace(SearchTraineeText))
+        {
+            // Reset to show all trainees 
+            FilteredTrainees.Clear();
+            foreach (var trainee in AllTrainees)
+            {
+                FilteredTrainees.Add(trainee);
+            }
+            SelectedTrainee = null;
+            return;
+        }
+
+        IsSearchingTrainee = true;
+
+        try
+        {
+            await Task.Delay(200);
+            var searchTerm = SearchTraineeText.ToLowerInvariant();
+            var filteredResults = AllTrainees.Where(trainee =>
+                trainee.FirstName.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+                trainee.LastName.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+                $"{trainee.FirstName} {trainee.LastName}".Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+                trainee.ID.ToString().Contains(searchTerm) ||
+                trainee.PackageType.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
+                trainee.ContactNumber.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase)
+            ).ToList();
+            
+            FilteredTrainees.Clear();
+            foreach (var trainee in filteredResults)
+            {
+                FilteredTrainees.Add(trainee);
+            }
+            
+            var exactMatch = filteredResults.FirstOrDefault(m =>
+                $"{m.FirstName} {m.LastName}".Equals(SearchTraineeText, StringComparison.OrdinalIgnoreCase));
+
+            if (exactMatch != null)
+            {
+                SelectedTrainee = exactMatch;
+            }
+        }
+        finally
+        {
+            IsSearchingTrainee = false;
+        }
+    }
+    
+    private void UpdateSuggestions()
+    {
+        var suggestions = AllTrainees 
+            .Select(m => $"{m.FirstName} {m.LastName}")
+            .Distinct()
+            .OrderBy(s => s)
+            .ToList();
+
+        TraineesSuggestions.Clear();
+        foreach (var suggestion in suggestions)
+        {
+            TraineesSuggestions.Add(suggestion);
+        }
+    }
+    
+    partial void OnSearchTraineeTextChanged(string value)
+    {
+        SearchTraineesCommand.Execute(null);
+    }
+
+    partial void OnSelectedTraineeChanged(Trainees? value)
+    {		
+        if (value == null) return;
+        // Update the search text to match the selected trainee 
+        SearchTraineeText = $"{value.FirstName} {value.LastName}";
+
+        // Show only the selected trainee in the grid
+        FilteredTrainees.Clear();
+        FilteredTrainees.Add(value);
+    }
+    
+    [RelayCommand]
+    private void SelectTrainee(Trainees trainee)
+    {
+        SelectedTrainee = trainee;
+    }
+
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        SearchTraineeText = string.Empty;
+        SelectedTrainee = null;
+        FilteredTrainees.Clear();
+        foreach (var trainee in AllTrainees)
+        {
+            FilteredTrainees.Add(trainee);
+        }
+    }
+    
+    public Trainees? LastSelectedTrainee { get; private set; }
     
     [RelayCommand]
     private void Submit()
@@ -167,15 +305,19 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         ValidateAllProperties();
         ValidateProperty(StartTime, nameof(StartTime));
         ValidateProperty(EndTime, nameof(EndTime));
-        if (HasErrors) return;
         
+        if (HasErrors) return;
+        if (SelectedTrainee == null) return;
+
+        LastSelectedTrainee = SelectedTrainee;
+        ClearSearch();
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
 
     [RelayCommand]
     private void Cancel()
     {
-        ClearAllErrors();
+        ClearSearch();
         _dialogManager.Close(this);
     }
     
@@ -185,20 +327,36 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         StartTime = null;
         EndTime = null;
         SelectedTrainingDate = null;
+        
+        SearchTraineeText = string.Empty;
+        SelectedTrainee = null;
         ClearAllErrors();
     }
         
 }
 
-class Trainees
+public partial class Trainees : ObservableObject
 {
-    public int ID { get; set; }
-    public string? Picture { get; set; } = string.Empty;
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string ContactNumber { get; set; } = string.Empty;
-    public string PackageType { get; set; } = string.Empty;
-    public int SessionLeft { get; set; }
+    [ObservableProperty] 
+    private int _iD;
+    
+    [ObservableProperty] 
+    private string? _picture = string.Empty;
+    
+    [ObservableProperty] 
+    private string _firstName = string.Empty;
+    
+    [ObservableProperty] 
+    private string _lastName  = string.Empty;
+    
+    [ObservableProperty] 
+    private string _contactNumber = string.Empty;
+    
+    [ObservableProperty] 
+    private string _packageType = string.Empty;
+
+    [ObservableProperty] 
+    private int _sessionLeft; 
 
     public string PicturePath => string.IsNullOrEmpty(Picture) || Picture == "null"
         ? "avares://AHON_TRACK/Assets/MainWindowView/user.png"
