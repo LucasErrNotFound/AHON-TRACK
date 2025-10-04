@@ -7,9 +7,9 @@
     xmlns:viewModels="using:AHON_TRACK.Components.ViewModels"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     x:DataType="viewModels:ChangeScheduleDialogCardViewModel"
-    mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="490"
+    mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="510"
     Width="400"
-    MaxHeight="490"
+    MaxHeight="510"
     x:Class="AHON_TRACK.Components.ChangeScheduleDialog.ChangeScheduleDialogCard">
     
     <Design.DataContext>
