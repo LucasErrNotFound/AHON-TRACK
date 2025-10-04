@@ -3,17 +3,22 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged 
+public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
+    [ObservableProperty] 
+    private string[] _coachFilterItems = ["Coach Jho", "Coach Rey", "Coach Jedd"];
+    
     private TimeOnly? _startTime;
     private TimeOnly? _endTime;
     private DateTime? _selectedTrainingDate;
+    private string? _selectedCoach;
     
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -40,7 +45,12 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         set => SetProperty(ref _selectedTrainingDate, value, true);
     }
     
-    [Required(ErrorMessage = "Start time is required.")]
+    public string? SelectedCoach
+    {
+        get => _selectedCoach;
+        set => SetProperty(ref _selectedCoach, value, true);
+    }
+
     [StartTimeValidation(nameof(EndTime), ErrorMessage = "Start time must be less than end time")]
     public TimeOnly? StartTime
     {
@@ -65,9 +75,14 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public void Initialize(ScheduledPerson? scheduledPerson)
     {
-        ClearAllFields();
+        ClearAllErrors();
+
+        SelectedTrainingDate = scheduledPerson?.ScheduledDate;
+        SelectedCoach = scheduledPerson?.AssignedCoach;
+        StartTime = scheduledPerson?.ScheduledTimeStart;
+        EndTime = scheduledPerson?.ScheduledTimeEnd;
     }
 
     [RelayCommand]
