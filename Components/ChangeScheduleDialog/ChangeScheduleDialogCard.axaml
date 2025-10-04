@@ -40,6 +40,7 @@
                     <StackPanel Grid.Column="0">
                         <CalendarDatePicker
                             shadui:ControlAssist.Label="Scheduled Date"
+                            shadui:ControlAssist.ReadOnly="True"
                             Width="150"
                             SelectedDate="{CompiledBinding SelectedTrainingDate}" />
                     </StackPanel>
