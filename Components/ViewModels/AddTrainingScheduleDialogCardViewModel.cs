@@ -35,6 +35,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         set => SetProperty(ref _selectedCoachItem, value, true);
     }
     
+    [TodayValidation]
     [Required(ErrorMessage = "A training date is required.")]
     public DateTime? SelectedTrainingDate
     {

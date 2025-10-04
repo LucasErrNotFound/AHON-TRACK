@@ -38,6 +38,7 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         _pageManager = new PageManager(new ServiceProvider());
     }
     
+    [TodayValidation]
     [Required(ErrorMessage = "A training date is required.")]
     public DateTime? SelectedTrainingDate
     {
