@@ -288,6 +288,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _productCurrentStock, value, true);
     }
 
+    // Alias for XAML binding compatibility
+    public int? CurrentStock
+    {
+        get => ProductCurrentStock;
+        set => ProductCurrentStock = value;
+    }
+
     public string? SelectedProductStatus
     {
         get => _selectedProductStatusItem;

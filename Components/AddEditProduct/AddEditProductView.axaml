@@ -12,74 +12,74 @@
     x:DataType="viewModel:AddEditProductViewModel"
     x:Class="AHON_TRACK.Components.AddEditProduct.AddEditProductView">
 
-    <Design.DataContext>
-        <viewModel:AddEditProductViewModel />
-    </Design.DataContext>
+	<Design.DataContext>
+		<viewModel:AddEditProductViewModel />
+	</Design.DataContext>
 
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
-        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
-        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
 
-        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
-        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
-        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
-        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
 
-        <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter" />
-    </UserControl.Resources>
+		<converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter" />
+	</UserControl.Resources>
 
-    <DockPanel LastChildFill="True">
-        <StackPanel
+	<DockPanel LastChildFill="True">
+		<StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
             Margin="{StaticResource PageMargin}"
             DockPanel.Dock="Top">
-            <TextBlock
+			<TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
                 Text="{CompiledBinding ViewTitle}"
                 Foreground="{StaticResource FontForeground}"
                 Margin="90,30,0,0" />
-            <TextBlock
+			<TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
                 HorizontalAlignment="Left"
                 Text="{CompiledBinding ViewDescription}"
                 TextWrapping="Wrap"
                 Margin="90,0" />
-        </StackPanel>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="350,30,350,0" Spacing="16">
-                <Grid RowDefinitions="* * *" ColumnDefinitions="1.5* *" ColumnSpacing="30">
+		</StackPanel>
+		<ScrollViewer VerticalScrollBarVisibility="Auto">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="350,30,350,0" Spacing="16">
+				<Grid RowDefinitions="* * *" ColumnDefinitions="1.5* *" ColumnSpacing="30">
 
-                    <!-- Column 1 -->
-                    <!-- Product Details -->
-                    <Grid Grid.Row="0" Grid.Column="0" RowDefinitions="* * *" VerticalAlignment="Top" RowSpacing="20">
-                        <shadui:Card Grid.Row="0" VerticalAlignment="Top">
-                            <StackPanel>
-                                <shadui:CardTitle Content="Product Details" />
-                                <TextBox
+					<!-- Column 1 -->
+					<!-- Product Details -->
+					<Grid Grid.Row="0" Grid.Column="0" RowDefinitions="* * *" VerticalAlignment="Top" RowSpacing="20">
+						<shadui:Card Grid.Row="0" VerticalAlignment="Top">
+							<StackPanel>
+								<shadui:CardTitle Content="Product Details" />
+								<TextBox
                                     Classes="Clearable"
                                     shadui:ControlAssist.Label="Product Name"
                                     Watermark="Enter the product name here"
-                                    Margin="0,30,0,0" 
+                                    Margin="0,30,0,0"
                                     Text="{CompiledBinding ProductName, Mode=TwoWay}"/>
-                                <Grid ColumnDefinitions="* *" ColumnSpacing="30" Margin="0,20,0,0">
-                                    <TextBox
+								<Grid ColumnDefinitions="* *" ColumnSpacing="30" Margin="0,20,0,0">
+									<TextBox
                                         Grid.Column="0"
                                         Classes="Clearable"
                                         Watermark="Enter the product SKU here"
                                         shadui:ControlAssist.Label="SKU"
                                         Text="{CompiledBinding ProductSKU, Mode=TwoWay}"/>
-                                    <ComboBox 
+									<ComboBox
                                         Margin="0,-4,0,0"
                                         Grid.Column="1"
                                         PlaceholderText="Select its supplier here"
                                         shadui:ControlAssist.Label="Product Supplier"
                                         ItemsSource="{CompiledBinding ProductSupplierItems}"
                                         SelectedItem="{CompiledBinding SelectedProductSupplier, Mode=TwoWay}" />
-                                </Grid>
-                                <TextBox
+								</Grid>
+								<TextBox
                                     shadui:ControlAssist.Label="Description (Optional)"
                                     shadui:ControlAssist.Height="80"
                                     Watermark="Set a description to the product"
@@ -87,78 +87,78 @@
                                     AcceptsReturn="True"
                                     Margin="0,20,0,0"
                                     Text="{CompiledBinding ProductDescription, Mode=TwoWay}"/>
-                            </StackPanel>
-                        </shadui:Card>
-                        <shadui:Card Grid.Row="1" VerticalAlignment="Top">
-                            <StackPanel>
-                                <shadui:CardTitle Content="Product Images" />
-                                <Border Margin="0,20,0,0">
-                                    <Grid>
-                                        <Rectangle StrokeDashArray="2, 1" Stroke="LightGray" StrokeThickness="1.8"
+							</StackPanel>
+						</shadui:Card>
+						<shadui:Card Grid.Row="1" VerticalAlignment="Top">
+							<StackPanel>
+								<shadui:CardTitle Content="Product Images" />
+								<Border Margin="0,20,0,0">
+									<Grid>
+										<Rectangle StrokeDashArray="2, 1" Stroke="LightGray" StrokeThickness="1.8"
                                                    RadiusX="7" RadiusY="7" Fill="White" />
-                                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center"
+										<StackPanel Orientation="Vertical" HorizontalAlignment="Center"
                                                     Margin="0,20,0,20" Spacing="5">
-                                            <StackPanel
+											<StackPanel
                                                 Orientation="Vertical"
                                                 Spacing="10">
-                                                <Border Width="90" Height="90" Margin="0,10"
+												<Border Width="90" Height="90" Margin="0,10"
                                                         Background="#F5F5F5"
                                                         BorderBrush="#CCCCCC"
                                                         BorderThickness="1"
                                                         CornerRadius="150"
                                                         ClipToBounds="True">
 
-                                                    <Image
+													<Image
                                                         Name="ProductImage"
                                                         Stretch="UniformToFill"
                                                         IsVisible="True"/>
-                                                    <!-- Profile image placeholder -->
-                                                </Border>
-                                            </StackPanel>
-                                            
-                                                <TextBlock
-                                                Text="Drop your images here"
-                                                HorizontalAlignment="Center"
-                                                FontWeight="SemiBold"
-                                                FontSize="15"
-                                                Foreground="{DynamicResource FontForeground}" />
-                                            <TextBlock
+													<!-- Profile image placeholder -->
+												</Border>
+											</StackPanel>
+
+											<TextBlock
+											Text="Drop your images here"
+											HorizontalAlignment="Center"
+											FontWeight="SemiBold"
+											FontSize="15"
+											Foreground="{DynamicResource FontForeground}" />
+											<TextBlock
                                                 Text="PNG or JPG"
                                                 HorizontalAlignment="Center"
                                                 Classes="Caption Muted" />
-                                            <Button
-                                                Classes="Outline" 
-                                                HorizontalAlignment="Center" 
+											<Button
+                                                Classes="Outline"
+                                                HorizontalAlignment="Center"
                                                 Margin="0,10,0,0"
                                                 Click="Button_OnClick">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Svg
+												<StackPanel Orientation="Horizontal">
+													<Svg
                                                         Width="20"
                                                         Height="20"
                                                         VerticalAlignment="Center"
                                                         Margin="0,0,6,0"
                                                         Path="avares://AHON_TRACK/Assets/ManageBillingView/upload-icon.svg" />
-                                                    <TextBlock 
-                                                        Text="Select Images" 
+													<TextBlock
+                                                        Text="Select Images"
                                                         VerticalAlignment="Center"
                                                         Foreground="{DynamicResource FontForeground}" />
-                                                </StackPanel>
-                                            </Button>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
-                        </shadui:Card>
-                    </Grid>
+												</StackPanel>
+											</Button>
+										</StackPanel>
+									</Grid>
+								</Border>
+							</StackPanel>
+						</shadui:Card>
+					</Grid>
 
-                    <!-- Column 2 -->
-                    <!-- Pricing -->
-                    <Grid Grid.Row="0" Grid.Column="1" RowDefinitions="* * * * *" RowSpacing="15" VerticalAlignment="Top">
-                        <shadui:Card Grid.Row="0" VerticalAlignment="Top">
-                            <StackPanel>
-                                <shadui:CardTitle Content="Pricing" />
-                                <!-- Price -->
-                                <NumericUpDown
+					<!-- Column 2 -->
+					<!-- Pricing -->
+					<Grid Grid.Row="0" Grid.Column="1" RowDefinitions="* * * * *" RowSpacing="15" VerticalAlignment="Top">
+						<shadui:Card Grid.Row="0" VerticalAlignment="Top">
+							<StackPanel>
+								<shadui:CardTitle Content="Pricing" />
+								<!-- Price -->
+								<NumericUpDown
                                     Margin="0,30,0,0"
                                     shadui:ControlAssist.Label="Price"
                                     Classes="Clearable"
@@ -166,13 +166,13 @@
                                     ShowButtonSpinner="False"
                                     Watermark="0.00"
                                     Value="{CompiledBinding ProductPrice, Mode=TwoWay}">
-                                    <NumericUpDown.InnerLeftContent>
-                                        <TextBlock Margin="8,0,-8,0" Text="₱" />
-                                    </NumericUpDown.InnerLeftContent>
-                                </NumericUpDown>
+									<NumericUpDown.InnerLeftContent>
+										<TextBlock Margin="8,0,-8,0" Text="₱" />
+									</NumericUpDown.InnerLeftContent>
+								</NumericUpDown>
 
-                                <!-- Discounted Price -->
-                                <NumericUpDown
+								<!-- Discounted Price -->
+								<NumericUpDown
                                     Margin="0,30,0,0"
                                     shadui:ControlAssist.Label="Discounted Price (Optional)"
                                     Classes="Clearable"
@@ -180,107 +180,115 @@
                                     ShowButtonSpinner="False"
                                     Watermark="0"
                                     Value="{CompiledBinding ProductDiscountedPrice, Mode=TwoWay}">
-                                    <NumericUpDown.InnerLeftContent>
-                                        <TextBlock 
-                                            Margin="8,0,-8,0" 
+									<NumericUpDown.InnerLeftContent>
+										<TextBlock
+                                            Margin="8,0,-8,0"
                                             Text="{CompiledBinding DiscountSymbol}" />
-                                    </NumericUpDown.InnerLeftContent>
-                                </NumericUpDown>
-                                <Separator Margin="0,10,0,10"/>
-                                <StackPanel 
+									</NumericUpDown.InnerLeftContent>
+								</NumericUpDown>
+								<Separator Margin="0,10,0,10"/>
+								<StackPanel
                                     Orientation="Horizontal"
                                     Spacing="8"
                                     Margin="10,0,0,0"
                                     VerticalAlignment="Center"
                                     HorizontalAlignment="Left">
-                                    <ToggleSwitch 
-                                        shadui:ToggleSwitchAssist.RightAlignedContent="True" 
+									<ToggleSwitch
+                                        shadui:ToggleSwitchAssist.RightAlignedContent="True"
                                         IsChecked="{CompiledBinding IsPercentageModeOn, Mode=TwoWay}">
-                                        <ToggleSwitch.OnContent>
-                                            <TextBlock
+										<ToggleSwitch.OnContent>
+											<TextBlock
                                                 VerticalAlignment="Center"
                                                 FontSize="13"
                                                 Text="Percentage Mode On" />
-                                        </ToggleSwitch.OnContent>
-                                        <ToggleSwitch.OffContent>
-                                            <TextBlock
+										</ToggleSwitch.OnContent>
+										<ToggleSwitch.OffContent>
+											<TextBlock
                                                 VerticalAlignment="Center"
                                                 FontSize="13"
                                                 Text="Percentage Mode Off" />
-                                        </ToggleSwitch.OffContent>
-                                    </ToggleSwitch>
-                                </StackPanel>
-                            </StackPanel>
-                        </shadui:Card>
+										</ToggleSwitch.OffContent>
+									</ToggleSwitch>
+								</StackPanel>
+							</StackPanel>
+						</shadui:Card>
 
-                        <shadui:Card Grid.Row="1" VerticalAlignment="Top">
-                            <StackPanel>
-                                <shadui:CardTitle Content="Status" />
-                                <ComboBox 
+						<shadui:Card Grid.Row="1" VerticalAlignment="Top">
+							<StackPanel>
+								<shadui:CardTitle Content="Stock" />
+								<NumericUpDown
                                     Margin="0,20,0,0"
-                                    shadui:ControlAssist.Hint="Set the product stock status"
-                                    ItemsSource="{CompiledBinding ProductStatusItems}"
-                                    SelectedItem="{CompiledBinding SelectedProductStatus, Mode=TwoWay}">
-                                </ComboBox>
-                            </StackPanel>
-                        </shadui:Card>
-                        
-                        <shadui:Card Grid.Row="2" VerticalAlignment="Top">
-                            <StackPanel>
-                                <shadui:CardTitle Content="Expiry" />
-                                <CalendarDatePicker 
+                                    shadui:ControlAssist.Label="Current Stock"
+                                    Classes="Clearable"
+                                    FormatString="N0"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0"
+                                    Minimum="1"
+                                    Maximum="500"
+                                    Value="{CompiledBinding CurrentStock, Mode=TwoWay}">
+									<NumericUpDown.InnerLeftContent>
+										<TextBlock Margin="8,0,-8,0" Text="×" />
+									</NumericUpDown.InnerLeftContent>
+								</NumericUpDown>
+							</StackPanel>
+						</shadui:Card>
+
+						<shadui:Card Grid.Row="2" VerticalAlignment="Top">
+							<StackPanel>
+								<shadui:CardTitle Content="Expiry" />
+								<CalendarDatePicker
                                     shadui:ControlAssist.Hint="Pick the product's expiry date (optional)"
                                     Margin="0,20,0,0"
                                     SelectedDate="{CompiledBinding ProductExpiry}"/>
-                            </StackPanel>
-                        </shadui:Card>
-                        
-                        <shadui:Card Grid.Row="3" VerticalAlignment="Top">
-                            <StackPanel>
-                                <shadui:CardTitle Content="Category"/>
-                                <ComboBox 
+							</StackPanel>
+						</shadui:Card>
+
+						<shadui:Card Grid.Row="3" VerticalAlignment="Top">
+							<StackPanel>
+								<shadui:CardTitle Content="Category"/>
+								<ComboBox
                                     Margin="0,20,0,0"
                                     shadui:ControlAssist.Hint="Select the appropriate product category"
                                     ItemsSource="{CompiledBinding ProductCategoryItems}"
                                     SelectedItem="{CompiledBinding SelectedProductCategory, Mode=TwoWay}">
-                                </ComboBox>
-                            </StackPanel>
-                        </shadui:Card>
-                        <StackPanel 
-                            Grid.Row="4" 
+								</ComboBox>
+							</StackPanel>
+						</shadui:Card>
+						<StackPanel
+                            Grid.Row="4"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             Spacing="15">
-                            <Button 
+							<Button
                                 Classes="Destructive"
-                                Command="{CompiledBinding DiscardProductCommand}">
-                                <StackPanel Orientation="Horizontal">
-                                    <Svg
+                                Command="{CompiledBinding CancelEditProductCommand}">
+								<StackPanel Orientation="Horizontal">
+									<Svg
                                         Width="20"
                                         Height="20"
                                         VerticalAlignment="Center"
                                         Margin="0,0,6,0"
-                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/discard-icon.svg"/>
-                                    <TextBlock Text="Discard" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-                            <Button 
+                                        Path="avares://AHON_TRACK/Assets/ProductStockView/cancel-icon.svg"/>
+									<TextBlock Text="Cancel" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
+							<Button
                                 Classes="Primary"
                                 Command="{CompiledBinding PublishProductCommand}">
-                                <StackPanel Orientation="Horizontal">
-                                    <Svg
+								<StackPanel Orientation="Horizontal">
+									<Svg
                                         Width="20"
                                         Height="20"
                                         VerticalAlignment="Center"
                                         Margin="0,0,6,0"
-                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/publish-icon.svg"/>
-                                    <TextBlock Text="Publish" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </StackPanel>
-        </ScrollViewer>
-    </DockPanel>
+                                        Path="avares://AHON_TRACK/Assets/ProductStockView/publish-icon.svg"/>
+									<TextBlock Text="Publish" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
+						</StackPanel>
+					</Grid>
+				</Grid>
+			</StackPanel>
+		</ScrollViewer>
+	</DockPanel>
 </UserControl>
