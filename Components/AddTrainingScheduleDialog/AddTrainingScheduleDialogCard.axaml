@@ -9,9 +9,9 @@
     x:DataType="viewModels:AddTrainingScheduleDialogCardViewModel"
     mc:Ignorable="d"
     Width="1550"
-    MaxHeight="720"
+    MaxHeight="725"
     d:DesignWidth="1550"
-    d:DesignHeight="650"
+    d:DesignHeight="655"
     x:Class="AHON_TRACK.Components.AddTrainingScheduleDialog.AddTrainingScheduleDialogCard">
 
     <Design.DataContext>
@@ -65,7 +65,7 @@
                 <TextBlock
                     Text="Add a new training schedule for your trainee"
                     Classes="Muted" />
-                <shadui:Card Margin="0,10,0,0" MaxHeight="590" HasShadow="True">
+                <shadui:Card Margin="0,10,0,0" MaxHeight="595" HasShadow="True">
                     <Grid ColumnDefinitions="Auto Auto" ColumnSpacing="50">
                         <StackPanel Grid.Column="0" Spacing="20" HorizontalAlignment="Left">
                             <TextBox
@@ -177,11 +177,13 @@
                                     <CalendarDatePicker 
                                         HorizontalAlignment="Left"
                                         shadui:ControlAssist.Label="Date of Training"
+                                        shadui:ControlAssist.ReadOnly="True"
                                         Width="150"
                                         Margin="0,20"
                                         SelectedDate="{CompiledBinding SelectedTrainingDate}">
                                     </CalendarDatePicker>
                                     <ComboBox 
+                                        VerticalAlignment="Top"
                                         Margin="30,20,0,35"
                                         Width="200"
                                         PlaceholderText="Pick a coach"
