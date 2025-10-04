@@ -261,15 +261,15 @@
                             Spacing="15">
                             <Button 
                                 Classes="Destructive"
-                                Command="{CompiledBinding DiscardProductCommand}">
+                                Command="{CompiledBinding CancelEditProductCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Svg
                                         Width="20"
                                         Height="20"
                                         VerticalAlignment="Center"
                                         Margin="0,0,6,0"
-                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/discard-icon.svg"/>
-                                    <TextBlock Text="Discard" VerticalAlignment="Center"/>
+                                        Path="avares://AHON_TRACK/Assets/ProductStockView/cancel-icon.svg"/>
+                                    <TextBlock Text="Cancel" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button 
@@ -281,7 +281,7 @@
                                         Height="20"
                                         VerticalAlignment="Center"
                                         Margin="0,0,6,0"
-                                        Path="avares://AHON_TRACK/Assets/ManageBillingView/publish-icon.svg"/>
+                                        Path="avares://AHON_TRACK/Assets/ProductStockView/publish-icon.svg"/>
                                     <TextBlock Text="Publish" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>

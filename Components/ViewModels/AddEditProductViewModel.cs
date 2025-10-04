@@ -95,13 +95,19 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     }
 
     [RelayCommand]
-    private void DiscardProduct()
+    private void CancelEditProduct()
     {
+        var title = ViewContext == ProductViewContext.EditProduct
+            ? "Cancel editing?"
+            : "Cancel product creation?";
+    
+        var message = ViewContext == ProductViewContext.EditProduct
+            ? "This action will cancel your editing and return to the product list. Any unsaved changes will be lost."
+            : "This action will cancel the product creation process. All entered information will be lost.";
+        
         _dialogManager
-            .CreateDialog(
-                "Are you absolutely sure?",
-                "This action cannot be undone. This will permanently discard your product creation.")
-            .WithPrimaryButton("Continue", DiscardSwitchBack ,DialogButtonStyle.Destructive)
+            .CreateDialog(title, message)
+            .WithPrimaryButton("Continue", CancelSwitchBack ,DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
@@ -116,13 +122,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             .ShowSuccess();
         _pageManager.Navigate<ProductStockViewModel>();
     }
-
-    private void DiscardSwitchBack()
+    
+    private void CancelSwitchBack()
     {
-        _toastManager.CreateToast("Discard Product")
-            .WithContent("Product discarded successfully")
+        _toastManager.CreateToast("Cancel Edit Product")
+            .WithContent("Product editing cancelled")
             .DismissOnClick()
-            .ShowSuccess();
+            .ShowWarning();
         _pageManager.Navigate<ProductStockViewModel>();
     }
 
