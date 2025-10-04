@@ -215,13 +215,21 @@
 
                         <shadui:Card Grid.Row="1" VerticalAlignment="Top">
                             <StackPanel>
-                                <shadui:CardTitle Content="Status" />
-                                <ComboBox 
+                                <shadui:CardTitle Content="Stock" />
+                                <NumericUpDown
                                     Margin="0,20,0,0"
-                                    shadui:ControlAssist.Hint="Set the product stock status"
-                                    ItemsSource="{CompiledBinding ProductStatusItems}"
-                                    SelectedItem="{CompiledBinding SelectedProductStatus, Mode=TwoWay}">
-                                </ComboBox>
+                                    shadui:ControlAssist.Label="Current Stock"
+                                    Classes="Clearable"
+                                    FormatString="N0"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0"
+                                    Minimum="1"
+                                    Maximum="500"
+                                    Value="{CompiledBinding CurrentStock, Mode=TwoWay}">
+                                    <NumericUpDown.InnerLeftContent>
+                                        <TextBlock Margin="8,0,-8,0" Text="×" />
+                                    </NumericUpDown.InnerLeftContent>
+                                </NumericUpDown>
                             </StackPanel>
                         </shadui:Card>
                         

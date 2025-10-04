@@ -40,6 +40,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private int? _price;
     private int? _discountedPrice;
+    private int? _currentStock;
     private bool? _inStock;
 
     private string? _productStatus;
@@ -81,7 +82,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         
         if (!parameters.TryGetValue("SelectedProduct", out var product)) return;
         var selectedProduct = (ProductStock)product;
-        PopulateFormWithProductdata(selectedProduct);
+        PopulateFormWithProductData(selectedProduct);
     }
 
     [RelayCommand]
@@ -125,7 +126,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         _pageManager.Navigate<ProductStockViewModel>();
     }
 
-    private void PopulateFormWithProductdata(ProductStock product)
+    private void PopulateFormWithProductData(ProductStock product)
     {
         ProductName = product.Name;
         ProductDescription = product.Description;
@@ -136,6 +137,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductSKU = product.Sku;
         
         SelectedProductSupplier = product.Supplier;
+        CurrentStock = product.CurrentStock;
         SelectedProductStatus = product.Status;
         SelectedProductCategory = product.Category;
         // ProductImage = product.Poster; // Don't know how to do this
@@ -202,8 +204,14 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         get => _discountedPrice;
         set => SetProperty(ref _discountedPrice, value, true);
     }
+
+    public int? CurrentStock
+    {
+        get => _currentStock;
+        set => SetProperty(ref _currentStock, value, true);
+    }
     
-    public string? SelectedProductStatus 
+    public string? SelectedProductStatus // Make this NumericUpDown<int> instead of ComboBox<string>
     {
         get => _selectedProductStatusItem;
         set =>  SetProperty(ref _selectedProductStatusItem, value, true);
