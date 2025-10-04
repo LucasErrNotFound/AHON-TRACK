@@ -42,3 +42,19 @@ public sealed class EndDateValidationAttribute(
             : new ValidationResult(ErrorMessage);
     }
 }
+
+public sealed class TodayValidationAttribute(
+    string errorMessage = "The date you selected is invalid. Past dates are now allowed") : ValidationAttribute(errorMessage)
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        var today = DateTime.Today;
+        
+        if (value is not DateTime selectedDate)
+            return ValidationResult.Success;
+        
+        return selectedDate.CompareTo(today) >= 0
+            ? ValidationResult.Success
+            : new ValidationResult(ErrorMessage);
+    }
+}
