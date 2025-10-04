@@ -526,26 +526,74 @@ public partial class ProductStock : ObservableObject
     private string? _status;
 
     [ObservableProperty]
-    private string? _poster; // Image path or URL
+    private string? _poster;
 
     [ObservableProperty]
     private bool _isSelected;
 
+    // ✅ ADD THIS: Calculate the final price after discount
+    public int? FinalPrice
+    {
+        get
+        {
+            if (!Price.HasValue) return null;
+
+            if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
+            {
+                if (DiscountInPercentage)
+                {
+                    // Calculate percentage discount
+                    var discountAmount = Price.Value * (DiscountedPrice.Value / 100.0);
+                    return (int)(Price.Value - discountAmount);
+                }
+                else
+                {
+                    // Fixed discount - return the discounted price directly
+                    return DiscountedPrice.Value;
+                }
+            }
+
+            return Price;
+        }
+    }
+
     public string FormattedExpiry => Expiry.HasValue ? $"{Expiry.Value:MM/dd/yyyy}" : string.Empty;
-    public string FormattedPrice => Price.HasValue ? $"₱{Price:N2}" : string.Empty;
+
+    // ✅ UPDATED: Show the FINAL price (after discount), not original price
+    public string FormattedPrice => FinalPrice.HasValue ? $"₱{FinalPrice:N2}" : string.Empty;
+
+    // ✅ ADD THIS: Show original price if there's a discount (for comparison)
+    public string OriginalPrice => (DiscountedPrice.HasValue && DiscountedPrice.Value > 0 && Price.HasValue)
+        ? $"₱{Price:N2}"
+        : string.Empty;
+
+    // ✅ ADD THIS: Show discount information
+    public string DiscountDisplay
+    {
+        get
+        {
+            if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
+            {
+                return DiscountInPercentage
+                    ? $"{DiscountedPrice}% OFF"
+                    : $"₱{DiscountedPrice} OFF";
+            }
+            return string.Empty;
+        }
+    }
 
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch
     {
-        "in stock" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),      // Green-500
-        "out of stock" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),  // Red-500
-        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))              // Default Gray-500
+        "in stock" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
+        "out of stock" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
     };
 
     public IBrush StatusBackground => Status?.ToLowerInvariant() switch
     {
-        "in stock" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
-        "out of stock" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
-        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))             // Default Gray-500 with alpha
+        "in stock" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
+        "out of stock" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
     };
 
     public string? StatusDisplayText => Status?.ToLowerInvariant() switch
@@ -555,10 +603,33 @@ public partial class ProductStock : ObservableObject
         _ => Status
     };
 
-    partial void OnStatusChanged(string value)
+    partial void OnStatusChanged(string? value)
     {
         OnPropertyChanged(nameof(StatusForeground));
         OnPropertyChanged(nameof(StatusBackground));
         OnPropertyChanged(nameof(StatusDisplayText));
+    }
+
+    // ✅ ADD THIS: Notify UI when discount changes
+    partial void OnPriceChanged(int? value)
+    {
+        OnPropertyChanged(nameof(FinalPrice));
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPrice));
+    }
+
+    partial void OnDiscountedPriceChanged(int? value)
+    {
+        OnPropertyChanged(nameof(FinalPrice));
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPrice));
+        OnPropertyChanged(nameof(DiscountDisplay));
+    }
+
+    partial void OnDiscountInPercentageChanged(bool value)
+    {
+        OnPropertyChanged(nameof(FinalPrice));
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(DiscountDisplay));
     }
 }

@@ -1393,6 +1393,8 @@ WHERE equipmentID = @equipmentID";
 
         public async Task<bool> AddProductAsync(ProductModel product)
         {
+            product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
+
             const string query = @"
         INSERT INTO Products (ProductName, SKU, ProductSupplier, Description, 
                              Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
@@ -1474,6 +1476,9 @@ WHERE equipmentID = @equipmentID";
 
         public async Task<bool> UpdateProductAsync(ProductModel product)
         {
+
+            product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
+
             const string query = @"
         UPDATE Products SET 
             ProductName = @ProductName,
