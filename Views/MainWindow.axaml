@@ -281,7 +281,7 @@
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
+						Command="{CompiledBinding OpenGymDemographicsCommand}"
 						Content="Gym Demographics"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Gym Demographics'}">
