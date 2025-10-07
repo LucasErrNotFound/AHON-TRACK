@@ -11,7 +11,7 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface ISystemService
     {
-        #region Package Settings
+        #region Package Management Settings
         // Basic method with minimal parameters (2 parameters)
         Task AddPackageAsync(string packageName, decimal price);
 
@@ -28,7 +28,7 @@ namespace AHON_TRACK.Services.Interface
 
         #endregion
 
-        #region Chckin/out Settings
+        #region Chckin/out Management Settings
 
         Task<List<MemberPerson>> GetMemberCheckInsAsync(DateTime date);
         Task<bool> CheckInMemberAsync(int memberId);
@@ -49,7 +49,7 @@ namespace AHON_TRACK.Services.Interface
 
         #endregion
 
-        #region Inventory Settings
+        #region Inventory Management Settings
         Task<List<EquipmentModel>> GetEquipmentAsync();
         Task<bool> AddEquipmentAsync(EquipmentModel equipment);
         Task<bool> UpdateEquipmentAsync(EquipmentModel equipment);
@@ -69,6 +69,20 @@ namespace AHON_TRACK.Services.Interface
         Task<List<ProductModel>> GetProductsExpiringSoonAsync(int daysThreshold = 30);
         Task<ProductModel?> GetProductByIdAsync(int productId);
         Task<ProductModel?> GetProductBySKUAsync(string sku);
+        #endregion
+
+        #region Training Schedule Management Settings
+        Task<List<TrainingModel>> GetTrainingSchedulesAsync();
+        Task<List<TrainingModel>> GetTrainingSchedulesByDateAsync(DateTime date);
+        Task<List<TrainingModel>> GetTrainingSchedulesByPackageTypeAsync(string packageType);
+        Task<List<TrainingModel>> GetTrainingSchedulesByCoachAsync(string coachName);
+        Task<bool> AddTrainingScheduleAsync(TrainingModel training);
+        Task<bool> UpdateTrainingScheduleAsync(TrainingModel training);
+        Task<bool> UpdateAttendanceAsync(int trainingID, string attendance);
+        Task<bool> DeleteTrainingScheduleAsync(int trainingID);
+        Task<TrainingModel?> GetTrainingScheduleByIdAsync(int trainingID);
+
+        Task<List<TraineeModel>> GetAvailableTraineesAsync();
         #endregion
     }
 }
