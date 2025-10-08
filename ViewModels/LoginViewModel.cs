@@ -174,13 +174,13 @@ public partial class LoginViewModel : ViewModelBase
 
                     role = "Staff";
 
-                    LogAction(conn, username, role, "Login", "Login successful", true);
+                    LogAction(conn, username, role, "Login successful.", "Login successful", true);
                     return true;
                 }
             }
 
             // 🔹 If no match found
-            LogAction(conn, username, role, "Login", "Login failed - invalid credentials", false);
+            LogAction(conn, username, role, "Login failed.", "Login failed - invalid credentials", false);
             return false;
         }
         catch (Exception ex)

@@ -152,7 +152,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         IsInitialized = true;
     }
 
-    private async Task LoadMemberDataAsync()
+    public async Task LoadMemberDataAsync()
     {
         if (_memberService == null) return;
 
@@ -869,20 +869,30 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     }
 
     [RelayCommand]
-    private void ShowModifyMemberDialog(ManageMembersItem member)
+    private async Task ShowModifyMemberDialog(ManageMembersItem member)
     {
         _memberDialogCardViewModel.Initialize();
+
+        // Populate the dialog with member data from database
+        await _memberDialogCardViewModel.PopulateWithMemberDataAsync(member.ID);
+
         _dialogManager.CreateDialog(_memberDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
+            {
+                // Reload data after successful modification
+                await LoadMemberDataAsync();
+
                 _toastManager.CreateToast("Modified an existing gym member information")
                     .WithContent($"You just modified {member.Name} information!")
                     .DismissOnClick()
-                    .ShowSuccess())
+                    .ShowSuccess();
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Cancellation of modification")
                     .WithContent($"You just cancelled modifying {member.Name} information!")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(950)
+                    .ShowWarning())
+            .WithMaxWidth(950)
             .Dismissible()
             .Show();
     }

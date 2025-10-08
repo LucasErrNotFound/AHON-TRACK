@@ -36,6 +36,7 @@ namespace AHON_TRACK.Services
             (Firstname + ' ' + ISNULL(MiddleInitial + '. ', '') + Lastname) AS Name,
             ContactNumber,
             Status,
+            MembershipType,
             Validity,
             ProfilePicture
         FROM Members";
@@ -61,7 +62,7 @@ namespace AHON_TRACK.Services
                         MemberID = reader.GetInt32(reader.GetOrdinal("MemberId")),
                         Name = reader["Name"]?.ToString() ?? string.Empty,
                         ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                        MembershipType = null,
+                        MembershipType = reader["MembershipType"]?.ToString() ?? string.Empty, // FIX: Added MembershipType
                         Status = reader["Status"].ToString() ?? string.Empty,
                         Validity = validityDisplay,
                         ProfilePicture = ImageHelper.GetAvatarOrDefault(bytes) // Convert bytes to Bitmap for UI
@@ -179,7 +180,7 @@ namespace AHON_TRACK.Services
             }
         }
 
-        private async Task<ManageMemberModel?> GetMemberByIdAsync(string memberId)
+        public async Task<ManageMemberModel?> GetMemberByIdAsync(string memberId)
         {
             try
             {
@@ -187,15 +188,21 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 const string query = @"
-                SELECT 
-                    MemberId,
-                    (Firstname + ' ' + ISNULL(MiddleInitial + '. ', '') + Lastname) AS Name,
-                    ContactNumber,
-                    MembershipType,
-                    Status,
-                    MembershipDuration AS Validity,
-                    ProfilePicture
-                FROM Members WHERE MemberId = @MemberId";
+            SELECT 
+                MemberId,
+                Firstname,
+                MiddleInitial,
+                Lastname,
+                Gender,
+                ContactNumber,
+                Age,
+                DateOfBirth,
+                MembershipType,
+                Status,
+                Validity,
+                ProfilePicture
+            FROM Members 
+            WHERE MemberId = @MemberId";
 
                 await using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@MemberId", int.Parse(memberId));
@@ -209,14 +216,52 @@ namespace AHON_TRACK.Services
                         profilePictureObj = (byte[])reader["ProfilePicture"];
                     }
 
+                    string validityDisplay = string.Empty;
+                    if (!reader.IsDBNull(reader.GetOrdinal("Validity")))
+                    {
+                        var validityDate = reader.GetDateTime(reader.GetOrdinal("Validity"));
+                        validityDisplay = validityDate.ToString("MMM dd, yyyy");
+                    }
+
+                    DateTime? dateOfBirth = null;
+                    if (!reader.IsDBNull(reader.GetOrdinal("DateOfBirth")))
+                    {
+                        dateOfBirth = reader.GetDateTime(reader.GetOrdinal("DateOfBirth"));
+                    }
+
+                    int? age = null;
+                    if (!reader.IsDBNull(reader.GetOrdinal("Age")))
+                    {
+                        age = reader.GetInt32(reader.GetOrdinal("Age"));
+                    }
+
+                    string middleInitial = string.Empty;
+                    if (!reader.IsDBNull(reader.GetOrdinal("MiddleInitial")))
+                    {
+                        middleInitial = reader["MiddleInitial"]?.ToString()?.Trim().ToUpper() ?? string.Empty;
+                        // Ensure it's only one character
+                        if (middleInitial.Length > 1)
+                        {
+                            middleInitial = middleInitial.Substring(0, 1);
+                        }
+                    }
+
+                    Console.WriteLine($"[GetMemberByIdAsync] Middle Initial from DB: '{reader["MiddleInitial"]}' -> Processed: '{middleInitial}'");
+
                     return new ManageMemberModel
                     {
                         MemberID = reader.GetInt32(reader.GetOrdinal("MemberId")),
-                        Name = reader["Name"]?.ToString() ?? string.Empty,
+                        FirstName = reader["Firstname"]?.ToString() ?? string.Empty,
+                        MiddleInitial = middleInitial,
+                        LastName = reader["Lastname"]?.ToString() ?? string.Empty,
+                        Name = $"{reader["Firstname"]} {middleInitial}. {reader["Lastname"]}".Replace("  ", " ").Trim(),
+                        Gender = reader["Gender"]?.ToString() ?? string.Empty,
                         ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
+                        Age = age,
+                        DateOfBirth = dateOfBirth,
                         MembershipType = reader["MembershipType"]?.ToString() ?? string.Empty,
                         Status = reader["Status"]?.ToString() ?? string.Empty,
-                        Validity = reader["Validity"]?.ToString() ?? string.Empty,
+                        Validity = validityDisplay,
                         ProfilePicture = profilePictureObj
                     };
                 }
@@ -237,7 +282,7 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string sql = @"
-INSERT INTO Members(Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, Validity, Status, PaymentMethod) VALUES(@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, @Validity, @Status, @PaymentMethod)";
+INSERT INTO Members(Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, Validity, MembershipType, Status, PaymentMethod) VALUES(@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, @Validity, @MembershipType, @Status, @PaymentMethod)";
 
                 await using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@Firstname", member.FirstName);
@@ -277,6 +322,7 @@ INSERT INTO Members(Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, 
                         validityDate = DateTime.Now.AddMonths(months);
                     }
                 }
+                cmd.Parameters.AddWithValue("@MembershipType", (object?)member.MembershipType ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Validity", (object?)validityDate ?? DBNull.Value);
                 Console.WriteLine($"Adding member with Status: '{member.Status}'");
                 cmd.Parameters.AddWithValue("@Status", member.Status);
@@ -308,6 +354,74 @@ INSERT INTO Members(Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, 
                 catch { /* swallow secondary errors */ }
 
                 throw;
+            }
+        }
+
+        public async Task<bool> UpdateMemberAsync(string memberId, ManageMemberModel member)
+        {
+            try
+            {
+                await using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string sql = @"
+UPDATE Members 
+SET 
+    Firstname = @Firstname,
+    MiddleInitial = @MiddleInitial,
+    Lastname = @Lastname,
+    Gender = @Gender,
+    ContactNumber = @ContactNumber,
+    Age = @Age,
+    DateOfBirth = @DateOfBirth,
+    MembershipType = @MembershipType,
+    Status = @Status
+WHERE MemberID = @MemberID";
+
+                await using var cmd = new SqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@MemberID", int.Parse(memberId));
+                cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@MiddleInitial", member.MiddleInitial ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Age", member.Age ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@MembershipType", member.MembershipType ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Status", member.Status ?? (object)DBNull.Value);
+
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    string desc = $"Updated member: {member.FirstName} {member.MiddleInitial}. {member.LastName}";
+                    await LogActionAsync(conn, actionType: "Update Member", description: desc, success: true);
+
+                    _toastManager?.CreateToast("Member Updated")
+                                 .WithContent($"Successfully updated {member.FirstName}")
+                                 .ShowSuccess();
+                    return true;
+                }
+
+                return false;
+            }
+            catch (SqlException ex)
+            {
+                Console.WriteLine($"[UpdateMemberAsync] SQL Error: {ex.Message}");
+                _toastManager?.CreateToast("Database Error")
+                              .WithContent(ex.Message)
+                              .WithDelay(5)
+                              .ShowError();
+
+                try
+                {
+                    await using var conn = new SqlConnection(_connectionString);
+                    await conn.OpenAsync();
+                    await LogActionAsync(conn, "Update Member", $"Failed to update {member.FirstName}: {ex.Message}", success: false);
+                }
+                catch { /* swallow secondary errors */ }
+
+                return false;
             }
         }
 

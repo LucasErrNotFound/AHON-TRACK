@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AHON_TRACK.Services.Interface;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -463,6 +464,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _memberService = null!;
     }
 
     [AvaloniaHotReload]
@@ -630,10 +632,72 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         return null;
     }
 
-    public bool IsActiveSelected { get; set; }
-    public bool IsInactiveSelected { get; set; }
-    public bool IsTerminatedSelected { get; set; }
+    private bool _isActiveSelected;
+    private bool _isInactiveSelected;
+    private bool _isTerminatedSelected;
 
+    public bool IsActiveSelected
+    {
+        get => _isActiveSelected;
+        set
+        {
+            if (_isActiveSelected == value) return;
+            _isActiveSelected = value;
+
+            if (value)
+            {
+                _isInactiveSelected = false;
+                _isTerminatedSelected = false;
+                OnPropertyChanged(nameof(IsInactiveSelected));
+                OnPropertyChanged(nameof(IsTerminatedSelected));
+            }
+
+            OnPropertyChanged();
+            Debug.WriteLine($"[Status] IsActiveSelected = {value}");
+        }
+    }
+
+    public bool IsInactiveSelected
+    {
+        get => _isInactiveSelected;
+        set
+        {
+            if (_isInactiveSelected == value) return;
+            _isInactiveSelected = value;
+
+            if (value)
+            {
+                _isActiveSelected = false;
+                _isTerminatedSelected = false;
+                OnPropertyChanged(nameof(IsActiveSelected));
+                OnPropertyChanged(nameof(IsTerminatedSelected));
+            }
+
+            OnPropertyChanged();
+            Debug.WriteLine($"[Status] IsInactiveSelected = {value}");
+        }
+    }
+
+    public bool IsTerminatedSelected
+    {
+        get => _isTerminatedSelected;
+        set
+        {
+            if (_isTerminatedSelected == value) return;
+            _isTerminatedSelected = value;
+
+            if (value)
+            {
+                _isActiveSelected = false;
+                _isInactiveSelected = false;
+                OnPropertyChanged(nameof(IsActiveSelected));
+                OnPropertyChanged(nameof(IsInactiveSelected));
+            }
+
+            OnPropertyChanged();
+            Debug.WriteLine($"[Status] IsTerminatedSelected = {value}");
+        }
+    }
     private string? GetSelectedStatus()
     {
         if (IsActiveSelected) return "Active";
@@ -645,7 +709,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
 
     [RelayCommand]
-    private async void Payment()
+    private async Task Payment()
     {
         try
         {
@@ -659,7 +723,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 Age = MemberAge,
                 DateOfBirth = MemberBirthDate,
                 Validity = MembershipDuration?.ToString(),
-                Status = MemberStatus,
+                MembershipType = "Boxing", // doesnt return the MembershipType because its null.
+                Status = "Active", // doesnt get the MemberStatus
                 PaymentMethod = GetSelectedPaymentMethod(),
             };
 
