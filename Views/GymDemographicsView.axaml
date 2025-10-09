@@ -92,7 +92,11 @@
                                         FontSize="18" 
                                         FontWeight="Medium"
                                         Margin="0,20,0,0" />
-                                    <lvc:PieChart InitialRotation="120" SeriesSource="{Binding PieDataCollection}" LegendPosition="Right" Height="350">
+                                    <lvc:PieChart 
+                                        ZIndex="-1"
+                                        Margin="0,-30,0,0"
+                                        InitialRotation="120" 
+                                        SeriesSource="{Binding PieDataCollection}" LegendPosition="Right" Height="300">
                                         <lvc:PieChart.SeriesTemplate>
                                             <DataTemplate x:DataType="viewModels:PieData">
                                                 <lvc:XamlPieSeries
