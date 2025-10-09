@@ -211,8 +211,8 @@ public partial class LoginViewModel : ViewModelBase
         try
         {
             using (var logCmd = new SqlCommand(
-                "INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful) " +
-                "VALUES (@username, @role, @actionType, @description, @success)", conn))
+                "INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, PerformedByEmployeeID) " +
+                "VALUES (@username, @role, @actionType, @description, @success, @employeeID)", conn))
             {
                 logCmd.Parameters.AddWithValue("@username", username);
                 logCmd.Parameters.AddWithValue("@role", role);
@@ -225,6 +225,7 @@ public partial class LoginViewModel : ViewModelBase
                 else
                     logCmd.Parameters.AddWithValue("@success", DBNull.Value);
 
+                logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId.HasValue ? (object)CurrentUserModel.UserId.Value : DBNull.Value);
                 logCmd.ExecuteNonQuery();
             }
         }
