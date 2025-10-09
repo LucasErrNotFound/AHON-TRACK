@@ -6,6 +6,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -44,6 +46,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly IInventoryService _inventoryService;
 
     public int EquipmentID
     {
@@ -127,11 +130,12 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         set => SetProperty(ref _nextMaintenance, value, true);
     }
 
-    public EquipmentDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public EquipmentDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IInventoryService inventoryService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _inventoryService = inventoryService;
     }
 
     public EquipmentDialogCardViewModel()
@@ -139,6 +143,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _inventoryService = null!;
     }
 
     [AvaloniaHotReload]

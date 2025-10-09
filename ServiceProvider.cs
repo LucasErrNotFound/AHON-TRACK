@@ -52,7 +52,12 @@ namespace AHON_TRACK;
 [Singleton<IEmployeeService, EmployeeService>]
 [Singleton<IDashboardService, DashboardService>]
 [Singleton<IMemberService, MemberService>]
-[Singleton<ISystemService, SystemService>]
+[Singleton<ICheckInOutService, CheckInOutService>]
+[Singleton<TrainingService, TrainingService>]
+[Singleton<IProductService, ProductService>]
+[Singleton<IInventoryService, InventoryService>]
+[Singleton<PackageService, PackageService>]
+
 
 public partial class ServiceProvider
 {

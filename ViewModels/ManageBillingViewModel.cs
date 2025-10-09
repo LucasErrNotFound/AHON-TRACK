@@ -2,7 +2,6 @@ using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
-using AHON_TRACK.Services.Interface;
 using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -49,21 +48,21 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly AddNewPackageDialogCardViewModel _addNewPackageDialogCardViewModel;
     private readonly EditPackageDialogCardViewModel _editPackageDialogCardViewModel;
     private ObservableCollection<RecentActivity> _recentActivities = [];
-    private readonly ISystemService _systemService;
+    private readonly IPackageService _packageService;
 
     [ObservableProperty]
     private ObservableCollection<Invoices> _invoiceList = [];
 
     public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
         AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel, EditPackageDialogCardViewModel editPackageDialogCardViewModel,
-        ISystemService systemService)
+        IPackageService packageSrvice)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _addNewPackageDialogCardViewModel = addNewPackageDialogCardViewModel;
         _editPackageDialogCardViewModel = editPackageDialogCardViewModel;
-        _systemService = systemService;
+        _packageService = packageSrvice;
         LoadSampleSalesData();
         LoadInvoiceData();
         LoadPackageOptionsAsync();
@@ -77,6 +76,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _pageManager = new PageManager(new ServiceProvider());
         _addNewPackageDialogCardViewModel = new AddNewPackageDialogCardViewModel();
         _editPackageDialogCardViewModel = new EditPackageDialogCardViewModel();
+        _packageService = null!;
         LoadSampleSalesData();
         LoadInvoiceData();
         LoadPackageOptionsAsync();
@@ -119,9 +119,9 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     private async void LoadPackageOptionsAsync()
     {
-        if (_systemService != null)
+        if (_packageService != null)
         {
-            var packages = await _systemService.GetPackagesAsync();
+            var packages = await _packageService.GetPackagesAsync();
             PackageOptions = new ObservableCollection<Package>(packages);
         }
     }
@@ -171,10 +171,10 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 {
                     // Get the package data for database
                     var packageData = _addNewPackageDialogCardViewModel.GetPackageData();
-                    if (packageData != null && _systemService != null)
+                    if (packageData != null && _packageService != null)
                     {
                         // Save to database using SystemService
-                        await _systemService.AddPackageAsync(packageData);
+                        await _packageService.AddPackageAsync(packageData);
 
                         LoadPackageOptionsAsync();
 
@@ -228,9 +228,9 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             {
                 if (_editPackageDialogCardViewModel.IsDeleteAction)
                 {
-                    if (_systemService != null)
+                    if (_packageService != null)
                     {
-                        var success = await _systemService.DeletePackageAsync(package.PackageId);
+                        var success = await _packageService.DeletePackageAsync(package.PackageId);
                         if (success)
                         {
                             PackageOptions.Remove(package);
@@ -250,14 +250,14 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 }
                 else
                 {
-                    if (_systemService != null)
+                    if (_packageService != null)
                     {
                         // Convert updated VM data into PackageModel
                         var updatedModel = _editPackageDialogCardViewModel.ToPackageModel(package.PackageId);
 
                         try
                         {
-                            var success = await _systemService.UpdatePackageAsync(updatedModel);
+                            var success = await _packageService.UpdatePackageAsync(updatedModel);
                             if (success)
                             {
                                 // Convert back to display Package

@@ -59,20 +59,20 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly EquipmentDialogCardViewModel _equipmentDialogCardViewModel;
-    private readonly ISystemService _systemService;
+    private readonly IInventoryService _inventoryService;
 
     public EquipmentInventoryViewModel(
         DialogManager dialogManager,
         ToastManager toastManager,
         PageManager pageManager,
         EquipmentDialogCardViewModel equipmentDialogCardViewModel,
-        ISystemService systemService)
+        IInventoryService inventoryService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _equipmentDialogCardViewModel = equipmentDialogCardViewModel;
-        _systemService = systemService;
+        _inventoryService = inventoryService;
 
         LoadEquipmentData();
         UpdateEquipmentCounts();
@@ -84,7 +84,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _equipmentDialogCardViewModel = new EquipmentDialogCardViewModel();
-        _systemService = null;
+        _inventoryService = null!;
 
         LoadEquipmentData();
         UpdateEquipmentCounts();
@@ -103,7 +103,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         try
         {
-            var equipmentModels = await _systemService.GetEquipmentAsync();
+            var equipmentModels = await _inventoryService.GetEquipmentAsync();
             var equipmentList = equipmentModels.Select(MapToEquipment).ToList();
 
             OriginalEquipmentData = equipmentList;
@@ -212,7 +212,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 NextMaintenance = _equipmentDialogCardViewModel.NextMaintenance
             };
 
-            await _systemService.AddEquipmentAsync(newEquipmentModel);
+            await _inventoryService.AddEquipmentAsync(newEquipmentModel);
             LoadEquipmentData(); // Reload to get updated data with new ID
         }
         catch (Exception ex)
@@ -346,7 +346,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             equipment.NextMaintenance = _equipmentDialogCardViewModel.NextMaintenance;
 
             var equipmentModel = MapToEquipmentModel(equipment);
-            await _systemService.UpdateEquipmentAsync(equipmentModel);
+            await _inventoryService.UpdateEquipmentAsync(equipmentModel);
 
             // Refresh the UI
             OnPropertyChanged(nameof(EquipmentItems));
@@ -394,7 +394,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         try
         {
-            await _systemService.DeleteEquipmentAsync(equipment.ID);
+            await _inventoryService.DeleteEquipmentAsync(equipment.ID);
             equipment.PropertyChanged -= OnEquipmentPropertyChanged;
             EquipmentItems.Remove(equipment);
             OriginalEquipmentData.Remove(equipment);
@@ -425,7 +425,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         {
             foreach (var equipmentItem in selectedEquipments)
             {
-                await _systemService.DeleteEquipmentAsync(equipmentItem.ID);
+                await _inventoryService.DeleteEquipmentAsync(equipmentItem.ID);
                 equipmentItem.PropertyChanged -= OnEquipmentPropertyChanged;
                 EquipmentItems.Remove(equipmentItem);
                 OriginalEquipmentData.Remove(equipmentItem);

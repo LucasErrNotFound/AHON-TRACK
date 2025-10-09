@@ -39,12 +39,13 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
     private bool _isLoading;
 
     private readonly DialogManager _dialogManager;
-    private readonly ISystemService? _systemService;
+    private readonly ICheckInOutService? _checkInOutService;
 
-    public LogGymMemberDialogCardViewModel(DialogManager dialogManager, ISystemService systemService)
+    public LogGymMemberDialogCardViewModel(DialogManager dialogManager, ICheckInOutService checkInOutService)
     {
-        _systemService = systemService;
+        _checkInOutService = checkInOutService;
         _dialogManager = dialogManager;
+
     }
 
     public LogGymMemberDialogCardViewModel(DialogManager dialogManager, List<MemberPerson>? members = null)
@@ -79,7 +80,7 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
         SearchText = string.Empty;
 
         // Load from service if available, otherwise use sample data
-        if (_systemService != null)
+        if (_checkInOutService != null)
         {
             _ = LoadMembersFromServiceAsync();
         }
@@ -93,7 +94,7 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
 
     private async Task LoadMembersFromServiceAsync()
     {
-        if (_systemService == null)
+        if (_checkInOutService == null)
         {
             Debug.WriteLine("SystemService is null");
             return;
@@ -105,7 +106,7 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
             Debug.WriteLine("Starting to load members from service...");
 
             // Get available members from service
-            var availableMembers = await _systemService.GetAvailableMembersForCheckInAsync();
+            var availableMembers = await _checkInOutService.GetAvailableMembersForCheckInAsync();
             Debug.WriteLine($"Retrieved {availableMembers.Count} members from service");
 
             // Convert ManageMemberModel to MemberPerson to keep your existing structure
@@ -337,7 +338,7 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
     [RelayCommand]
     private async Task RefreshMembers()
     {
-        if (_systemService != null)
+        if (_checkInOutService != null)
         {
             await LoadMembersFromServiceAsync();
         }

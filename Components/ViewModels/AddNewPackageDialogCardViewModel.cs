@@ -46,16 +46,16 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly ISystemService _systemService;
+    private readonly IPackageService _packageService;
 
     public bool IsDiscountEnabled => EnableDiscount;
 
-    public AddNewPackageDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ISystemService systemService)
+    public AddNewPackageDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IPackageService packageService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _systemService = systemService;
+        _packageService = packageService;
     }
 
     public AddNewPackageDialogCardViewModel()
@@ -63,6 +63,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _packageService = null!;
     }
 
     [AvaloniaHotReload]

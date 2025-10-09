@@ -60,14 +60,14 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly ISystemService _systemService;
+    private readonly IProductService _productService;
 
-    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ISystemService systemService)
+    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IProductService productService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _systemService = systemService;
+        _productService = productService;
 
         _ = LoadProductDataAsync();
         // LoadProductData();
@@ -79,7 +79,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _systemService = null!;
+        _productService = null!;
 
         LoadProductData();
         UpdateProductCounts();
@@ -97,12 +97,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
     private async Task LoadProductDataAsync()
     {
-        if (_systemService == null) return;
+        if (_productService == null) return;
 
         IsLoading = true;
         try
         {
-            var productModels = await _systemService.GetProductsAsync();
+            var productModels = await _productService.GetProductsAsync();
             var productStocks = productModels.Select(MapToProductStock).ToList();
 
             OriginalProductData = productStocks;
@@ -331,11 +331,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
     private async Task<bool> DeleteProductFromDatabase(ProductStock? product)
     {
-        if (product == null || _systemService == null) return false;
+        if (product == null || _productService == null) return false;
 
         try
         {
-            return await _systemService.DeleteProductAsync(product.ID);
+            return await _productService.DeleteProductAsync(product.ID);
         }
         catch (Exception ex)
         {

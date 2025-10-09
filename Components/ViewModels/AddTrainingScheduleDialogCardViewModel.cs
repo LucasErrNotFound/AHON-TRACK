@@ -1,4 +1,5 @@
 using AHON_TRACK.Models;
+using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
@@ -28,10 +29,13 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     [ObservableProperty]
     private DataGridCollectionView _traineeList;
 
+    [ObservableProperty]
+    private bool _isLoading;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly ISystemService _systemService;
+    private readonly ITrainingService _trainingService;
 
     [Required(ErrorMessage = "Select the coach")]
     public string SelectedCoachItem
@@ -71,12 +75,12 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         }
     }
 
-    public AddTrainingScheduleDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ISystemService systemService)
+    public AddTrainingScheduleDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ITrainingService trainingService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _systemService = systemService;
+        _trainingService = trainingService;
 
         LoadSampleData();
     }
@@ -86,29 +90,43 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _systemService = null!;
+        _trainingService = null!;
 
         LoadSampleData();
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async void Initialize()
     {
         ClearAllFields();
-        LoadTraineesFromDatabase();
+        await LoadTraineesFromDatabaseAsync();
     }
 
-    private async void LoadTraineesFromDatabase()
+    private async Task LoadTraineesFromDatabaseAsync()
     {
-        if (_systemService == null)
+        if (_trainingService == null)
         {
-            LoadSampleData(); // Fallback for design mode
+            LoadSampleData();
             return;
         }
 
-        var trainees = await _systemService.GetAvailableTraineesAsync();
-        var traineeCollection = new DataGridCollectionView(trainees);
-        TraineeList = traineeCollection;
+        try
+        {
+            IsLoading = true;
+            var trainees = await _trainingService.GetAvailableTraineesAsync();
+            var traineeCollection = new DataGridCollectionView(trainees);
+            TraineeList = traineeCollection;
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to load trainees: {ex.Message}")
+                .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private void LoadSampleData()
@@ -187,14 +205,16 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         ValidateAllProperties();
         ValidateProperty(StartTime, nameof(StartTime));
         ValidateProperty(EndTime, nameof(EndTime));
-        if (HasErrors || _systemService == null) return;
+
+        if (HasErrors || _trainingService == null) return;
 
         try
         {
-            // Get selected trainees from the DataGrid
+            IsLoading = true;
+
             var selectedTrainees = TraineeList.SourceCollection
                 .Cast<TraineeModel>()
-                .Where(t => t.IsSelected) // You'll need to add IsSelected property to TraineeModel
+                .Where(t => t.IsSelected)
                 .ToList();
 
             if (!selectedTrainees.Any())
@@ -205,12 +225,10 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                 return;
             }
 
-            // Combine date with time
-            var scheduledDate = SelectedTrainingDate.Value.Date;
-            var startDateTime = scheduledDate.Add(StartTime.Value.ToTimeSpan());
-            var endDateTime = scheduledDate.Add(EndTime.Value.ToTimeSpan());
+            var scheduledDate = SelectedTrainingDate!.Value.Date;
+            var startDateTime = scheduledDate.Add(StartTime!.Value.ToTimeSpan());
+            var endDateTime = scheduledDate.Add(EndTime!.Value.ToTimeSpan());
 
-            // Create training schedule for each selected trainee
             foreach (var trainee in selectedTrainees)
             {
                 var training = new TrainingModel
@@ -228,7 +246,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                     attendance = null
                 };
 
-                await _systemService.AddTrainingScheduleAsync(training);
+                await _trainingService.AddTrainingScheduleAsync(training);
             }
 
             _dialogManager.Close(this, new CloseDialogOptions { Success = true });
@@ -238,6 +256,10 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
             _toastManager.CreateToast("Error")
                 .WithContent($"Failed to add training schedule: {ex.Message}")
                 .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 

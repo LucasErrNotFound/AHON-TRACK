@@ -56,17 +56,17 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly ISystemService _systemService;
+    private readonly IProductService _productService;
 
     public string DiscountSymbol => IsPercentageModeOn ? "%" : "₱";
     public string DiscountFormat => IsPercentageModeOn ? "N2" : "N0";
 
-    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ISystemService systemService)
+    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IProductService productService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _systemService = systemService;
+        _productService = productService;
     }
 
     public AddEditProductViewModel()
@@ -74,7 +74,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _systemService = null!;
+        _productService = null!;
     }
 
     [AvaloniaHotReload]
@@ -107,7 +107,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             return;
         }
 
-        if (_systemService == null) return;
+        if (_productService == null) return;
 
         try
         {
@@ -131,11 +131,11 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             bool success;
             if (ViewContext == ProductViewContext.EditProduct)
             {
-                success = await _systemService.UpdateProductAsync(productModel);
+                success = await _productService.UpdateProductAsync(productModel);
             }
             else
             {
-                success = await _systemService.AddProductAsync(productModel);
+                success = await _productService.AddProductAsync(productModel);
             }
 
             if (success) PublishSwitchBack();

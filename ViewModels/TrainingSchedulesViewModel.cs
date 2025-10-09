@@ -46,6 +46,9 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     private bool _isInitialized;
 
     [ObservableProperty]
+    private bool _isLoading;
+
+    [ObservableProperty]
     private ObservableCollection<ScheduledPerson> _scheduledPeople = [];
 
     private readonly DialogManager _dialogManager;
@@ -53,19 +56,19 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     private readonly PageManager _pageManager;
     private readonly AddTrainingScheduleDialogCardViewModel _addTrainingScheduleDialogCardViewModel;
     private readonly ChangeScheduleDialogCardViewModel _changeScheduleDialogCardViewModel;
-    private readonly ISystemService _systemService;
+    private readonly ITrainingService _trainingService;
 
     public TrainingSchedulesViewModel(PageManager pageManager, DialogManager dialogManager, ToastManager toastManager,
-        AddTrainingScheduleDialogCardViewModel addTrainingScheduleDialogCardViewModel, ChangeScheduleDialogCardViewModel changeScheduleDialogCardViewModel, ISystemService systemService)
+        AddTrainingScheduleDialogCardViewModel addTrainingScheduleDialogCardViewModel, ChangeScheduleDialogCardViewModel changeScheduleDialogCardViewModel, ITrainingService trainingService)
     {
         _dialogManager = dialogManager;
         _pageManager = pageManager;
         _toastManager = toastManager;
         _addTrainingScheduleDialogCardViewModel = addTrainingScheduleDialogCardViewModel;
         _changeScheduleDialogCardViewModel = changeScheduleDialogCardViewModel;
-        _systemService = systemService;
+        _trainingService = trainingService;
 
-        LoadSampleData();
+        _ = LoadDataFromDatabaseAsync();
         UpdateScheduledPeopleCounts();
     }
 
@@ -76,37 +79,36 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _pageManager = new PageManager(new ServiceProvider());
         _addTrainingScheduleDialogCardViewModel = new AddTrainingScheduleDialogCardViewModel();
         _changeScheduleDialogCardViewModel = new ChangeScheduleDialogCardViewModel();
-        _systemService = null!;
-
-        LoadSampleData();
+        _trainingService = null!;
         UpdateScheduledPeopleCounts();
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async void Initialize()
     {
         if (IsInitialized) return;
-        LoadDataFromDatabase();
+        await LoadDataFromDatabaseAsync();
         UpdateScheduledPeopleCounts();
         IsInitialized = true;
     }
 
-    private async void LoadDataFromDatabase()
+    private async Task LoadDataFromDatabaseAsync()
     {
-        if (_systemService == null)
+        if (_trainingService == null)
         {
-            LoadSampleData(); // Fallback for design mode
+            LoadSampleData();
             return;
         }
 
         try
         {
-            // Get training schedules from database
-            var trainings = await _systemService.GetTrainingSchedulesAsync();
+            IsLoading = true;
 
-            // Convert TrainingModel to ScheduledPerson
+            var trainings = await _trainingService.GetTrainingSchedulesAsync();
+
             OriginalScheduledPeople = trainings.Select(t => new ScheduledPerson
             {
+                TrainingID = t.trainingID,
                 ID = t.memberID,
                 Picture = t.picture,
                 FirstName = t.firstName,
@@ -124,9 +126,13 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast("Error")
+            _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to load training schedules: {ex.Message}")
                 .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
@@ -219,7 +225,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
             .WithSuccessCallback(async _ =>
             {
                 // Reload data after adding
-                LoadDataFromDatabase();
+                await LoadDataFromDatabaseAsync();
 
                 _toastManager.CreateToast("Added new training schedule")
                     .WithContent($"You have added a new training schedule!")
@@ -238,10 +244,10 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     [RelayCommand]
     private async Task MarkAsPresent(ScheduledPerson? scheduledPerson)
     {
-        if (scheduledPerson is null || _systemService == null) return;
+        if (scheduledPerson is null || _trainingService == null) return;
 
         // Update in database
-        var success = await _systemService.UpdateAttendanceAsync(scheduledPerson.ID.Value, "Present");
+        var success = await _trainingService.UpdateAttendanceAsync(scheduledPerson.ID.Value, "Present");
 
         if (success)
         {
@@ -258,10 +264,10 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     [RelayCommand]
     private async Task MarkAsAbsent(ScheduledPerson? scheduledPerson)
     {
-        if (scheduledPerson is null || _systemService == null) return;
+        if (scheduledPerson is null || _trainingService == null) return;
 
         // Update in database
-        var success = await _systemService.UpdateAttendanceAsync(scheduledPerson.ID.Value, "Absent");
+        var success = await _trainingService.UpdateAttendanceAsync(scheduledPerson.ID.Value, "Absent");
 
         if (success)
         {
@@ -348,9 +354,9 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private async Task DeleteTrainingSchedule(ScheduledPerson? scheduledPerson)
     {
-        if (scheduledPerson is null || _systemService == null) return;
+        if (scheduledPerson is null || _trainingService == null) return;
 
-        var success = await _systemService.DeleteTrainingScheduleAsync(scheduledPerson.ID.Value);
+        var success = await _trainingService.DeleteTrainingScheduleAsync(scheduledPerson.ID.Value);
 
         if (success)
         {
@@ -364,6 +370,9 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
 public partial class ScheduledPerson : ObservableObject
 {
+    [ObservableProperty]
+    private int? _trainingID;
+
     [ObservableProperty]
     private int? _iD;
 

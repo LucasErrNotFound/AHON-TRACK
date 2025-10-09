@@ -60,21 +60,21 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     private readonly ToastManager _toastManager;
     private readonly LogGymMemberDialogCardViewModel _logGymMemberDialogCardViewModel;
     private readonly LogWalkInPurchaseViewModel _logWalkInPurchaseViewModel;
-    private readonly ISystemService _systemService;
+    private readonly ICheckInOutService _checkInOutService;
 
-    public CheckInOutViewModel(PageManager pageManager, DialogManager dialogManager, ToastManager toastManager, LogGymMemberDialogCardViewModel logGymMemberDialogCardViewModel, LogWalkInPurchaseViewModel logWalkInPurchaseViewModel, ISystemService systemService)
+    public CheckInOutViewModel(PageManager pageManager, DialogManager dialogManager, ToastManager toastManager, LogGymMemberDialogCardViewModel logGymMemberDialogCardViewModel, LogWalkInPurchaseViewModel logWalkInPurchaseViewModel, ICheckInOutService checkInOutService)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _logGymMemberDialogCardViewModel = logGymMemberDialogCardViewModel;
         _logWalkInPurchaseViewModel = logWalkInPurchaseViewModel;
-        _systemService = systemService;
+        _checkInOutService = checkInOutService;
 
         /*LoadSampleData();
         UpdateWalkInCounts();
         UpdateMemberCounts();*/
-        Debug.WriteLine($"SystemService is null: {systemService == null}");
+        Debug.WriteLine($"SystemService is null: {checkInOutService == null}");
 
         // Load actual data from service
         _ = LoadDataAsync();
@@ -88,6 +88,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         _toastManager = new ToastManager();
         _logGymMemberDialogCardViewModel = new LogGymMemberDialogCardViewModel();
         _logWalkInPurchaseViewModel = new LogWalkInPurchaseViewModel();
+        _checkInOutService = null!;
 
         /*LoadSampleData();
         UpdateWalkInCounts();
@@ -132,7 +133,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     private async Task LoadCheckInDataFromService(DateTime date)
     {
-        if (_systemService == null)
+        if (_checkInOutService == null)
         {
             LoadSampleData();
             return;
@@ -141,11 +142,11 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         try
         {
             // Load member check-ins from service
-            var memberCheckIns = await _systemService.GetMemberCheckInsAsync(date);
+            var memberCheckIns = await _checkInOutService.GetMemberCheckInsAsync(date);
             OriginalMemberData = memberCheckIns;
 
             // Load walk-in check-ins from service  
-            var walkInCheckIns = await _systemService.GetWalkInCheckInsAsync(date);
+            var walkInCheckIns = await _checkInOutService.GetWalkInCheckInsAsync(date);
             OriginalWalkInData = walkInCheckIns;
 
             // Apply date filter to populate the observable collections
@@ -368,8 +369,9 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     [RelayCommand]
     private async Task AddMemberPerson()
     {
-        if (_systemService == null)
+        if (_checkInOutService == null)
         {
+            await LoadDataAsync();
             _toastManager.CreateToast("Service Unavailable")
                 .WithContent("System service is not available")
                 .ShowError();
@@ -391,7 +393,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                     {
                         // Use MemberID for check-in (the actual member ID from the database)
                         var memberId = selectedMember.ID != 0 ? selectedMember.ID : selectedMember.ID;
-                        var success = await _systemService.CheckInMemberAsync(memberId);
+                        var success = await _checkInOutService.CheckInMemberAsync(memberId);
 
                         if (success)
                         {
@@ -443,11 +445,11 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     [RelayCommand]
     private async Task StampWalkInCheckOut(WalkInPerson? walkIn)
     {
-        if (walkIn is null || _systemService == null) return;
+        if (walkIn is null || _checkInOutService == null) return;
 
         try
         {
-            var success = await _systemService.CheckOutWalkInAsync(walkIn.ID);
+            var success = await _checkInOutService.CheckOutWalkInAsync(walkIn.ID);
 
             if (success)
             {
@@ -479,11 +481,11 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     [RelayCommand]
     private async Task StampMemberInCheckOut(MemberPerson? member)
     {
-        if (member is null || _systemService == null) return;
+        if (member is null || _checkInOutService == null) return;
 
         try
         {
-            var success = await _systemService.CheckOutMemberAsync(member.ID);
+            var success = await _checkInOutService.CheckOutMemberAsync(member.ID);
 
             if (success)
             {
@@ -544,9 +546,9 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     {
         try
         {
-            if (_systemService != null)
+            if (_checkInOutService != null)
             {
-                var success = await _systemService.DeleteWalkInCheckInAsync(walkInPerson.ID);
+                var success = await _checkInOutService.DeleteWalkInCheckInAsync(walkInPerson.ID);
                 if (success)
                 {
                     WalkInPersons.Remove(walkInPerson);
@@ -580,9 +582,9 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     {
         try
         {
-            if (_systemService != null)
+            if (_checkInOutService != null)
             {
-                var success = await _systemService.DeleteMemberCheckInAsync(memberPerson.ID);
+                var success = await _checkInOutService.DeleteMemberCheckInAsync(memberPerson.ID);
                 if (success)
                 {
                     MemberPersons.Remove(memberPerson);
