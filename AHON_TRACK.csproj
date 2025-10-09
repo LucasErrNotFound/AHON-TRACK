@@ -29,11 +29,11 @@
 		<PackageReference Include="Jab" Version="0.11.0" PrivateAssets="All" />
 		<PackageReference Include="Serilog" Version="4.3.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-		<PackageReference Include="Egolds.Xaml.Behaviors.Interactions.Animated" Version="11.3.3" />
+        <PackageReference Include="Egolds.Xaml.Behaviors.Interactions.Animated" Version="11.3.3" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Assets\Fonts\" />
-		<Folder Include="Assets\CheckInOutView\" />
+	  <Folder Include="Assets\Fonts\" />
+	  <Folder Include="Assets\CheckInOutView\" />
 	</ItemGroup>
 </Project>
