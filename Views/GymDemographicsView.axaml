@@ -8,6 +8,7 @@
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
     xmlns:skiaSharpView="clr-namespace:LiveChartsCore.SkiaSharpView;assembly=LiveChartsCore.SkiaSharpView"
+    xmlns:system="clr-namespace:System;assembly=System.Runtime"
     x:DataType="viewModels:GymDemographicsViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
     x:Class="AHON_TRACK.Views.GymDemographicsView">
@@ -55,10 +56,35 @@
         </StackPanel>
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,90,24" Spacing="16">
-                <Grid RowDefinitions="* * *" ColumnDefinitions="2* 1*">
-                    <shadui:Card Grid.Row="0" Grid.Column="0">
+                <Grid RowDefinitions="* * *" ColumnDefinitions="2* *" ColumnSpacing="30">
+                    <shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True">
                         <StackPanel>
-                            <shadui:CardTitle Content="Demographics" FontSize="20" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="* Auto">
+                                <shadui:CardTitle Grid.Column="0" Content="Demographics" FontSize="20" FontWeight="SemiBold"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="15">
+                                    <CalendarDatePicker 
+                                        shadui:ControlAssist.Label="From"
+                                        shadui:ControlAssist.ReadOnly="True"
+                                        SelectedDate="{x:Static system:DateTime.Today}" />
+                                    <CalendarDatePicker 
+                                        shadui:ControlAssist.Label="To"
+                                        shadui:ControlAssist.ReadOnly="True"
+                                        SelectedDate="{x:Static system:DateTime.Today}" />
+                                    <Button 
+                                        Classes="Primary" 
+                                        VerticalAlignment="Bottom">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
+                                                Width="20"
+                                                Height="20"
+                                                Path="avares://AHON_TRACK/Assets/GymDemographicsView/download-icon.svg"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,8,0"/>
+                                            <TextBlock Text="Download" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
                             <Grid ColumnDefinitions="1* *" ColumnSpacing="35">
                                 <StackPanel Grid.Column="0">
                                     <TextBlock 
@@ -66,7 +92,7 @@
                                         FontSize="18" 
                                         FontWeight="Medium"
                                         Margin="0,20,0,0" />
-                                    <lvc:PieChart InitialRotation="120" SeriesSource="{Binding PieDataCollection}" LegendPosition="Right" Height="300">
+                                    <lvc:PieChart InitialRotation="120" SeriesSource="{Binding PieDataCollection}" LegendPosition="Right" Height="350">
                                         <lvc:PieChart.SeriesTemplate>
                                             <DataTemplate x:DataType="viewModels:PieData">
                                                 <lvc:XamlPieSeries
@@ -74,9 +100,9 @@
                                                     Values="{Binding Values}"
                                                     Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
                                                     Fill="{Binding Color, Converter={StaticResource StringToPaintConverter}}"
-                                                    HoverPushout="0"
+                                                    HoverPushout="15"
                                                     DataLabelsFormatter="{Binding Formatter}"
-                                                    DataLabelsSize="20"
+                                                    DataLabelsSize="15"
                                                     ShowDataLabels="{Binding IsTotal}"
                                                     DataLabelsPosition="Outer"
                                                     IsVisibleAtLegend="{Binding IsTotal}" >
@@ -95,12 +121,22 @@
                                         Height="300"
                                         Name="CartesianChart1"
                                         Margin="12,0,12,12"
-                                        Series="{CompiledBinding Series}"
                                         XAxes="{CompiledBinding XAxes}"
                                         YAxes="{CompiledBinding YAxes}"
-                                        TooltipTextSize="14" />
+                                        TooltipTextSize="14">
+                                        <lvc:CartesianChart.Series>
+                                            <lvc:XamlColumnSeries
+                                                Values="{CompiledBinding Series[0].Values}"
+                                                PointMeasuredCommand="{CompiledBinding PointMeasuredCommand}"/>
+                                        </lvc:CartesianChart.Series>
+                                    </lvc:CartesianChart>
                                 </StackPanel>
                             </Grid>
+                        </StackPanel>
+                    </shadui:Card>
+                    <shadui:Card Grid.Row="0" Grid.Column="1" HasShadow="True">
+                        <StackPanel>
+                            <shadui:CardTitle Content="Demographics" FontSize="20" FontWeight="SemiBold" />
                         </StackPanel>
                     </shadui:Card>
                 </Grid>

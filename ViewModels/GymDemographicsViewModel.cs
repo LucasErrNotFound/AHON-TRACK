@@ -9,10 +9,11 @@ using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ShadUI;
 using SkiaSharp;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AHON_TRACK.ViewModels;
 
-public class GymDemographicsViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     public PieData[] PieDataCollection { get; set; }
     public Axis[] XAxes { get; set; }
@@ -28,7 +29,6 @@ public class GymDemographicsViewModel : ViewModelBase, INavigable, INotifyProper
         _toastManager = toastManager;
         _pageManager = pageManager;
         
-        // UpdateAxesLabelPaints(colors);
         UpdateSeriesFill(Color.DodgerBlue);
         
         PieDataCollection = 
@@ -89,21 +89,33 @@ public class GymDemographicsViewModel : ViewModelBase, INavigable, INotifyProper
         if (Series.Length > 0) ((ColumnSeries<double>)Series[0]).Fill = new SolidColorPaint(color);
     }
 
-    private void UpdateAxesLabelPaints(ThemeColors colors)
+    private SolidColorPaint GetPaint(int index)
     {
-        var foreground = new SKColor(
-            colors.ForegroundColor.R,
-            colors.ForegroundColor.G,
-            colors.ForegroundColor.B,
-            colors.ForegroundColor.A);
-
-        var foregroundPaint = new SolidColorPaint
+        var paints = new[]
         {
-            Color = foreground,
+            new SolidColorPaint(SKColors.Red),
+            new SolidColorPaint(SKColors.LimeGreen),
+            new SolidColorPaint(SKColors.DodgerBlue),
+            new SolidColorPaint(SKColors.Yellow)
         };
 
-        XAxes[0].LabelsPaint = foregroundPaint;
-        YAxes[0].LabelsPaint = foregroundPaint;
+        return paints[index % paints.Length];
+    }
+
+    [RelayCommand]
+    private void OnPointMeasured(ChartPoint point)
+    {
+        // This is straight from their documentation, NOT FROM CHATGPT/CLAUDE !!! - LucasErrNotFound
+        
+        // the PointMeasured command/event is called every time a point is measured,
+        // this happens when the chart loads, rezizes or when the data changes, this method
+        // is called for every point in the series.
+
+        if (point.Context.Visual is null) return;
+
+        // here we can customize the visual of the point, for example we can set
+        // a different color for each point.
+        point.Context.Visual.Fill = GetPaint(point.Index);
     }
 
     public ISeries[] Series { get; set; } =
