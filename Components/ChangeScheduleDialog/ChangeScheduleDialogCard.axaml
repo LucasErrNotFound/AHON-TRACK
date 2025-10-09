@@ -7,9 +7,9 @@
     xmlns:viewModels="using:AHON_TRACK.Components.ViewModels"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     x:DataType="viewModels:ChangeScheduleDialogCardViewModel"
-    mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="480"
+    mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="510"
     Width="400"
-    MaxHeight="480"
+    MaxHeight="510"
     x:Class="AHON_TRACK.Components.ChangeScheduleDialog.ChangeScheduleDialogCard">
     
     <Design.DataContext>
@@ -36,10 +36,23 @@
             <StackPanel>
                 <shadui:CardTitle Content="Change Training Schedule" />
                 <shadui:CardDescription Content="This will update the current schedule with a new one" />
-                <StackPanel Width="280" Spacing="20" Margin="0,30,0,0" HorizontalAlignment="Center">
-                    <CalendarDatePicker
-                        shadui:ControlAssist.Label="Scheduled Date"
-                        SelectedDate="{CompiledBinding SelectedTrainingDate}" />
+                <Grid ColumnDefinitions="Auto Auto" HorizontalAlignment="Center" ColumnSpacing="20" Margin="0,20,0,0">
+                    <StackPanel Grid.Column="0">
+                        <CalendarDatePicker
+                            shadui:ControlAssist.Label="Scheduled Date"
+                            shadui:ControlAssist.ReadOnly="True"
+                            Width="150"
+                            SelectedDate="{CompiledBinding SelectedTrainingDate}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <ComboBox
+                            shadui:ControlAssist.Label="Change Coach"
+                            ItemsSource="{CompiledBinding CoachFilterItems}"
+                            SelectedItem="{CompiledBinding SelectedCoach}"
+                            Width="150"/>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Width="320" Spacing="20" Margin="0,30,0,0" HorizontalAlignment="Center">
                     <TimePicker
                         shadui:ControlAssist.Label="Start Time"
                         SelectedTime="{CompiledBinding StartTime, Converter={x:Static converters:TimeOnlyToTimeSpanConverter.Instance}}" />
@@ -63,10 +76,10 @@
                     <Svg
                         Width="20"
                         Height="20"
-                        Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/discard-icon.svg"
+                        Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/cancel-icon.svg"
                         Margin="0,0,7,0"
                         VerticalAlignment="Center" />
-                    <TextBlock Text="Discard" VerticalAlignment="Center" />
+                    <TextBlock Text="Cancel" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
             <Button

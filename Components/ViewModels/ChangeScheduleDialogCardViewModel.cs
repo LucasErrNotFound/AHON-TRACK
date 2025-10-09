@@ -15,9 +15,13 @@ namespace AHON_TRACK.Components.ViewModels;
 
 public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
+    [ObservableProperty]
+    private string[] _coachFilterItems = ["Coach Jho", "Coach Rey", "Coach Jedd"];
+
     private TimeOnly? _startTime;
     private TimeOnly? _endTime;
     private DateTime? _selectedTrainingDate;
+    private string? _selectedCoach;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -45,11 +49,18 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         _trainingService = null!;
     }
 
+    [TodayValidation]
     [Required(ErrorMessage = "A training date is required.")]
     public DateTime? SelectedTrainingDate
     {
         get => _selectedTrainingDate;
         set => SetProperty(ref _selectedTrainingDate, value, true);
+    }
+
+    public string? SelectedCoach
+    {
+        get => _selectedCoach;
+        set => SetProperty(ref _selectedCoach, value, true);
     }
 
     [Required(ErrorMessage = "Start time is required.")]
@@ -86,6 +97,7 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
     {
         TrainingID = scheduledPerson.TrainingID;
         SelectedTrainingDate = scheduledPerson.ScheduledDate;
+        SelectedCoach = scheduledPerson.AssignedCoach;
 
         if (scheduledPerson.ScheduledTimeStart.HasValue)
             StartTime = TimeOnly.FromDateTime(scheduledPerson.ScheduledTimeStart.Value);
@@ -120,6 +132,7 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
             training.scheduledDate = SelectedTrainingDate!.Value.Date;
             training.scheduledTimeStart = SelectedTrainingDate.Value.Date.Add(StartTime!.Value.ToTimeSpan());
             training.scheduledTimeEnd = SelectedTrainingDate.Value.Date.Add(EndTime!.Value.ToTimeSpan());
+            training.assignedCoach = SelectedCoach;
 
             var success = await _trainingService.UpdateTrainingScheduleAsync(training);
 
@@ -152,6 +165,7 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         StartTime = null;
         EndTime = null;
         SelectedTrainingDate = null;
+        SelectedCoach = null;
         ClearAllErrors();
     }
 }
