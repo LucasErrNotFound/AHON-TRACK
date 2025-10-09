@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 using HotAvalonia;
 using LiveChartsCore;
 using LiveChartsCore.Kernel;
@@ -18,7 +18,27 @@ namespace AHON_TRACK.ViewModels;
 
 public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    public PieData[] PieDataCollection { get; set; }
+    [ObservableProperty]
+    private DateTime _gymPopulationSelectedFromDate = DateTime.Today;
+    
+    [ObservableProperty]
+    private DateTime _gymPopulationSelectedToDate = DateTime.Today.AddMonths(1);
+    
+    [ObservableProperty]
+    private DateTime _demographicsGroupSelectedFromDate = DateTime.Today;
+    
+    [ObservableProperty]
+    private DateTime _demographicsGroupSelectedToDate = DateTime.Today.AddMonths(1);
+    
+    [ObservableProperty] 
+    private ISeries[] _populationSeriesCollection;
+
+    [ObservableProperty] 
+    private Axis[] _populationLineChartXAxes;
+    
+    [ObservableProperty]
+    private PieData[] _genderPieDataCollection;
+    
     public Axis[] XAxes { get; set; }
     public Axis[] YAxes { get; set; }
     
@@ -33,12 +53,8 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         _pageManager = pageManager;
         
         UpdateSeriesFill(Color.DodgerBlue);
-        
-        PieDataCollection = 
-        [
-            new PieData("Male", [null, null, 55], "#1976D2"),
-            new PieData("Female", [null, null, 45], "#D32F2F")
-        ];
+        UpdateDemographicsGroupChart();
+        UpdatePopulationChart();
         
         XAxes =
         [
@@ -83,13 +99,13 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
     [AvaloniaHotReload]
     public void Initialize()
     {
-        ((ColumnSeries<double>)Series[0]).Values = GenerateRandomValues();
+        ((ColumnSeries<double>)AgeSeries[0]).Values = GenerateRandomValues();
     }
     
     private void UpdateSeriesFill(Color primary)
     {
         var color = new SKColor(primary.R, primary.G, primary.B, primary.A);
-        if (Series.Length > 0) ((ColumnSeries<double>)Series[0]).Fill = new SolidColorPaint(color);
+        if (AgeSeries.Length > 0) ((ColumnSeries<double>)AgeSeries[0]).Fill = new SolidColorPaint(color);
     }
 
     private SolidColorPaint GetPaint(int index)
@@ -122,7 +138,7 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
     }
     
     [RelayCommand]
-    public void OnHoveredPointsChanged(HoverCommandArgs args)
+    private void OnHoveredPointsChanged(HoverCommandArgs args)
     {
         foreach (var hovered in args.NewPoints ?? [])
         {
@@ -135,7 +151,7 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         }
     }
 
-    public ISeries[] Series { get; set; } =
+    public ISeries[] AgeSeries { get; set; } =
     [
         new ColumnSeries<double>
         {
@@ -155,6 +171,99 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         }
 
         return values;
+    }
+
+    private void UpdatePopulationChart()
+    {
+        var days = new List<string>();
+        var populations = new List<double>();
+        var random = new Random();
+    
+        var currentDate = GymPopulationSelectedFromDate;
+        while (currentDate <= GymPopulationSelectedToDate)
+        {
+            days.Add(currentDate.ToString("MMM dd"));
+            populations.Add(random.Next(1, 100));
+            currentDate = currentDate.AddDays(1);
+        }
+    
+        PopulationSeriesCollection =
+        [
+            new LineSeries<double>
+            {
+                Values = populations,
+                ShowDataLabels = false,
+                Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(100)),
+                Stroke = new SolidColorPaint(SKColors.Red) { StrokeThickness = 2 },
+                GeometryFill = new SolidColorPaint(SKColors.Red),
+                GeometryStroke = new SolidColorPaint(SKColors.Black) { StrokeThickness = 2 },
+                LineSmoothness = 0.3
+            }
+        ];
+    
+        PopulationLineChartXAxes =
+        [
+            new Axis
+            {
+                Labels = days.ToArray(),
+                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+                TextSize = 12,
+                MinStep = 1,
+            }
+        ];
+    }
+    
+    private void UpdateDemographicsGroupChart()
+    {
+        var random = new Random();
+        var values = new double[4];
+    
+        // Generate random values for age groups
+        for (var i = 0; i < values.Length; i++)
+        {
+            values[i] = random.Next(1, 500);
+        }
+    
+        AgeSeries =
+        [
+            new ColumnSeries<double>
+            {
+                Values = values,
+                Fill = new SolidColorPaint(SKColors.Transparent)
+            }
+        ];
+    
+        // Generate random values for pie chart (Male/Female distribution)
+        var malePercentage = random.Next(30, 70);
+        var femalePercentage = 100 - malePercentage;
+    
+        GenderPieDataCollection = 
+        [
+            new PieData("Male", [null, null, malePercentage], "#1976D2"),
+            new PieData("Female", [null, null, femalePercentage], "#D32F2F")
+        ];
+    
+        OnPropertyChanged(nameof(AgeSeries));
+    }
+
+    partial void OnDemographicsGroupSelectedFromDateChanged(DateTime value)
+    {
+        UpdateDemographicsGroupChart();
+    }
+
+    partial void OnDemographicsGroupSelectedToDateChanged(DateTime value)
+    {
+        UpdateDemographicsGroupChart();
+    }
+    
+    partial void OnGymPopulationSelectedFromDateChanged(DateTime value)
+    {
+        UpdatePopulationChart();
+    }
+
+    partial void OnGymPopulationSelectedToDateChanged(DateTime value)
+    {
+        UpdatePopulationChart();
     }
 }
 

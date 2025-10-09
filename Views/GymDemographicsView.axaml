@@ -65,11 +65,11 @@
                                     <CalendarDatePicker 
                                         shadui:ControlAssist.Label="From"
                                         shadui:ControlAssist.ReadOnly="True"
-                                        SelectedDate="{x:Static system:DateTime.Today}" />
+                                        SelectedDate="{CompiledBinding DemographicsGroupSelectedFromDate}" />
                                     <CalendarDatePicker 
                                         shadui:ControlAssist.Label="To"
                                         shadui:ControlAssist.ReadOnly="True"
-                                        SelectedDate="{x:Static system:DateTime.Today}" />
+                                        SelectedDate="{CompiledBinding DemographicsGroupSelectedToDate}" />
                                     <Button 
                                         Classes="Primary" 
                                         VerticalAlignment="Bottom">
@@ -96,7 +96,7 @@
                                         ZIndex="-1"
                                         Margin="0,-30,0,0"
                                         InitialRotation="120" 
-                                        SeriesSource="{Binding PieDataCollection}" LegendPosition="Right" Height="300">
+                                        SeriesSource="{Binding GenderPieDataCollection}" LegendPosition="Right" Height="300">
                                         <lvc:PieChart.SeriesTemplate>
                                             <DataTemplate x:DataType="viewModels:PieData">
                                                 <lvc:XamlPieSeries
@@ -131,7 +131,7 @@
                                         TooltipTextSize="14">
                                         <lvc:CartesianChart.Series>
                                             <lvc:XamlColumnSeries
-                                                Values="{CompiledBinding Series[0].Values}"
+                                                Values="{CompiledBinding AgeSeries[0].Values}"
                                                 Stroke="{lvc:SolidColorPaint Color='#00000000'}"
                                                 PointMeasuredCommand="{CompiledBinding PointMeasuredCommand}"/>
                                         </lvc:CartesianChart.Series>
@@ -142,13 +142,28 @@
                     </shadui:Card>
                     <shadui:Card Grid.Row="0" Grid.Column="1" HasShadow="True">
                         <StackPanel>
-                            <shadui:CardTitle Content="Demographics" FontSize="20" FontWeight="SemiBold" />
+                            <shadui:CardTitle Content="Dunno what to do here)" FontSize="20" FontWeight="SemiBold" />
                         </StackPanel>
                     </shadui:Card>
                 </Grid>
                 <shadui:Card>
                     <StackPanel>
-                        <shadui:CardTitle Content="Gym Population"/>
+                        <shadui:CardTitle Content="Gym Population" FontSize="20"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="15">
+                            <CalendarDatePicker 
+                                shadui:ControlAssist.Label="From"
+                                shadui:ControlAssist.ReadOnly="True"
+                                SelectedDate="{CompiledBinding GymPopulationSelectedFromDate}" />
+                            <CalendarDatePicker 
+                                shadui:ControlAssist.Label="To"
+                                shadui:ControlAssist.ReadOnly="True"
+                                SelectedDate="{CompiledBinding GymPopulationSelectedToDate}" />
+                        </StackPanel>
+                        <lvc:CartesianChart 
+                            Height="400" 
+                            Series="{CompiledBinding PopulationSeriesCollection}"
+                            XAxes="{CompiledBinding PopulationLineChartXAxes}">
+                        </lvc:CartesianChart>
                     </StackPanel>
                 </shadui:Card>
             </StackPanel>
