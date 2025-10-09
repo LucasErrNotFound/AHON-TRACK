@@ -27,14 +27,15 @@ namespace AHON_TRACK.Services
             try
             {
                 using var logCmd = new SqlCommand(
-                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime) 
-                      VALUES (@username, @role, @actionType, @description, @success, GETDATE())", conn);
+                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+                      VALUES (@username, @role, @actionType, @description, @success, GETDATE()), @employeeID", conn);
 
                 logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
                 logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
                 logCmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
                 logCmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
                 logCmd.Parameters.AddWithValue("@success", success);
+                logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                 await logCmd.ExecuteNonQueryAsync();
             }
