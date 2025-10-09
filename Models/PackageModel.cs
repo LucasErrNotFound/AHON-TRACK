@@ -24,5 +24,6 @@ namespace AHON_TRACK.Models
         public decimal discountedPrice { get; set; }
         public DateTime validFrom { get; set; }
         public DateTime validTo { get; set; }
+        public int AddedByEmployeeID { get; set; }
     }
 }

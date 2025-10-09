@@ -20,5 +20,6 @@ namespace AHON_TRACK.Models
         public string Status { get; set; }
         public DateTime? LastMaintenance { get; set; }
         public DateTime? NextMaintenance { get; set; }
+        public int AddedByEmployeeID { get; set; }
     }
 }

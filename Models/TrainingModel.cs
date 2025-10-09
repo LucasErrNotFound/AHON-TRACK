@@ -17,10 +17,11 @@ namespace AHON_TRACK.Models
         public string packageType { get; set; }
         public string assignedCoach { get; set; }
         public DateTime scheduledDate { get; set; }
-        public DateTime scheduledTimeStart { get; set; }
-        public DateTime scheduledTimeEnd { get; set; }
+        public DateTime? scheduledTimeStart { get; set; }
+        public DateTime? scheduledTimeEnd { get; set; }
         public string attendance { get; set; }
         public DateTime createdAt { get; set; }
         public DateTime updatedAt { get; set; }
+        public int AddedByEmployeeID { get; set; }
     }
 }

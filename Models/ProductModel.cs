@@ -23,6 +23,8 @@ namespace AHON_TRACK.Models
 
         public int CurrentStock { get; set; }
 
+        public int AddedByEmployeeID { get; set; }
+
         // Computed property for final price
         public decimal FinalPrice
         {

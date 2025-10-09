@@ -16,7 +16,7 @@ namespace AHON_TRACK.Models
         public string PackageType { get; set; } = string.Empty;
         public int SessionLeft { get; set; }
         public bool IsSelected { get; set; }
-
         public string PicturePath { get; set; } = string.Empty;
+        public int AddedByEmployeeID { get; set; }
     }
 }

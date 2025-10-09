@@ -23,5 +23,6 @@ namespace AHON_TRACK.Models
         public string Validity { get; set; }
         public string Status { get; set; } = "Active";      // must be "Active" | "Inactive" | "Terminated"
         public string? PaymentMethod { get; set; }
+        public int AddedByEmployeeID { get; set; }
     }
 }
