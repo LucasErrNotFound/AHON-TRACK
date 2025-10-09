@@ -1,4 +1,4 @@
-﻿﻿﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net9.0</TargetFramework>
@@ -22,18 +22,20 @@
 
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.3" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.2" />
 		<PackageReference Include="ShadUI" Version="0.1.5" />
 		<PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
 		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="11.3.0.4" />
-		<PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All"/>
+		<PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All" />
 		<PackageReference Include="Jab" Version="0.11.0" PrivateAssets="All" />
 		<PackageReference Include="Serilog" Version="4.3.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-        <PackageReference Include="Egolds.Xaml.Behaviors.Interactions.Animated" Version="11.3.3" />
+		<PackageReference Include="Egolds.Xaml.Behaviors.Interactions.Animated" Version="11.3.3" />
+		<PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Assets\Fonts\" />
-	  <Folder Include="Assets\CheckInOutView\" />
+		<Folder Include="Assets\Fonts\" />
+		<Folder Include="Assets\CheckInOutView\" />
 	</ItemGroup>
 </Project>
