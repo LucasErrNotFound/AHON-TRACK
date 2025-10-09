@@ -1,3 +1,11 @@
+using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
+using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -5,42 +13,36 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using AHON_TRACK.Components.ViewModels;
-using Avalonia.Media;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using HotAvalonia;
-using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("supplier-management")]
 public sealed partial class SupplierManagementViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private string[] _supplierFilterItems = ["All", "Products", "Drinks", "Supplements"];
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string _selectedSupplierFilterItem = "All";
-    
+
     [ObservableProperty]
     private ObservableCollection<Supplier> _supplierItems = [];
-    
+
     [ObservableProperty]
     private List<Supplier> _originalSupplierData = [];
-    
+
     [ObservableProperty]
     private List<Supplier> _currentFilteredSupplierData = [];
-    
+
     [ObservableProperty]
     private bool _isInitialized;
-    
+
     [ObservableProperty]
     private string _searchStringResult = string.Empty;
-    
+
     [ObservableProperty]
     private bool _isSearchingSupplier;
-    
+
     [ObservableProperty]
     private bool _selectAll;
 
@@ -49,23 +51,28 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private int _totalCount;
-    
+
+    [ObservableProperty]
+    private bool _isLoading;
+
     [ObservableProperty]
     private Supplier? _selectedSupplier;
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly SupplierDialogCardViewModel _supplierDialogCardViewModel;
+    private readonly ISupplierService _supplierService;
 
-    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  SupplierDialogCardViewModel supplierDialogCardViewModel)
+    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, SupplierDialogCardViewModel supplierDialogCardViewModel, ISupplierService supplierService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _supplierDialogCardViewModel = supplierDialogCardViewModel;
-        
-        LoadSupplierData();
+        _supplierService = supplierService;
+
+        _ = LoadSupplierDataFromDatabaseAsync();
         UpdateSupplierCounts();
     }
 
@@ -75,25 +82,97 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
-        
-        LoadSupplierData();
+        _supplierService = null!; // This should be injected in real scenario
+
+        _ = LoadSupplierDataFromDatabaseAsync();
         UpdateSupplierCounts();
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
         if (IsInitialized) return;
-        LoadSupplierData();
+        if (_supplierService != null)
+        {
+            await LoadSupplierDataFromDatabaseAsync();
+        }
+        else
+        {
+            LoadSupplierData();
+        }
         UpdateSupplierCounts();
         IsInitialized = true;
     }
+
+    private async Task LoadSupplierDataFromDatabaseAsync()
+    {
+        IsLoading = true;
+
+        try
+        {
+            // Call the service to get suppliers from database
+            var result = await _supplierService.GetAllSuppliersAsync();
+
+            if (result.Success && result.Suppliers != null)
+            {
+                // Convert SupplierManagementModel to Supplier (UI model)
+                var suppliers = result.Suppliers.Select(s => new Supplier
+                {
+                    ID = s.SupplierID,
+                    Name = s.SupplierName,
+                    ContactPerson = s.ContactPerson,
+                    Email = s.Email,
+                    PhoneNumber = s.PhoneNumber,
+                    Products = s.Products,
+                    Status = s.Status,
+                    IsSelected = false
+                }).ToList();
+
+                OriginalSupplierData = suppliers;
+                CurrentFilteredSupplierData = [.. suppliers];
+
+                SupplierItems.Clear();
+                foreach (var supplier in suppliers)
+                {
+                    supplier.PropertyChanged += OnSupplierPropertyChanged;
+                    SupplierItems.Add(supplier);
+                }
+
+                TotalCount = SupplierItems.Count;
+
+                if (SupplierItems.Count > 0)
+                {
+                    SelectedSupplier = SupplierItems[0];
+                }
+            }
+            else
+            {
+                // Handle failure - show error or load sample data
+                _toastManager.CreateToast("Data Load Failed")
+                    .WithContent(result.Message)
+                    .DismissOnClick()
+                    .ShowWarning();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Error Loading Data")
+                .WithContent($"Failed to load suppliers: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
 
     private void LoadSupplierData()
     {
         var sampleSupplier = GetSampleSupplierData();
         OriginalSupplierData = sampleSupplier;
-        CurrentFilteredSupplierData = [..sampleSupplier];
+        CurrentFilteredSupplierData = [.. sampleSupplier];
 
         SupplierItems.Clear();
         foreach (var supplier in sampleSupplier)
@@ -110,7 +189,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     private List<Supplier> GetSampleSupplierData()
     {
-        return 
+        return
         [
             new Supplier
             {
@@ -164,26 +243,50 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             }
         ];
     }
-    
+
     [RelayCommand]
     private void ShowAddSupplierDialog()
     {
         _supplierDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
-            .WithSuccessCallback(_ =>
-                _toastManager.CreateToast("Added a new supplier contact")
-                    .WithContent($"You just added a new supplier contact to the database!")
-                    .DismissOnClick()
-                    .ShowSuccess())
+            .WithSuccessCallback(async _ =>
+            {
+                // Get the supplier data from dialog
+                var newSupplier = new SupplierManagementModel
+                {
+                    SupplierName = _supplierDialogCardViewModel.SupplierName,
+                    ContactPerson = _supplierDialogCardViewModel.ContactPerson,
+                    Email = _supplierDialogCardViewModel.Email,
+                    PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
+                    Products = _supplierDialogCardViewModel.Products,
+                    Status = _supplierDialogCardViewModel.Status ?? "Active"
+                };
+
+                // Call service to add to database
+                var result = await _supplierService.AddSupplierAsync(newSupplier);
+
+                if (result.Success)
+                {
+                    // Reload data from database to refresh UI
+                    await LoadSupplierDataFromDatabaseAsync();
+
+                    _toastManager.CreateToast("Supplier Added Successfully")
+                        .WithContent($"Successfully added '{newSupplier.SupplierName}' to the database!")
+                        .DismissOnClick()
+                        .ShowSuccess();
+                }
+                // Error handling is done inside the service with toast notifications
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new supplier contact cancelled")
                     .WithContent("If you want to add a new supplier contact, please try again.")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(650)
+                    .ShowWarning())
+            .WithMaxWidth(650)
             .Dismissible()
             .Show();
     }
-    
+
     [RelayCommand]
     private void ShowEditSupplierDialog(Supplier? supplier)
     {
@@ -191,50 +294,83 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         _supplierDialogCardViewModel.InitializeForEditMode(supplier);
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
             {
-                _toastManager.CreateToast("Modified supplier details")
-                    .WithContent($"You have successfully modified {supplier.Name}!")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                // Prepare updated supplier data
+                var updatedSupplier = new SupplierManagementModel
+                {
+                    SupplierID = supplier.ID ?? 0,
+                    SupplierName = _supplierDialogCardViewModel.SupplierName,
+                    ContactPerson = _supplierDialogCardViewModel.ContactPerson,
+                    Email = _supplierDialogCardViewModel.Email,
+                    PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
+                    Products = _supplierDialogCardViewModel.Products,
+                    Status = _supplierDialogCardViewModel.Status ?? "Active"
+                };
+
+                // Call service to update in database
+                var result = await _supplierService.UpdateSupplierAsync(updatedSupplier);
+
+                if (result.Success)
+                {
+                    // Reload data to refresh UI
+                    await LoadSupplierDataFromDatabaseAsync();
+
+                    _toastManager.CreateToast("Supplier Updated")
+                        .WithContent($"Successfully updated '{updatedSupplier.SupplierName}'!")
+                        .DismissOnClick()
+                        .ShowSuccess();
+                }
             })
-            .WithCancelCallback(() => 
+            .WithCancelCallback(() =>
                 _toastManager.CreateToast("Modifying supplier Details Cancelled")
-                    .WithContent($"Try again if you really want to modify the {supplier.Name}'s details")
+                    .WithContent($"Try again if you really want to modify {supplier.Name}'s details")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(950)
+                    .ShowWarning())
+            .WithMaxWidth(950)
             .Dismissible()
             .Show();
     }
-    
+
     [RelayCommand]
     private void ShowSingleItemDeletionDialog(Supplier? supplier)
     {
         if (supplier == null) return;
-        
-        _dialogManager.CreateDialog("" + 
-            "Are you absolutely sure?", $"This action cannot be undone. This will permanently delete {supplier.Name} and remove the data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(supplier), DialogButtonStyle.Destructive)
-            .WithCancelButton("Cancel")
-            .WithMaxWidth(512)
-            .Dismissible()
-            .Show();
-    }
-    
-    [RelayCommand]
-    private void ShowMultipleItemDeletionDialog(Supplier? supplier)
-    {
-        if (supplier == null) return;
 
-        _dialogManager.CreateDialog("" + 
-            "Are you absolutely sure?", $"This action cannot be undone. This will permanently delete multiple equipments and remove their data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteMultipleItems(supplier), DialogButtonStyle.Destructive)
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            $"This action cannot be undone. This will permanently delete {supplier.Name} and remove the data from your database.")
+            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteSingleItem(supplier), DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
     }
-    
+
+    [RelayCommand]
+    private void ShowMultipleItemDeletionDialog()
+    {
+        var selectedSuppliers = SupplierItems.Where(s => s.IsSelected).ToList();
+
+        if (selectedSuppliers.Count == 0)
+        {
+            _toastManager.CreateToast("No Selection")
+                .WithContent("Please select at least one supplier to delete.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            $"This action cannot be undone. This will permanently delete {selectedSuppliers.Count} supplier(s) and remove their data from your database.")
+            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteMultipleItems(), DialogButtonStyle.Destructive)
+            .WithCancelButton("Cancel")
+            .WithMaxWidth(512)
+            .Dismissible()
+            .Show();
+    }
+
     [RelayCommand]
     private async Task SearchSupplier()
     {
@@ -249,9 +385,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             UpdateSupplierCounts();
             return;
         }
-        
+
         IsSearchingSupplier = true;
-        
+
         try
         {
             await Task.Delay(500);
@@ -259,9 +395,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             var filteredSuppliers = CurrentFilteredSupplierData.Where(supplier =>
                     supplier is
                     {
-                        Name: not null, ContactPerson: not null, Email: not null, 
+                        Name: not null, ContactPerson: not null, Email: not null,
                         PhoneNumber: not null, Products: not null, Status: not null
-                    } && (supplier.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) || 
+                    } && (supplier.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                           supplier.ContactPerson.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                           supplier.Email.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                           supplier.PhoneNumber.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
@@ -282,12 +418,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             IsSearchingSupplier = false;
         }
     }
-    
+
     private void ApplySupplierFilter()
     {
         if (OriginalSupplierData.Count == 0) return;
         List<Supplier> filteredList;
-        
+
         if (SelectedSupplierFilterItem == "All")
         {
             filteredList = OriginalSupplierData.ToList();
@@ -308,7 +444,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         }
         UpdateSupplierCounts();
     }
-    
+
     [RelayCommand]
     private void ToggleSelection(bool? isChecked)
     {
@@ -320,52 +456,72 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         }
         UpdateSupplierCounts();
     }
-    
+
     private async Task OnSubmitDeleteSingleItem(Supplier supplier)
     {
-        await DeleteEquipmentFromDatabase(supplier);
-        supplier.PropertyChanged -= OnSupplierPropertyChanged;
-        SupplierItems.Remove(supplier);
-        UpdateSupplierCounts();
+        if (supplier.ID == null) return;
 
-        _toastManager.CreateToast("Delete Supplier")
-            .WithContent($"{supplier.Name} has been deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+        // Call service to delete from database
+        var result = await _supplierService.DeleteSupplierAsync(supplier.ID.Value);
+
+        if (result.Success)
+        {
+            // Remove from UI
+            supplier.PropertyChanged -= OnSupplierPropertyChanged;
+            SupplierItems.Remove(supplier);
+            OriginalSupplierData.Remove(supplier);
+            CurrentFilteredSupplierData.Remove(supplier);
+            UpdateSupplierCounts();
+
+            _toastManager.CreateToast("Supplier Deleted")
+                .WithContent($"{supplier.Name} has been deleted successfully!")
+                .DismissOnClick()
+                .WithDelay(6)
+                .ShowSuccess();
+        }
     }
-    private async Task OnSubmitDeleteMultipleItems(Supplier supplier)
+
+    private async Task OnSubmitDeleteMultipleItems()
     {
         var selectedSuppliers = SupplierItems.Where(item => item.IsSelected).ToList();
         if (selectedSuppliers.Count == 0) return;
 
-        foreach (var suppliers in selectedSuppliers)
-        {
-            await DeleteEquipmentFromDatabase(supplier);
-            suppliers.PropertyChanged -= OnSupplierPropertyChanged;
-            SupplierItems.Remove(suppliers);
-        }
-        UpdateSupplierCounts();
+        // Prepare list of IDs
+        var supplierIds = selectedSuppliers
+            .Where(s => s.ID.HasValue)
+            .Select(s => s.ID!.Value)
+            .ToList();
 
-        _toastManager.CreateToast($"Delete Selected Suppliers")
-            .WithContent($"Multiple suppliers deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+        // Call service to delete multiple from database
+        var result = await _supplierService.DeleteMultipleSuppliersAsync(supplierIds);
+
+        if (result.Success)
+        {
+            // Remove from UI
+            foreach (var supplier in selectedSuppliers)
+            {
+                supplier.PropertyChanged -= OnSupplierPropertyChanged;
+                SupplierItems.Remove(supplier);
+                OriginalSupplierData.Remove(supplier);
+                CurrentFilteredSupplierData.Remove(supplier);
+            }
+            UpdateSupplierCounts();
+
+            _toastManager.CreateToast("Suppliers Deleted")
+                .WithContent($"{result.DeletedCount} supplier(s) deleted successfully!")
+                .DismissOnClick()
+                .WithDelay(6)
+                .ShowSuccess();
+        }
     }
-    
-    private async Task DeleteEquipmentFromDatabase(Supplier supplier)
-    {
-        await Task.Delay(100); // Just an animation/simulation of async operation
-    }
-    
+
     private void UpdateSupplierCounts()
     {
         SelectedCount = SupplierItems.Count(x => x.IsSelected);
         TotalCount = SupplierItems.Count;
         SelectAll = SupplierItems.Count > 0 && SupplierItems.All(x => x.IsSelected);
     }
-    
+
     private void OnSupplierPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Supplier.IsSelected))
@@ -373,12 +529,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             UpdateSupplierCounts();
         }
     }
-    
+
     partial void OnSearchStringResultChanged(string value)
     {
         SearchSupplierCommand.Execute(null);
     }
-    
+
     partial void OnSelectedSupplierFilterItemChanged(string value)
     {
         ApplySupplierFilter();
@@ -387,30 +543,30 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
 public partial class Supplier : ObservableObject
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private int? _iD;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string? _name;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _contactPerson;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _email;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _phoneNumber;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _products;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _status;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private bool _isSelected;
-    
+
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500

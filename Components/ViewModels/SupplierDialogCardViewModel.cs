@@ -6,30 +6,32 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
 
 namespace AHON_TRACK.Components.ViewModels;
 
 public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private string[] _statusFilterItems = ["Active", "Inactive", "Suspended"];
-    
+
     [ObservableProperty]
     private string _dialogTitle = "Add Supplier Contact";
 
     [ObservableProperty]
     private string _dialogDescription = "Register new supplier with their contact to maintain reliable supply management";
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private bool _isEditMode = false;
-    
+
     private string? _supplierName = string.Empty;
     private string? _contactPerson = string.Empty;
     private string? _email = string.Empty;
     private string? _phoneNumber = string.Empty;
     private string? _products = string.Empty;
     private string? _status = string.Empty;
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -50,7 +52,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
 
     [AvaloniaHotReload]
     public void Initialize()
-    { 
+    {
         DialogTitle = "Add Supplier Contact";
         DialogDescription = "Register new supplier with their contact to maintain reliable supply management";
         IsEditMode = false;
@@ -77,16 +79,16 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     {
         _dialogManager.Close(this);
     }
-    
+
     [RelayCommand]
     private void AddSupplier()
     {
         ValidateAllProperties();
-        
+
         if (HasErrors) return;
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
-    
+
     private void ClearAllFields()
     {
         SupplierName = string.Empty;
@@ -95,10 +97,10 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         PhoneNumber = string.Empty;
         Products = string.Empty;
         Status = string.Empty;
-        
+
         ClearAllErrors();
     }
-    
+
     [Required(ErrorMessage = "Supplier name is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
@@ -107,7 +109,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _supplierName;
         set => SetProperty(ref _supplierName, value, true);
     }
-    
+
     [Required(ErrorMessage = "Contact person is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
@@ -116,7 +118,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _contactPerson;
         set => SetProperty(ref _contactPerson, value, true);
     }
-    
+
     [Required(ErrorMessage = "Email is required")]
     [EmailValidation]
     public string? Email
@@ -124,7 +126,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _email;
         set => SetProperty(ref _email, value, true);
     }
-    
+
     [Required(ErrorMessage = "Phone number is required")]
     [RegularExpression(@"^09\d{9}$", ErrorMessage = "Contact number must start with 09 and be 11 digits long")]
     public string? PhoneNumber
@@ -132,16 +134,16 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _phoneNumber;
         set => SetProperty(ref _phoneNumber, value, true);
     }
-    
+
     [Required(ErrorMessage = "Products is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string? Products 
+    public string? Products
     {
         get => _products;
         set => SetProperty(ref _products, value, true);
     }
-    
+
     [Required(ErrorMessage = "Select a status")]
     public string? Status
     {
