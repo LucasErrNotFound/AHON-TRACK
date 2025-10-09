@@ -10,7 +10,7 @@
 	xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
 	x:DataType="viewModel:AddNewEmployeeDialogCardViewModel"
 	Width="950"
-	Height="900"
+	MaxHeight="900"
 	x:Class="AHON_TRACK.Components.AddNewEmployeeDialog.AddNewEmployeeDialogCard">
 
 	<Design.DataContext>
