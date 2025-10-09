@@ -1,6 +1,8 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using HotAvalonia;
 using LiveChartsCore;
 using LiveChartsCore.Kernel;
@@ -10,6 +12,7 @@ using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ShadUI;
 using SkiaSharp;
 using CommunityToolkit.Mvvm.Input;
+using LiveChartsCore.Kernel.Events;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -116,6 +119,20 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         // here we can customize the visual of the point, for example we can set
         // a different color for each point.
         point.Context.Visual.Fill = GetPaint(point.Index);
+    }
+    
+    [RelayCommand]
+    public void OnHoveredPointsChanged(HoverCommandArgs args)
+    {
+        foreach (var hovered in args.NewPoints ?? [])
+        {
+            hovered.Context.Visual!.Stroke = new SolidColorPaint(SKColors.Black, 3);
+        }
+
+        foreach (var hovered in args.OldPoints ?? [])
+        {
+            hovered.Context.Visual!.Stroke = null;
+        }
     }
 
     public ISeries[] Series { get; set; } =

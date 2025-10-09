@@ -127,10 +127,12 @@
                                         Margin="12,0,12,12"
                                         XAxes="{CompiledBinding XAxes}"
                                         YAxes="{CompiledBinding YAxes}"
+                                        HoveredPointsChangedCommand="{CompiledBinding HoveredPointsChangedCommand}"
                                         TooltipTextSize="14">
                                         <lvc:CartesianChart.Series>
                                             <lvc:XamlColumnSeries
                                                 Values="{CompiledBinding Series[0].Values}"
+                                                Stroke="{lvc:SolidColorPaint Color='#00000000'}"
                                                 PointMeasuredCommand="{CompiledBinding PointMeasuredCommand}"/>
                                         </lvc:CartesianChart.Series>
                                     </lvc:CartesianChart>
@@ -144,6 +146,11 @@
                         </StackPanel>
                     </shadui:Card>
                 </Grid>
+                <shadui:Card>
+                    <StackPanel>
+                        <shadui:CardTitle Content="Gym Population"/>
+                    </StackPanel>
+                </shadui:Card>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
