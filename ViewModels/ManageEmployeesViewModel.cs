@@ -108,7 +108,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _employeeService = employeeService;
         //LoadEmployeesAsync();
-        UpdateCounts();
+        _ = UpdateCounts();
 
     }
 
@@ -119,6 +119,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _pageManager = new PageManager(new ServiceProvider());
         _addNewEmployeeDialogCardViewModel = new AddNewEmployeeDialogCardViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
+        _employeeService = null!;
     }
 
 
@@ -127,7 +128,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         if (IsInitialized) return;
         _ = LoadEmployeesFromDatabaseAsync();
-        UpdateCounts();
+        _ = UpdateCounts();
         IsInitialized = true;
     }
 
@@ -311,7 +312,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             }
 
             TotalCount = EmployeeItems.Count;
-            UpdateCounts();
+            _ = UpdateCounts();
         }
         catch (Exception ex)
         {
@@ -361,7 +362,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         if (e.PropertyName == nameof(ManageEmployeesItem.IsSelected))
         {
-            UpdateCounts();
+            _ = UpdateCounts();
         }
     }
 
@@ -503,7 +504,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
 
         CurrentFilteredData = [.. OriginalEmployeeData];
-        UpdateCounts();
+        _ = UpdateCounts();
 
         SelectedSortIndex = -1;
         SelectedFilterIndex = -1;
@@ -688,7 +689,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         {
             item.IsSelected = shouldSelect;
         }
-        UpdateCounts();
+        _ = UpdateCounts();
     }
 
     [RelayCommand]
@@ -1151,7 +1152,7 @@ public partial class ManageEmployeesItem : ObservableObject
     [ObservableProperty]
     private DateTime _dateJoined;
 
-    public static Bitmap DefaultAvatarSource { get; internal set; }
+    //public static Bitmap DefaultAvatarSource { get; internal set; }
 
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {
