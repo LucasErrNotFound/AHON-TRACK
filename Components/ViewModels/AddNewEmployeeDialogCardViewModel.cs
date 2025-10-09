@@ -44,6 +44,9 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isEditMode = false;
 
+    [ObservableProperty]
+    private int? _editingEmployeeID;
+
     private readonly DialogManager _dialogManager;
     private readonly IEmployeeService _employeeService;
     private readonly ToastManager _toastManager;
@@ -263,13 +266,13 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [ObservableProperty]
-    private Bitmap profileImageSource;
-
+    private Bitmap profileImageSource = null!;
     public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager, IEmployeeService employeeService, ToastManager toastManager)
     {
         _dialogManager = dialogManager;
         _employeeService = employeeService;
         _toastManager = toastManager;
+        _employeeService = employeeService;
     }
 
     public AddNewEmployeeDialogCardViewModel()
@@ -277,6 +280,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _employeeService = new EmployeeService("Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True", _toastManager);
+        _employeeService = null!;
     }
 
     [AvaloniaHotReload]
@@ -287,7 +291,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         ClearAllFields();
     }
 
-    public void InitializeForEditMode(ManageEmployeesItem? employee)
+    public async Task InitializeForEditMode(ManageEmployeesItem? employee)
     {
         IsEditMode = true;
         DialogTitle = "Edit Employee Details";
