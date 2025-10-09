@@ -290,6 +290,10 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
 public partial class ScheduledPerson : ObservableObject
 {
+
+    [ObservableProperty]
+    private int? _trainingID;
+
     [ObservableProperty]
     private int? _iD;
 
