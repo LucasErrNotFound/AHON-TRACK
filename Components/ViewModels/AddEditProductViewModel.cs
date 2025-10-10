@@ -1,4 +1,5 @@
 using AHON_TRACK.Models;
+using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using Avalonia.Controls;
@@ -10,9 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
-using AHON_TRACK.ViewModels;
-using Microsoft.Identity.Client;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -31,11 +31,20 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string? _selectedProductCategoryItem = "None";
 
     [ObservableProperty]
-    private string[] _productSupplierItems = ["None", "San Miguel", "Optimum", "AHON Factory", "Nike"];
-    private string? _selectedSupplierCategoryItem = "Tender Juicy";
+    private string[] _productSupplierItems = ["None"];
+    private string? _selectedSupplierCategoryItem = "None";
+
+    [ObservableProperty]
+    private byte[]? _productImageBytes;
 
     [ObservableProperty]
     private bool _isPercentageModeOn;
+
+    [ObservableProperty]
+    private bool _isSaving;
+
+    [ObservableProperty]
+    private bool _isLoadingSuppliers;
 
     private int? _productID;
     private string? _productName = string.Empty;
@@ -44,9 +53,10 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private DateTime? _productExpiry;
     private Image? _productImage;
 
-    private int? _price;
-    private int? _discountedPrice;
-    private bool? _inStock;
+    private string? _productImageFilePath;
+
+    private decimal? _price;
+    private decimal? _discountedPrice;
 
     private string? _productStatus;
     private string? _productCategory;
@@ -57,16 +67,18 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly IProductService _productService;
+    private readonly ISupplierService _supplierService;
 
     public string DiscountSymbol => IsPercentageModeOn ? "%" : "₱";
     public string DiscountFormat => IsPercentageModeOn ? "N2" : "N0";
 
-    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IProductService productService)
+    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IProductService productService, ISupplierService supplierService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _productService = productService;
+        _supplierService = supplierService;
     }
 
     public AddEditProductViewModel()
@@ -75,11 +87,86 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _productService = null!;
+        _supplierService = null!;
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
+        await LoadSuppliersAsync();
+    }
+
+    private async Task LoadSuppliersAsync()
+    {
+        if (_supplierService == null) return;
+
+        IsLoadingSuppliers = true;
+
+        try
+        {
+            var result = await _supplierService.GetAllSuppliersAsync();
+
+            if (result.Success && result.Suppliers != null)
+            {
+                // Extract supplier names and add "None" as first option
+                var supplierNames = result.Suppliers
+                    .Where(s => !string.IsNullOrEmpty(s.SupplierName))
+                    .Select(s => s.SupplierName)
+                    .OrderBy(name => name)
+                    .ToList();
+
+                // Add "None" as the first option
+                supplierNames.Insert(0, "None");
+
+                ProductSupplierItems = supplierNames.ToArray();
+
+                // If no supplier is selected yet, default to "None"
+                if (string.IsNullOrEmpty(SelectedProductSupplier))
+                {
+                    SelectedProductSupplier = "None";
+                }
+            }
+            else
+            {
+                // Fallback to default if loading fails
+                ProductSupplierItems = ["None"];
+                SelectedProductSupplier = "None";
+
+                if (!result.Success)
+                {
+                    _toastManager?.CreateToast("Warning")
+                        .WithContent("Could not load suppliers from database. Using defaults.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Fallback to default on error
+            ProductSupplierItems = ["None"];
+            SelectedProductSupplier = "None";
+
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to load suppliers: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsLoadingSuppliers = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshSuppliers()
+    {
+        await LoadSuppliersAsync();
+
+        _toastManager?.CreateToast("Suppliers Refreshed")
+            .WithContent("Supplier list has been updated")
+            .DismissOnClick()
+            .ShowSuccess();
     }
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
@@ -89,9 +176,27 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             SetViewContext((ProductViewContext)context);
         }
 
-        if (!parameters.TryGetValue("SelectedProduct", out var product)) return;
-        var selectedProduct = (ProductStock)product;
-        PopulateFormWithProductData(selectedProduct);
+        if (parameters.TryGetValue("SelectedProduct", out var product))
+        {
+            var selectedProduct = (ProductStock)product;
+            // ✅ FIXED: Load suppliers first, then populate form
+            _ = LoadSuppliersAndPopulateForm(selectedProduct);
+        }
+    }
+
+    private async Task LoadSuppliersAndPopulateForm(ProductStock product)
+    {
+        Console.WriteLine($"🔄 Loading suppliers and populating form for product: {product.Name}");
+        await LoadSuppliersAsync();
+
+        // ✅ Small delay to ensure suppliers are loaded first
+        await Task.Delay(100);
+
+        PopulateFormWithProductData(product);
+
+        // ✅ Force UI update
+        OnPropertyChanged(nameof(ProductCurrentStock));
+        OnPropertyChanged(nameof(CurrentStock));
     }
 
     [RelayCommand]
@@ -103,48 +208,76 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         {
             _toastManager?.CreateToast("Validation Error")
                 .WithContent("Please fix all validation errors before saving")
+                .DismissOnClick()
                 .ShowWarning();
             return;
         }
 
-        if (_productService == null) return;
+        if (_productService == null)
+        {
+            _toastManager?.CreateToast("Service Error")
+                .WithContent("Product service is not available")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
+        IsSaving = true;
 
         try
         {
+            var supplierToSave = SelectedProductSupplier == "None" ? null : SelectedProductSupplier;
+
             var productModel = new ProductModel
             {
                 ProductID = ProductID ?? 0,
                 ProductName = ProductName ?? "",
                 SKU = ProductSKU ?? "",
-                ProductSupplier = SelectedProductSupplier,
+                ProductSupplier = supplierToSave,
                 Description = ProductDescription,
                 Price = ProductPrice ?? 0,
                 DiscountedPrice = ProductDiscountedPrice,
                 IsPercentageDiscount = IsPercentageModeOn,
-                ProductImagePath = ProductImage?.Source?.ToString(),
+                // ✅ CRITICAL: Pass file path for NEW images, bytes for existing
+                ProductImageFilePath = _productImageFilePath,
+                ProductImageBytes = _productImageBytes, // Existing image from DB
                 ExpiryDate = ProductExpiry,
                 Status = SelectedProductStatus ?? "In Stock",
                 Category = SelectedProductCategory ?? "None",
                 CurrentStock = ProductCurrentStock ?? 0
             };
 
-            bool success;
+            (bool success, string message, int? productId) result;
+
             if (ViewContext == ProductViewContext.EditProduct)
             {
-                success = await _productService.UpdateProductAsync(productModel);
+                var updateResult = await _productService.UpdateProductAsync(productModel);
+                result = (updateResult.Success, updateResult.Message, productModel.ProductID);
             }
             else
             {
-                success = await _productService.AddProductAsync(productModel);
+                result = await _productService.AddProductAsync(productModel);
             }
 
-            if (success) PublishSwitchBack();
+            if (result.success)
+            {
+                PublishSwitchBack();
+            }
+            else
+            {
+                Console.WriteLine($"Failed to save product: {result.message}");
+            }
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast("Error")
-                .WithContent($"Failed to save product: {ex.Message}")
+                .WithContent($"An unexpected error occurred: {ex.Message}")
+                .DismissOnClick()
                 .ShowError();
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
@@ -170,9 +303,11 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private void PublishSwitchBack()
     {
-        _toastManager.CreateToast("Publish product")
-            .ShowSuccess();
+        var successMessage = ViewContext == ProductViewContext.EditProduct
+            ? "Product updated successfully"
+            : "Product added successfully";
 
+        // Note: Service already shows toast, but we keep this for consistency
         _pageManager.Navigate<ProductStockViewModel>(new Dictionary<string, object>
         {
             { "ShouldRefresh", true }
@@ -198,8 +333,10 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private void PopulateFormWithProductData(ProductStock product)
     {
-        ProductID = product.ID;
+        Console.WriteLine($"🔄 Populating form with product ID: {product.ID}");
+        Console.WriteLine($"📊 Product.CurrentStock value: {product.CurrentStock}");
 
+        ProductID = product.ID;
         ProductName = product.Name;
         ProductDescription = product.Description;
         ProductPrice = product.Price;
@@ -207,12 +344,47 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
         ProductSKU = product.Sku;
-        ProductCurrentStock = product.CurrentStock;
 
-        SelectedProductSupplier = product.Supplier;
+        // ✅ CRITICAL FIX: Explicitly set CurrentStock
+        ProductCurrentStock = product.CurrentStock;
+        Console.WriteLine($"✅ Set ProductCurrentStock to: {ProductCurrentStock}");
+
+        if (!string.IsNullOrEmpty(product.Supplier) &&
+            ProductSupplierItems.Contains(product.Supplier))
+        {
+            SelectedProductSupplier = product.Supplier;
+        }
+        else
+        {
+            SelectedProductSupplier = "None";
+        }
+
         SelectedProductStatus = product.Status;
         SelectedProductCategory = product.Category;
+
+        // Handle Base64 images from database
+        if (!string.IsNullOrEmpty(product.Poster))
+        {
+            if (product.Poster.StartsWith("data:image/png;base64,"))
+            {
+                var base64Data = product.Poster.Replace("data:image/png;base64,", "");
+                try
+                {
+                    ProductImageBytes = Convert.FromBase64String(base64Data);
+                    OnPropertyChanged(nameof(ProductImageBytes));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Failed to convert Base64 image: {ex.Message}");
+                }
+            }
+            else if (!product.Poster.StartsWith("avares://"))
+            {
+                ProductImageFilePath = product.Poster;
+            }
+        }
     }
+
 
     public string ViewTitle => ViewContext switch
     {
@@ -269,26 +441,26 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     [Required(ErrorMessage = "Price must be set")]
     [Range(20, 5000, ErrorMessage = "Price must be between 20 and 5,000")]
-    public int? ProductPrice
+    public decimal? ProductPrice
     {
         get => _price;
         set => SetProperty(ref _price, value, true);
     }
 
     [Range(1, 15000, ErrorMessage = "Price must be between 1 and 15,000")]
-    public int? ProductDiscountedPrice
+    public decimal? ProductDiscountedPrice
     {
         get => _discountedPrice;
         set => SetProperty(ref _discountedPrice, value, true);
     }
 
+    [Range(0, 100000, ErrorMessage = "Stock must be between 0 and 100,000")]
     public int? ProductCurrentStock
     {
         get => _productCurrentStock;
         set => SetProperty(ref _productCurrentStock, value, true);
     }
 
-    // Alias for XAML binding compatibility
     public int? CurrentStock
     {
         get => ProductCurrentStock;
@@ -324,6 +496,14 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         get => _productImage;
         set => SetProperty(ref _productImage, value, true);
     }
+
+    // ✅ NEW: Property to store actual file path
+    public string? ProductImageFilePath
+    {
+        get => _productImageFilePath;
+        set => SetProperty(ref _productImageFilePath, value, true);
+    }
+
 
     partial void OnIsPercentageModeOnChanged(bool value)
     {

@@ -9,15 +9,17 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface IProductService
     {
-        Task<List<ProductModel>> GetProductsAsync();
-        Task<bool> AddProductAsync(ProductModel product);
-        Task<bool> UpdateProductAsync(ProductModel product);
-        Task<bool> DeleteProductAsync(int productId);
-        Task<List<ProductModel>> GetProductsByCategoryAsync(string category);
-        Task<List<ProductModel>> GetProductsByStatusAsync(string status);
-        Task<List<ProductModel>> GetExpiredProductsAsync();
-        Task<List<ProductModel>> GetProductsExpiringSoonAsync(int daysThreshold = 30);
-        Task<ProductModel?> GetProductByIdAsync(int productId);
-        Task<ProductModel?> GetProductBySKUAsync(string sku);
+        Task<(bool Success, string Message, int? ProductId)> AddProductAsync(ProductModel product);
+        Task<(bool Success, string Message, List<ProductModel>? Products)> GetAllProductsAsync();
+        Task<(bool Success, string Message, ProductModel? Product)> GetProductByIdAsync(int productId);
+        Task<(bool Success, string Message, ProductModel? Product)> GetProductBySKUAsync(string sku);
+        Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsByCategoryAsync(string category);
+        Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsByStatusAsync(string status);
+        Task<(bool Success, string Message, List<ProductModel>? Products)> GetExpiredProductsAsync();
+        Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsExpiringSoonAsync(int daysThreshold = 30);
+        Task<(bool Success, string Message)> UpdateProductAsync(ProductModel product);
+        Task<(bool Success, string Message)> UpdateProductStockAsync(int productId, int newStock);
+        Task<(bool Success, string Message)> DeleteProductAsync(int productId);
+        Task<(bool Success, string Message, int DeletedCount)> DeleteMultipleProductsAsync(List<int> productIds);
     }
 }

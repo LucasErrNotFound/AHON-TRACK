@@ -9,17 +9,19 @@ namespace AHON_TRACK.Models
     public class ProductModel
     {
         public int ProductID { get; set; }
-        public string ProductName { get; set; }
-        public string SKU { get; set; }
-        public string ProductSupplier { get; set; }
-        public string Description { get; set; }
+        public string? ProductName { get; set; }
+        public string? SKU { get; set; }
+        public string? ProductSupplier { get; set; }
+        public string? Description { get; set; }
         public decimal Price { get; set; }
         public decimal? DiscountedPrice { get; set; }
         public bool IsPercentageDiscount { get; set; }
-        public string ProductImagePath { get; set; }
+        public string? ProductImageFilePath { get; set; }
+        public string? ProductImageBase64 { get; set; }
+        public byte[]? ProductImageBytes { get; set; }
         public DateTime? ExpiryDate { get; set; }
-        public string Status { get; set; }
-        public string Category { get; set; }
+        public string? Status { get; set; }
+        public string? Category { get; set; }
 
         public int CurrentStock { get; set; }
 

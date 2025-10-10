@@ -19,7 +19,7 @@ namespace AHON_TRACK.ViewModels;
 public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements"];
+    private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements", "Apparel"];
 
     [ObservableProperty]
     private string _selectedProductFilterItem = "All";
@@ -70,7 +70,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _productService = productService;
 
         _ = LoadProductDataAsync();
-        // LoadProductData();
         UpdateProductCounts();
     }
 
@@ -86,24 +85,37 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
         if (IsInitialized) return;
-        _ = LoadProductDataAsync();
-        //LoadProductData();
+        await LoadProductDataAsync();
         UpdateProductCounts();
         IsInitialized = true;
     }
 
     private async Task LoadProductDataAsync()
     {
-        if (_productService == null) return;
+        if (_productService == null)
+        {
+            LoadProductData(); // Fallback to sample data
+            return;
+        }
 
         IsLoading = true;
         try
         {
-            var productModels = await _productService.GetProductsAsync();
-            var productStocks = productModels.Select(MapToProductStock).ToList();
+            var result = await _productService.GetAllProductsAsync();
+
+            if (!result.Success || result.Products == null)
+            {
+                _toastManager?.CreateToast("Error Loading Products")
+                    .WithContent(result.Message)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            var productStocks = result.Products.Select(MapToProductStock).ToList();
 
             OriginalProductData = productStocks;
             CurrentFilteredProductData = [.. productStocks];
@@ -127,6 +139,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         {
             _toastManager?.CreateToast("Error Loading Products")
                 .WithContent($"Failed to load products: {ex.Message}")
+                .DismissOnClick()
                 .ShowError();
         }
         finally
@@ -193,38 +206,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 Expiry = today.AddYears(6).AddDays(32),
                 Status = "In Stock",
                 Poster = "avares://AHON_TRACK/Assets/ProductStockView/protein-powder-display.png"
-            },
-            new ProductStock
-            {
-                ID = 1003,
-                Name = "Creatine XPLODE Powder",
-                Sku = "1AU3OTE0923U",
-                Description = "1.1lbs Creatine Monohydrate",
-                Category = "Supplements",
-                CurrentStock = 0,
-                DiscountInPercentage = false,
-                DiscountedPrice = 550,
-                Price = 1050,
-                Supplier = "Optimum",
-                Expiry = today.AddYears(6).AddDays(32),
-                Status = "Out of Stock",
-                Poster = "avares://AHON_TRACK/Assets/ProductStockView/creatine-display.png"
-            },
-            new ProductStock
-            {
-                ID = 1004,
-                Name = "Insane Labz PSYCHOTIC",
-                Sku = "1AU3OTE0923U",
-                Description = "7.6oz PreWorkout Peaches & Cream",
-                Category = "Supplements",
-                CurrentStock = 3,
-                DiscountInPercentage = false,
-                DiscountedPrice = null,
-                Price = 900,
-                Supplier = "Optimum",
-                Expiry = today.AddYears(6).AddDays(32),
-                Status = "In Stock",
-                Poster = "avares://AHON_TRACK/Assets/ProductStockView/preworkout-display.png"
             }
         ];
     }
@@ -253,37 +234,47 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     private void ShowSingleItemDeletionDialog(ProductStock? product)
     {
         if (product == null) return;
-
-        _dialogManager.CreateDialog("" +
-            "Are you absolutely sure?", $"This action cannot be undone. This will permanently delete {product.Name} and remove the data from your database.")
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            $"This action cannot be undone. This will permanently delete {product.Name} and remove the data from your database.")
             .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(product), DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
+        _ = LoadProductDataAsync();
     }
 
     [RelayCommand]
-    private void ShowMultipleItemDeletionDialog(ProductStock? product)
+    private void ShowMultipleItemDeletionDialog()
     {
-        if (product == null) return;
-
-        _dialogManager.CreateDialog("" +
-            "Are you absolutely sure?", $"This action cannot be undone. This will permanently delete multiple products and remove their data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteMultipleItems(product), DialogButtonStyle.Destructive)
+        var selectedCount = ProductItems.Count(x => x.IsSelected);
+        if (selectedCount == 0)
+        {
+            _toastManager.CreateToast("No Selection")
+                .WithContent("Please select products to delete")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            $"This action cannot be undone. This will permanently delete {selectedCount} product(s) and remove their data from your database.")
+            .WithPrimaryButton("Continue", OnSubmitDeleteMultipleItems, DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
+        _ = LoadProductDataAsync();
     }
 
     private async Task OnSubmitDeleteSingleItem(ProductStock? product)
     {
-        if (product == null) return;
+        if (product == null || _productService == null) return;
 
-        var success = await DeleteProductFromDatabase(product);
+        var result = await _productService.DeleteProductAsync(product.ID);
 
-        if (success)
+        if (result.Success)
         {
             product.PropertyChanged -= OnProductPropertyChanged;
             ProductItems.Remove(product);
@@ -291,58 +282,32 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             CurrentFilteredProductData.Remove(product);
             UpdateProductCounts();
 
-            _toastManager.CreateToast("Delete product")
-                .WithContent($"{product.Name} has been deleted successfully!")
-                .DismissOnClick()
-                .WithDelay(6)
-                .ShowSuccess();
+            // Service already shows success toast
         }
     }
 
-    private async Task OnSubmitDeleteMultipleItems(ProductStock? product)
+    private async Task OnSubmitDeleteMultipleItems()
     {
-        if (product == null) return;
+        if (_productService == null) return;
 
         var selectedProducts = ProductItems.Where(item => item.IsSelected).ToList();
         if (selectedProducts.Count == 0) return;
 
-        var successCount = 0;
-        foreach (var products in selectedProducts)
+        var productIds = selectedProducts.Select(p => p.ID).ToList();
+        var result = await _productService.DeleteMultipleProductsAsync(productIds);
+
+        if (result.Success)
         {
-            var success = await DeleteProductFromDatabase(products);
-            if (success)
+            foreach (var product in selectedProducts)
             {
-                products.PropertyChanged -= OnProductPropertyChanged;
-                ProductItems.Remove(products);
-                OriginalProductData.Remove(products);
-                CurrentFilteredProductData.Remove(products);
-                successCount++;
+                product.PropertyChanged -= OnProductPropertyChanged;
+                ProductItems.Remove(product);
+                OriginalProductData.Remove(product);
+                CurrentFilteredProductData.Remove(product);
             }
-        }
 
-        UpdateProductCounts();
-
-        _toastManager.CreateToast("Delete Selected Products")
-            .WithContent($"{successCount} product(s) deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
-    }
-
-    private async Task<bool> DeleteProductFromDatabase(ProductStock? product)
-    {
-        if (product == null || _productService == null) return false;
-
-        try
-        {
-            return await _productService.DeleteProductAsync(product.ID);
-        }
-        catch (Exception ex)
-        {
-            _toastManager?.CreateToast("Delete Failed")
-                .WithContent($"Failed to delete product: {ex.Message}")
-                .ShowError();
-            return false;
+            UpdateProductCounts();
+            // Service already shows success toast
         }
     }
 
@@ -377,21 +342,22 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
         try
         {
-            await Task.Delay(500);
+            await Task.Delay(300); // Debounce
 
-            var filteredEquipments = CurrentFilteredProductData.Where(equipment =>
-                    equipment is { Name: not null, Category: not null, Supplier: not null, Status: not null } &&
-                    (equipment.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                     equipment.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                     equipment.Supplier.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                     equipment.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
+            var filteredProducts = CurrentFilteredProductData.Where(product =>
+                    product is { Name: not null, Category: not null, Supplier: not null, Status: not null } &&
+                    (product.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     product.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     product.Supplier.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     product.Sku?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) == true ||
+                     product.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             ProductItems.Clear();
-            foreach (var equipment in filteredEquipments)
+            foreach (var product in filteredProducts)
             {
-                equipment.PropertyChanged += OnProductPropertyChanged;
-                ProductItems.Add(equipment);
+                product.PropertyChanged += OnProductPropertyChanged;
+                ProductItems.Add(product);
             }
             UpdateProductCounts();
         }
@@ -413,7 +379,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         else
         {
             filteredList = OriginalProductData
-                .Where(equipment => equipment.Category == SelectedProductFilterItem)
+                .Where(product => product.Category == SelectedProductFilterItem)
                 .ToList();
         }
         CurrentFilteredProductData = filteredList;
@@ -455,27 +421,30 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
     private ProductStock MapToProductStock(ProductModel model)
     {
+        // ✅ FIXED: Handle Base64 image properly
+        string posterPath = "avares://AHON_TRACK/Assets/ProductStockView/default-product.png";
+
+        if (!string.IsNullOrEmpty(model.ProductImageBase64))
+        {
+            posterPath = $"data:image/png;base64,{model.ProductImageBase64}";
+        }
+
         return new ProductStock
         {
             ID = model.ProductID,
-            Name = model.ProductName,
-            Sku = model.SKU,
-            Category = model.Category,
+            Name = model.ProductName ?? "",
+            Sku = model.SKU ?? "",
+            Category = model.Category ?? "",
             CurrentStock = model.CurrentStock,
-            Price = (int)model.Price,
-            Supplier = model.ProductSupplier ?? "",
+            Price = model.Price,
+            Supplier = model.ProductSupplier ?? "None", // ✅ FIXED: Default to "None" if null
             Expiry = model.ExpiryDate,
-            Status = model.Status,
+            Status = model.Status ?? "",
             Description = model.Description ?? "",
-            DiscountedPrice = model.DiscountedPrice.HasValue ? (int)model.DiscountedPrice.Value : null,
+            DiscountedPrice = model.DiscountedPrice,
             DiscountInPercentage = model.IsPercentageDiscount,
-            Poster = model.ProductImagePath ?? "avares://AHON_TRACK/Assets/ProductStockView/default-product.png"
+            Poster = posterPath
         };
-    }
-
-    public async Task RefreshProductsAsync()
-    {
-        await LoadProductDataAsync();
     }
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
@@ -487,6 +456,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     }
 }
 
+// ProductStock class remains the same as in your document
 public partial class ProductStock : ObservableObject
 {
     [ObservableProperty]
@@ -508,10 +478,10 @@ public partial class ProductStock : ObservableObject
     private int? _currentStock;
 
     [ObservableProperty]
-    private int? _price;
+    private decimal _price;
 
     [ObservableProperty]
-    private int? _discountedPrice;
+    private decimal? _discountedPrice;
 
     [ObservableProperty]
     private bool _discountInPercentage;
@@ -531,43 +501,34 @@ public partial class ProductStock : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
-    // ✅ ADD THIS: Calculate the final price after discount
-    public int? FinalPrice
+    public decimal FinalPrice
     {
         get
         {
-            if (!Price.HasValue) return null;
-
             if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
             {
                 if (DiscountInPercentage)
                 {
-                    // Calculate percentage discount
-                    var discountAmount = Price.Value * (DiscountedPrice.Value / 100.0);
-                    return (int)(Price.Value - discountAmount);
+                    var discountAmount = Price * (DiscountedPrice.Value / 100);
+                    return Price - discountAmount;
                 }
                 else
                 {
-                    // Fixed discount - return the discounted price directly
                     return DiscountedPrice.Value;
                 }
             }
-
             return Price;
         }
     }
 
     public string FormattedExpiry => Expiry.HasValue ? $"{Expiry.Value:MM/dd/yyyy}" : string.Empty;
 
-    // ✅ UPDATED: Show the FINAL price (after discount), not original price
-    public string FormattedPrice => FinalPrice.HasValue ? $"₱{FinalPrice:N2}" : string.Empty;
+    public string FormattedPrice => $"₱{FinalPrice:N2}";
 
-    // ✅ ADD THIS: Show original price if there's a discount (for comparison)
-    public string OriginalPrice => (DiscountedPrice.HasValue && DiscountedPrice.Value > 0 && Price.HasValue)
+    public string OriginalPrice => (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
         ? $"₱{Price:N2}"
         : string.Empty;
 
-    // ✅ ADD THIS: Show discount information
     public string DiscountDisplay
     {
         get
@@ -575,8 +536,8 @@ public partial class ProductStock : ObservableObject
             if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
             {
                 return DiscountInPercentage
-                    ? $"{DiscountedPrice}% OFF"
-                    : $"₱{DiscountedPrice} OFF";
+                    ? $"{DiscountedPrice:N0}% OFF"
+                    : $"₱{DiscountedPrice:N2} OFF";
             }
             return string.Empty;
         }
@@ -610,15 +571,14 @@ public partial class ProductStock : ObservableObject
         OnPropertyChanged(nameof(StatusDisplayText));
     }
 
-    // ✅ ADD THIS: Notify UI when discount changes
-    partial void OnPriceChanged(int? value)
+    partial void OnPriceChanged(decimal value)
     {
         OnPropertyChanged(nameof(FinalPrice));
         OnPropertyChanged(nameof(FormattedPrice));
         OnPropertyChanged(nameof(OriginalPrice));
     }
 
-    partial void OnDiscountedPriceChanged(int? value)
+    partial void OnDiscountedPriceChanged(decimal? value)
     {
         OnPropertyChanged(nameof(FinalPrice));
         OnPropertyChanged(nameof(FormattedPrice));

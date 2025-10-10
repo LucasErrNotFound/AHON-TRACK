@@ -441,7 +441,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
 
     [RelayCommand]
-    private void ShowModifyEmployeeDialog(ManageEmployeesItem? employee)
+    private async Task ShowModifyEmployeeDialog(ManageEmployeesItem? employee)
     {
         if (employee is null)
         {
@@ -451,23 +451,24 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 .ShowError();
             return;
         }
-        _addNewEmployeeDialogCardViewModel.InitializeForEditMode(employee);
+
+        await _addNewEmployeeDialogCardViewModel.InitializeForEditMode(employee);
+
         _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
-                // ✅ Reload the employee data after successful modification
                 await LoadEmployeesFromDatabaseAsync();
-
                 _toastManager.CreateToast("Modified Employee Details")
                     .WithContent($"You have successfully modified {employee.Name}'s details")
                     .DismissOnClick()
                     .ShowSuccess();
             })
-                .WithCancelCallback(() =>
+            .WithCancelCallback(() =>
                 _toastManager.CreateToast("Modifying Employee Details Cancelled")
                     .WithContent("Click the three-dots if you want to modify your employees' details")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(950)
+                    .ShowWarning())
+            .WithMaxWidth(950)
             .Show();
     }
 

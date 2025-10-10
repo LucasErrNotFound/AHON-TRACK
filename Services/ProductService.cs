@@ -22,13 +22,818 @@ namespace AHON_TRACK.Services
             _toastManager = toastManager;
         }
 
+        #region Role-Based Access Control
+
+        private bool CanCreate()
+        {
+            // Both Admin and Staff can create
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanUpdate()
+        {
+            // Only Admin can update
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanDelete()
+        {
+            // Only Admin can delete
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanView()
+        {
+            // Both Admin and Staff can view
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        #endregion
+
+        #region CREATE
+
+        public async Task<(bool Success, string Message, int? ProductId)> AddProductAsync(ProductModel product)
+        {
+            if (!CanCreate())
+            {
+                _toastManager.CreateToast("Access Denied")
+                    .WithContent("You don't have permission to add products.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to add products.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Auto-set status based on stock
+                product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
+
+                // Check for duplicate SKU
+                using var checkCmd = new SqlCommand(
+                    "SELECT COUNT(*) FROM Products WHERE SKU = @sku", conn);
+                checkCmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
+
+                var count = (int)await checkCmd.ExecuteScalarAsync();
+                if (count > 0)
+                {
+                    _toastManager.CreateToast("Duplicate SKU")
+                        .WithContent($"Product with SKU '{product.SKU}' already exists.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Product SKU already exists.", null);
+                }
+
+                // ✅ FIXED: Handle image properly
+                byte[]? imageBytes = null;
+                if (!string.IsNullOrEmpty(product.ProductImageFilePath))
+                {
+                    try
+                    {
+                        if (System.IO.File.Exists(product.ProductImageFilePath))
+                        {
+                            imageBytes = await System.IO.File.ReadAllBytesAsync(product.ProductImageFilePath);
+                            Console.WriteLine($"Successfully read image: {imageBytes.Length} bytes");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Image file not found: {product.ProductImageFilePath}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to read image: {ex.Message}");
+                    }
+                }
+
+                // Insert new product
+                using var cmd = new SqlCommand(
+                    @"INSERT INTO Products (ProductName, SKU, ProductSupplier, Description, 
+                     Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                     ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID)
+              OUTPUT INSERTED.ProductID
+              VALUES (@productName, @sku, @supplier, @description,
+                      @price, @discountedPrice, @isPercentageDiscount, @imagePath,
+                      @expiryDate, @status, @category, @currentStock, @employeeID)", conn);
+
+                cmd.Parameters.AddWithValue("@productName", product.ProductName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@supplier", product.ProductSupplier ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@description", product.Description ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@price", product.Price);
+                cmd.Parameters.AddWithValue("@discountedPrice", product.DiscountedPrice ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@isPercentageDiscount", product.IsPercentageDiscount);
+
+                // ✅ CRITICAL: Properly handle image parameter
+                if (imageBytes != null && imageBytes.Length > 0)
+                {
+                    cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = imageBytes;
+                    Console.WriteLine($"Adding image to database: {imageBytes.Length} bytes");
+                }
+                else
+                {
+                    cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = DBNull.Value;
+                    Console.WriteLine("No image to add (NULL)");
+                }
+
+                cmd.Parameters.AddWithValue("@expiryDate", product.ExpiryDate ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@status", product.Status);
+                cmd.Parameters.AddWithValue("@category", product.Category ?? "None");
+                cmd.Parameters.AddWithValue("@currentStock", product.CurrentStock);
+                cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                var productId = (int)await cmd.ExecuteScalarAsync();
+
+                string logDescription = $"Added product: '{product.ProductName}' (SKU: {product.SKU}) - Price: ₱{product.Price:N2}, Stock: {product.CurrentStock}";
+                if (product.HasDiscount)
+                {
+                    logDescription += $", Discount: {product.DiscountedPrice}{(product.IsPercentageDiscount ? "%" : " fixed")}, Final Price: ₱{product.FinalPrice:N2}";
+                }
+
+                await LogActionAsync(conn, "Added new product.", logDescription, true);
+
+                _toastManager.CreateToast("Product Added")
+                    .WithContent($"Successfully added product '{product.ProductName}'.")
+                    .DismissOnClick()
+                    .ShowSuccess();
+
+                return (true, "Product added successfully.", productId);
+            }
+            catch (SqlException ex)
+            {
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Failed to add product: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                Console.WriteLine($"SQL Error: {ex.Message}");
+                return (false, $"Database error: {ex.Message}", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                Console.WriteLine($"General Error: {ex.Message}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        #endregion
+
+        #region READ
+
+        public async Task<(bool Success, string Message, List<ProductModel>? Products)> GetAllProductsAsync()
+        {
+            if (!CanView())
+            {
+                _toastManager.CreateToast("Access Denied")
+                    .WithContent("You don't have permission to view products.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to view products.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
+                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
+                      FROM Products 
+                      ORDER BY ProductName", conn);
+
+                var products = new List<ProductModel>();
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    products.Add(MapProductFromReader(reader));
+                }
+
+                return (true, "Products retrieved successfully.", products);
+            }
+            catch (SqlException ex)
+            {
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Failed to retrieve products: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Database error: {ex.Message}", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, ProductModel? Product)> GetProductByIdAsync(int productId)
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view products.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
+                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
+                      FROM Products 
+                      WHERE ProductID = @productId", conn);
+
+                cmd.Parameters.AddWithValue("@productId", productId);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var product = MapProductFromReader(reader);
+                    return (true, "Product retrieved successfully.", product);
+                }
+
+                return (false, "Product not found.", null);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, ProductModel? Product)> GetProductBySKUAsync(string sku)
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view products.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
+                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
+                      FROM Products 
+                      WHERE SKU = @sku", conn);
+
+                cmd.Parameters.AddWithValue("@sku", sku ?? (object)DBNull.Value);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var product = MapProductFromReader(reader);
+                    return (true, "Product retrieved successfully.", product);
+                }
+
+                return (false, "Product not found.", null);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsByCategoryAsync(string category)
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view products.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
+                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
+                      FROM Products 
+                      WHERE Category = @category
+                      ORDER BY ProductName", conn);
+
+                cmd.Parameters.AddWithValue("@category", category ?? (object)DBNull.Value);
+
+                var products = new List<ProductModel>();
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    products.Add(MapProductFromReader(reader));
+                }
+
+                return (true, "Products retrieved successfully.", products);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsByStatusAsync(string status)
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view products.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
+                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
+                      FROM Products 
+                      WHERE Status = @status
+                      ORDER BY ProductName", conn);
+
+                cmd.Parameters.AddWithValue("@status", status ?? (object)DBNull.Value);
+
+                var products = new List<ProductModel>();
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    products.Add(MapProductFromReader(reader));
+                }
+
+                return (true, "Products retrieved successfully.", products);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, List<ProductModel>? Products)> GetExpiredProductsAsync()
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view products.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
+                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
+                      FROM Products 
+                      WHERE ExpiryDate IS NOT NULL 
+                        AND ExpiryDate < CAST(GETDATE() AS DATE)
+                      ORDER BY ExpiryDate DESC", conn);
+
+                var products = new List<ProductModel>();
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    products.Add(MapProductFromReader(reader));
+                }
+
+                return (true, "Expired products retrieved successfully.", products);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsExpiringSoonAsync(int daysThreshold = 30)
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view products.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
+                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
+                      FROM Products 
+                      WHERE ExpiryDate IS NOT NULL 
+                        AND ExpiryDate >= CAST(GETDATE() AS DATE)
+                        AND ExpiryDate <= DATEADD(day, @daysThreshold, CAST(GETDATE() AS DATE))
+                      ORDER BY ExpiryDate", conn);
+
+                cmd.Parameters.AddWithValue("@daysThreshold", daysThreshold);
+
+                var products = new List<ProductModel>();
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    products.Add(MapProductFromReader(reader));
+                }
+
+                return (true, "Expiring products retrieved successfully.", products);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        #endregion
+
+        #region UPDATE
+
+        public async Task<(bool Success, string Message)> UpdateProductAsync(ProductModel product)
+        {
+            if (!CanUpdate())
+            {
+                _toastManager.CreateToast("Access Denied")
+                    .WithContent("Only administrators can update product information.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to update products.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Auto-set status based on stock
+                product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
+
+                // Check if product exists and get existing image
+                byte[]? existingImage = null;
+                using var checkCmd = new SqlCommand(
+                    "SELECT ProductImagePath FROM Products WHERE ProductID = @productId", conn);
+                checkCmd.Parameters.AddWithValue("@productId", product.ProductID);
+
+                var result = await checkCmd.ExecuteScalarAsync();
+                if (result == null)
+                {
+                    _toastManager.CreateToast("Product Not Found")
+                        .WithContent("The product you're trying to update doesn't exist.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Product not found.");
+                }
+
+                if (result != DBNull.Value)
+                {
+                    existingImage = (byte[])result;
+                }
+
+                // Check for duplicate SKU (excluding current product)
+                using var dupCmd = new SqlCommand(
+                    "SELECT COUNT(*) FROM Products WHERE SKU = @sku AND ProductID != @productId", conn);
+                dupCmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
+                dupCmd.Parameters.AddWithValue("@productId", product.ProductID);
+
+                var duplicateCount = (int)await dupCmd.ExecuteScalarAsync();
+                if (duplicateCount > 0)
+                {
+                    _toastManager.CreateToast("Duplicate SKU")
+                        .WithContent($"Another product with SKU '{product.SKU}' already exists.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Product SKU already exists.");
+                }
+
+                // ✅ FIXED: Handle image properly - only update if new file is provided
+                byte[]? imageBytes = existingImage; // Keep existing by default
+
+                if (!string.IsNullOrEmpty(product.ProductImageFilePath))
+                {
+                    try
+                    {
+                        if (System.IO.File.Exists(product.ProductImageFilePath))
+                        {
+                            // New image file selected
+                            imageBytes = await System.IO.File.ReadAllBytesAsync(product.ProductImageFilePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to read image: {ex.Message}");
+                        // Keep existing image if read fails
+                    }
+                }
+
+                // Update product - use parameterized query with proper NULL handling
+                using var cmd = new SqlCommand(
+                    @"UPDATE Products 
+              SET ProductName = @productName,
+                  SKU = @sku,
+                  ProductSupplier = @supplier,
+                  Description = @description,
+                  Price = @price,
+                  DiscountedPrice = @discountedPrice,
+                  IsPercentageDiscount = @isPercentageDiscount,
+                  ProductImagePath = @imagePath,
+                  ExpiryDate = @expiryDate,
+                  Status = @status,
+                  Category = @category,
+                  CurrentStock = @currentStock
+              WHERE ProductID = @productId", conn);
+
+                cmd.Parameters.AddWithValue("@productId", product.ProductID);
+                cmd.Parameters.AddWithValue("@productName", product.ProductName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@supplier", product.ProductSupplier ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@description", product.Description ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@price", product.Price);
+                cmd.Parameters.AddWithValue("@discountedPrice", product.DiscountedPrice ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@isPercentageDiscount", product.IsPercentageDiscount);
+
+                // ✅ CRITICAL: Properly set image parameter
+                if (imageBytes != null)
+                {
+                    cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = imageBytes;
+                }
+                else
+                {
+                    cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = DBNull.Value;
+                }
+
+                cmd.Parameters.AddWithValue("@expiryDate", product.ExpiryDate ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@status", product.Status);
+                cmd.Parameters.AddWithValue("@category", product.Category ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@currentStock", product.CurrentStock);
+
+                await cmd.ExecuteNonQueryAsync();
+
+                await LogActionAsync(conn, "Updated a product.", $"Updated product: {product.ProductName} (ID: {product.ProductID})", true);
+
+                _toastManager.CreateToast("Product Updated")
+                    .WithContent($"Successfully updated product '{product.ProductName}'.")
+                    .DismissOnClick()
+                    .ShowSuccess();
+
+                return (true, "Product updated successfully.");
+            }
+            catch (SqlException ex)
+            {
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Failed to update product: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Database error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        public async Task<(bool Success, string Message)> UpdateProductStockAsync(int productId, int newStock)
+        {
+            if (!CanUpdate())
+            {
+                _toastManager.CreateToast("Access Denied")
+                    .WithContent("Only administrators can update product stock.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to update product stock.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string newStatus = newStock > 0 ? "In Stock" : "Out Of Stock";
+
+                using var cmd = new SqlCommand(
+                    @"UPDATE Products 
+                      SET CurrentStock = @newStock,
+                          Status = @status
+                      WHERE ProductID = @productId", conn);
+
+                cmd.Parameters.AddWithValue("@productId", productId);
+                cmd.Parameters.AddWithValue("@newStock", newStock);
+                cmd.Parameters.AddWithValue("@status", newStatus);
+
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    await LogActionAsync(conn, "Stock updated.", $"Updated product stock to: {newStock}", true);
+
+                    _toastManager.CreateToast("Stock Updated")
+                        .WithContent($"Product stock updated to {newStock}.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Stock updated successfully.");
+                }
+
+                return (false, "Product not found.");
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent($"Failed to update stock: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region DELETE
+
+        public async Task<(bool Success, string Message)> DeleteProductAsync(int productId)
+        {
+            if (!CanDelete())
+            {
+                _toastManager.CreateToast("Access Denied")
+                    .WithContent("Only administrators can delete products.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to delete products.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Get product name for logging
+                using var getNameCmd = new SqlCommand(
+                    "SELECT ProductName FROM Products WHERE ProductID = @productId", conn);
+                getNameCmd.Parameters.AddWithValue("@productId", productId);
+                var productName = await getNameCmd.ExecuteScalarAsync() as string;
+
+                if (string.IsNullOrEmpty(productName))
+                {
+                    _toastManager.CreateToast("Product Not Found")
+                        .WithContent("The product you're trying to delete doesn't exist.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Product not found.");
+                }
+
+                // Delete product
+                using var cmd = new SqlCommand(
+                    "DELETE FROM Products WHERE ProductID = @productId", conn);
+                cmd.Parameters.AddWithValue("@productId", productId);
+
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    await LogActionAsync(conn, "Deleted a product.", $"Deleted product: {productName} (ID: {productId})", true);
+
+                    _toastManager.CreateToast("Product Deleted")
+                        .WithContent($"Successfully deleted product '{productName}'.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Product deleted successfully.");
+                }
+
+                return (false, "Failed to delete product.");
+            }
+            catch (SqlException ex)
+            {
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Failed to delete product: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Database error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        public async Task<(bool Success, string Message, int DeletedCount)> DeleteMultipleProductsAsync(List<int> productIds)
+        {
+            if (!CanDelete())
+            {
+                _toastManager.CreateToast("Access Denied")
+                    .WithContent("Only administrators can delete products.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to delete products.", 0);
+            }
+
+            if (productIds == null || productIds.Count == 0)
+            {
+                return (false, "No products selected for deletion.", 0);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                var deletedCount = 0;
+                var productNames = new List<string>();
+
+                using var transaction = conn.BeginTransaction();
+                try
+                {
+                    foreach (var productId in productIds)
+                    {
+                        // Get product name
+                        using var getNameCmd = new SqlCommand(
+                            "SELECT ProductName FROM Products WHERE ProductID = @productId", conn, transaction);
+                        getNameCmd.Parameters.AddWithValue("@productId", productId);
+                        var name = await getNameCmd.ExecuteScalarAsync() as string;
+
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            productNames.Add(name);
+                        }
+
+                        // Delete product
+                        using var deleteCmd = new SqlCommand(
+                            "DELETE FROM Products WHERE ProductID = @productId", conn, transaction);
+                        deleteCmd.Parameters.AddWithValue("@productId", productId);
+                        deletedCount += await deleteCmd.ExecuteNonQueryAsync();
+                    }
+
+                    await LogActionAsync(conn, "Deleted multiple product.", $"Deleted {deletedCount} products: {string.Join(", ", productNames)}", true);
+
+                    transaction.Commit();
+
+                    _toastManager.CreateToast("Products Deleted")
+                        .WithContent($"Successfully deleted {deletedCount} product(s).")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, $"Successfully deleted {deletedCount} product(s).", deletedCount);
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (SqlException ex)
+            {
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Failed to delete products: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Database error: {ex.Message}", 0);
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, $"Error: {ex.Message}", 0);
+            }
+        }
+
+        #endregion
+
+        #region UTILITY METHODS
+
         private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success)
         {
             try
             {
                 using var logCmd = new SqlCommand(
                     @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
-                      VALUES (@username, @role, @actionType, @description, @success, GETDATE()), @employeeID", conn);
+                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)", conn);
 
                 logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
                 logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
@@ -45,591 +850,114 @@ namespace AHON_TRACK.Services
             }
         }
 
-        public async Task<List<ProductModel>> GetProductsAsync()
+        private ProductModel MapProductFromReader(SqlDataReader reader)
         {
-            var products = new List<ProductModel>();
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
+            string? imageBase64 = null;
+            byte[]? imageBytes = null;
 
-                    const string query = @"
-                SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                       Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                       ExpiryDate, Status, Category, CurrentStock
-                FROM Products 
-                ORDER BY ProductName";
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                products.Add(new ProductModel
-                                {
-                                    ProductID = reader.GetInt32("ProductID"),
-                                    ProductName = reader["ProductName"]?.ToString() ?? "",
-                                    SKU = reader["SKU"]?.ToString() ?? "",
-                                    ProductSupplier = reader["ProductSupplier"]?.ToString() ?? "",
-                                    Description = reader["Description"]?.ToString() ?? "",
-                                    Price = reader.GetDecimal("Price"),
-                                    DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? reader.GetDecimal("DiscountedPrice") : null,
-                                    IsPercentageDiscount = reader.GetBoolean("IsPercentageDiscount"),
-                                    ProductImagePath = reader["ProductImagePath"]?.ToString() ?? "",
-                                    ExpiryDate = reader["ExpiryDate"] != DBNull.Value ? reader.GetDateTime("ExpiryDate") : null,
-                                    Status = reader["Status"]?.ToString() ?? "",
-                                    Category = reader["Category"]?.ToString() ?? "",
-                                    CurrentStock = reader.GetInt32("CurrentStock")
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
+            if (!reader.IsDBNull(reader.GetOrdinal("ProductImagePath")))
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load products: {ex.Message}")
-                    .WithDelay(5)
-                    .ShowError();
+                imageBytes = (byte[])reader["ProductImagePath"];
+                imageBase64 = Convert.ToBase64String(imageBytes);
             }
-            return products;
+
+            return new ProductModel
+            {
+                ProductID = reader.GetInt32(reader.GetOrdinal("ProductID")),
+                ProductName = reader["ProductName"]?.ToString() ?? "",
+                SKU = reader["SKU"]?.ToString() ?? "",
+                ProductSupplier = reader["ProductSupplier"]?.ToString(),
+                Description = reader["Description"]?.ToString() ?? "",
+                Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+                DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value
+                    ? reader.GetDecimal(reader.GetOrdinal("DiscountedPrice"))
+                    : null,
+                IsPercentageDiscount = reader.GetBoolean(reader.GetOrdinal("IsPercentageDiscount")),
+                ProductImageBase64 = imageBase64,
+                ProductImageBytes = imageBytes,
+                ExpiryDate = reader["ExpiryDate"] != DBNull.Value
+                    ? reader.GetDateTime(reader.GetOrdinal("ExpiryDate"))
+                    : null,
+                Status = reader["Status"]?.ToString() ?? "",
+                Category = reader["Category"]?.ToString() ?? "",
+                CurrentStock = reader.GetInt32(reader.GetOrdinal("CurrentStock")),
+                AddedByEmployeeID = reader["AddedByEmployeeID"] != DBNull.Value
+                    ? reader.GetInt32(reader.GetOrdinal("AddedByEmployeeID"))
+                    : 0
+            };
         }
 
-        public async Task<bool> AddProductAsync(ProductModel product)
+        public async Task<(bool Success, int TotalProducts, int InStock, int OutOfStock, int Expired)> GetProductStatisticsAsync()
         {
-            product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
-
-            const string query = @"
-        INSERT INTO Products (ProductName, SKU, ProductSupplier, Description, 
-                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                             ExpiryDate, Status, Category, CurrentStock)
-        OUTPUT INSERTED.ProductID
-        VALUES (@ProductName, @SKU, @ProductSupplier, @Description,
-                @Price, @DiscountedPrice, @IsPercentageDiscount, @ProductImagePath,
-                @ExpiryDate, @Status, @Category, @CurrentStock)";
+            if (!CanView())
+            {
+                return (false, 0, 0, 0, 0);
+            }
 
             try
             {
-                using (var connection = new SqlConnection(_connectionString))
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT 
+                        COUNT(*) as TotalProducts,
+                        SUM(CASE WHEN Status = 'In Stock' THEN 1 ELSE 0 END) as InStock,
+                        SUM(CASE WHEN Status = 'Out Of Stock' THEN 1 ELSE 0 END) as OutOfStock,
+                        SUM(CASE WHEN ExpiryDate IS NOT NULL AND ExpiryDate < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) as Expired
+                      FROM Products", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
                 {
-                    await connection.OpenAsync();
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@ProductName", product.ProductName);
-                        command.Parameters.AddWithValue("@SKU", product.SKU);
-                        command.Parameters.AddWithValue("@ProductSupplier", (object)product.ProductSupplier ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Description", (object)product.Description ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Price", product.Price);
-                        command.Parameters.AddWithValue("@DiscountedPrice", (object)product.DiscountedPrice ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@IsPercentageDiscount", product.IsPercentageDiscount);
-                        command.Parameters.AddWithValue("@ProductImagePath", (object)product.ProductImagePath ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@ExpiryDate", (object)product.ExpiryDate ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Status", product.Status);
-                        command.Parameters.AddWithValue("@Category", product.Category);
-                        command.Parameters.AddWithValue("@CurrentStock", product.CurrentStock);
-
-                        var newId = await command.ExecuteScalarAsync();
-
-                        if (newId != null && newId != DBNull.Value)
-                        {
-                            product.ProductID = Convert.ToInt32(newId);
-
-                            string logDescription = $"Added product: '{product.ProductName}' (SKU: {product.SKU}) - Price: ₱{product.Price:N2}, Stock: {product.CurrentStock}";
-                            if (product.HasDiscount)
-                            {
-                                logDescription += $", Discount: {product.DiscountedPrice}{(product.IsPercentageDiscount ? "%" : " fixed")}, Final Price: ₱{product.FinalPrice:N2}";
-                            }
-
-                            await LogActionAsync(connection, "Add Product", logDescription, true);
-
-                            _toastManager?.CreateToast("Product Added")
-                                .WithContent($"Product '{product.ProductName}' added successfully!")
-                                .ShowSuccess();
-                            return true;
-                        }
-                    }
+                    return (true,
+                        reader.GetInt32(0),
+                        reader.GetInt32(1),
+                        reader.GetInt32(2),
+                        reader.GetInt32(3));
                 }
-            }
-            catch (SqlException ex)
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    await LogActionAsync(connection, "Failed to add product",
-                        $"Failed to add product '{product.ProductName}' - SQL Error: {ex.Message}", false);
-                }
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to add product: {ex.Message}")
-                    .ShowError();
+
+                return (false, 0, 0, 0, 0);
             }
             catch (Exception ex)
             {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    await LogActionAsync(connection, "Failed to add product",
-                        $"Failed to add product '{product.ProductName}' - Error: {ex.Message}", false);
-                }
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"Error adding product: {ex.Message}")
-                    .ShowError();
+                Console.WriteLine($"[GetProductStatisticsAsync] {ex.Message}");
+                return (false, 0, 0, 0, 0);
             }
-            return false;
         }
 
-        public async Task<bool> UpdateProductAsync(ProductModel product)
+        public async Task<(bool Success, string Message, byte[]? ImageBytes)> GetProductImageAsync(int productId)
         {
-
-            product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
-
-            const string query = @"
-        UPDATE Products SET 
-            ProductName = @ProductName,
-            SKU = @SKU,
-            ProductSupplier = @ProductSupplier,
-            Description = @Description,
-            Price = @Price,
-            DiscountedPrice = @DiscountedPrice,
-            IsPercentageDiscount = @IsPercentageDiscount,
-            ProductImagePath = @ProductImagePath,
-            ExpiryDate = @ExpiryDate,
-            Status = @Status,
-            Category = @Category,
-            CurrentStock = @CurrentStock
-        WHERE ProductID = @ProductID";
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view product images.", null);
+            }
 
             try
             {
-                using (var connection = new SqlConnection(_connectionString))
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    "SELECT ProductImagePath FROM Products WHERE ProductID = @productId", conn);
+                cmd.Parameters.AddWithValue("@productId", productId);
+
+                var result = await cmd.ExecuteScalarAsync();
+
+                if (result != null && result != DBNull.Value)
                 {
-                    await connection.OpenAsync();
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@ProductID", product.ProductID);
-                        command.Parameters.AddWithValue("@ProductName", product.ProductName);
-                        command.Parameters.AddWithValue("@SKU", product.SKU);
-                        command.Parameters.AddWithValue("@ProductSupplier", (object)product.ProductSupplier ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Description", (object)product.Description ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Price", product.Price);
-                        command.Parameters.AddWithValue("@DiscountedPrice", (object)product.DiscountedPrice ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@IsPercentageDiscount", product.IsPercentageDiscount);
-                        command.Parameters.AddWithValue("@ProductImagePath", (object)product.ProductImagePath ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@ExpiryDate", (object)product.ExpiryDate ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Status", product.Status);
-                        command.Parameters.AddWithValue("@Category", product.Category);
-                        command.Parameters.AddWithValue("@CurrentStock", product.CurrentStock);
-
-                        var rowsAffected = await command.ExecuteNonQueryAsync();
-
-                        if (rowsAffected > 0)
-                        {
-                            await LogActionAsync(connection, "Update Product",
-                                $"Updated product: '{product.ProductName}' (ID: {product.ProductID})", true);
-
-                            _toastManager?.CreateToast("Product Updated")
-                                .WithContent($"Product '{product.ProductName}' updated successfully!")
-                                .ShowSuccess();
-                            return true;
-                        }
-                    }
+                    byte[] imageBytes = (byte[])result;
+                    return (true, "Image retrieved successfully.", imageBytes);
                 }
+
+                return (false, "No image found for this product.", null);
             }
             catch (Exception ex)
             {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    await LogActionAsync(connection, "Failed to update product",
-                        $"Failed to update product '{product.ProductName}' - Error: {ex.Message}", false);
-                }
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"Error updating product: {ex.Message}")
-                    .ShowError();
-            }
-            return false;
-        }
-
-        public async Task<bool> DeleteProductAsync(int productID)
-        {
-            const string query = "DELETE FROM Products WHERE ProductID = @ProductID";
-
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    var productName = await GetProductNameByIdAsync(connection, productID);
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@ProductID", productID);
-                        var rowsAffected = await command.ExecuteNonQueryAsync();
-
-                        if (rowsAffected > 0)
-                        {
-                            await LogActionAsync(connection, "Delete Product",
-                                $"Deleted product: '{productName}' (ID: {productID})", true);
-
-                            _toastManager?.CreateToast("Product Deleted")
-                                .WithContent($"Product '{productName}' deleted successfully!")
-                                .ShowSuccess();
-                            return true;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    await LogActionAsync(connection, "Failed to delete product",
-                        $"Failed to delete product ID {productID} - Error: {ex.Message}", false);
-                }
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"Error deleting product: {ex.Message}")
-                    .ShowError();
-            }
-            return false;
-        }
-
-        public async Task<List<ProductModel>> GetProductsByCategoryAsync(string category)
-        {
-            var products = new List<ProductModel>();
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    const string query = @"
-                SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                       Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                       ExpiryDate, Status, Category, CurrentStock
-                FROM Products 
-                WHERE Category = @Category
-                ORDER BY ProductName";
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Category", category);
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                products.Add(new ProductModel
-                                {
-                                    ProductID = reader.GetInt32("ProductID"),
-                                    ProductName = reader["ProductName"]?.ToString() ?? "",
-                                    SKU = reader["SKU"]?.ToString() ?? "",
-                                    ProductSupplier = reader["ProductSupplier"]?.ToString() ?? "",
-                                    Description = reader["Description"]?.ToString() ?? "",
-                                    Price = reader.GetDecimal("Price"),
-                                    DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? reader.GetDecimal("DiscountedPrice") : null,
-                                    IsPercentageDiscount = reader.GetBoolean("IsPercentageDiscount"),
-                                    ProductImagePath = reader["ProductImagePath"]?.ToString() ?? "",
-                                    ExpiryDate = reader["ExpiryDate"] != DBNull.Value ? reader.GetDateTime("ExpiryDate") : null,
-                                    Status = reader["Status"]?.ToString() ?? "",
-                                    Category = reader["Category"]?.ToString() ?? "",
-                                    CurrentStock = reader.GetInt32("CurrentStock")
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load products by category: {ex.Message}")
-                    .ShowError();
-            }
-            return products;
-        }
-
-        public async Task<List<ProductModel>> GetProductsByStatusAsync(string status)
-        {
-            var products = new List<ProductModel>();
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    const string query = @"
-                SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                       Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                       ExpiryDate, Status, Category, CurrentStock
-                FROM Products 
-                WHERE Status = @Status
-                ORDER BY ProductName";
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Status", status);
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                products.Add(new ProductModel
-                                {
-                                    ProductID = reader.GetInt32("ProductID"),
-                                    ProductName = reader["ProductName"]?.ToString() ?? "",
-                                    SKU = reader["SKU"]?.ToString() ?? "",
-                                    ProductSupplier = reader["ProductSupplier"]?.ToString() ?? "",
-                                    Description = reader["Description"]?.ToString() ?? "",
-                                    Price = reader.GetDecimal("Price"),
-                                    DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? reader.GetDecimal("DiscountedPrice") : null,
-                                    IsPercentageDiscount = reader.GetBoolean("IsPercentageDiscount"),
-                                    ProductImagePath = reader["ProductImagePath"]?.ToString() ?? "",
-                                    ExpiryDate = reader["ExpiryDate"] != DBNull.Value ? reader.GetDateTime("ExpiryDate") : null,
-                                    Status = reader["Status"]?.ToString() ?? "",
-                                    Category = reader["Category"]?.ToString() ?? "",
-                                    CurrentStock = reader.GetInt32("CurrentStock")
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load products by status: {ex.Message}")
-                    .ShowError();
-            }
-            return products;
-        }
-
-        public async Task<List<ProductModel>> GetExpiredProductsAsync()
-        {
-            var products = new List<ProductModel>();
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    const string query = @"
-                SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                       Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                       ExpiryDate, Status, Category, CurrentStock
-                FROM Products 
-                WHERE ExpiryDate IS NOT NULL 
-                  AND ExpiryDate < CAST(GETDATE() AS DATE)
-                ORDER BY ExpiryDate DESC";
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                products.Add(new ProductModel
-                                {
-                                    ProductID = reader.GetInt32("ProductID"),
-                                    ProductName = reader["ProductName"]?.ToString() ?? "",
-                                    SKU = reader["SKU"]?.ToString() ?? "",
-                                    ProductSupplier = reader["ProductSupplier"]?.ToString() ?? "",
-                                    Description = reader["Description"]?.ToString() ?? "",
-                                    Price = reader.GetDecimal("Price"),
-                                    DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? reader.GetDecimal("DiscountedPrice") : null,
-                                    IsPercentageDiscount = reader.GetBoolean("IsPercentageDiscount"),
-                                    ProductImagePath = reader["ProductImagePath"]?.ToString() ?? "",
-                                    ExpiryDate = reader["ExpiryDate"] != DBNull.Value ? reader.GetDateTime("ExpiryDate") : null,
-                                    Status = reader["Status"]?.ToString() ?? "",
-                                    Category = reader["Category"]?.ToString() ?? "",
-                                    CurrentStock = reader.GetInt32("CurrentStock")
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load expired products: {ex.Message}")
-                    .ShowError();
-            }
-            return products;
-        }
-
-        public async Task<List<ProductModel>> GetProductsExpiringSoonAsync(int daysThreshold = 30)
-        {
-            var products = new List<ProductModel>();
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    const string query = @"
-                SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                       Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                       ExpiryDate, Status, Category, CurrentStock
-                FROM Products 
-                WHERE ExpiryDate IS NOT NULL 
-                  AND ExpiryDate >= CAST(GETDATE() AS DATE)
-                  AND ExpiryDate <= DATEADD(day, @DaysThreshold, CAST(GETDATE() AS DATE))
-                ORDER BY ExpiryDate";
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@DaysThreshold", daysThreshold);
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                products.Add(new ProductModel
-                                {
-                                    ProductID = reader.GetInt32("ProductID"),
-                                    ProductName = reader["ProductName"]?.ToString() ?? "",
-                                    SKU = reader["SKU"]?.ToString() ?? "",
-                                    ProductSupplier = reader["ProductSupplier"]?.ToString() ?? "",
-                                    Description = reader["Description"]?.ToString() ?? "",
-                                    Price = reader.GetDecimal("Price"),
-                                    DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? reader.GetDecimal("DiscountedPrice") : null,
-                                    IsPercentageDiscount = reader.GetBoolean("IsPercentageDiscount"),
-                                    ProductImagePath = reader["ProductImagePath"]?.ToString() ?? "",
-                                    ExpiryDate = reader["ExpiryDate"] != DBNull.Value ? reader.GetDateTime("ExpiryDate") : null,
-                                    Status = reader["Status"]?.ToString() ?? "",
-                                    Category = reader["Category"]?.ToString() ?? "",
-                                    CurrentStock = reader.GetInt32("CurrentStock")
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load expiring products: {ex.Message}")
-                    .ShowError();
-            }
-            return products;
-        }
-
-        public async Task<ProductModel?> GetProductByIdAsync(int productID)
-        {
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    const string query = @"
-                SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                       Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                       ExpiryDate, Status, Category, CurrentStock
-                FROM Products 
-                WHERE ProductID = @ProductID";
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@ProductID", productID);
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            if (await reader.ReadAsync())
-                            {
-                                return new ProductModel
-                                {
-                                    ProductID = reader.GetInt32("ProductID"),
-                                    ProductName = reader["ProductName"]?.ToString() ?? "",
-                                    SKU = reader["SKU"]?.ToString() ?? "",
-                                    ProductSupplier = reader["ProductSupplier"]?.ToString() ?? "",
-                                    Description = reader["Description"]?.ToString() ?? "",
-                                    Price = reader.GetDecimal("Price"),
-                                    DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? reader.GetDecimal("DiscountedPrice") : null,
-                                    IsPercentageDiscount = reader.GetBoolean("IsPercentageDiscount"),
-                                    ProductImagePath = reader["ProductImagePath"]?.ToString() ?? "",
-                                    ExpiryDate = reader["ExpiryDate"] != DBNull.Value ? reader.GetDateTime("ExpiryDate") : null,
-                                    Status = reader["Status"]?.ToString() ?? "",
-                                    Category = reader["Category"]?.ToString() ?? "",
-                                    CurrentStock = reader.GetInt32("CurrentStock")
-                                };
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load product: {ex.Message}")
-                    .ShowError();
-            }
-            return null;
-        }
-
-        public async Task<ProductModel?> GetProductBySKUAsync(string sku)
-        {
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    const string query = @"
-                SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                       Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                       ExpiryDate, Status, Category, CurrentStock
-                FROM Products 
-                WHERE SKU = @SKU";
-
-                    using (var command = new SqlCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@SKU", sku);
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            if (await reader.ReadAsync())
-                            {
-                                return new ProductModel
-                                {
-                                    ProductID = reader.GetInt32("ProductID"),
-                                    ProductName = reader["ProductName"]?.ToString() ?? "",
-                                    SKU = reader["SKU"]?.ToString() ?? "",
-                                    ProductSupplier = reader["ProductSupplier"]?.ToString() ?? "",
-                                    Description = reader["Description"]?.ToString() ?? "",
-                                    Price = reader.GetDecimal("Price"),
-                                    DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? reader.GetDecimal("DiscountedPrice") : null,
-                                    IsPercentageDiscount = reader.GetBoolean("IsPercentageDiscount"),
-                                    ProductImagePath = reader["ProductImagePath"]?.ToString() ?? "",
-                                    ExpiryDate = reader["ExpiryDate"] != DBNull.Value ? reader.GetDateTime("ExpiryDate") : null,
-                                    Status = reader["Status"]?.ToString() ?? "",
-                                    Category = reader["Category"]?.ToString() ?? "",
-                                    CurrentStock = reader.GetInt32("CurrentStock")
-                                };
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load product by SKU: {ex.Message}")
-                    .ShowError();
-            }
-            return null;
-        }
-
-        private async Task<string> GetProductNameByIdAsync(SqlConnection connection, int productID)
-        {
-            const string query = "SELECT ProductName FROM Products WHERE ProductID = @ProductID";
-            using (var command = new SqlCommand(query, connection))
-            {
-                command.Parameters.AddWithValue("@ProductID", productID);
-                var result = await command.ExecuteScalarAsync();
-                return result?.ToString() ?? "Unknown Product";
+                return (false, $"Error: {ex.Message}", null);
             }
         }
+
+        #endregion
     }
 }
