@@ -54,10 +54,10 @@ namespace AHON_TRACK;
 [Singleton<IDashboardService, DashboardService>]
 [Singleton<IMemberService, MemberService>]
 [Singleton<ICheckInOutService, CheckInOutService>]
-[Singleton<TrainingService, TrainingService>]
+[Singleton<ITrainingService, TrainingService>]
 [Singleton<IProductService, ProductService>]
 [Singleton<IInventoryService, InventoryService>]
-[Singleton<PackageService, PackageService>]
+[Singleton<IPackageService, PackageService>]
 [Singleton<ISupplierService, SupplierService>]
 
 
