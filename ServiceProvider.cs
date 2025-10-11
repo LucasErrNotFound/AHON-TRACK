@@ -36,6 +36,7 @@ namespace AHON_TRACK;
 [Transient<EquipmentDialogCardViewModel>]
 [Transient<SupplierDialogCardViewModel>]
 [Transient<GymDemographicsViewModel>]
+[Transient<GymAttendanceViewModel>]
 [Transient<MemberDialogCardViewModel>]
 [Transient<AddNewMemberViewModel>]
 [Transient<ChangeScheduleDialogCardViewModel>]
