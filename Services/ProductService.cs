@@ -70,7 +70,6 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Auto-set status based on stock
                 product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
 
                 // Check for duplicate SKU
@@ -88,7 +87,7 @@ namespace AHON_TRACK.Services
                     return (false, "Product SKU already exists.", null);
                 }
 
-                // ✅ FIXED: Handle image properly
+                // ✅ Handle image properly
                 byte[]? imageBytes = null;
                 if (!string.IsNullOrEmpty(product.ProductImageFilePath))
                 {
@@ -99,10 +98,6 @@ namespace AHON_TRACK.Services
                             imageBytes = await System.IO.File.ReadAllBytesAsync(product.ProductImageFilePath);
                             Console.WriteLine($"Successfully read image: {imageBytes.Length} bytes");
                         }
-                        else
-                        {
-                            Console.WriteLine($"Image file not found: {product.ProductImageFilePath}");
-                        }
                     }
                     catch (Exception ex)
                     {
@@ -110,34 +105,32 @@ namespace AHON_TRACK.Services
                     }
                 }
 
-                // Insert new product
+                // ✅ UPDATED: Use SupplierID instead of ProductSupplier
                 using var cmd = new SqlCommand(
-                    @"INSERT INTO Products (ProductName, SKU, ProductSupplier, Description, 
+                    @"INSERT INTO Products (ProductName, SKU, SupplierID, Description, 
                      Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
                      ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID)
               OUTPUT INSERTED.ProductID
-              VALUES (@productName, @sku, @supplier, @description,
+              VALUES (@productName, @sku, @supplierID, @description,
                       @price, @discountedPrice, @isPercentageDiscount, @imagePath,
                       @expiryDate, @status, @category, @currentStock, @employeeID)", conn);
 
                 cmd.Parameters.AddWithValue("@productName", product.ProductName ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@supplier", product.ProductSupplier ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@supplierID", product.SupplierID ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@description", product.Description ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@price", product.Price);
                 cmd.Parameters.AddWithValue("@discountedPrice", product.DiscountedPrice ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@isPercentageDiscount", product.IsPercentageDiscount);
 
-                // ✅ CRITICAL: Properly handle image parameter
+                // ✅ Handle image parameter
                 if (imageBytes != null && imageBytes.Length > 0)
                 {
                     cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = imageBytes;
-                    Console.WriteLine($"Adding image to database: {imageBytes.Length} bytes");
                 }
                 else
                 {
                     cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = DBNull.Value;
-                    Console.WriteLine("No image to add (NULL)");
                 }
 
                 cmd.Parameters.AddWithValue("@expiryDate", product.ExpiryDate ?? (object)DBNull.Value);
@@ -203,12 +196,14 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
+                // ✅ UPDATED: JOIN with Suppliers table to get supplier name
                 using var cmd = new SqlCommand(
-                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
-                      FROM Products 
-                      ORDER BY ProductName", conn);
+                    @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
+                             p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
+                             p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
+                      FROM Products p
+                      LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
+                      ORDER BY p.ProductName", conn);
 
                 var products = new List<ProductModel>();
 
@@ -250,12 +245,14 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
+                // ✅ UPDATED: JOIN with Suppliers
                 using var cmd = new SqlCommand(
-                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
-                      FROM Products 
-                      WHERE ProductID = @productId", conn);
+                    @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
+                             p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
+                             p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
+                      FROM Products p
+                      LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
+                      WHERE p.ProductID = @productId", conn);
 
                 cmd.Parameters.AddWithValue("@productId", productId);
 
@@ -483,7 +480,6 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Auto-set status based on stock
                 product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
 
                 // Check if product exists and get existing image
@@ -507,24 +503,8 @@ namespace AHON_TRACK.Services
                     existingImage = (byte[])result;
                 }
 
-                // Check for duplicate SKU (excluding current product)
-                using var dupCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Products WHERE SKU = @sku AND ProductID != @productId", conn);
-                dupCmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
-                dupCmd.Parameters.AddWithValue("@productId", product.ProductID);
-
-                var duplicateCount = (int)await dupCmd.ExecuteScalarAsync();
-                if (duplicateCount > 0)
-                {
-                    _toastManager.CreateToast("Duplicate SKU")
-                        .WithContent($"Another product with SKU '{product.SKU}' already exists.")
-                        .DismissOnClick()
-                        .ShowWarning();
-                    return (false, "Product SKU already exists.");
-                }
-
-                // ✅ FIXED: Handle image properly - only update if new file is provided
-                byte[]? imageBytes = existingImage; // Keep existing by default
+                // Handle image - only update if new file is provided
+                byte[]? imageBytes = existingImage;
 
                 if (!string.IsNullOrEmpty(product.ProductImageFilePath))
                 {
@@ -532,23 +512,21 @@ namespace AHON_TRACK.Services
                     {
                         if (System.IO.File.Exists(product.ProductImageFilePath))
                         {
-                            // New image file selected
                             imageBytes = await System.IO.File.ReadAllBytesAsync(product.ProductImageFilePath);
                         }
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"Failed to read image: {ex.Message}");
-                        // Keep existing image if read fails
                     }
                 }
 
-                // Update product - use parameterized query with proper NULL handling
+                // ✅ UPDATED: Use SupplierID
                 using var cmd = new SqlCommand(
                     @"UPDATE Products 
               SET ProductName = @productName,
                   SKU = @sku,
-                  ProductSupplier = @supplier,
+                  SupplierID = @supplierID,
                   Description = @description,
                   Price = @price,
                   DiscountedPrice = @discountedPrice,
@@ -563,13 +541,12 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@productId", product.ProductID);
                 cmd.Parameters.AddWithValue("@productName", product.ProductName ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@supplier", product.ProductSupplier ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@supplierID", product.SupplierID ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@description", product.Description ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@price", product.Price);
                 cmd.Parameters.AddWithValue("@discountedPrice", product.DiscountedPrice ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@isPercentageDiscount", product.IsPercentageDiscount);
 
-                // ✅ CRITICAL: Properly set image parameter
                 if (imageBytes != null)
                 {
                     cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = imageBytes;
@@ -850,6 +827,7 @@ namespace AHON_TRACK.Services
             }
         }
 
+        // ✅ UPDATED: MapProductFromReader to handle SupplierID and SupplierName
         private ProductModel MapProductFromReader(SqlDataReader reader)
         {
             string? imageBase64 = null;
@@ -866,7 +844,10 @@ namespace AHON_TRACK.Services
                 ProductID = reader.GetInt32(reader.GetOrdinal("ProductID")),
                 ProductName = reader["ProductName"]?.ToString() ?? "",
                 SKU = reader["SKU"]?.ToString() ?? "",
-                ProductSupplier = reader["ProductSupplier"]?.ToString(),
+                SupplierID = reader["SupplierID"] != DBNull.Value
+                    ? reader.GetInt32(reader.GetOrdinal("SupplierID"))
+                    : null,
+                SupplierName = reader["SupplierName"]?.ToString(),
                 Description = reader["Description"]?.ToString() ?? "",
                 Price = reader.GetDecimal(reader.GetOrdinal("Price")),
                 DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value
@@ -886,6 +867,7 @@ namespace AHON_TRACK.Services
                     : 0
             };
         }
+
 
         public async Task<(bool Success, int TotalProducts, int InStock, int OutOfStock, int Expired)> GetProductStatisticsAsync()
         {

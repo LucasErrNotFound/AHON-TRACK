@@ -34,6 +34,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string[] _productSupplierItems = ["None"];
     private string? _selectedSupplierCategoryItem = "None";
 
+    private Dictionary<string, int> _supplierNameToIdMap = new();
+
     [ObservableProperty]
     private byte[]? _productImageBytes;
 
@@ -45,6 +47,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     [ObservableProperty]
     private bool _isLoadingSuppliers;
+
+    private bool _suppliersLoaded = false;
 
     private int? _productID;
     private string? _productName = string.Empty;
@@ -79,6 +83,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         _pageManager = pageManager;
         _productService = productService;
         _supplierService = supplierService;
+
+        _ = LoadSuppliersAsync();
     }
 
     public AddEditProductViewModel()
@@ -93,7 +99,10 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     [AvaloniaHotReload]
     public async Task Initialize()
     {
-        await LoadSuppliersAsync();
+        if (!_suppliersLoaded)
+        {
+            await LoadSuppliersAsync();
+        }
     }
 
     private async Task LoadSuppliersAsync()
@@ -108,19 +117,25 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
             if (result.Success && result.Suppliers != null)
             {
-                // Extract supplier names and add "None" as first option
+                // ✅ Build name-to-ID mapping
+                _supplierNameToIdMap.Clear();
+
                 var supplierNames = result.Suppliers
                     .Where(s => !string.IsNullOrEmpty(s.SupplierName))
-                    .Select(s => s.SupplierName)
-                    .OrderBy(name => name)
+                    .OrderBy(s => s.SupplierName)
                     .ToList();
 
-                // Add "None" as the first option
-                supplierNames.Insert(0, "None");
+                foreach (var supplier in supplierNames)
+                {
+                    _supplierNameToIdMap[supplier.SupplierName] = supplier.SupplierID;
+                }
 
-                ProductSupplierItems = supplierNames.ToArray();
+                // Add "None" as first option
+                var names = supplierNames.Select(s => s.SupplierName).ToList();
+                names.Insert(0, "None");
 
-                // If no supplier is selected yet, default to "None"
+                ProductSupplierItems = names.ToArray();
+
                 if (string.IsNullOrEmpty(SelectedProductSupplier))
                 {
                     SelectedProductSupplier = "None";
@@ -128,7 +143,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             }
             else
             {
-                // Fallback to default if loading fails
                 ProductSupplierItems = ["None"];
                 SelectedProductSupplier = "None";
 
@@ -143,7 +157,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         }
         catch (Exception ex)
         {
-            // Fallback to default on error
             ProductSupplierItems = ["None"];
             SelectedProductSupplier = "None";
 
@@ -171,6 +184,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
     {
+        Console.WriteLine("🔵 SetNavigationParameters called");
+        Console.WriteLine($"🔵 Current suppliers count: {ProductSupplierItems.Length}");
+        Console.WriteLine($"🔵 Suppliers loaded: {_suppliersLoaded}");
+        // ✅ Ensure suppliers are loaded before processing parameters
+        if (!_suppliersLoaded)
+        {
+            _ = LoadSuppliersAsync();
+        }
+
         if (parameters.TryGetValue("Context", out var context))
         {
             SetViewContext((ProductViewContext)context);
@@ -179,7 +201,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         if (parameters.TryGetValue("SelectedProduct", out var product))
         {
             var selectedProduct = (ProductStock)product;
-            // ✅ FIXED: Load suppliers first, then populate form
             _ = LoadSuppliersAndPopulateForm(selectedProduct);
         }
     }
@@ -187,14 +208,16 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private async Task LoadSuppliersAndPopulateForm(ProductStock product)
     {
         Console.WriteLine($"🔄 Loading suppliers and populating form for product: {product.Name}");
-        await LoadSuppliersAsync();
 
-        // ✅ Small delay to ensure suppliers are loaded first
-        await Task.Delay(100);
+        // Wait for suppliers to load if they haven't yet
+        while (!_suppliersLoaded && IsLoadingSuppliers)
+        {
+            await Task.Delay(50);
+        }
 
         PopulateFormWithProductData(product);
 
-        // ✅ Force UI update
+        // Force UI update
         OnPropertyChanged(nameof(ProductCurrentStock));
         OnPropertyChanged(nameof(CurrentStock));
     }
@@ -226,21 +249,28 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         try
         {
-            var supplierToSave = SelectedProductSupplier == "None" ? null : SelectedProductSupplier;
+            // ✅ Convert supplier name to ID
+            int? supplierIdToSave = null;
+            if (!string.IsNullOrEmpty(SelectedProductSupplier) && SelectedProductSupplier != "None")
+            {
+                if (_supplierNameToIdMap.TryGetValue(SelectedProductSupplier, out int supplierId))
+                {
+                    supplierIdToSave = supplierId;
+                }
+            }
 
             var productModel = new ProductModel
             {
                 ProductID = ProductID ?? 0,
                 ProductName = ProductName ?? "",
                 SKU = ProductSKU ?? "",
-                ProductSupplier = supplierToSave,
+                SupplierID = supplierIdToSave, // ✅ Use ID instead of name
                 Description = ProductDescription,
                 Price = ProductPrice ?? 0,
                 DiscountedPrice = ProductDiscountedPrice,
                 IsPercentageDiscount = IsPercentageModeOn,
-                // ✅ CRITICAL: Pass file path for NEW images, bytes for existing
                 ProductImageFilePath = _productImageFilePath,
-                ProductImageBytes = _productImageBytes, // Existing image from DB
+                ProductImageBytes = _productImageBytes,
                 ExpiryDate = ProductExpiry,
                 Status = SelectedProductStatus ?? "In Stock",
                 Category = SelectedProductCategory ?? "None",
@@ -334,7 +364,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private void PopulateFormWithProductData(ProductStock product)
     {
         Console.WriteLine($"🔄 Populating form with product ID: {product.ID}");
-        Console.WriteLine($"📊 Product.CurrentStock value: {product.CurrentStock}");
 
         ProductID = product.ID;
         ProductName = product.Name;
@@ -344,11 +373,9 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
         ProductSKU = product.Sku;
-
-        // ✅ CRITICAL FIX: Explicitly set CurrentStock
         ProductCurrentStock = product.CurrentStock;
-        Console.WriteLine($"✅ Set ProductCurrentStock to: {ProductCurrentStock}");
 
+        // ✅ Set supplier by name (dropdown displays names)
         if (!string.IsNullOrEmpty(product.Supplier) &&
             ProductSupplierItems.Contains(product.Supplier))
         {
@@ -384,7 +411,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             }
         }
     }
-
 
     public string ViewTitle => ViewContext switch
     {

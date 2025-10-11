@@ -421,7 +421,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
     private ProductStock MapToProductStock(ProductModel model)
     {
-        // ✅ FIXED: Handle Base64 image properly
+        // ✅ Handle Base64 image properly
         string posterPath = "avares://AHON_TRACK/Assets/ProductStockView/default-product.png";
 
         if (!string.IsNullOrEmpty(model.ProductImageBase64))
@@ -437,7 +437,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             Category = model.Category ?? "",
             CurrentStock = model.CurrentStock,
             Price = model.Price,
-            Supplier = model.ProductSupplier ?? "None", // ✅ FIXED: Default to "None" if null
+            Supplier = model.SupplierName ?? "None", // ✅ Use SupplierName from join
             Expiry = model.ExpiryDate,
             Status = model.Status ?? "",
             Description = model.Description ?? "",

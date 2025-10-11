@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace AHON_TRACK.Models
 {
     public class ProductModel
@@ -11,7 +10,13 @@ namespace AHON_TRACK.Models
         public int ProductID { get; set; }
         public string? ProductName { get; set; }
         public string? SKU { get; set; }
-        public string? ProductSupplier { get; set; }
+
+        // ✅ CHANGED: Store SupplierID instead of supplier name
+        public int? SupplierID { get; set; }
+
+        // ✅ NEW: Display property for supplier name (loaded separately)
+        public string? SupplierName { get; set; }
+
         public string? Description { get; set; }
         public decimal Price { get; set; }
         public decimal? DiscountedPrice { get; set; }
@@ -22,9 +27,7 @@ namespace AHON_TRACK.Models
         public DateTime? ExpiryDate { get; set; }
         public string? Status { get; set; }
         public string? Category { get; set; }
-
         public int CurrentStock { get; set; }
-
         public int AddedByEmployeeID { get; set; }
 
         // Computed property for final price
@@ -68,7 +71,6 @@ namespace AHON_TRACK.Models
             get
             {
                 if (!HasDiscount) return 0;
-
                 if (IsPercentageDiscount)
                 {
                     return Price * (DiscountedPrice.Value / 100);
