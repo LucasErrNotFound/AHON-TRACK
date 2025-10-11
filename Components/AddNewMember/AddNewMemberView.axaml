@@ -167,23 +167,23 @@
                                                 ClipToBounds="True">
 
                                             <Image
-                                                Name="EmployeeProfileImage"
+                                                Name="MemberProfileImage"
                                                 Stretch="UniformToFill"
                                                 IsVisible="True"
-                                                Source="avares://AHON_TRACK/Assets/ManageEmployeesView/default-profile-picture.png" />
+                                                Source="avares://AHON_TRACK/Assets/ManageMembershipView/default-profile-picture.png" />
                                             <!-- Profile image placeholder -->
                                         </Border>
                                         <Button
                                             Classes="Outline"
                                             HorizontalAlignment="Center"
-                                            Click="Button_Click">
+                                            Command="{CompiledBinding ChooseFileCommand}">
                                             <StackPanel Orientation="Horizontal">
                                                 <Svg
                                                     Width="20"
                                                     Height="20"
                                                     VerticalAlignment="Center"
                                                     Margin="0,0,7,0"
-                                                    Path="avares://AHON_TRACK/Assets/ManageEmployeesView/upload-icon.svg" />
+                                                    Path="avares://AHON_TRACK/Assets/ManageMembershipView/upload-icon.svg" />
                                                 <TextBlock Text="Choose File" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Button>
@@ -220,6 +220,7 @@
                                 <StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91">
                                     <CalendarDatePicker
                                         shadui:ControlAssist.Label="Date of Birth"
+                                        shadui:ControlAssist.ReadOnly="True"
                                         Width="150"
                                         HorizontalAlignment="Left"
                                         SelectedDate="{CompiledBinding MemberBirthDate}" />
@@ -237,6 +238,8 @@
                                 <StackPanel Grid.Row="0" Grid.Column="0">
                                     <NumericUpDown
                                         shadui:ControlAssist.Label="Membership Duration (Month)"
+                                        Minimum="1"
+                                        Width="230"
                                         FormatString="N0"
                                         Watermark="Enter the duration"
                                         Value="{CompiledBinding MembershipDuration}">
