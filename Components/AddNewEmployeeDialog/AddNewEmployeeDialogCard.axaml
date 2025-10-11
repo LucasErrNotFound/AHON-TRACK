@@ -144,7 +144,7 @@
 							<Button
 								Classes="Outline"
 								HorizontalAlignment="Center"
-								Click="Button_Click">
+								Command="{CompiledBinding ChooseFileCommand}">
 								<StackPanel Orientation="Horizontal">
 									<Svg
 										Width="20"
@@ -188,6 +188,7 @@
 					<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91">
 						<CalendarDatePicker
 							shadui:ControlAssist.Label="Date of Birth"
+							shadui:ControlAssist.ReadOnly="True"
 							Width="150"
 							HorizontalAlignment="Left"
 							SelectedDate="{CompiledBinding EmployeeBirthDate}"/>
@@ -315,6 +316,7 @@
 					<StackPanel Grid.Row="0" Grid.Column="1" Margin="80,-3,15,0">
 						<CalendarDatePicker
 							shadui:ControlAssist.Label="Date Joined"
+							shadui:ControlAssist.ReadOnly="True"
 							Width="150"
 							HorizontalAlignment="Left"
 							SelectedDate="{CompiledBinding EmployeeDateJoined}"/>
