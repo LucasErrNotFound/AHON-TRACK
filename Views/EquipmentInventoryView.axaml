@@ -169,7 +169,7 @@
                                 <!-- Current Stock -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MaxWidth="80"
+                                    MinWidth="100"
                                     Header="Current Stock"
                                     Binding="{CompiledBinding CurrentStock}" />
                                 
@@ -191,7 +191,7 @@
                                 <DataGridTextColumn
                                     Width="Auto"
                                     MinWidth="120"
-                                    Header="Warranty"
+                                    Header="Warranty Expiration"
                                     Binding="{CompiledBinding FormattedWarranty}" />
                                 
                                 <!-- Last Maintenance -->

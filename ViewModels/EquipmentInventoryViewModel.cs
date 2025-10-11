@@ -13,7 +13,6 @@ using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
 
-
 namespace AHON_TRACK.ViewModels;
 
 [Page("equipment-inventory")]
@@ -55,6 +54,9 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     [ObservableProperty]
     private Equipment? _selectedEquipment;
 
+    [ObservableProperty]
+    private bool _isLoadingData;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -74,8 +76,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _equipmentDialogCardViewModel = equipmentDialogCardViewModel;
         _inventoryService = inventoryService;
 
-        LoadEquipmentData();
-        UpdateEquipmentCounts();
+        _ = LoadEquipmentDataAsync();
     }
 
     public EquipmentInventoryViewModel()
@@ -86,24 +87,35 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _equipmentDialogCardViewModel = new EquipmentDialogCardViewModel();
         _inventoryService = null!;
 
-        LoadEquipmentData();
-        UpdateEquipmentCounts();
+        _ = LoadEquipmentDataAsync();
     }
 
     [AvaloniaHotReload]
     public void Initialize()
     {
         if (IsInitialized) return;
-        LoadEquipmentData();
-        UpdateEquipmentCounts();
+        _ = LoadEquipmentDataAsync();
         IsInitialized = true;
     }
 
-    private async void LoadEquipmentData()
+    private async Task LoadEquipmentDataAsync()
     {
+        if (_inventoryService == null) return;
+
+        IsLoadingData = true;
         try
         {
-            var equipmentModels = await _inventoryService.GetEquipmentAsync();
+            var (success, message, equipmentModels) = await _inventoryService.GetEquipmentAsync();
+
+            if (!success || equipmentModels == null)
+            {
+                _toastManager.CreateToast("Error Loading Equipment")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
             var equipmentList = equipmentModels.Select(MapToEquipment).ToList();
 
             OriginalEquipmentData = equipmentList;
@@ -121,6 +133,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             {
                 SelectedEquipment = EquipmentItems[0];
             }
+
             ApplyEquipmentFilter();
             UpdateEquipmentCounts();
         }
@@ -131,8 +144,15 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 .DismissOnClick()
                 .ShowError();
         }
+        finally
+        {
+            IsLoadingData = false;
+        }
     }
 
+    /// <summary>
+    /// Maps EquipmentModel (from database) to Equipment (UI model)
+    /// </summary>
     private Equipment MapToEquipment(EquipmentModel model)
     {
         return new Equipment
@@ -141,30 +161,35 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             BrandName = model.EquipmentName,
             Category = model.Category,
             CurrentStock = model.CurrentStock,
-            Supplier = model.Supplier,
-            PurchasedPrice = (int?)(model.PurchasePrice ?? 0),
+            SupplierID = model.SupplierID,  // Store the ID
+            SupplierName = model.SupplierName,  // Display name from JOIN
+            PurchasedPrice = model.PurchasePrice,
             PurchasedDate = model.PurchaseDate,
             Warranty = model.WarrantyExpiry,
             Condition = model.Condition,
+            Status = model.Status,
             LastMaintenance = model.LastMaintenance,
             NextMaintenance = model.NextMaintenance
         };
     }
 
+    /// <summary>
+    /// Maps Equipment (UI model) to EquipmentModel (for database)
+    /// </summary>
     private EquipmentModel MapToEquipmentModel(Equipment equipment)
     {
         return new EquipmentModel
         {
             EquipmentID = equipment.ID,
-            EquipmentName = equipment.BrandName,
-            Category = equipment.Category,
+            EquipmentName = equipment.BrandName ?? string.Empty,
+            Category = equipment.Category ?? string.Empty,
             CurrentStock = equipment.CurrentStock ?? 0,
-            Supplier = equipment.Supplier,
+            SupplierID = equipment.SupplierID,  // Use the ID, not the name
             PurchasePrice = equipment.PurchasedPrice,
             PurchaseDate = equipment.PurchasedDate,
             WarrantyExpiry = equipment.Warranty,
-            Condition = equipment.Condition,
-            Status = "Active", // Default status
+            Condition = equipment.Condition ?? string.Empty,
+            Status = equipment.Status ?? "Active",
             LastMaintenance = equipment.LastMaintenance,
             NextMaintenance = equipment.NextMaintenance
         };
@@ -178,10 +203,6 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             .WithSuccessCallback(async _ =>
             {
                 await AddEquipmentToDatabase();
-                _toastManager.CreateToast("Added a new equipment")
-                    .WithContent($"You just added a new equipment to the database!")
-                    .DismissOnClick()
-                    .ShowSuccess();
             })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new equipment cancelled")
@@ -199,21 +220,38 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         {
             var newEquipmentModel = new EquipmentModel
             {
-                EquipmentName = _equipmentDialogCardViewModel.BrandName,
-                Category = _equipmentDialogCardViewModel.Category,
+                EquipmentName = _equipmentDialogCardViewModel.BrandName ?? string.Empty,
+                Category = _equipmentDialogCardViewModel.Category ?? string.Empty,
                 CurrentStock = _equipmentDialogCardViewModel.CurrentStock ?? 0,
-                Supplier = _equipmentDialogCardViewModel.Supplier,
+                SupplierID = _equipmentDialogCardViewModel.SupplierID,  // Now using SupplierID
                 PurchasePrice = _equipmentDialogCardViewModel.PurchasePrice,
                 PurchaseDate = _equipmentDialogCardViewModel.PurchasedDate,
                 WarrantyExpiry = _equipmentDialogCardViewModel.WarrantyExpiry,
-                Condition = _equipmentDialogCardViewModel.Condition,
-                Status = "Active",
+                Condition = _equipmentDialogCardViewModel.Condition ?? string.Empty,
+                Status = _equipmentDialogCardViewModel.Status ?? "Active",
                 LastMaintenance = _equipmentDialogCardViewModel.LastMaintenance,
                 NextMaintenance = _equipmentDialogCardViewModel.NextMaintenance
             };
 
-            await _inventoryService.AddEquipmentAsync(newEquipmentModel);
-            LoadEquipmentData(); // Reload to get updated data with new ID
+            var (success, message, equipmentId) = await _inventoryService.AddEquipmentAsync(newEquipmentModel);
+
+            if (success)
+            {
+                _toastManager.CreateToast("Equipment Added")
+                    .WithContent($"Successfully added '{newEquipmentModel.EquipmentName}' to the database!")
+                    .DismissOnClick()
+                    .ShowSuccess();
+
+                // Reload data to reflect changes
+                await LoadEquipmentDataAsync();
+            }
+            else
+            {
+                _toastManager.CreateToast("Error Adding Equipment")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+            }
         }
         catch (Exception ex)
         {
@@ -287,7 +325,8 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 equipment is { BrandName: not null, Category: not null, Condition: not null } &&
                 (equipment.BrandName.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                  equipment.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                 equipment.Condition.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
+                 equipment.Condition.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                 (equipment.SupplierName?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ?? false)))
                 .ToList();
 
             EquipmentItems.Clear();
@@ -314,18 +353,14 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             .WithSuccessCallback(async _ =>
             {
                 await UpdateEquipmentInDatabase(equipment);
-                _toastManager.CreateToast("Modified equipment details")
-                    .WithContent($"You have successfully modified {equipment.BrandName}!")
-                    .DismissOnClick()
-                    .ShowSuccess();
-                LoadEquipmentData();
             })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Modifying Equipment Details Cancelled")
                     .WithContent("Click the three-dots if you want to modify equipment details")
                     .DismissOnClick()
                     .ShowWarning())
-            .WithMaxWidth(950)
+            .WithMaxWidth(650)
+            .Dismissible()
             .Show();
     }
 
@@ -333,23 +368,63 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         try
         {
+            // ✅ Validate maintenance dates before updating
+            if (_equipmentDialogCardViewModel.LastMaintenance.HasValue &&
+                _equipmentDialogCardViewModel.NextMaintenance.HasValue &&
+                _equipmentDialogCardViewModel.NextMaintenance <= _equipmentDialogCardViewModel.LastMaintenance)
+            {
+                _toastManager.CreateToast("Invalid Maintenance Dates")
+                    .WithContent("Next maintenance date must be after the last maintenance date.")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            if (_equipmentDialogCardViewModel.LastMaintenance > DateTime.Today)
+            {
+                _toastManager.CreateToast("Invalid Date")
+                    .WithContent("Last maintenance date cannot be in the future.")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
             // Update the equipment object with values from dialog
             equipment.BrandName = _equipmentDialogCardViewModel.BrandName;
             equipment.Category = _equipmentDialogCardViewModel.Category;
             equipment.CurrentStock = _equipmentDialogCardViewModel.CurrentStock;
-            equipment.Supplier = _equipmentDialogCardViewModel.Supplier;
+            equipment.SupplierID = _equipmentDialogCardViewModel.SupplierID;  // Update SupplierID
+            equipment.SupplierName = _equipmentDialogCardViewModel.Supplier;  // Use Supplier instead of SelectedSupplier
             equipment.PurchasedPrice = _equipmentDialogCardViewModel.PurchasePrice;
             equipment.PurchasedDate = _equipmentDialogCardViewModel.PurchasedDate;
             equipment.Warranty = _equipmentDialogCardViewModel.WarrantyExpiry;
             equipment.Condition = _equipmentDialogCardViewModel.Condition;
+            equipment.Status = _equipmentDialogCardViewModel.Status;
             equipment.LastMaintenance = _equipmentDialogCardViewModel.LastMaintenance;
             equipment.NextMaintenance = _equipmentDialogCardViewModel.NextMaintenance;
 
-            var equipmentModel = MapToEquipmentModel(equipment);
-            await _inventoryService.UpdateEquipmentAsync(equipmentModel);
 
-            // Refresh the UI
-            OnPropertyChanged(nameof(EquipmentItems));
+
+            var equipmentModel = MapToEquipmentModel(equipment);
+            var (success, message) = await _inventoryService.UpdateEquipmentAsync(equipmentModel);
+
+            if (success)
+            {
+                _toastManager.CreateToast("Equipment Updated")
+                    .WithContent($"Successfully modified {equipment.BrandName}!")
+                    .DismissOnClick()
+                    .ShowSuccess();
+
+                // Refresh the UI
+                OnPropertyChanged(nameof(EquipmentItems));
+            }
+            else
+            {
+                _toastManager.CreateToast("Update Failed")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+            }
         }
         catch (Exception ex)
         {
@@ -380,10 +455,12 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         if (equipment == null) return;
 
+        var selectedCount = EquipmentItems.Count(x => x.IsSelected);
+
         _dialogManager.CreateDialog(
             "Are you absolutely sure?",
-            $"This action cannot be undone. This will permanently delete multiple equipments and remove their data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteMultipleItems(equipment), DialogButtonStyle.Destructive)
+            $"This action cannot be undone. This will permanently delete {selectedCount} equipment item(s) and remove their data from your database.")
+            .WithPrimaryButton("Continue", OnSubmitDeleteMultipleItems, DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
@@ -394,18 +471,29 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         try
         {
-            await _inventoryService.DeleteEquipmentAsync(equipment.ID);
-            equipment.PropertyChanged -= OnEquipmentPropertyChanged;
-            EquipmentItems.Remove(equipment);
-            OriginalEquipmentData.Remove(equipment);
-            CurrentFilteredEquipmentData.Remove(equipment);
-            UpdateEquipmentCounts();
+            var (success, message) = await _inventoryService.DeleteEquipmentAsync(equipment.ID);
 
-            _toastManager.CreateToast("Delete Equipment")
-                .WithContent($"{equipment.BrandName} has been deleted successfully!")
-                .DismissOnClick()
-                .WithDelay(6)
-                .ShowSuccess();
+            if (success)
+            {
+                equipment.PropertyChanged -= OnEquipmentPropertyChanged;
+                EquipmentItems.Remove(equipment);
+                OriginalEquipmentData.Remove(equipment);
+                CurrentFilteredEquipmentData.Remove(equipment);
+                UpdateEquipmentCounts();
+
+                _toastManager.CreateToast("Equipment Deleted")
+                    .WithContent($"{equipment.BrandName} has been deleted successfully!")
+                    .DismissOnClick()
+                    .WithDelay(6)
+                    .ShowSuccess();
+            }
+            else
+            {
+                _toastManager.CreateToast("Delete Failed")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+            }
         }
         catch (Exception ex)
         {
@@ -416,28 +504,47 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         }
     }
 
-    private async Task OnSubmitDeleteMultipleItems(Equipment equipment)
+    private async Task OnSubmitDeleteMultipleItems()
     {
         var selectedEquipments = EquipmentItems.Where(item => item.IsSelected).ToList();
-        if (selectedEquipments.Count == 0) return;
+        if (selectedEquipments.Count == 0)
+        {
+            _toastManager.CreateToast("No Selection")
+                .WithContent("Please select equipment items to delete.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
 
         try
         {
-            foreach (var equipmentItem in selectedEquipments)
-            {
-                await _inventoryService.DeleteEquipmentAsync(equipmentItem.ID);
-                equipmentItem.PropertyChanged -= OnEquipmentPropertyChanged;
-                EquipmentItems.Remove(equipmentItem);
-                OriginalEquipmentData.Remove(equipmentItem);
-                CurrentFilteredEquipmentData.Remove(equipmentItem);
-            }
-            UpdateEquipmentCounts();
+            var equipmentIds = selectedEquipments.Select(e => e.ID).ToList();
+            var (success, message, deletedCount) = await _inventoryService.DeleteMultipleEquipmentAsync(equipmentIds);
 
-            _toastManager.CreateToast($"Delete Selected Equipments")
-                .WithContent($"Multiple equipments deleted successfully!")
-                .DismissOnClick()
-                .WithDelay(6)
-                .ShowSuccess();
+            if (success)
+            {
+                foreach (var equipmentItem in selectedEquipments)
+                {
+                    equipmentItem.PropertyChanged -= OnEquipmentPropertyChanged;
+                    EquipmentItems.Remove(equipmentItem);
+                    OriginalEquipmentData.Remove(equipmentItem);
+                    CurrentFilteredEquipmentData.Remove(equipmentItem);
+                }
+                UpdateEquipmentCounts();
+
+                _toastManager.CreateToast("Equipment Deleted")
+                    .WithContent($"Successfully deleted {deletedCount} equipment item(s)!")
+                    .DismissOnClick()
+                    .WithDelay(6)
+                    .ShowSuccess();
+            }
+            else
+            {
+                _toastManager.CreateToast("Delete Failed")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+            }
         }
         catch (Exception ex)
         {
@@ -487,13 +594,16 @@ public partial class Equipment : ObservableObject
     private string? _category;
 
     [ObservableProperty]
-    private string? _supplier;
+    private int? _supplierID;  // Store the ID
+
+    [ObservableProperty]
+    private string? _supplierName;  // Display name from JOIN
 
     [ObservableProperty]
     private int? _currentStock;
 
     [ObservableProperty]
-    private int? _purchasedPrice;
+    private decimal? _purchasedPrice;
 
     [ObservableProperty]
     private DateTime? _purchasedDate;
@@ -505,6 +615,9 @@ public partial class Equipment : ObservableObject
     private string? _condition;
 
     [ObservableProperty]
+    private string? _status;
+
+    [ObservableProperty]
     private DateTime? _lastMaintenance;
 
     [ObservableProperty]
@@ -513,16 +626,21 @@ public partial class Equipment : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    // Formatted properties for display
     public string FormattedWarranty => Warranty.HasValue ? $"{Warranty.Value:MM/dd/yyyy}" : string.Empty;
     public string FormattedPurchasedDate => PurchasedDate.HasValue ? $"{PurchasedDate.Value:MM/dd/yyyy}" : string.Empty;
     public string FormattedLastMaintenance => LastMaintenance.HasValue ? $"{LastMaintenance.Value:MM/dd/yyyy}" : string.Empty;
     public string FormattedNextMaintenance => NextMaintenance.HasValue ? $"{NextMaintenance.Value:MM/dd/yyyy}" : string.Empty;
-    public string FormattedPurchasedPrice => $"₱{PurchasedPrice:N2}";
+    public string FormattedPurchasedPrice => PurchasedPrice.HasValue ? $"₱{PurchasedPrice.Value:N2}" : "₱0.00";
 
+    // Display supplier name, fallback to "N/A" if null
+    public string DisplaySupplierName => SupplierName ?? "N/A";
+
+    // Condition styling
     public IBrush ConditionForeground => Condition?.ToLowerInvariant() switch
     {
         "excellent" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
-        "repairing" => new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+        "repairing" => new SolidColorBrush(Color.FromRgb(251, 146, 60)),
         "broken" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
         _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
     };
@@ -530,7 +648,7 @@ public partial class Equipment : ObservableObject
     public IBrush ConditionBackground => Condition?.ToLowerInvariant() switch
     {
         "excellent" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
-        "repairing" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)),
+        "repairing" => new SolidColorBrush(Color.FromArgb(25, 251, 146, 60)),
         "broken" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
     };
@@ -543,10 +661,53 @@ public partial class Equipment : ObservableObject
         _ => Condition
     };
 
-    partial void OnConditionChanged(string value)
+    // Status styling
+    public IBrush StatusForeground => Status?.ToLowerInvariant() switch
+    {
+        "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
+        "inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+        "under maintenance" => new SolidColorBrush(Color.FromRgb(251, 146, 60)),
+        "retired" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        "on loan" => new SolidColorBrush(Color.FromRgb(59, 130, 246)),
+        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
+    };
+
+    public IBrush StatusBackground => Status?.ToLowerInvariant() switch
+    {
+        "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
+        "inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)),
+        "under maintenance" => new SolidColorBrush(Color.FromArgb(25, 251, 146, 60)),
+        "retired" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+        "on loan" => new SolidColorBrush(Color.FromArgb(25, 59, 130, 246)),
+        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
+    };
+
+    public string? StatusDisplayText => Status?.ToLowerInvariant() switch
+    {
+        "active" => "● Active",
+        "inactive" => "● Inactive",
+        "under maintenance" => "● Under Maintenance",
+        "retired" => "● Retired",
+        "on loan" => "● On Loan",
+        _ => Status
+    };
+
+    partial void OnConditionChanged(string? value)
     {
         OnPropertyChanged(nameof(ConditionForeground));
         OnPropertyChanged(nameof(ConditionBackground));
         OnPropertyChanged(nameof(ConditionDisplayText));
+    }
+
+    partial void OnStatusChanged(string? value)
+    {
+        OnPropertyChanged(nameof(StatusForeground));
+        OnPropertyChanged(nameof(StatusBackground));
+        OnPropertyChanged(nameof(StatusDisplayText));
+    }
+
+    partial void OnSupplierNameChanged(string? value)
+    {
+        OnPropertyChanged(nameof(DisplaySupplierName));
     }
 }
