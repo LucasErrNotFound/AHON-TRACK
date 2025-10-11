@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AHON_TRACK.Converters;
+using Avalonia.Media.Imaging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,7 +17,9 @@ namespace AHON_TRACK.Models
 
         public string LastName { get; set; } = string.Empty;
         public string Gender { get; set; }        // must be "Male" or "Female"
-        public object? ProfilePicture { get; set; } = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+        public byte[] ProfilePicture { get; set; }
+        public Bitmap ProfileImageSource { get; set; }
+        public static Bitmap DefaultAvatarSource => ImageHelper.GetDefaultAvatar();
         public string? ContactNumber { get; set; }
         public string MembershipType { get; set; }
         public int? Age { get; set; }
