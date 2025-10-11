@@ -310,7 +310,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenGymAttendanceReportsCommand}"
-						Content="Class Attendance"
+						Content="Gym Attendance"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Class Attendance Reports'}">
 						<shadui:SidebarItem.Icon>
