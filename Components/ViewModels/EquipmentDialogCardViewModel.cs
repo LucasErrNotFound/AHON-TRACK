@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,6 +11,7 @@ using HotAvalonia;
 using ShadUI;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Services;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -20,7 +24,14 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private string[] _conditionFilterItems = ["Excellent", "Repairing", "Broken"];
 
     [ObservableProperty]
-    private string[] _supplierFilterItems = ["San Miguel", "FitLab", "Optimum"];
+    private string[] _statusFilterItems = ["Active", "Inactive", "Under Maintenance", "Retired", "On Loan"];
+
+    // Supplier dropdown items - now contains supplier names as strings
+    [ObservableProperty]
+    private string[] _supplierFilterItems = Array.Empty<string>();
+
+    // This maintains the internal list of supplier objects
+    private List<SupplierDropdownModel> _supplierModels = new();
 
     [ObservableProperty]
     private string _dialogTitle = "Add New Equipment";
@@ -31,13 +42,17 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     [ObservableProperty]
     private bool _isEditMode = false;
 
+    [ObservableProperty]
+    private bool _isLoadingSuppliers = false;
+
     private int _equipmentID;
     private string? _brandName = string.Empty;
     private string? _category = string.Empty;
     private string? _condition = string.Empty;
-    private string? _supplier = string.Empty;
+    private string? _status = "Active";
+    private string? _supplier = string.Empty;  // This binds to XAML
     private int? _currentStock;
-    private int? _purchasePrice;
+    private decimal? _purchasePrice;
     private DateTime? _purchaseDate;
     private DateTime? _warrantyExpiry;
     private DateTime? _lastMaintenance;
@@ -77,6 +92,14 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         set => SetProperty(ref _condition, value, true);
     }
 
+    [Required(ErrorMessage = "Select a status")]
+    public string? Status
+    {
+        get => _status;
+        set => SetProperty(ref _status, value, true);
+    }
+
+    // This property binds to XAML - it's the supplier NAME (string)
     [Required(ErrorMessage = "Select a supplier")]
     public string? Supplier
     {
@@ -84,8 +107,33 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         set => SetProperty(ref _supplier, value, true);
     }
 
+    // Helper property to get the SupplierID based on selected supplier name
+    public int? SupplierID
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(Supplier))
+                return null;
+
+            var supplierModel = _supplierModels.FirstOrDefault(s => s.SupplierName == Supplier);
+            return supplierModel?.SupplierID;
+        }
+    }
+
+    // Helper property to get the selected supplier model (for compatibility)
+    public SupplierDropdownModel? SelectedSupplierModel
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(Supplier))
+                return null;
+
+            return _supplierModels.FirstOrDefault(s => s.SupplierName == Supplier);
+        }
+    }
+
     [Required(ErrorMessage = "Stock is required")]
-    [Range(1, 500, ErrorMessage = "Stock must be between 1 and 500")]
+    [Range(0, 500, ErrorMessage = "Stock must be between 0 and 500")]
     public int? CurrentStock
     {
         get => _currentStock;
@@ -93,8 +141,8 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     }
 
     [Required(ErrorMessage = "Price is required")]
-    [Range(1, 1000000000, ErrorMessage = "Price must be between 1 and 1000000000")]
-    public int? PurchasePrice
+    [Range(0.01, 1000000000, ErrorMessage = "Price must be between 0.01 and 1000000000")]
+    public decimal? PurchasePrice
     {
         get => _purchasePrice;
         set => SetProperty(ref _purchasePrice, value, true);
@@ -108,7 +156,6 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         set => SetProperty(ref _purchaseDate, value, true);
     }
 
-    [Required(ErrorMessage = "Warranty expiry is required")]
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
     public DateTime? WarrantyExpiry
     {
@@ -130,7 +177,11 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         set => SetProperty(ref _nextMaintenance, value, true);
     }
 
-    public EquipmentDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IInventoryService inventoryService)
+    public EquipmentDialogCardViewModel(
+        DialogManager dialogManager,
+        ToastManager toastManager,
+        PageManager pageManager,
+        IInventoryService inventoryService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
@@ -147,16 +198,17 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async void Initialize()
     {
         DialogTitle = "Add New Equipment";
         DialogDescription = "Easily register gym equipment with details like brand name, category, quantity, etc.";
         IsEditMode = false;
-        EquipmentID = 0; // Will be auto-generated by database
+        EquipmentID = 0;
         ClearAllFields();
+        await LoadSuppliersAsync();
     }
 
-    public void InitializeForEditMode(Equipment? equipment)
+    public async void InitializeForEditMode(Equipment? equipment)
     {
         IsEditMode = true;
         DialogTitle = "Edit Equipment Details";
@@ -168,13 +220,99 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         BrandName = equipment?.BrandName;
         Category = equipment?.Category;
         Condition = equipment?.Condition;
-        Supplier = equipment?.Supplier;
+        Status = equipment?.Status ?? "Active";
         CurrentStock = equipment?.CurrentStock;
         PurchasePrice = equipment?.PurchasedPrice;
         PurchasedDate = equipment?.PurchasedDate;
         WarrantyExpiry = equipment?.Warranty;
         LastMaintenance = equipment?.LastMaintenance;
         NextMaintenance = equipment?.NextMaintenance;
+
+        // Load suppliers first
+        await LoadSuppliersAsync();
+
+        // Set the supplier NAME (not ID) to match the XAML binding
+        if (equipment?.SupplierID.HasValue == true)
+        {
+            var supplierModel = _supplierModels.FirstOrDefault(s => s.SupplierID == equipment.SupplierID);
+            Supplier = supplierModel?.SupplierName;
+        }
+        else if (!string.IsNullOrEmpty(equipment?.SupplierName))
+        {
+            // Fallback: use the supplier name directly if ID lookup fails
+            Supplier = equipment.SupplierName;
+        }
+
+        else
+        {
+            Supplier = "None";
+        }
+    }
+
+    private async Task LoadSuppliersAsync()
+    {
+        if (_inventoryService == null)
+        {
+            // Fallback for design-time
+            _supplierModels = new List<SupplierDropdownModel>
+                    {
+                        new() { SupplierID = 1, SupplierName = "San Miguel" },
+                        new() { SupplierID = 2, SupplierName = "FitLab" },
+                        new() { SupplierID = 3, SupplierName = "Optimum" }
+                    };
+            // Add "None" option at the beginning
+            var supplierNames = new List<string> { "None" };
+            supplierNames.AddRange(_supplierModels.Select(s => s.SupplierName));
+            SupplierFilterItems = supplierNames.ToArray();
+            return;
+        }
+
+        IsLoadingSuppliers = true;
+        try
+        {
+            var (success, message, suppliers) = await _inventoryService.GetSuppliersForDropdownAsync();
+
+            if (success && suppliers != null && suppliers.Any())
+            {
+                _supplierModels = suppliers;
+
+                // Add "None" option at the beginning, followed by supplier names
+                var supplierNames = new List<string> { "None" };
+                supplierNames.AddRange(_supplierModels.Select(s => s.SupplierName));
+                SupplierFilterItems = supplierNames.ToArray();
+
+                // Auto-select first real supplier if adding new equipment (skip "None")
+                if (!IsEditMode && _supplierModels.Any())
+                {
+                    Supplier = "None";
+                }
+            }
+            else
+            {
+                _toastManager?.CreateToast("Failed to Load Suppliers")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowWarning();
+
+                // Provide "None" option as fallback
+                _supplierModels = new List<SupplierDropdownModel>();
+                SupplierFilterItems = new[] { "None" };
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Error Loading Suppliers")
+                .WithContent($"Failed to load suppliers: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+
+            _supplierModels = new List<SupplierDropdownModel>();
+            SupplierFilterItems = new[] { "None" };
+        }
+        finally
+        {
+            IsLoadingSuppliers = false;
+        }
     }
 
     [RelayCommand]
@@ -188,7 +326,55 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     {
         ValidateAllProperties();
 
+        // Custom validation for supplier
+        if (string.IsNullOrEmpty(Supplier))
+        {
+            _toastManager?.CreateToast("Validation Error")
+                .WithContent("Please select a supplier")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
+        // ? Custom validation for warranty date
+        if (PurchasedDate.HasValue && WarrantyExpiry.HasValue)
+        {
+            if (WarrantyExpiry.Value <= PurchasedDate.Value)
+            {
+                _toastManager?.CreateToast("Invalid Warranty Date")
+                    .WithContent("Warranty expiry must be after the purchase date.")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+        }
+
+        // ? (Optional) If you want to ensure purchase date is not in the future
+        if (PurchasedDate.HasValue && PurchasedDate.Value > DateTime.Today)
+        {
+            _toastManager?.CreateToast("Invalid Purchase Date")
+                .WithContent("Purchase date cannot be in the future.")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
         if (HasErrors) return;
+
+        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+
+        // Custom validation for supplier
+        if (string.IsNullOrEmpty(Supplier))
+        {
+            _toastManager?.CreateToast("Validation Error")
+                .WithContent("Please select a supplier")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
+        if (HasErrors) return;
+
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
 
@@ -197,6 +383,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         BrandName = string.Empty;
         Category = string.Empty;
         Condition = string.Empty;
+        Status = "Active";
         Supplier = string.Empty;
         CurrentStock = null;
         PurchasePrice = null;
