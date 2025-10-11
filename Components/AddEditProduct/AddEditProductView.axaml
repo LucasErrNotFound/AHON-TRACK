@@ -117,7 +117,7 @@
                                             </StackPanel>
                                             
                                                 <TextBlock
-                                                Text="Drop your images here"
+                                                Text="Drop your image here"
                                                 HorizontalAlignment="Center"
                                                 FontWeight="SemiBold"
                                                 FontSize="15"
@@ -130,7 +130,7 @@
                                                 Classes="Outline" 
                                                 HorizontalAlignment="Center" 
                                                 Margin="0,10,0,0"
-                                                Click="Button_OnClick">
+                                                Command="{CompiledBinding ChooseFileCommand}">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Svg
                                                         Width="20"
@@ -139,7 +139,7 @@
                                                         Margin="0,0,6,0"
                                                         Path="avares://AHON_TRACK/Assets/ManageBillingView/upload-icon.svg" />
                                                     <TextBlock 
-                                                        Text="Select Images" 
+                                                        Text="Choose File" 
                                                         VerticalAlignment="Center"
                                                         Foreground="{DynamicResource FontForeground}" />
                                                 </StackPanel>

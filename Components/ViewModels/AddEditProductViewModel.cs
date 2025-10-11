@@ -3,8 +3,13 @@ using System.Collections.Generic;
 using ShadUI;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using AHON_TRACK.ViewModels;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -31,6 +36,9 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     [ObservableProperty] 
     private bool _isPercentageModeOn;
+    
+    [ObservableProperty]
+    private Image? _productImageControl;
     
     private string? _productName = string.Empty;
     private string? _productSKU = string.Empty;
@@ -112,6 +120,59 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
+    }
+    
+    [RelayCommand]
+    private async Task ChooseFile()
+    {
+        try
+        {
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+
+            var files = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Select Image File",
+                AllowMultiple = false,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Image Files")
+                    {
+                        Patterns = ["*.png", "*.jpg"]
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = ["*.*"]
+                    }
+                ]
+            });
+
+            if (files.Count > 0)
+            {
+                var selectedFile = files[0];
+                _toastManager.CreateToast("Image file selected")
+                    .WithContent($"{selectedFile.Name}")
+                    .DismissOnClick()
+                    .ShowInfo();
+                
+                var file = files[0];
+                await using var stream = await file.OpenReadAsync();
+                
+                var bitmap = new Bitmap(stream);
+                
+                if (ProductImageControl != null)
+                {
+                    ProductImageControl.Source = bitmap;
+                    ProductImageControl.IsVisible = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+        }
     }
     
     private void PublishSwitchBack()

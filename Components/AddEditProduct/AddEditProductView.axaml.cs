@@ -1,9 +1,5 @@
-using System;
-using System.Diagnostics;
+using AHON_TRACK.Components.ViewModels;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
 
 namespace AHON_TRACK.Components.AddEditProduct;
 
@@ -12,34 +8,13 @@ public partial class AddEditProductView : UserControl
     public AddEditProductView()
     {
         InitializeComponent();
-    }
-
-    private async void Button_OnClick(object? sender, RoutedEventArgs e)
-    {
-        try
+        
+        Loaded += (s, e) =>
         {
-            var topLevel = TopLevel.GetTopLevel(this);
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            if (DataContext is AddEditProductViewModel vm)
             {
-                AllowMultiple = false,
-                Title = "Select an image file",
-                FileTypeFilter = [FilePickerFileTypes.ImageJpg, FilePickerFileTypes.ImagePng, FilePickerFileTypes.ImageAll]
-            });
-
-            if (files.Count <= 0) return;
-            var file = files[0];
-            await using var stream = await file.OpenReadAsync();
-        
-            var bitmap = new Bitmap(stream);
-            var profileImage = this.FindControl<Image>("ProductImage");
-        
-            if (profileImage == null) return;
-            profileImage.Source = bitmap;
-            profileImage.IsVisible = true; // Ensure the image is visible after loading
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
-        }
+                vm.ProductImageControl = this.FindControl<Image>("ProductImage");
+            }
+        };
     }
 }
