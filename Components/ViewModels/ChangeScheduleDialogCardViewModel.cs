@@ -99,11 +99,11 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         SelectedTrainingDate = scheduledPerson.ScheduledDate;
         SelectedCoach = scheduledPerson.AssignedCoach;
 
-        if (scheduledPerson.ScheduledTimeStart.HasValue)
-            StartTime = TimeOnly.FromDateTime(scheduledPerson.ScheduledTimeStart.Value);
+        /* if (scheduledPerson.ScheduledTimeStart.HasValue)
+             StartTime = TimeOnly.FromDateTime(scheduledPerson.ScheduledTimeStart.Value);
 
-        if (scheduledPerson.ScheduledTimeEnd.HasValue)
-            EndTime = TimeOnly.FromDateTime(scheduledPerson.ScheduledTimeEnd.Value);
+         if (scheduledPerson.ScheduledTimeEnd.HasValue)
+             EndTime = TimeOnly.FromDateTime(scheduledPerson.ScheduledTimeEnd.Value);*/
     }
 
     [RelayCommand]
