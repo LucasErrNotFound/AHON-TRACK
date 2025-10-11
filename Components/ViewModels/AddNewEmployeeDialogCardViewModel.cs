@@ -10,6 +10,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -29,11 +33,15 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _dialogDescription = "Please fill out the form to create this employee's information";
+    
+    [ObservableProperty]
+    private Image? _employeeProfileImageControl;
 
     [ObservableProperty]
     private bool _isEditMode = false;
 
     private readonly DialogManager _dialogManager;
+    private readonly ToastManager _toastManager;
 
     // Personal Details Section
     private string _employeeFirstName = string.Empty;
@@ -240,14 +248,16 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeStatus, value, true);
     }
 
-    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager)
+    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager)
     {
         _dialogManager = dialogManager;
+        _toastManager =  toastManager;
     }
 
     public AddNewEmployeeDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
+        _toastManager = new ToastManager();
     }
 
     [AvaloniaHotReload]
@@ -300,6 +310,59 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
         if (birthDate.Date > today.AddYears(-age)) age--;
         return age;
+    }
+
+    [RelayCommand]
+    private async Task ChooseFile()
+    {
+        try
+        {
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+
+            var files = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Select Image File",
+                AllowMultiple = false,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Image Files")
+                    {
+                        Patterns = ["*.png", "*.jpg"]
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = ["*.*"]
+                    }
+                ]
+            });
+
+            if (files.Count > 0)
+            {
+                var selectedFile = files[0];
+                _toastManager.CreateToast("Image file selected")
+                    .WithContent($"{selectedFile.Name}")
+                    .DismissOnClick()
+                    .ShowInfo();
+                
+                var file = files[0];
+                await using var stream = await file.OpenReadAsync();
+                
+                var bitmap = new Bitmap(stream);
+                
+                if (EmployeeProfileImageControl != null)
+                {
+                    EmployeeProfileImageControl.Source = bitmap;
+                    EmployeeProfileImageControl.IsVisible = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+        }
     }
 
     [RelayCommand]
