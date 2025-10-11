@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Converters;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
@@ -41,6 +42,7 @@ public partial class AddNewEmployeeDialogCard : UserControl
             if (DataContext is AddNewEmployeeDialogCardViewModel vm)
             {
                 vm.ProfileImageSource = bitmap;
+                vm.ProfileImage = ImageHelper.BitmapToBytes(bitmap);
             }
 
             var profileImage = this.FindControl<Image>("EmployeeProfileImage");
