@@ -410,6 +410,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
             if (success)
             {
+                _ = LoadEquipmentDataAsync();
                 _toastManager.CreateToast("Equipment Updated")
                     .WithContent($"Successfully modified {equipment.BrandName}!")
                     .DismissOnClick()
