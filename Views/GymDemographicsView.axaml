@@ -55,36 +55,34 @@
                 Margin="90,0" />
         </StackPanel>
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,40,90,24" Spacing="16">
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15">
+                    <CalendarDatePicker 
+                        shadui:ControlAssist.Label="From"
+                        shadui:ControlAssist.ReadOnly="True"
+                        SelectedDate="{CompiledBinding DemographicsGroupSelectedFromDate}" />
+                    <CalendarDatePicker 
+                        shadui:ControlAssist.Label="To"
+                        shadui:ControlAssist.ReadOnly="True"
+                        SelectedDate="{CompiledBinding DemographicsGroupSelectedToDate}" />
+                    <Button 
+                        Classes="Primary" 
+                        VerticalAlignment="Bottom">
+                        <StackPanel Orientation="Horizontal">
+                            <Svg
+                                Width="20"
+                                Height="20"
+                                Path="avares://AHON_TRACK/Assets/GymDemographicsView/download-icon.svg"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0"/>
+                            <TextBlock Text="Download" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
                 <Grid RowDefinitions="* * *" ColumnDefinitions="2* *" ColumnSpacing="30">
                     <shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True">
                         <StackPanel>
-                            <Grid ColumnDefinitions="* Auto">
-                                <shadui:CardTitle Grid.Column="0" Content="Demographics" FontSize="20" FontWeight="SemiBold"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="15">
-                                    <CalendarDatePicker 
-                                        shadui:ControlAssist.Label="From"
-                                        shadui:ControlAssist.ReadOnly="True"
-                                        SelectedDate="{CompiledBinding DemographicsGroupSelectedFromDate}" />
-                                    <CalendarDatePicker 
-                                        shadui:ControlAssist.Label="To"
-                                        shadui:ControlAssist.ReadOnly="True"
-                                        SelectedDate="{CompiledBinding DemographicsGroupSelectedToDate}" />
-                                    <Button 
-                                        Classes="Primary" 
-                                        VerticalAlignment="Bottom">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Svg
-                                                Width="20"
-                                                Height="20"
-                                                Path="avares://AHON_TRACK/Assets/GymDemographicsView/download-icon.svg"
-                                                VerticalAlignment="Center"
-                                                Margin="0,0,8,0"/>
-                                            <TextBlock Text="Download" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Grid>
+                            <shadui:CardTitle Content="Demographics" FontSize="20" FontWeight="SemiBold"/>
                             <Grid ColumnDefinitions="1* *" ColumnSpacing="35">
                                 <StackPanel Grid.Column="0">
                                     <TextBlock 
@@ -96,7 +94,9 @@
                                         ZIndex="-1"
                                         Margin="0,-30,0,0"
                                         InitialRotation="120" 
-                                        SeriesSource="{Binding GenderPieDataCollection}" LegendPosition="Right" Height="300">
+                                        SeriesSource="{CompiledBinding GenderPieDataCollection}" 
+                                        LegendPosition="Right" 
+                                        Height="310">
                                         <lvc:PieChart.SeriesTemplate>
                                             <DataTemplate x:DataType="viewModels:PieData">
                                                 <lvc:XamlPieSeries
@@ -149,18 +149,8 @@
                 <shadui:Card>
                     <StackPanel>
                         <shadui:CardTitle Content="Gym Population" FontSize="20"/>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="15">
-                            <CalendarDatePicker 
-                                shadui:ControlAssist.Label="From"
-                                shadui:ControlAssist.ReadOnly="True"
-                                SelectedDate="{CompiledBinding GymPopulationSelectedFromDate}" />
-                            <CalendarDatePicker 
-                                shadui:ControlAssist.Label="To"
-                                shadui:ControlAssist.ReadOnly="True"
-                                SelectedDate="{CompiledBinding GymPopulationSelectedToDate}" />
-                        </StackPanel>
                         <lvc:CartesianChart 
-                            Height="400" 
+                            Height="280" 
                             Series="{CompiledBinding PopulationSeriesCollection}"
                             XAxes="{CompiledBinding PopulationLineChartXAxes}">
                         </lvc:CartesianChart>

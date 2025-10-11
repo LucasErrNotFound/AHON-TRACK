@@ -19,12 +19,6 @@ namespace AHON_TRACK.ViewModels;
 public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private DateTime _gymPopulationSelectedFromDate = DateTime.Today;
-    
-    [ObservableProperty]
-    private DateTime _gymPopulationSelectedToDate = DateTime.Today.AddMonths(1);
-    
-    [ObservableProperty]
     private DateTime _demographicsGroupSelectedFromDate = DateTime.Today;
     
     [ObservableProperty]
@@ -179,8 +173,8 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         var populations = new List<double>();
         var random = new Random();
     
-        var currentDate = GymPopulationSelectedFromDate;
-        while (currentDate <= GymPopulationSelectedToDate)
+        var currentDate = DemographicsGroupSelectedFromDate;
+        while (currentDate <= DemographicsGroupSelectedToDate)
         {
             days.Add(currentDate.ToString("MMM dd"));
             populations.Add(random.Next(1, 100));
@@ -249,20 +243,12 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
     partial void OnDemographicsGroupSelectedFromDateChanged(DateTime value)
     {
         UpdateDemographicsGroupChart();
+        UpdatePopulationChart();
     }
 
     partial void OnDemographicsGroupSelectedToDateChanged(DateTime value)
     {
         UpdateDemographicsGroupChart();
-    }
-    
-    partial void OnGymPopulationSelectedFromDateChanged(DateTime value)
-    {
-        UpdatePopulationChart();
-    }
-
-    partial void OnGymPopulationSelectedToDateChanged(DateTime value)
-    {
         UpdatePopulationChart();
     }
 }
