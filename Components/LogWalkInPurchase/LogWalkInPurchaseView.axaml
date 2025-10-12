@@ -81,8 +81,10 @@
 				<scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
 			</Interaction.Behaviors>
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
+				<!--
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
+					-->
 						<Grid Margin="100,30" ColumnDefinitions="3* 3*">
 							<shadui:Card VerticalAlignment="Top">
 								<StackPanel Spacing="0">
@@ -726,8 +728,10 @@
 								</StackPanel>
 							</shadui:Card>
 						</Grid>
+				<!--
 					</shadui:BreakpointView>
 				</shadui:BreakpointViewPort>
+				-->
 			</StackPanel>
 		</ScrollViewer>
 	</DockPanel>

@@ -11,8 +11,21 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+<<<<<<< HEAD
 using AHON_TRACK.Services.Interface;
 using System.Threading.Tasks;
+=======
+using System.Threading.Tasks;
+using AHON_TRACK.ViewModels;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
+>>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -40,7 +53,14 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
     [ObservableProperty]
     private string[] _memberStatusItems = ["Active", "Inactive", "Terminated"];
+<<<<<<< HEAD
 
+=======
+    
+    [ObservableProperty]
+    private Image? _memberProfileImageControl;
+    
+>>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
     // Personal Details Section
     private string _memberFirstName = string.Empty;
     private string _selectedMiddleInitialItem = string.Empty;
@@ -616,6 +636,59 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
         // Fallback - shouldn't reach here if HasCompoundLastNamePattern returned true
         return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
+    }
+    
+    [RelayCommand]
+    private async Task ChooseFile()
+    {
+        try
+        {
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+
+            var files = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Select Image File",
+                AllowMultiple = false,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Image Files")
+                    {
+                        Patterns = ["*.png", "*.jpg"]
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = ["*.*"]
+                    }
+                ]
+            });
+
+            if (files.Count > 0)
+            {
+                var selectedFile = files[0];
+                _toastManager.CreateToast("Image file selected")
+                    .WithContent($"{selectedFile.Name}")
+                    .DismissOnClick()
+                    .ShowInfo();
+                
+                var file = files[0];
+                await using var stream = await file.OpenReadAsync();
+                
+                var bitmap = new Bitmap(stream);
+                
+                if (MemberProfileImageControl != null)
+                {
+                    MemberProfileImageControl.Source = bitmap;
+                    MemberProfileImageControl.IsVisible = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+        }
     }
 
     [RelayCommand]

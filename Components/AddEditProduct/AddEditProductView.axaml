@@ -112,17 +112,17 @@
                                                         Name="ProductImage"
                                                         Stretch="UniformToFill"
                                                         IsVisible="True"/>
-													<!-- Profile image placeholder -->
-												</Border>
-											</StackPanel>
-
-											<TextBlock
-											Text="Drop your images here"
-											HorizontalAlignment="Center"
-											FontWeight="SemiBold"
-											FontSize="15"
-											Foreground="{DynamicResource FontForeground}" />
-											<TextBlock
+                                                    <!-- Profile image placeholder -->
+                                                </Border>
+                                            </StackPanel>
+                                            
+                                                <TextBlock
+                                                Text="Drop your image here"
+                                                HorizontalAlignment="Center"
+                                                FontWeight="SemiBold"
+                                                FontSize="15"
+                                                Foreground="{DynamicResource FontForeground}" />
+                                            <TextBlock
                                                 Text="PNG or JPG"
                                                 HorizontalAlignment="Center"
                                                 Classes="Caption Muted" />
@@ -130,26 +130,26 @@
                                                 Classes="Outline"
                                                 HorizontalAlignment="Center"
                                                 Margin="0,10,0,0"
-                                                Click="Button_OnClick">
-												<StackPanel Orientation="Horizontal">
-													<Svg
+                                                Click="{CompiledBinding ChooseFileCommand}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Svg
                                                         Width="20"
                                                         Height="20"
                                                         VerticalAlignment="Center"
                                                         Margin="0,0,6,0"
                                                         Path="avares://AHON_TRACK/Assets/ManageBillingView/upload-icon.svg" />
-													<TextBlock
-                                                        Text="Select Images"
-                                                        VerticalAlignment="Center"
-                                                        Foreground="{DynamicResource FontForeground}" />
-												</StackPanel>
+                                                    <TextBlock 
+                                                        Text="Choose File"
+                                                Click="Button_OnClick">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Svg
 											</Button>
 										</StackPanel>
 									</Grid>
 								</Border>
 							</StackPanel>
-						</shadui:Card>
-					</Grid>
+                        </shadui:Card>
+                    </Grid>
 
 					<!-- Column 2 -->
 					<!-- Pricing -->

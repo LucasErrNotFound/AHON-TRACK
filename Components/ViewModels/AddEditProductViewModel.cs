@@ -1,8 +1,21 @@
+<<<<<<< HEAD
 using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
+=======
+using System;
+using System.Collections.Generic;
+using ShadUI;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Threading.Tasks;
+>>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
 using AHON_TRACK.ViewModels;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -41,6 +54,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     [ObservableProperty]
     private bool _isPercentageModeOn;
+<<<<<<< HEAD
 
     [ObservableProperty]
     private bool _isSaving;
@@ -51,6 +65,12 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private bool _suppliersLoaded = false;
 
     private int? _productID;
+=======
+    
+    [ObservableProperty]
+    private Image? _productImageControl;
+    
+>>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
     private string? _productName = string.Empty;
     private string? _productSKU = string.Empty;
     private string? _productDescription = string.Empty;
@@ -330,7 +350,64 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             .Dismissible()
             .Show();
     }
+<<<<<<< HEAD
 
+=======
+    
+    [RelayCommand]
+    private async Task ChooseFile()
+    {
+        try
+        {
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+
+            var files = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Select Image File",
+                AllowMultiple = false,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Image Files")
+                    {
+                        Patterns = ["*.png", "*.jpg"]
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = ["*.*"]
+                    }
+                ]
+            });
+
+            if (files.Count > 0)
+            {
+                var selectedFile = files[0];
+                _toastManager.CreateToast("Image file selected")
+                    .WithContent($"{selectedFile.Name}")
+                    .DismissOnClick()
+                    .ShowInfo();
+                
+                var file = files[0];
+                await using var stream = await file.OpenReadAsync();
+                
+                var bitmap = new Bitmap(stream);
+                
+                if (ProductImageControl != null)
+                {
+                    ProductImageControl.Source = bitmap;
+                    ProductImageControl.IsVisible = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+        }
+    }
+    
+>>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
     private void PublishSwitchBack()
     {
         var successMessage = ViewContext == ProductViewContext.EditProduct
