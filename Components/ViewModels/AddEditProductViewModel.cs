@@ -1,16 +1,6 @@
-<<<<<<< HEAD
 using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
-=======
-using System;
-using System.Collections.Generic;
-using ShadUI;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-using System.Threading.Tasks;
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
 using AHON_TRACK.ViewModels;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -24,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -54,7 +45,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     [ObservableProperty]
     private bool _isPercentageModeOn;
-<<<<<<< HEAD
 
     [ObservableProperty]
     private bool _isSaving;
@@ -62,15 +52,12 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     [ObservableProperty]
     private bool _isLoadingSuppliers;
 
+    [ObservableProperty]
+    private Image? _productImageControl;
+
     private bool _suppliersLoaded = false;
 
     private int? _productID;
-=======
-    
-    [ObservableProperty]
-    private Image? _productImageControl;
-    
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
     private string? _productName = string.Empty;
     private string? _productSKU = string.Empty;
     private string? _productDescription = string.Empty;
@@ -137,7 +124,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
             if (result.Success && result.Suppliers != null)
             {
-                // ✅ Build name-to-ID mapping
                 _supplierNameToIdMap.Clear();
 
                 var supplierNames = result.Suppliers
@@ -150,7 +136,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                     _supplierNameToIdMap[supplier.SupplierName] = supplier.SupplierID;
                 }
 
-                // Add "None" as first option
                 var names = supplierNames.Select(s => s.SupplierName).ToList();
                 names.Insert(0, "None");
 
@@ -188,6 +173,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         finally
         {
             IsLoadingSuppliers = false;
+            _suppliersLoaded = true;
         }
     }
 
@@ -204,10 +190,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
     {
-        Console.WriteLine("🔵 SetNavigationParameters called");
-        Console.WriteLine($"🔵 Current suppliers count: {ProductSupplierItems.Length}");
-        Console.WriteLine($"🔵 Suppliers loaded: {_suppliersLoaded}");
-        // ✅ Ensure suppliers are loaded before processing parameters
         if (!_suppliersLoaded)
         {
             _ = LoadSuppliersAsync();
@@ -227,9 +209,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private async Task LoadSuppliersAndPopulateForm(ProductStock product)
     {
-        Console.WriteLine($"🔄 Loading suppliers and populating form for product: {product.Name}");
-
-        // Wait for suppliers to load if they haven't yet
         while (!_suppliersLoaded && IsLoadingSuppliers)
         {
             await Task.Delay(50);
@@ -237,7 +216,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         PopulateFormWithProductData(product);
 
-        // Force UI update
         OnPropertyChanged(nameof(ProductCurrentStock));
         OnPropertyChanged(nameof(CurrentStock));
     }
@@ -269,7 +247,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         try
         {
-            // ✅ Convert supplier name to ID
             int? supplierIdToSave = null;
             if (!string.IsNullOrEmpty(SelectedProductSupplier) && SelectedProductSupplier != "None")
             {
@@ -284,7 +261,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 ProductID = ProductID ?? 0,
                 ProductName = ProductName ?? "",
                 SKU = ProductSKU ?? "",
-                SupplierID = supplierIdToSave, // ✅ Use ID instead of name
+                SupplierID = supplierIdToSave,
                 Description = ProductDescription,
                 Price = ProductPrice ?? 0,
                 DiscountedPrice = ProductDiscountedPrice,
@@ -312,10 +289,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             if (result.success)
             {
                 PublishSwitchBack();
-            }
-            else
-            {
-                Console.WriteLine($"Failed to save product: {result.message}");
             }
         }
         catch (Exception ex)
@@ -350,10 +323,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             .Dismissible()
             .Show();
     }
-<<<<<<< HEAD
 
-=======
-    
     [RelayCommand]
     private async Task ChooseFile()
     {
@@ -388,17 +358,23 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                     .WithContent($"{selectedFile.Name}")
                     .DismissOnClick()
                     .ShowInfo();
-                
+
                 var file = files[0];
                 await using var stream = await file.OpenReadAsync();
-                
+
                 var bitmap = new Bitmap(stream);
-                
+
                 if (ProductImageControl != null)
                 {
                     ProductImageControl.Source = bitmap;
                     ProductImageControl.IsVisible = true;
                 }
+
+                // Also convert to bytes for database storage
+                stream.Position = 0;
+                using var memoryStream = new System.IO.MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                ProductImageBytes = memoryStream.ToArray();
             }
         }
         catch (Exception ex)
@@ -406,15 +382,9 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
         }
     }
-    
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
+
     private void PublishSwitchBack()
     {
-        var successMessage = ViewContext == ProductViewContext.EditProduct
-            ? "Product updated successfully"
-            : "Product added successfully";
-
-        // Note: Service already shows toast, but we keep this for consistency
         _pageManager.Navigate<ProductStockViewModel>(new Dictionary<string, object>
         {
             { "ShouldRefresh", true }
@@ -440,8 +410,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private void PopulateFormWithProductData(ProductStock product)
     {
-        Console.WriteLine($"🔄 Populating form with product ID: {product.ID}");
-
         ProductID = product.ID;
         ProductName = product.Name;
         ProductDescription = product.Description;
@@ -452,7 +420,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductSKU = product.Sku;
         ProductCurrentStock = product.CurrentStock;
 
-        // ✅ Set supplier by name (dropdown displays names)
         if (!string.IsNullOrEmpty(product.Supplier) &&
             ProductSupplierItems.Contains(product.Supplier))
         {
@@ -466,7 +433,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         SelectedProductStatus = product.Status;
         SelectedProductCategory = product.Category;
 
-        // Handle Base64 images from database
         if (!string.IsNullOrEmpty(product.Poster))
         {
             if (product.Poster.StartsWith("data:image/png;base64,"))
@@ -600,13 +566,11 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _productImage, value, true);
     }
 
-    // ✅ NEW: Property to store actual file path
     public string? ProductImageFilePath
     {
         get => _productImageFilePath;
         set => SetProperty(ref _productImageFilePath, value, true);
     }
-
 
     partial void OnIsPercentageModeOnChanged(bool value)
     {
