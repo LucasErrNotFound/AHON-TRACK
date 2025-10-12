@@ -404,7 +404,7 @@ namespace AHON_TRACK.Services
                         ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
                         Status = reader["Status"]?.ToString() ?? string.Empty,
                         Validity = validityDisplay,
-                        ProfilePicture = ImageHelper.GetAvatarOrDefault(bytes)
+                        //ProfilePicture = ImageHelper.GetAvatarOrDefault(bytes)
                     });
                 }
             }

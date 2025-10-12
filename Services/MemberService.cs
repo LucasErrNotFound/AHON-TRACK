@@ -88,7 +88,7 @@ namespace AHON_TRACK.Services
                         MembershipType = reader["MembershipType"]?.ToString() ?? string.Empty, // FIX: Added MembershipType
                         Status = reader["Status"].ToString() ?? string.Empty,
                         Validity = validityDisplay,
-                        ProfilePicture = ImageHelper.GetAvatarOrDefault(bytes) // Convert bytes to Bitmap for UI
+                        //ProfilePicture = ImageHelper.GetAvatarOrDefault(bytes) // Convert bytes to Bitmap for UI
                     });
                 }
             }
@@ -285,7 +285,7 @@ namespace AHON_TRACK.Services
                         MembershipType = reader["MembershipType"]?.ToString() ?? string.Empty,
                         Status = reader["Status"]?.ToString() ?? string.Empty,
                         Validity = validityDisplay,
-                        ProfilePicture = profilePictureObj
+                        //ProfilePicture = profilePictureObj
                     };
                 }
             }
@@ -313,7 +313,7 @@ INSERT INTO Members(Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, 
                 cmd.Parameters.AddWithValue("@Lastname", member.LastName);
                 cmd.Parameters.AddWithValue("@Gender", member.Gender);
 
-                byte[]? dbBytes = null;
+                /*byte[]? dbBytes = null;
                 switch (member.ProfilePicture)
                 {
                     case byte[] bytes:
@@ -328,9 +328,9 @@ INSERT INTO Members(Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, 
                     default:
                         dbBytes = null;
                         break;
-                }
+                }*/
 
-                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary).Value = (object?)dbBytes ?? DBNull.Value;
+                //cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary).Value = (object?)dbBytes ?? DBNull.Value;
                 cmd.Parameters.AddWithValue("@ContactNumber", (object?)member.ContactNumber ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Age", (object?)member.Age ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@DateOfBirth", (object?)member.DateOfBirth ?? DBNull.Value);
