@@ -27,6 +27,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly SupplierManagementViewModel _supplierManagementViewModel;
     private readonly GymDemographicsViewModel  _gymDemographicsViewModel;
     private readonly GymAttendanceViewModel  _gymAttendanceViewModel;
+    private readonly AuditLogsViewModel _auditLogsViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
@@ -47,6 +48,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SupplierManagementViewModel supplierManagementViewModel,
         GymDemographicsViewModel gymDemographicsViewModel,
         GymAttendanceViewModel gymAttendanceViewModel,
+        AuditLogsViewModel auditLogsViewModel,
         EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
     {
         _pageManager = pageManager;
@@ -63,6 +65,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _supplierManagementViewModel = supplierManagementViewModel;
         _gymDemographicsViewModel = gymDemographicsViewModel;
         _gymAttendanceViewModel = gymAttendanceViewModel;
+        _auditLogsViewModel = auditLogsViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
@@ -89,6 +92,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _supplierManagementViewModel = new SupplierManagementViewModel();
         _gymDemographicsViewModel = new GymDemographicsViewModel();
         _gymAttendanceViewModel = new GymAttendanceViewModel();
+        _auditLogsViewModel = new AuditLogsViewModel();
     }
 
     [ObservableProperty]
@@ -182,13 +186,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenGymDemographics() => SwitchPage(_gymDemographicsViewModel);
 
-    /*
-    [RelayCommand]
-    private void OpenEquipmentUsageReports() => SwitchPage(_equipmentUsageReportsViewModel);
-    */
-
     [RelayCommand]
     private void OpenGymAttendanceReports() => SwitchPage(_gymAttendanceViewModel);
+    
+    [RelayCommand]
+    private void OpenAuditLogs() => SwitchPage(_auditLogsViewModel);
 
     [RelayCommand]
     private void OpenViewProfile()

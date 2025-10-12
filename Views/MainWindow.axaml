@@ -295,20 +295,6 @@
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
-						Content="Equipment Usage"
-						FontSize="15"
-						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Equipment Usage Reports'}">
-						<shadui:SidebarItem.Icon>
-							<Viewbox>
-								<Svg
-									Width="24"
-									Height="24"
-									Path="avares://AHON_TRACK/Assets/MainWindowView/equipment-usage-icon.svg"/>
-							</Viewbox>
-						</shadui:SidebarItem.Icon>
-					</shadui:SidebarItem>
-					<shadui:SidebarItem
 						Command="{CompiledBinding OpenGymAttendanceReportsCommand}"
 						Content="Gym Attendance"
 						FontSize="15"
@@ -319,6 +305,20 @@
 									Width="24"
 									Height="24"
 									Path="avares://AHON_TRACK/Assets/MainWindowView/class-attendance-icon.svg"/>
+							</Viewbox>
+						</shadui:SidebarItem.Icon>
+					</shadui:SidebarItem>
+					<shadui:SidebarItem
+						Command="{CompiledBinding OpenAuditLogsCommand}"
+						Content="Audit Logs"
+						FontSize="15"
+						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Equipment Usage Reports'}">
+						<shadui:SidebarItem.Icon>
+							<Viewbox>
+								<Svg
+									Width="24"
+									Height="24"
+									Path="avares://AHON_TRACK/Assets/MainWindowView/equipment-usage-icon.svg"/>
 							</Viewbox>
 						</shadui:SidebarItem.Icon>
 					</shadui:SidebarItem>
