@@ -156,7 +156,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         [
             new ManageEmployeesItem
             {
-                ID = "1001",
+                ID = 1001,
                 AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
                 Name = "Jedd Calubayan",
                 Username = "Kuya Rome",
@@ -168,7 +168,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
             new ManageEmployeesItem
             {
-                ID = "1002",
+                ID = 1002,
                 AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
                 Name = "JC Casidore",
                 Username = "Jaycee",
@@ -180,7 +180,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
             new ManageEmployeesItem
             {
-                ID = "1003",
+                ID = 1003,
                 AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
                 Name = "Mardie Dela Cruz",
                 Username = "Figora",
@@ -192,7 +192,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
             new ManageEmployeesItem
             {
-                ID = "1004",
+                ID = 1004,
                 AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
                 Name = "JL Taberdo",
                 Username = "JeyEL",
@@ -204,7 +204,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
             new ManageEmployeesItem
             {
-                ID = "1005",
+                ID = 1005,
                 AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
                 Name = "Jav Agustin",
                 Username = "Mr. Javitos",
@@ -212,66 +212,6 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Position = "Gym Staff",
                 Status = "Inactive",
                 DateJoined = new DateTime(2025, 6, 21)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = "1006",
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "Marc Torres",
-                Username = "Sora",
-                ContactNumber = "0913 153 4456",
-                Position = "Gym Admin",
-                Status = "Active",
-                DateJoined = new DateTime(2025, 6, 21)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = "1007",
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "Maverick Lim",
-                Username = "Kiriya",
-                ContactNumber = "0983 853 0459",
-                Position = "Gym Staff",
-                Status = "Terminated",
-                DateJoined = new DateTime(2022, 11, 9)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = "1008",
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "Dave Dapitillo",
-                Username = "Dabii69",
-                ContactNumber = "0914 145 4552",
-                Position = "Gym Admin",
-                Status = "Inactive",
-                DateJoined = new DateTime(2023, 11, 9)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = "1009",
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "Sianrey Flora",
-                Username = "Reylifts",
-                ContactNumber = "0911 115 4232",
-                Position = "Gym Admin",
-                Status = "Active",
-                DateJoined = new DateTime(2020, 11, 29)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = "1010",
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "Mark Dela Cruz",
-                Username = "MarkyWTF",
-                ContactNumber = "0931 315 1672",
-                Position = "Gym Staff",
-                Status = "Terminated",
-                DateJoined = new DateTime(2018, 10, 1)
             }
         ];
     }
@@ -284,15 +224,25 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         try
         {
-            var employees = await _employeeService.GetEmployeesAsync();
+            var (success, message, employees) = await _employeeService.GetEmployeesAsync();
+
+            if (!success || employees == null)
+            {
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Failed to load employees: {message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                LoadSampleData(); // Fallback
+                return;
+            }
 
             var employeeItems = employees.Select(emp => new ManageEmployeesItem
             {
-                ID = emp.ID,
-                // UPDATED: Use ImageHelper to get avatar or default
+                ID = emp.ID, // ✅ Convert int to string for UI
                 AvatarSource = emp.AvatarBytes != null
-        ? ImageHelper.BytesToBitmap(emp.AvatarBytes)
-        : ManageEmployeeModel.DefaultAvatarSource,
+                    ? ImageHelper.BytesToBitmap(emp.AvatarBytes)
+                    : ManageEmployeeModel.DefaultAvatarSource,
                 Name = emp.Name,
                 Username = emp.Username,
                 ContactNumber = emp.ContactNumber,
@@ -316,12 +266,12 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast("Database Error")
-                .WithContent($"Failed to load employees: {ex.Message}")
+            _toastManager.CreateToast("Error")
+                .WithContent($"Unexpected error: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
 
-            LoadSampleData(); // Fallback to sample data
+            LoadSampleData();
         }
     }
 
@@ -512,173 +462,125 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private async Task SortById()
+    private void SortById()
     {
-        try
+        var sortedById = EmployeeItems.OrderBy(employee => employee.ID).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var employees in sortedById)
         {
-            var employees = await _employeeService.GetEmployeesSortedAsync("id", false);
-            await UpdateEmployeeItemsFromService(employees);
+            EmployeeItems.Add(employees);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Sort Error")
-                .WithContent($"Error sorting by ID: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        // Update current filtered data to match sorted state
+        CurrentFilteredData = [.. sortedById];
     }
 
     [RelayCommand]
-    private async Task SortNamesByAlphabetical()
+    private void SortNamesByAlphabetical()
     {
-        try
+        var sortedNamesInAlphabetical = EmployeeItems.OrderBy(employee => employee.Name).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var employees in sortedNamesInAlphabetical)
         {
-            var employees = await _employeeService.GetEmployeesSortedAsync("name", false);
-            await UpdateEmployeeItemsFromService(employees);
+            EmployeeItems.Add(employees);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Sort Error")
-                .WithContent($"Error sorting names alphabetically: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        CurrentFilteredData = [.. sortedNamesInAlphabetical];
     }
 
     [RelayCommand]
-    private async Task SortNamesByReverseAlphabetical()
+    private void SortNamesByReverseAlphabetical()
     {
-        try
+        var sortedReverseNamesInAlphabetical = EmployeeItems.OrderByDescending(employee => employee.Name).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var employees in sortedReverseNamesInAlphabetical)
         {
-            var employees = await _employeeService.GetEmployeesSortedAsync("name", true);
-            await UpdateEmployeeItemsFromService(employees);
+            EmployeeItems.Add(employees);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Sort Error")
-                .WithContent($"Error sorting names reverse alphabetically: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        CurrentFilteredData = [.. sortedReverseNamesInAlphabetical];
     }
 
     [RelayCommand]
-    private async Task SortUsernamesByAlphabetical()
+    private void SortUsernamesByAlphabetical()
     {
-        try
+        var sortedUsernamesInAlphabetical = EmployeeItems.OrderBy(employee => employee.Username).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var employees in sortedUsernamesInAlphabetical)
         {
-            var employees = await _employeeService.GetEmployeesSortedAsync("username", false);
-            await UpdateEmployeeItemsFromService(employees);
+            EmployeeItems.Add(employees);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Sort Error")
-                .WithContent($"Error sorting usernames alphabetically: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        CurrentFilteredData = [.. sortedUsernamesInAlphabetical];
     }
 
     [RelayCommand]
-    private async Task SortUsernamesByReverseAlphabetical()
+    private void SortUsernamesByReverseAlphabetical()
     {
-        try
+        var sortedUsernamesInReverseAlphabetical = EmployeeItems.OrderByDescending(employee => employee.Username).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var employees in sortedUsernamesInReverseAlphabetical)
         {
-            var employees = await _employeeService.GetEmployeesSortedAsync("username", true);
-            await UpdateEmployeeItemsFromService(employees);
+            EmployeeItems.Add(employees);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Sort Error")
-                .WithContent($"Error sorting usernames reverse alphabetically: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        CurrentFilteredData = [.. sortedUsernamesInReverseAlphabetical];
     }
 
     [RelayCommand]
-    private async Task SortDateByNewestToOldest()
+    private void SortDateByNewestToOldest()
     {
-        try
+        var sortedDates = EmployeeItems.OrderByDescending(log => log.DateJoined).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var logs in sortedDates)
         {
-            var employees = await _employeeService.GetEmployeesSortedAsync("datejoined", true);
-            await UpdateEmployeeItemsFromService(employees);
+            EmployeeItems.Add(logs);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Sort Error")
-                .WithContent($"Error sorting by newest date: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        CurrentFilteredData = [.. sortedDates];
     }
 
     [RelayCommand]
-    private async Task SortDateByOldestToNewest()
+    private void SortDateByOldestToNewest()
     {
-        try
+        var sortedDates = EmployeeItems.OrderBy(log => log.DateJoined).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var logs in sortedDates)
         {
-            var employees = await _employeeService.GetEmployeesSortedAsync("datejoined", false);
-            await UpdateEmployeeItemsFromService(employees);
+            EmployeeItems.Add(logs);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Sort Error")
-                .WithContent($"Error sorting by oldest date: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        CurrentFilteredData = [.. sortedDates];
     }
 
     [RelayCommand]
-    private async Task FilterActiveStatus()
+    private void FilterActiveStatus()
     {
-        try
+        var filterActiveStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("active", StringComparison.OrdinalIgnoreCase)).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var employee in filterActiveStatus)
         {
-            var employees = await _employeeService.GetEmployeesByStatusAsync("Active");
-            await UpdateEmployeeItemsFromService(employees);
+            employee.PropertyChanged += OnEmployeePropertyChanged;
+            EmployeeItems.Add(employee);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Filter Error")
-                .WithContent($"Error filtering active employees: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        CurrentFilteredData = [.. filterActiveStatus];
+        _ = UpdateCounts();
     }
 
     [RelayCommand]
-    private async Task FilterInactiveStatus()
+    private void FilterInactiveStatus()
     {
-        try
-        {
-            var employees = await _employeeService.GetEmployeesByStatusAsync("Inactive");
-            await UpdateEmployeeItemsFromService(employees);
-        }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Filter Error")
-                .WithContent($"Error filtering inactive employees: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
-    }
+        var filterInactiveStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase)).ToList();
+        EmployeeItems.Clear();
 
-    [RelayCommand]
-    private async Task FilterTerminatedStatus()
-    {
-        try
+        foreach (var employee in filterInactiveStatus)
         {
-            var employees = await _employeeService.GetEmployeesByStatusAsync("Terminated");
-            await UpdateEmployeeItemsFromService(employees);
+            employee.PropertyChanged += OnEmployeePropertyChanged;
+            EmployeeItems.Add(employee);
         }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Filter Error")
-                .WithContent($"Error filtering terminated employees: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
+        CurrentFilteredData = [.. filterInactiveStatus];
+        _ = UpdateCounts();
     }
 
     [RelayCommand]
@@ -694,75 +596,66 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
+    private void FilterTerminatedStatus()
+    {
+        var filterTerminatedStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase)).ToList();
+        EmployeeItems.Clear();
+
+        foreach (var employee in filterTerminatedStatus)
+        {
+            employee.PropertyChanged += OnEmployeePropertyChanged;
+            EmployeeItems.Add(employee);
+        }
+        CurrentFilteredData = [.. filterTerminatedStatus];
+        _ = UpdateCounts();
+    }
+
+    [RelayCommand]
     private async Task SearchEmployees()
     {
-        IsSearchingEmployee = true;
-
-        try
+        if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
-            List<ManageEmployeeModel> employees;
-
-            if (string.IsNullOrWhiteSpace(SearchStringResult))
-            {
-                // If search is empty, get all employees or apply current filter
-                if (SelectedFilterIndex >= 0)
-                {
-                    string status = SelectedFilterIndex switch
-                    {
-                        0 => "Active",
-                        1 => "Inactive",
-                        2 => "Terminated",
-                        _ => "Active"
-                    };
-                    employees = await _employeeService.GetEmployeesByStatusAsync(status);
-                }
-                else
-                {
-                    employees = await _employeeService.GetEmployeesAsync();
-                }
-            }
-            else
-            {
-                // Use service search method
-                employees = await _employeeService.SearchEmployeesAsync(SearchStringResult);
-            }
-
-            // Convert to ManageEmployeesItem and update UI
-            var employeeItems = employees.Select(emp => new ManageEmployeesItem
-            {
-                ID = emp.ID,
-                AvatarSource = emp.AvatarBytes != null
-                    ? ImageHelper.BytesToBitmap(emp.AvatarBytes)
-                    : ManageEmployeeModel.DefaultAvatarSource,
-                Name = emp.Name,
-                Username = emp.Username,
-                ContactNumber = emp.ContactNumber,
-                Position = emp.Position,
-                Status = emp.Status,
-                DateJoined = emp.DateJoined
-            }).ToList();
-
+            // Reset to current filtered data instead of original data
             EmployeeItems.Clear();
-            foreach (var employee in employeeItems)
+            foreach (var employee in CurrentFilteredData)
             {
                 employee.PropertyChanged += OnEmployeePropertyChanged;
                 EmployeeItems.Add(employee);
             }
-
-            await UpdateCounts();
+            _ = UpdateCounts();
+            return;
         }
-        catch (Exception ex)
+        IsSearchingEmployee = true;
+
+        try
         {
-            _toastManager.CreateToast("Search Error")
-                .WithContent($"Error searching employees: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
+            await Task.Delay(500);
+
+            // Search within the current filtered data instead of original data
+            var filteredEmployees = CurrentFilteredData.Where(emp =>
+                emp.ID.ToString().Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.Username.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.ContactNumber.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.Position.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                emp.DateJoined.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+
+            EmployeeItems.Clear();
+            foreach (var employees in filteredEmployees)
+            {
+                employees.PropertyChanged += OnEmployeePropertyChanged;
+                EmployeeItems.Add(employees);
+            }
+            _ = UpdateCounts();
         }
         finally
         {
             IsSearchingEmployee = false;
         }
     }
+
 
     [RelayCommand]
     private async Task ShowCopySingleEmployeeName(ManageEmployeesItem? employee)
@@ -811,7 +704,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         var clipboard = Clipboard.Get();
         if (clipboard != null)
         {
-            await clipboard.SetTextAsync(employee.ID);
+            await clipboard.SetTextAsync(employee.ID.ToString());
         }
 
         _toastManager.CreateToast("Copy Employee ID")
@@ -1015,17 +908,21 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
     private async Task OnSubmitDeleteSingleItem(ManageEmployeesItem employee)
     {
-        await DeleteEmployeeFromDatabase(employee);
+        var (success, message) = await _employeeService.DeleteEmployeeAsync(employee.ID);
 
-        // ✅ Instead of just removing from UI, reload from database
-        await LoadEmployeesFromDatabaseAsync();
-
-        _toastManager.CreateToast($"Delete {employee.Position} Account")
-            .WithContent($"{employee.Name}'s Account deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+        if (success)
+        {
+            await LoadEmployeesFromDatabaseAsync();
+        }
+        else
+        {
+            _toastManager.CreateToast("Delete Failed")
+                .WithContent($"Failed to delete: {message}")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
+
 
     private async Task OnSubmitDeleteMultipleItems(ManageEmployeesItem employee)
     {
@@ -1052,39 +949,35 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         // using var connection = new SqlConnection(connectionString);
         // await connection.ExecuteAsync("DELETE FROM Employees WHERE ID = @ID", new { IDI = employee.ID });
-
-        if (int.TryParse(employee.ID, out int id))
-        {
-            await _employeeService.DeleteEmployeeAsync(id);
-        }
+        await _employeeService.DeleteEmployeeAsync(employee.ID);
 
         await Task.Delay(100); // Just an animation/simulation of async operation
     }
 
-    private async void ExecuteSortCommand(int selectedIndex)
+    private void ExecuteSortCommand(int selectedIndex)
     {
         switch (selectedIndex)
         {
             case 0:
-                await SortById();
+                SortByIdCommand.Execute(null);
                 break;
             case 1:
-                await SortNamesByAlphabetical();
+                SortNamesByAlphabeticalCommand.Execute(null);
                 break;
             case 2:
-                await SortNamesByReverseAlphabetical();
+                SortNamesByReverseAlphabeticalCommand.Execute(null);
                 break;
             case 3:
-                await SortUsernamesByAlphabetical();
+                SortUsernamesByAlphabeticalCommand.Execute(null);
                 break;
             case 4:
-                await SortUsernamesByReverseAlphabetical();
+                SortUsernamesByReverseAlphabeticalCommand.Execute(null);
                 break;
             case 5:
-                await SortDateByNewestToOldest();
+                SortDateByNewestToOldestCommand.Execute(null);
                 break;
             case 6:
-                await SortDateByOldestToNewest();
+                SortDateByOldestToNewestCommand.Execute(null);
                 break;
             case 7:
                 SortResetCommand.Execute(null);
@@ -1092,13 +985,13 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
     }
 
-    private async void ExecuteFilterCommand(int selectedIndex)
+    private void ExecuteFilterCommand(int selectedIndex)
     {
         switch (selectedIndex)
         {
-            case 0: await FilterActiveStatus(); break;
-            case 1: await FilterInactiveStatus(); break;
-            case 2: await FilterTerminatedStatus(); break;
+            case 0: FilterActiveStatusCommand.Execute(null); break;
+            case 1: FilterInactiveStatusCommand.Execute(null); break;
+            case 2: FilterTerminatedStatusCommand.Execute(null); break;
         }
     }
 
@@ -1130,7 +1023,7 @@ public partial class ManageEmployeesItem : ObservableObject
     private bool _isSelected;
 
     [ObservableProperty]
-    private string _iD = string.Empty;
+    private int _iD;
 
     [ObservableProperty]
     private Bitmap _avatarSource = ManageEmployeeModel.DefaultAvatarSource;

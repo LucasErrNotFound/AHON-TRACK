@@ -84,7 +84,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeFirstName, value, true);
     }
 
-    // [Required(ErrorMessage = "Select your MI")] -> I disabled this because apparently there are people who do not have middle name/initial
     public string SelectedMiddleInitialItem
     {
         get => _selectedMiddleInitialItem;
@@ -125,8 +124,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         get => EmployeeGender == "Female";
         set { if (value) EmployeeGender = "Female"; }
     }
-
-
 
     [Required(ErrorMessage = "Contact number is required")]
     [RegularExpression(@"^09\d{9}$", ErrorMessage = "Contact number must start with 09 and be 11 digits long")]
@@ -262,17 +259,21 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     public byte[]? ProfileImage
     {
         get => _profileImage;
-        set => SetProperty(ref _profileImage, value);
+        set
+        {
+            SetProperty(ref _profileImage, value);
+            Debug.WriteLine($"ProfileImage updated: {(value != null ? $"{value.Length} bytes" : "null")}");
+        }
     }
 
     [ObservableProperty]
-    private Bitmap profileImageSource = null!;
+    private Bitmap? _profileImageSource;
+
     public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager, IEmployeeService employeeService, ToastManager toastManager)
     {
         _dialogManager = dialogManager;
         _employeeService = employeeService;
         _toastManager = toastManager;
-        _employeeService = employeeService;
     }
 
     public AddNewEmployeeDialogCardViewModel()
@@ -280,7 +281,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _employeeService = new EmployeeService("Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True", _toastManager);
-        _employeeService = null!;
     }
 
     [AvaloniaHotReload]
@@ -288,53 +288,108 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     {
         IsEditMode = false;
         DialogTitle = "Add Employee Details";
+        DialogDescription = "Please fill out the form to create this employee's information";
         ClearAllFields();
     }
 
     public async Task InitializeForEditMode(ManageEmployeesItem? employee)
     {
+        if (employee == null) return;
+
         IsEditMode = true;
         DialogTitle = "Edit Employee Details";
         DialogDescription = "Please update the employee's information";
+        EditingEmployeeID = employee.ID;
 
         ClearAllErrors();
-        var nameParts = employee.Name?.Split(' ') ?? [];
 
-        // Set personal details with default values
+        // Load full employee data from database
+        if (EditingEmployeeID.HasValue)
+        {
+            var (success, message, fullEmployee) = await _employeeService.ViewEmployeeProfileAsync(EditingEmployeeID.Value);
+
+            if (success && fullEmployee != null)
+            {
+                // Personal Details
+                EmployeeFirstName = fullEmployee.FirstName ?? string.Empty;
+                SelectedMiddleInitialItem = fullEmployee.MiddleInitial?.Trim() ?? string.Empty;
+                EmployeeLastName = fullEmployee.LastName ?? string.Empty;
+                EmployeeGender = fullEmployee.Gender ?? "Male";
+                EmployeeContactNumber = fullEmployee.ContactNumber ?? string.Empty;
+                EmployeePosition = fullEmployee.Position ?? "Gym Staff";
+                EmployeeAge = fullEmployee.Age;
+                EmployeeBirthDate = fullEmployee.DateOfBirth;
+
+                // Address
+                EmployeeHouseAddress = fullEmployee.HouseAddress ?? string.Empty;
+                EmployeeHouseNumber = fullEmployee.HouseNumber ?? string.Empty;
+                EmployeeStreet = fullEmployee.Street ?? string.Empty;
+                EmployeeBarangay = fullEmployee.Barangay ?? string.Empty;
+                EmployeeCityTown = fullEmployee.CityTown ?? string.Empty;
+                EmployeeProvince = fullEmployee.Province ?? string.Empty;
+
+                // Account
+                EmployeeUsername = fullEmployee.Username ?? string.Empty;
+                EmployeePassword = fullEmployee.Password ?? "********";
+                EmployeeDateJoined = fullEmployee.DateJoined;
+                EmployeeStatus = fullEmployee.Status ?? "Active";
+
+                // Profile Picture
+                if (fullEmployee.AvatarBytes != null)
+                {
+                    ProfileImage = fullEmployee.AvatarBytes;
+                    ProfileImageSource = ImageHelper.BytesToBitmap(fullEmployee.AvatarBytes);
+                }
+                else
+                {
+                    ProfileImageSource = ImageHelper.GetDefaultAvatar();
+                }
+
+                Debug.WriteLine($"✅ Successfully loaded employee data: {fullEmployee.FirstName} {fullEmployee.LastName}");
+                return;
+            }
+            else
+            {
+                _toastManager?.CreateToast("Load Error")
+                    .WithContent($"Failed to load employee data: {message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                Debug.WriteLine($"❌ Failed to load employee: {message}");
+            }
+        }
+
+        // Fallback to basic data
+        var nameParts = employee.Name?.Split(' ') ?? [];
         EmployeeFirstName = nameParts.Length > 0 ? nameParts[0] : "John";
         SelectedMiddleInitialItem = nameParts.Length > 2 ? nameParts[1].TrimEnd('.') : "A";
-        EmployeeLastName = nameParts.Length > 1 ? nameParts[^1] : "Doe"; // Last element
-
-        // Set default values for fields not available in ManageEmployeesItem
+        EmployeeLastName = nameParts.Length > 1 ? nameParts[^1] : "Doe";
         EmployeeGender = "Male";
-        EmployeeContactNumber = !string.IsNullOrEmpty(employee.ContactNumber) ?
-            employee.ContactNumber.Replace(" ", "") : "09123456789";
-        EmployeePosition = !string.IsNullOrEmpty(employee.Position) ? employee.Position : "Gym Staff";
-        EmployeeAge = 25; // Default age
+        EmployeeContactNumber = employee.ContactNumber?.Replace(" ", "") ?? "09123456789";
+        EmployeePosition = employee.Position ?? "Gym Staff";
+        EmployeeAge = 25;
         EmployeeBirthDate = DateTime.Now.AddYears(-25);
-
-        EmployeeHouseAddress = "Sample House Address";
-        EmployeeHouseNumber = "Blk 8 Lot 2";
+        EmployeeHouseAddress = "Sample Address";
+        EmployeeHouseNumber = "Block 1 Lot 1";
         EmployeeStreet = "Sample Street";
         EmployeeBarangay = "Sample Barangay";
         EmployeeCityTown = "Sample City";
         EmployeeProvince = "Sample Province";
-
-        EmployeeUsername = !string.IsNullOrEmpty(employee.Username) ? employee.Username : "defaultuser";
+        EmployeeUsername = employee.Username ?? "defaultuser";
         EmployeePassword = "defaultpassword";
         EmployeeDateJoined = employee.DateJoined != default ? employee.DateJoined : DateTime.Now;
-        EmployeeStatus = !string.IsNullOrEmpty(employee.Status) ? employee.Status : "Active";
+        EmployeeStatus = employee.Status ?? "Active";
+
+        Debug.WriteLine("⚠️ Using fallback data");
     }
 
     private int CalculateAge(DateTime birthDate)
     {
         var today = DateTime.Today;
         var age = today.Year - birthDate.Year;
-
         if (birthDate.Date > today.AddYears(-age)) age--;
         return age;
     }
-
 
     [RelayCommand]
     private async Task SaveDetails()
@@ -342,18 +397,27 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         ClearAllErrors();
         ValidateAllProperties();
 
-        if (HasErrors) return;
+        if (HasErrors)
+        {
+            _toastManager?.CreateToast("Validation Error")
+                .WithContent("Please fix all validation errors before saving.")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
         try
         {
-            var employee = new EmployeeModel
+            var employee = new ManageEmployeeModel
             {
+                EmployeeId = EditingEmployeeID ?? 0,
                 FirstName = EmployeeFirstName,
-                MiddleInitial = SelectedMiddleInitialItem,
+                MiddleInitial = string.IsNullOrWhiteSpace(SelectedMiddleInitialItem) ? null : SelectedMiddleInitialItem,
                 LastName = EmployeeLastName,
-                Gender = EmployeeGender ?? "",
+                Gender = EmployeeGender ?? string.Empty,
                 ContactNumber = EmployeeContactNumber,
                 Age = EmployeeAge ?? 0,
-                DateOfBirth = EmployeeBirthDate ?? DateTime.Now,
+                DateOfBirth = EmployeeBirthDate,
                 HouseAddress = EmployeeHouseAddress,
                 HouseNumber = EmployeeHouseNumber,
                 Street = EmployeeStreet,
@@ -367,49 +431,55 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                 Position = EmployeePosition,
                 ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
             };
-            bool success = await _employeeService.AddEmployeeAsync(employee);
-            if (success)
+
+            Debug.WriteLine($"📸 Profile Picture: {(employee.ProfilePicture != null ? $"{employee.ProfilePicture.Length} bytes" : "null")}");
+
+            if (IsEditMode && EditingEmployeeID.HasValue)
             {
-                _toastManager.CreateToast("Employee added successfully!").DismissOnClick().Show();
+                // UPDATE MODE
+                var (success, message) = await _employeeService.UpdateEmployeeAsync(employee);
+
+                if (success)
+                {
+                    _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+                }
+                else
+                {
+                    _toastManager?.CreateToast("Update Failed")
+                        .WithContent($"Failed to update employee: {message}")
+                        .DismissOnClick()
+                        .ShowError();
+                }
             }
             else
             {
-                _toastManager.CreateToast("Failed to add employee.").DismissOnClick().Show();
+                // ADD MODE
+                var (success, message, employeeId) = await _employeeService.AddEmployeeAsync(employee);
+
+                if (success)
+                {
+                    Debug.WriteLine($"✅ New employee added with ID: {employeeId}");
+                    _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+                }
+                else
+                {
+                    _toastManager?.CreateToast("Add Failed")
+                        .WithContent($"Failed to add employee: {message}")
+                        .DismissOnClick()
+                        .ShowError();
+                }
             }
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast($"Error: {ex.Message}").Show();
-            Debug.WriteLine($"Error adding employee: {ex.Message}");
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Error: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+
+            Debug.WriteLine($"❌ Error saving employee: {ex.Message}");
             Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-            return; // Don't close dialog if there was an error
         }
-
-        // Personal Details Debugging
-        Debug.WriteLine($"First Name: {EmployeeFirstName}");
-        Debug.WriteLine($"Middle Initial: {SelectedMiddleInitialItem}");
-        Debug.WriteLine($"Last Name: {EmployeeLastName}");
-        Debug.WriteLine($"Gender: {EmployeeGender}");
-        Debug.WriteLine($"Contact No.: {EmployeeContactNumber}");
-        Debug.WriteLine($"Position: {EmployeePosition}");
-        Debug.WriteLine($"Age: {EmployeeAge}");
-        Debug.WriteLine($"Date of Birth: {EmployeeBirthDate?.ToString("MMMM d, yyyy")}");
-
-        // Address Details Debugging
-        Debug.WriteLine($"\nHouse Adress: {EmployeeHouseAddress}");
-        Debug.WriteLine($"House Number: {EmployeeHouseNumber}");
-        Debug.WriteLine($"Street: {EmployeeStreet}");
-        Debug.WriteLine($"Barangay: {EmployeeBarangay}");
-        Debug.WriteLine($"City/Town: {EmployeeCityTown}");
-        Debug.WriteLine($"Province: {EmployeeProvince}");
-
-        // Account Details Debugging
-        Debug.WriteLine($"\nUsername: {EmployeeUsername}");
-        Debug.WriteLine($"Password: {EmployeePassword}");
-        Debug.WriteLine($"Date Joined: {EmployeeDateJoined?.ToString("MMMM d, yyyy")}");
-        Debug.WriteLine($"Status: {EmployeeStatus}");
-
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
 
     [RelayCommand]
@@ -424,12 +494,21 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
         if (imageBytes != null)
         {
-            using var ms = new MemoryStream(imageBytes);
-            ProfileImageSource = new Bitmap(ms);
+            try
+            {
+                ProfileImageSource = ImageHelper.BytesToBitmap(imageBytes);
+                Debug.WriteLine($"✅ Profile image set: {imageBytes.Length} bytes");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ Error setting profile image: {ex.Message}");
+                ProfileImageSource = ImageHelper.GetDefaultAvatar();
+            }
         }
         else
         {
-            ProfileImageSource = null;
+            ProfileImageSource = ImageHelper.GetDefaultAvatar();
+            Debug.WriteLine("ℹ️ No image bytes provided, using default avatar");
         }
     }
 
@@ -454,10 +533,12 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeDateJoined = null;
         EmployeeStatus = string.Empty;
         ProfileImage = null;
-        ProfileImageSource = null;
+        ProfileImageSource = ImageHelper.GetDefaultAvatar();
+        EditingEmployeeID = null;
         ClearAllErrors();
 
         ImageResetRequested?.Invoke();
+        Debug.WriteLine("🔄 All fields cleared");
     }
 
     public event Action? ImageResetRequested;

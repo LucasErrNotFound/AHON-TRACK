@@ -28,7 +28,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private string _employeeFullNameHeader = string.Empty;
 
     [ObservableProperty]
-    private string _employeeID = string.Empty;
+    private int _employeeID;
 
     [ObservableProperty]
     private string _employeePosition = string.Empty;
@@ -43,7 +43,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private string _employeeFullName = string.Empty;
 
     [ObservableProperty]
-    private string _employeeAge = string.Empty;
+    private int _employeeAge;
 
     [ObservableProperty]
     private string _employeeBirthDate = string.Empty;
@@ -131,37 +131,42 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     {
         if (_selectedEmployeeData != null)
         {
-            var fullEmployee = await _employeeService.ViewEmployeeProfileAsync(int.Parse(_selectedEmployeeData.ID));
+            var (success, message, fullEmployee) = await _employeeService.ViewEmployeeProfileAsync(_selectedEmployeeData.ID);
 
-            if (fullEmployee != null)
+            if (!success || fullEmployee == null)
             {
-                EmployeeID = fullEmployee.ID;
-                EmployeePosition = fullEmployee.Position;
-                EmployeeStatus = fullEmployee.Status;
-                EmployeeDateJoined = fullEmployee.DateJoined == DateTime.MinValue
-                    ? "N/A"
-                    : fullEmployee.DateJoined.ToString("MMMM d, yyyy");
-                EmployeeFullName = fullEmployee.Name;
-                EmployeeFullNameHeader = $"{fullEmployee.Name}'s Profile";
-                EmployeePhoneNumber = fullEmployee.ContactNumber;
+                _toastManager?.CreateToast("Error")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
 
-                EmployeeAge = fullEmployee.Age;
-                EmployeeBirthDate = fullEmployee.Birthdate;
-                EmployeeGender = fullEmployee.Gender;
-                EmployeeLastLogin = fullEmployee.LastLogin;
-                EmployeeHouseAddress = fullEmployee.HouseAddress;
-                EmployeeHouseNumber = fullEmployee.HouseNumber;
-                EmployeeStreet = fullEmployee.Street;
-                EmployeeBarangay = fullEmployee.Barangay;
-                EmployeeCityProvince = fullEmployee.CityProvince;
-                EmployeeZipCode = fullEmployee.ZipCode;
+            EmployeeID = fullEmployee.ID;
+            EmployeePosition = fullEmployee.Position;
+            EmployeeStatus = fullEmployee.Status;
+            EmployeeDateJoined = fullEmployee.DateJoined == DateTime.MinValue
+                ? "N/A"
+                : fullEmployee.DateJoined.ToString("MMMM d, yyyy");
+            EmployeeFullName = fullEmployee.Name;
+            EmployeeFullNameHeader = $"{fullEmployee.Name}'s Profile";
+            EmployeePhoneNumber = fullEmployee.ContactNumber;
 
-                // Profile Picture
-                if (fullEmployee.AvatarSource != null)
-                {
-                    // Assuming you add an ObservableProperty for this
-                    // EmployeeProfilePicture = fullEmployee.AvatarSource;
-                }
+            EmployeeAge = fullEmployee.Age;
+            EmployeeBirthDate = fullEmployee.Birthdate;
+            EmployeeGender = fullEmployee.Gender;
+            EmployeeLastLogin = fullEmployee.LastLogin;
+            EmployeeHouseAddress = fullEmployee.HouseAddress;
+            EmployeeHouseNumber = fullEmployee.HouseNumber;
+            EmployeeStreet = fullEmployee.Street;
+            EmployeeBarangay = fullEmployee.Barangay;
+            EmployeeCityProvince = fullEmployee.CityProvince;
+            EmployeeZipCode = fullEmployee.ZipCode;
+
+            // Profile Picture
+            if (fullEmployee.AvatarSource != null)
+            {
+                //
             }
         }
     }
@@ -175,13 +180,13 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     private void SetDefaultValues()
     {
-        EmployeeID = "E12345";
+        EmployeeID = 13203;
         EmployeePosition = "Software Engineer";
         EmployeeStatus = "Active";
         EmployeeDateJoined = "January 15, 2023";
         EmployeeFullName = "John Doe";
         EmployeeFullNameHeader = IsFromCurrentUser ? "My Profile" : "John Doe's Profile";
-        EmployeeAge = "30";
+        EmployeeAge = 31;
         EmployeeBirthDate = "1993-05-20";
         EmployeeGender = "Male";
         EmployeePhoneNumber = "09837756473";
