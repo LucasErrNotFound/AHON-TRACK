@@ -1,17 +1,14 @@
-﻿using AHON_TRACK.Models;
+﻿using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
-using Avalonia;
-using Avalonia.Media.Imaging;
 using Microsoft.Data.SqlClient;
 using ShadUI;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
 using System.Threading.Tasks;
-using AHON_TRACK.Converters;
-using System.Linq;
 
 namespace AHON_TRACK.Services
 {
@@ -26,13 +23,633 @@ namespace AHON_TRACK.Services
             _toastManager = toastManager;
         }
 
+        #region Role-Based Access Control
+
+        private bool CanCreate()
+        {
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanUpdate()
+        {
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanDelete()
+        {
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanView()
+        {
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        #endregion
+
+        #region CREATE
+
+        public async Task<(bool Success, string Message, int? EmployeeId)> AddEmployeeAsync(ManageEmployeeModel employee)
+        {
+            if (!CanCreate())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("Only administrators can add employees.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to add employees.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Check for duplicate username
+                using var checkCmd = new SqlCommand(
+                    "SELECT COUNT(*) FROM Employees WHERE Username = @username", conn);
+                checkCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
+
+                var count = (int)await checkCmd.ExecuteScalarAsync();
+                if (count > 0)
+                {
+                    _toastManager?.CreateToast("Duplicate Username")
+                        .WithContent($"Username '{employee.Username}' already exists.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Username already exists.", null);
+                }
+
+                // Insert into Employees table
+                string employeeQuery = @"
+                    INSERT INTO Employees 
+                    (FirstName, MiddleInitial, LastName, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
+                     HouseAddress, HouseNumber, Street, Barangay, CityTown, Province, 
+                     Username, Password, Status, Position)
+                    OUTPUT INSERTED.EmployeeId
+                    VALUES 
+                    (@FirstName, @MiddleInitial, @LastName, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
+                     @HouseAddress, @HouseNumber, @Street, @Barangay, @CityTown, @Province, 
+                     @Username, @Password, @Status, @Position)";
+
+                using var cmd = new SqlCommand(employeeQuery, conn);
+                cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(employee.MiddleInitial) ? (object)DBNull.Value : employee.MiddleInitial);
+                cmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Gender", employee.Gender ?? (object)DBNull.Value);
+                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = employee.ProfilePicture ?? (object)DBNull.Value;
+                cmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Age", employee.Age > 0 ? employee.Age : (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@DateOfBirth", employee.DateOfBirth ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@HouseAddress", employee.HouseAddress ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@HouseNumber", employee.HouseNumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Street", employee.Street ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Password", employee.Password ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
+                cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
+
+                int employeeId = (int)await cmd.ExecuteScalarAsync();
+
+                // Insert into Admins or Staffs table
+                if (employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    string adminQuery = @"INSERT INTO Admins (EmployeeID, Username, Password) 
+                                         VALUES (@EmployeeID, @Username, @Password)";
+                    using var adminCmd = new SqlCommand(adminQuery, conn);
+                    adminCmd.Parameters.AddWithValue("@EmployeeID", employeeId);
+                    adminCmd.Parameters.AddWithValue("@Username", employee.Username);
+                    adminCmd.Parameters.AddWithValue("@Password", employee.Password);
+                    await adminCmd.ExecuteNonQueryAsync();
+                }
+                else if (employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    string staffQuery = @"INSERT INTO Staffs (EmployeeID, Username, Password) 
+                                         VALUES (@EmployeeID, @Username, @Password)";
+                    using var staffCmd = new SqlCommand(staffQuery, conn);
+                    staffCmd.Parameters.AddWithValue("@EmployeeID", employeeId);
+                    staffCmd.Parameters.AddWithValue("@Username", employee.Username);
+                    staffCmd.Parameters.AddWithValue("@Password", employee.Password);
+                    await staffCmd.ExecuteNonQueryAsync();
+                }
+
+                await LogActionAsync(conn, "CREATE", $"Added new {employee.Position}: {employee.FirstName} {employee.LastName}", true);
+
+                _toastManager?.CreateToast("Employee Added")
+                    .WithContent($"Successfully added {employee.FirstName} {employee.LastName}.")
+                    .DismissOnClick()
+                    .ShowSuccess();
+
+                return (true, "Employee added successfully.", employeeId);
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to add employee: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"AddEmployeeAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"AddEmployeeAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        #endregion
+
+        #region READ
+
+        public async Task<(bool Success, string Message, List<ManageEmployeeModel>? Employees)> GetEmployeesAsync()
+        {
+            if (!CanView())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("You don't have permission to view employees.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to view employees.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT 
+                        EmployeeId,
+                        FirstName,
+                        MiddleInitial,
+                        LastName,
+                        LTRIM(RTRIM(FirstName + ISNULL(' ' + MiddleInitial + '.', '') + ' ' + LastName)) AS Name,
+                        Username,
+                        ContactNumber,
+                        Position,
+                        Status,
+                        DateJoined,
+                        ProfilePicture
+                    FROM Employees
+                    ORDER BY Name;";
+
+                var employees = new List<ManageEmployeeModel>();
+
+                using var cmd = new SqlCommand(query, conn);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    employees.Add(new ManageEmployeeModel
+                    {
+                        ID = reader.GetInt32(0),
+                        EmployeeId = reader.GetInt32(0),
+                        FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                        MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                        Name = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                        Username = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                        ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                        Position = reader.IsDBNull(7) ? string.Empty : reader.GetString(7),
+                        Status = reader.IsDBNull(8) ? "Active" : reader.GetString(8),
+                        DateJoined = reader.IsDBNull(9) ? DateTime.MinValue : reader.GetDateTime(9),
+                        AvatarBytes = reader.IsDBNull(10) ? null : (byte[])reader[10],
+                        AvatarSource = reader.IsDBNull(10)
+                            ? ImageHelper.GetDefaultAvatar()
+                            : ImageHelper.BytesToBitmap((byte[])reader[10])
+                    });
+                }
+
+                return (true, "Employees retrieved successfully.", employees);
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to load employees: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"GetEmployeesAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"GetEmployeesAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, ManageEmployeeModel? Employee)> GetEmployeeByIdAsync(int employeeId)
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view employee.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                var query = @"SELECT EmployeeId, FirstName, MiddleInitial, LastName, Username, ContactNumber, 
+                             Position, ProfilePicture, Status, DateJoined, Gender, Age, DateOfBirth,
+                             HouseAddress, HouseNumber, Street, Barangay, CityTown, Province
+                      FROM Employees 
+                      WHERE EmployeeId = @Id";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Id", employeeId);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var employee = new ManageEmployeeModel
+                    {
+                        ID = reader.GetInt32(0),
+                        EmployeeId = reader.GetInt32(0),
+                        FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                        MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                        Username = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                        ContactNumber = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                        Position = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                        Status = reader.IsDBNull(8) ? "Active" : reader.GetString(8),
+                        DateJoined = reader.IsDBNull(9) ? DateTime.MinValue : reader.GetDateTime(9),
+                        Gender = reader.IsDBNull(10) ? string.Empty : reader.GetString(10),
+                        Age = reader.IsDBNull(11) ? 0 : reader.GetInt32(11),
+                        DateOfBirth = reader.IsDBNull(12) ? null : reader.GetDateTime(12),
+                        HouseAddress = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                        HouseNumber = reader.IsDBNull(14) ? string.Empty : reader.GetString(14),
+                        Street = reader.IsDBNull(15) ? string.Empty : reader.GetString(15),
+                        Barangay = reader.IsDBNull(16) ? string.Empty : reader.GetString(16),
+                        CityTown = reader.IsDBNull(17) ? string.Empty : reader.GetString(17),
+                        Province = reader.IsDBNull(18) ? string.Empty : reader.GetString(18),
+                        AvatarBytes = reader.IsDBNull(7) ? null : (byte[])reader[7],
+                        AvatarSource = reader.IsDBNull(7)
+                            ? ImageHelper.GetDefaultAvatar()
+                            : ImageHelper.BytesToBitmap((byte[])reader[7])
+                    };
+
+                    employee.Name = $"{employee.FirstName} {(string.IsNullOrWhiteSpace(employee.MiddleInitial) ? "" : employee.MiddleInitial + ". ")}{employee.LastName}";
+
+                    return (true, "Employee retrieved successfully.", employee);
+                }
+
+                return (false, "Employee not found.", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Error retrieving employee: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"GetEmployeeByIdAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, ManageEmployeeModel? Employee)> ViewEmployeeProfileAsync(int employeeId)
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view employee profile.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT e.EmployeeId, e.FirstName, e.MiddleInitial, e.LastName, e.Gender, e.ProfilePicture, 
+                           e.ContactNumber, e.Age, e.DateOfBirth, e.HouseAddress, e.HouseNumber, e.Street, 
+                           e.Barangay, e.CityTown, e.Province, e.Username, e.Position, e.Status, e.DateJoined, e.Password,
+                           COALESCE(a.LastLogin, s.LastLogin) AS LastLogin
+                    FROM Employees e
+                    LEFT JOIN Admins a ON e.EmployeeId = a.EmployeeId
+                    LEFT JOIN Staffs s ON e.EmployeeId = s.EmployeeId
+                    WHERE e.EmployeeId = @Id;";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Id", employeeId);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var employee = new ManageEmployeeModel
+                    {
+                        ID = reader.GetInt32(0),
+                        EmployeeId = reader.GetInt32(0),
+                        FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                        MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                        Gender = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                        ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                        Age = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
+                        DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
+                        HouseAddress = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+                        HouseNumber = reader.IsDBNull(10) ? string.Empty : reader.GetString(10),
+                        Street = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+                        Barangay = reader.IsDBNull(12) ? string.Empty : reader.GetString(12),
+                        CityTown = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                        Province = reader.IsDBNull(14) ? string.Empty : reader.GetString(14),
+                        Username = reader.IsDBNull(15) ? string.Empty : reader.GetString(15),
+                        Position = reader.IsDBNull(16) ? string.Empty : reader.GetString(16),
+                        Status = reader.IsDBNull(17) ? "Active" : reader.GetString(17),
+                        DateJoined = reader.IsDBNull(18) ? DateTime.MinValue : reader.GetDateTime(18),
+                        Password = reader.IsDBNull(19) ? string.Empty : reader.GetString(19),
+                        LastLogin = reader.IsDBNull(20) ? "Never logged in" : reader.GetDateTime(20).ToString("MMMM dd, yyyy h:mm tt"),
+                        AvatarBytes = reader.IsDBNull(5) ? null : (byte[])reader[5],
+                        AvatarSource = reader.IsDBNull(5)
+                            ? ImageHelper.GetDefaultAvatar()
+                            : ImageHelper.BytesToBitmap((byte[])reader[5])
+                    };
+
+                    employee.Name = $"{employee.FirstName} {(string.IsNullOrWhiteSpace(employee.MiddleInitial) ? "" : employee.MiddleInitial + ". ")}{employee.LastName}";
+                    employee.Birthdate = employee.DateOfBirth?.ToString("yyyy-MM-dd") ?? string.Empty;
+                    employee.CityProvince = $"{employee.CityTown}, {employee.Province}".TrimEnd(',', ' ');
+
+                    return (true, "Employee profile retrieved successfully.", employee);
+                }
+
+                return (false, "Employee not found.", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Error retrieving profile: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"ViewEmployeeProfileAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        #endregion
+
+        #region UPDATE
+
+        public async Task<(bool Success, string Message)> UpdateEmployeeAsync(ManageEmployeeModel employee)
+        {
+            if (!CanUpdate())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("Only administrators can update employee data.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to update employees.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Check if employee exists
+                using var checkCmd = new SqlCommand(
+                    "SELECT COUNT(*) FROM Employees WHERE EmployeeId = @employeeId", conn);
+                checkCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
+
+                var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
+                if (!exists)
+                {
+                    _toastManager?.CreateToast("Employee Not Found")
+                        .WithContent("The employee you're trying to update doesn't exist.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Employee not found.");
+                }
+
+                // Check for duplicate username (excluding current employee)
+                using var dupCmd = new SqlCommand(
+                    "SELECT COUNT(*) FROM Employees WHERE Username = @username AND EmployeeId != @employeeId", conn);
+                dupCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
+                dupCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
+
+                var duplicateCount = (int)await dupCmd.ExecuteScalarAsync();
+                if (duplicateCount > 0)
+                {
+                    _toastManager?.CreateToast("Duplicate Username")
+                        .WithContent($"Another employee with username '{employee.Username}' already exists.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Username already exists.");
+                }
+
+                // Update employee
+                string query = @"UPDATE Employees 
+                     SET FirstName = @FirstName, 
+                         MiddleInitial = @MiddleInitial, 
+                         LastName = @LastName, 
+                         Gender = @Gender,
+                         Username = @Username, 
+                         ContactNumber = @ContactNumber, 
+                         Age = @Age,
+                         DateOfBirth = @DateOfBirth,
+                         HouseAddress = @HouseAddress,
+                         HouseNumber = @HouseNumber,
+                         Street = @Street,
+                         Barangay = @Barangay,
+                         CityTown = @CityTown,
+                         Province = @Province,
+                         Position = @Position,
+                         Status = @Status,
+                         ProfilePicture = @ProfilePicture
+                     WHERE EmployeeId = @EmployeeId";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(employee.MiddleInitial) ? (object)DBNull.Value : employee.MiddleInitial);
+                cmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Gender", employee.Gender ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Age", employee.Age > 0 ? employee.Age : (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@DateOfBirth", employee.DateOfBirth ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@HouseAddress", employee.HouseAddress ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@HouseNumber", employee.HouseNumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Street", employee.Street ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
+                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = employee.ProfilePicture ?? (object)DBNull.Value;
+
+                int rows = await cmd.ExecuteNonQueryAsync();
+                if (rows > 0)
+                {
+                    await LogActionAsync(conn, "UPDATE", $"Updated employee: {employee.FirstName} {employee.LastName}", true);
+
+                    _toastManager?.CreateToast("Employee Updated")
+                        .WithContent($"Successfully updated {employee.FirstName} {employee.LastName}.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Employee updated successfully.");
+                }
+
+                return (false, "Failed to update employee.");
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to update employee: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"UpdateEmployeeAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"UpdateEmployeeAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region DELETE
+
+        public async Task<(bool Success, string Message)> DeleteEmployeeAsync(int employeeId)
+        {
+            if (!CanDelete())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("Only administrators can delete employees.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to delete employees.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var transaction = conn.BeginTransaction();
+
+                try
+                {
+                    // Get employee name for logging
+                    string employeeName = string.Empty;
+                    using var getNameCmd = new SqlCommand(
+                        "SELECT FirstName, LastName FROM Employees WHERE EmployeeId = @employeeId", conn, transaction);
+                    getNameCmd.Parameters.AddWithValue("@employeeId", employeeId);
+
+                    using var nameReader = await getNameCmd.ExecuteReaderAsync();
+                    if (await nameReader.ReadAsync())
+                    {
+                        employeeName = $"{nameReader[0]} {nameReader[1]}";
+                    }
+                    nameReader.Close();
+
+                    if (string.IsNullOrEmpty(employeeName))
+                    {
+                        _toastManager?.CreateToast("Employee Not Found")
+                            .WithContent("The employee you're trying to delete doesn't exist.")
+                            .DismissOnClick()
+                            .ShowWarning();
+                        return (false, "Employee not found.");
+                    }
+
+                    // Delete from Staffs table
+                    using var deleteStaffCmd = new SqlCommand(
+                        "DELETE FROM Staffs WHERE EmployeeID = @employeeId", conn, transaction);
+                    deleteStaffCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                    await deleteStaffCmd.ExecuteNonQueryAsync();
+
+                    // Delete from Admins table
+                    using var deleteAdminCmd = new SqlCommand(
+                        "DELETE FROM Admins WHERE EmployeeID = @employeeId", conn, transaction);
+                    deleteAdminCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                    await deleteAdminCmd.ExecuteNonQueryAsync();
+
+                    // Delete from Employees table
+                    using var deleteEmpCmd = new SqlCommand(
+                        "DELETE FROM Employees WHERE EmployeeId = @employeeId", conn, transaction);
+                    deleteEmpCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                    int rowsAffected = await deleteEmpCmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        await LogActionAsync(conn, "DELETE", $"Deleted employee: {employeeName} (ID: {employeeId})", true);
+                        transaction.Commit();
+
+                        _toastManager?.CreateToast("Employee Deleted")
+                            .WithContent($"Successfully deleted {employeeName}.")
+                            .DismissOnClick()
+                            .ShowSuccess();
+
+                        return (true, "Employee deleted successfully.");
+                    }
+
+                    transaction.Rollback();
+                    return (false, "Failed to delete employee.");
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to delete employee: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"DeleteEmployeeAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"DeleteEmployeeAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        #endregion
+        #region UTILITY METHODS
+
         private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success)
         {
             try
             {
                 using var logCmd = new SqlCommand(
                     @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
-                      VALUES (@username, @role, @actionType, @description, @success, GETDATE()), @employeeID", conn);
+                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)", conn);
 
                 logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
                 logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
@@ -49,465 +666,26 @@ namespace AHON_TRACK.Services
             }
         }
 
-        public async Task<bool> AddEmployeeAsync(EmployeeModel employee)
+        public async Task<int> GetTotalEmployeeCountAsync()
         {
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // 1️⃣ Insert into Employees first
-                string employeeQuery = @"
-            INSERT INTO Employees 
-            (FirstName, MiddleInitial, LastName, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
-             HouseAddress, HouseNumber, Street, Barangay, CityTown, Province, 
-             Username, Password, Status, Position)
-            OUTPUT INSERTED.EmployeeId
-            VALUES 
-            (@FirstName, @MiddleInitial, @LastName, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
-             @HouseAddress, @HouseNumber, @Street, @Barangay, @CityTown, @Province, 
-             @Username, @Password, @Status, @Position)";
+                string query = "SELECT COUNT(*) FROM Employees";
+                using var cmd = new SqlCommand(query, conn);
 
-                using var cmd = new SqlCommand(employeeQuery, conn);
-                cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@MiddleInitial", employee.MiddleInitial ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Gender", employee.Gender ?? (object)DBNull.Value);
-
-                byte[]? profilePictureBytes = employee.ProfilePicture as byte[];
-                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = profilePictureBytes ?? (object)DBNull.Value;
-
-                cmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Age", employee.Age ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DateOfBirth", employee.DateOfBirth ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@HouseAddress", employee.HouseAddress ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@HouseNumber", employee.HouseNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Street", employee.Street ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Password", employee.Password ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
-                cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
-
-                // 🔑 Get the new EmployeeId
-                int employeeId = (int)await cmd.ExecuteScalarAsync();
-
-                // 2️⃣ Insert into Admin or Staff depending on Position
-                if (employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    string adminQuery = @"
-                INSERT INTO Admins (EmployeeID, Username, Password) 
-                VALUES (@EmployeeID, @Username, @Password)";
-
-                    using var adminCmd = new SqlCommand(adminQuery, conn);
-                    adminCmd.Parameters.AddWithValue("@EmployeeID", employeeId);
-                    adminCmd.Parameters.AddWithValue("@Username", employee.Username);
-                    adminCmd.Parameters.AddWithValue("@Password", employee.Password); // ⚠️ Consider hashing
-
-                    await adminCmd.ExecuteNonQueryAsync();
-                }
-                else if (employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    string staffQuery = @"
-                INSERT INTO Staffs (EmployeeID, Username, Password) 
-                VALUES (@EmployeeID, @Username, @Password)";
-
-                    using var staffCmd = new SqlCommand(staffQuery, conn);
-                    staffCmd.Parameters.AddWithValue("@EmployeeID", employeeId);
-                    staffCmd.Parameters.AddWithValue("@Username", employee.Username);
-                    staffCmd.Parameters.AddWithValue("@Password", employee.Password); // ⚠️ Consider hashing
-
-                    await staffCmd.ExecuteNonQueryAsync();
-                }
-
-                // ✅ Success Toast
-                _toastManager?.CreateToast("Success")
-                    .WithContent("Employee added successfully!")
-                    .DismissOnClick()
-                    .ShowSuccess();
-
-                await LogActionAsync(conn, "Add Employee", $"Added new {employee.Position}: {employee.FirstName} {employee.LastName}", true);
-
-                return true;
+                var result = await cmd.ExecuteScalarAsync();
+                return Convert.ToInt32(result);
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error adding employee: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"AddEmployeeAsync Error: {ex}");
-
-                try
-                {
-                    await using var conn2 = new SqlConnection(_connectionString);
-                    await conn2.OpenAsync();
-                    await LogActionAsync(conn2, "Add Employee", $"Error adding employee: {ex.Message}", false);
-                }
-                catch { }
-
-                return false;
+                System.Diagnostics.Debug.WriteLine($"GetTotalEmployeeCountAsync Error: {ex}");
+                return 0;
             }
         }
 
-
-
-        public async Task<ManageEmployeeModel?> GetEmployeeByIdAsync(int employeeId)
-        {
-            ManageEmployeeModel? employee = null;
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-                    var query = @"SELECT EmployeeId, FirstName, MiddleInitial, LastName, Username, ContactNumber, 
-                         Position, ProfilePicture, Status, DateJoined
-                      FROM Employees 
-                      WHERE EmployeeId = @Id";
-
-                    using (var cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", employeeId);
-
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            if (await reader.ReadAsync())
-                            {
-                                employee = new ManageEmployeeModel
-                                {
-                                    ID = reader["EmployeeId"].ToString() ?? string.Empty,
-                                    Name = $"{reader["FirstName"]} {(string.IsNullOrWhiteSpace(reader["MiddleInitial"]?.ToString()) ? "" : reader["MiddleInitial"] + ". ")}{reader["LastName"]}",
-                                    Username = reader["Username"]?.ToString() ?? string.Empty,
-                                    ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                                    Position = reader["Position"]?.ToString() ?? string.Empty,
-                                    Status = reader["Status"]?.ToString() ?? "Active",
-                                    DateJoined = reader["DateJoined"] == DBNull.Value ? DateTime.MinValue : Convert.ToDateTime(reader["DateJoined"]),
-
-                                    // SIMPLIFIED: Use ImageHelper to handle avatar conversion
-                                    AvatarSource = reader["ProfilePicture"] == DBNull.Value ? ImageHelper.GetDefaultAvatar() : ImageHelper.GetAvatarOrDefault((byte[])reader["ProfilePicture"])
-
-                                };
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error retrieving employee: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"GetEmployeeByIdAsync Error: {ex}");
-            }
-
-            return employee;
-        }
-
-        public async Task<List<ManageEmployeeModel>> GetEmployeesAsync()
-        {
-            var employees = new List<ManageEmployeeModel>();
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-
-                    string query = @"
-                        SELECT 
-                            EmployeeId,
-                            LTRIM(RTRIM(
-                                FirstName + 
-                                ISNULL(' ' + MiddleInitial + '.', '') + 
-                                ' ' + LastName
-                            )) AS Name,
-                            Username,
-                            ContactNumber,
-                            Position,
-                            Status,
-                            DateJoined,
-                            ProfilePicture
-                        FROM Employees
-                        ORDER BY Name;";
-
-                    using (var cmd = new SqlCommand(query, conn))
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            employees.Add(new ManageEmployeeModel
-                            {
-                                ID = reader["EmployeeId"]?.ToString() ?? string.Empty,
-                                Name = reader["Name"]?.ToString() ?? string.Empty,
-                                Username = reader["Username"]?.ToString() ?? string.Empty,
-                                ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                                Position = reader["Position"]?.ToString() ?? string.Empty,
-                                Status = reader["Status"]?.ToString() ?? "Active",
-                                DateJoined = reader["DateJoined"] == DBNull.Value
-                                    ? DateTime.MinValue
-                                    : Convert.ToDateTime(reader["DateJoined"]),
-
-                                // SIMPLIFIED: Use ImageHelper for all avatar handling
-                                AvatarBytes = reader["ProfilePicture"] == DBNull.Value ? null : (byte[])reader["ProfilePicture"],
-
-                                AvatarSource = reader["ProfilePicture"] == DBNull.Value ? ImageHelper.GetDefaultAvatar() : ImageHelper.BytesToBitmap((byte[])reader["ProfilePicture"])
-                            });
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error loading employees: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"GetEmployeesAsync Error: {ex}");
-            }
-
-            return employees;
-        }
-
-        // ✅ NEW: Search functionality for employees based on search term
-        public async Task<List<ManageEmployeeModel>> SearchEmployeesAsync(string searchTerm)
-        {
-            if (string.IsNullOrWhiteSpace(searchTerm))
-            {
-                return await GetEmployeesAsync(); // Return all employees if search is empty
-            }
-
-            var employees = new List<ManageEmployeeModel>();
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-
-                    string query = @"
-                        SELECT 
-                            EmployeeId,
-                            LTRIM(RTRIM(
-                                FirstName + 
-                                ISNULL(' ' + MiddleInitial + '.', '') + 
-                                ' ' + LastName
-                            )) AS Name,
-                            Username,
-                            ContactNumber,
-                            Position,
-                            Status,
-                            DateJoined,
-                            ProfilePicture
-                        FROM Employees
-                        WHERE FirstName LIKE @SearchTerm 
-                           OR LastName LIKE @SearchTerm 
-                           OR Username LIKE @SearchTerm 
-                           OR ContactNumber LIKE @SearchTerm
-                           OR Position LIKE @SearchTerm
-                           OR CONCAT(FirstName, ' ', LastName) LIKE @SearchTerm
-                        ORDER BY Name;";
-
-                    using (var cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@SearchTerm", $"%{searchTerm}%");
-
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                employees.Add(new ManageEmployeeModel
-                                {
-                                    ID = reader["EmployeeId"]?.ToString() ?? string.Empty,
-                                    Name = reader["Name"]?.ToString() ?? string.Empty,
-                                    Username = reader["Username"]?.ToString() ?? string.Empty,
-                                    ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                                    Position = reader["Position"]?.ToString() ?? string.Empty,
-                                    Status = reader["Status"]?.ToString() ?? "Active",
-                                    DateJoined = reader["DateJoined"] == DBNull.Value
-                                        ? DateTime.MinValue
-                                        : Convert.ToDateTime(reader["DateJoined"]),
-                                    AvatarBytes = reader["ProfilePicture"] == DBNull.Value
-                                        ? null
-                                        : (byte[])reader["ProfilePicture"],
-                                    AvatarSource = reader["ProfilePicture"] == DBNull.Value
-                                        ? ImageHelper.GetDefaultAvatar()
-                                        : ImageHelper.BytesToBitmap((byte[])reader["ProfilePicture"])
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error searching employees: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"SearchEmployeesAsync Error: {ex}");
-            }
-
-            return employees;
-        }
-
-        // ✅ NEW: Get employees by status (Active, Inactive, Terminated)
-        public async Task<List<ManageEmployeeModel>> GetEmployeesByStatusAsync(string status)
-        {
-            var employees = new List<ManageEmployeeModel>();
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-
-                    string query = @"
-                        SELECT 
-                            EmployeeId,
-                            LTRIM(RTRIM(
-                                FirstName + 
-                                ISNULL(' ' + MiddleInitial + '.', '') + 
-                                ' ' + LastName
-                            )) AS Name,
-                            Username,
-                            ContactNumber,
-                            Position,
-                            Status,
-                            DateJoined,
-                            ProfilePicture
-                        FROM Employees
-                        WHERE Status = @Status
-                        ORDER BY Name;";
-
-                    using (var cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@Status", status);
-
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                employees.Add(new ManageEmployeeModel
-                                {
-                                    ID = reader["EmployeeId"]?.ToString() ?? string.Empty,
-                                    Name = reader["Name"]?.ToString() ?? string.Empty,
-                                    Username = reader["Username"]?.ToString() ?? string.Empty,
-                                    ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                                    Position = reader["Position"]?.ToString() ?? string.Empty,
-                                    Status = reader["Status"]?.ToString() ?? "Active",
-                                    DateJoined = reader["DateJoined"] == DBNull.Value
-                                        ? DateTime.MinValue
-                                        : Convert.ToDateTime(reader["DateJoined"]),
-                                    AvatarBytes = reader["ProfilePicture"] == DBNull.Value
-                                        ? null
-                                        : (byte[])reader["ProfilePicture"],
-                                    AvatarSource = reader["ProfilePicture"] == DBNull.Value
-                                        ? ImageHelper.GetDefaultAvatar()
-                                        : ImageHelper.BytesToBitmap((byte[])reader["ProfilePicture"])
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error filtering employees by status: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"GetEmployeesByStatusAsync Error: {ex}");
-            }
-
-            return employees;
-        }
-
-        // ✅ NEW: Get employees with sorting options
-        public async Task<List<ManageEmployeeModel>> GetEmployeesSortedAsync(string sortBy, bool descending = false)
-        {
-            var employees = new List<ManageEmployeeModel>();
-            string orderByClause = sortBy.ToLower() switch
-            {
-                "id" => descending ? "EmployeeId DESC" : "EmployeeId ASC",
-                "name" => descending ? "Name DESC" : "Name ASC",
-                "username" => descending ? "Username DESC" : "Username ASC",
-                "datejoined" => descending ? "DateJoined DESC" : "DateJoined ASC",
-                _ => "Name ASC" // Default sort by name
-            };
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-
-                    string query = $@"
-                        SELECT 
-                            EmployeeId,
-                            LTRIM(RTRIM(
-                                FirstName + 
-                                ISNULL(' ' + MiddleInitial + '.', '') + 
-                                ' ' + LastName
-                            )) AS Name,
-                            Username,
-                            ContactNumber,
-                            Position,
-                            Status,
-                            DateJoined,
-                            ProfilePicture
-                        FROM Employees
-                        ORDER BY {orderByClause};";
-
-                    using (var cmd = new SqlCommand(query, conn))
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            employees.Add(new ManageEmployeeModel
-                            {
-                                ID = reader["EmployeeId"]?.ToString() ?? string.Empty,
-                                Name = reader["Name"]?.ToString() ?? string.Empty,
-                                Username = reader["Username"]?.ToString() ?? string.Empty,
-                                ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                                Position = reader["Position"]?.ToString() ?? string.Empty,
-                                Status = reader["Status"]?.ToString() ?? "Active",
-                                DateJoined = reader["DateJoined"] == DBNull.Value
-                                    ? DateTime.MinValue
-                                    : Convert.ToDateTime(reader["DateJoined"]),
-                                AvatarBytes = reader["ProfilePicture"] == DBNull.Value
-                                    ? null
-                                    : (byte[])reader["ProfilePicture"],
-                                AvatarSource = reader["ProfilePicture"] == DBNull.Value
-                                    ? ImageHelper.GetDefaultAvatar()
-                                    : ImageHelper.BytesToBitmap((byte[])reader["ProfilePicture"])
-                            });
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error sorting employees: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"GetEmployeesSortedAsync Error: {ex}");
-            }
-
-            return employees;
-        }
-
-        // ✅ NEW: Get employee count by status
         public async Task<int> GetEmployeeCountByStatusAsync(string status)
         {
             try
@@ -524,319 +702,48 @@ namespace AHON_TRACK.Services
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error getting employee count: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
                 System.Diagnostics.Debug.WriteLine($"GetEmployeeCountByStatusAsync Error: {ex}");
                 return 0;
             }
         }
 
-        // ✅ NEW: Get total employee count
-        public async Task<int> GetTotalEmployeeCountAsync()
+        public async Task<(bool Success, int ActiveCount, int InactiveCount, int TerminatedCount)> GetEmployeeStatisticsAsync()
         {
-            try
+            if (!CanView())
             {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                string query = "SELECT COUNT(*) FROM Employees";
-                using var cmd = new SqlCommand(query, conn);
-
-                var result = await cmd.ExecuteScalarAsync();
-                return Convert.ToInt32(result);
+                return (false, 0, 0, 0);
             }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error getting total employee count: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"GetTotalEmployeeCountAsync Error: {ex}");
-                return 0;
-            }
-        }
-
-        public async Task<bool> UpdateEmployeeAsync(EmployeeModel employee)
-        {
-            try
-            {
-                // ✅ Check if user has permission
-                if (CurrentUserModel.Role != "Admin")
-                {
-                    _toastManager?.CreateToast("Access Denied")
-                        .WithContent("Only Admin users can update employee data.")
-                        .DismissOnClick()
-                        .ShowError();
-
-                    return false;
-                }
-
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                string query = @"UPDATE Employees 
-                     SET FirstName=@FirstName, 
-                         MiddleInitial=@MiddleInitial, 
-                         LastName=@LastName, 
-                         Username=@Username, 
-                         ContactNumber=@ContactNumber, 
-                         Position=@Position,
-                         ProfilePicture=@ProfilePicture
-                     WHERE EmployeeId=@EmployeeId";
-
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
-                cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@MiddleInitial", employee.MiddleInitial ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
-
-                // SIMPLIFIED: Use ImageHelper for conversion
-                byte[]? profilePictureBytes = null;
-                if (employee.ProfilePicture != null)
-                {
-                    if (employee.ProfilePicture is byte[] bytes)
-                    {
-                        profilePictureBytes = bytes;
-                    }
-                    else if ((object)employee.ProfilePicture is Bitmap bitmap)
-                    {
-                        profilePictureBytes = ImageHelper.BitmapToBytes(bitmap);
-                    }
-                }
-
-                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value =
-                profilePictureBytes ?? (object)DBNull.Value;
-
-                int rows = await cmd.ExecuteNonQueryAsync();
-                if (rows > 0)
-                {
-                    await LogActionAsync(conn, "Update Employee", $"Updated employee: {employee.FirstName} {employee.LastName}", true);
-                    return true;
-                }
-                else
-                {
-                    await LogActionAsync(conn, "Update Employee", $"Failed to update employee: {employee.EmployeeId}", false);
-                    return false;
-                }
-            }
-
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error updating employee: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"UpdateEmployeeAsync Error: {ex}");
-                return false;
-            }
-        }
-
-        public async Task<bool> DeleteEmployeeAsync(int id)
-        {
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                // Start a transaction to ensure all deletions succeed or fail together
-                using var transaction = conn.BeginTransaction();
-
-                try
-                {
-                    // Get employee details for logging before deletion
-                    string employeeName = "";
-                    string getEmployeeQuery = "SELECT FirstName, LastName FROM Employees WHERE EmployeeId = @EmployeeId";
-                    using (var getCmd = new SqlCommand(getEmployeeQuery, conn, transaction))
-                    {
-                        getCmd.Parameters.AddWithValue("@EmployeeId", id);
-                        using var reader = await getCmd.ExecuteReaderAsync();
-                        if (await reader.ReadAsync())
-                        {
-                            employeeName = $"{reader["FirstName"]} {reader["LastName"]}";
-                        }
-                    }
-
-                    // 1. Delete from Staffs table first (if exists)
-                    string deleteStaffQuery = "DELETE FROM Staffs WHERE EmployeeID = @EmployeeId";
-                    using (var staffCmd = new SqlCommand(deleteStaffQuery, conn, transaction))
-                    {
-                        staffCmd.Parameters.AddWithValue("@EmployeeId", id);
-                        await staffCmd.ExecuteNonQueryAsync();
-                    }
-
-                    // 2. Delete from Admins table (if exists)
-                    string deleteAdminQuery = "DELETE FROM Admins WHERE EmployeeID = @EmployeeId";
-                    using (var adminCmd = new SqlCommand(deleteAdminQuery, conn, transaction))
-                    {
-                        adminCmd.Parameters.AddWithValue("@EmployeeId", id);
-                        await adminCmd.ExecuteNonQueryAsync();
-                    }
-
-                    // 3. Finally, delete from Employees table
-                    string deleteEmployeeQuery = "DELETE FROM Employees WHERE EmployeeId = @EmployeeId";
-                    using (var empCmd = new SqlCommand(deleteEmployeeQuery, conn, transaction))
-                    {
-                        empCmd.Parameters.AddWithValue("@EmployeeId", id);
-                        int rows = await empCmd.ExecuteNonQueryAsync();
-
-                        if (rows > 0)
-                        {
-                            // Commit the transaction
-                            transaction.Commit();
-
-                            // Log success
-                            using var conn2 = new SqlConnection(_connectionString);
-                            await conn2.OpenAsync();
-                            await LogActionAsync(conn2, "Delete Employee", $"Successfully deleted employee: {employeeName} (ID: {id})", true);
-
-                            // Show success toast
-                            _toastManager?.CreateToast("Success")
-                                .WithContent($"Employee {employeeName} deleted successfully!")
-                                .DismissOnClick()
-                                .ShowSuccess();
-
-                            return true;
-                        }
-                        else
-                        {
-                            // Rollback if no employee was found
-                            transaction.Rollback();
-
-                            _toastManager?.CreateToast("Warning")
-                                .WithContent("Employee not found or already deleted.")
-                                .DismissOnClick()
-                                .ShowWarning();
-
-                            return false;
-                        }
-                    }
-                }
-                catch
-                {
-                    // Rollback transaction on any error
-                    transaction.Rollback();
-                    throw; // Re-throw to be caught by outer catch block
-                }
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error deleting employee: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"DeleteEmployeeAsync Error: {ex}");
-
-                // Log the error
-                try
-                {
-                    using var conn2 = new SqlConnection(_connectionString);
-                    await conn2.OpenAsync();
-                    await LogActionAsync(conn2, "Delete Employee", $"Failed to delete employee ID: {id} - {ex.Message}", false);
-                }
-                catch { /* Ignore logging errors */ }
-
-                return false;
-            }
-        }
-
-        public async Task<ManageEmployeeModel?> ViewEmployeeProfileAsync(int employeeId)
-        {
-            ManageEmployeeModel employee = new ManageEmployeeModel(); // will already have defaults
 
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = @"
-            SELECT e.EmployeeId, 
-       e.FirstName, 
-       e.MiddleInitial, 
-       e.LastName, 
-       e.Gender, 
-       e.ProfilePicture, 
-       e.ContactNumber, 
-       e.Age, 
-       e.DateOfBirth, 
-       e.HouseAddress, 
-       e.HouseNumber, 
-       e.Street, 
-       e.Barangay, 
-       e.CityTown, 
-       e.Province,
-       e.Username, 
-       e.Position, 
-       e.Status, 
-       e.DateJoined,
-       COALESCE(a.LastLogin, s.LastLogin) AS LastLogin
-FROM Employees e
-LEFT JOIN Admins a ON e.EmployeeId = a.EmployeeId
-LEFT JOIN Staffs s ON e.EmployeeId = s.EmployeeId
-WHERE e.EmployeeId = @Id;";
-
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Id", employeeId);
+                using var cmd = new SqlCommand(
+                    @"SELECT 
+                        SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) as ActiveCount,
+                        SUM(CASE WHEN Status = 'Inactive' THEN 1 ELSE 0 END) as InactiveCount,
+                        SUM(CASE WHEN Status = 'Terminated' THEN 1 ELSE 0 END) as TerminatedCount
+                      FROM Employees", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
-                    employee.ID = reader["EmployeeId"]?.ToString() ?? employee.ID;
-                    employee.Name = $"{reader["FirstName"]} {(string.IsNullOrWhiteSpace(reader["MiddleInitial"]?.ToString()) ? "" : reader["MiddleInitial"] + ". ")}{reader["LastName"]}";
-                    employee.Username = reader["Username"]?.ToString() ?? employee.Username;
-                    employee.ContactNumber = reader["ContactNumber"]?.ToString() ?? employee.ContactNumber;
-                    employee.Position = reader["Position"]?.ToString() ?? employee.Position;
-                    employee.Status = reader["Status"]?.ToString() ?? employee.Status;
-                    employee.DateJoined = reader["DateJoined"] == DBNull.Value
-                        ? employee.DateJoined
-                        : Convert.ToDateTime(reader["DateJoined"]);
-
-                    // Profile Picture
-                    if (reader["ProfilePicture"] != DBNull.Value)
-                    {
-                        var bytes = (byte[])reader["ProfilePicture"];
-                        employee.AvatarBytes = bytes;
-                        employee.AvatarSource = ImageHelper.BytesToBitmap(bytes);
-                    }
-                    else
-                    {
-                        employee.AvatarSource = ImageHelper.GetDefaultAvatar();
-                    }
-
-                    // Extra fields with fallback
-                    employee.Gender = reader["Gender"]?.ToString() ?? employee.Gender;
-                    employee.Age = reader["Age"]?.ToString() ?? employee.Age;
-                    employee.Birthdate = reader["DateOfBirth"] == DBNull.Value
-                        ? employee.Birthdate
-                        : Convert.ToDateTime(reader["DateOfBirth"]).ToString("yyyy-MM-dd");
-
-                    employee.HouseAddress = reader["HouseAddress"]?.ToString() ?? employee.HouseAddress;
-                    employee.HouseNumber = reader["HouseNumber"]?.ToString() ?? employee.HouseNumber;
-                    employee.Street = reader["Street"]?.ToString() ?? employee.Street;
-                    employee.Barangay = reader["Barangay"]?.ToString() ?? employee.Barangay;
-                    employee.CityProvince = $"{reader["CityTown"]?.ToString() ?? ""}, {reader["Province"]?.ToString() ?? ""}".TrimEnd(',', ' ');
-                    employee.LastLogin = reader["LastLogin"] == DBNull.Value ? "Never logged in" : Convert.ToDateTime(reader["LastLogin"]).ToString("MMMM dd, yyyy h:mm tt");
+                    return (true,
+                        reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
+                        reader.IsDBNull(2) ? 0 : reader.GetInt32(2));
                 }
+
+                return (false, 0, 0, 0);
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error retrieving profile: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"ViewEmployeeProfileAsync Error: {ex}");
+                Console.WriteLine($"[GetEmployeeStatisticsAsync] {ex.Message}");
+                return (false, 0, 0, 0);
             }
-
-            return employee;
         }
+
+        #endregion
     }
 }
