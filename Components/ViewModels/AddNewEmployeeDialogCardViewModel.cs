@@ -4,6 +4,7 @@ using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
@@ -19,15 +20,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-<<<<<<< HEAD
 using System.ComponentModel;
-using Tmds.DBus.Protocol;
-=======
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -47,7 +40,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _dialogDescription = "Please fill out the form to create this employee's information";
-    
+
     [ObservableProperty]
     private Image? _employeeProfileImageControl;
 
@@ -58,10 +51,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private int? _editingEmployeeID;
 
     private readonly DialogManager _dialogManager;
-<<<<<<< HEAD
     private readonly IEmployeeService _employeeService;
-=======
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
     private readonly ToastManager _toastManager;
 
     // Personal Details Section
@@ -268,7 +258,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeStatus, value, true);
     }
 
-<<<<<<< HEAD
     private byte[]? _profileImage;
     public byte[]? ProfileImage
     {
@@ -288,22 +277,13 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         _dialogManager = dialogManager;
         _employeeService = employeeService;
         _toastManager = toastManager;
-=======
-    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager)
-    {
-        _dialogManager = dialogManager;
-        _toastManager =  toastManager;
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
     }
 
     public AddNewEmployeeDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-<<<<<<< HEAD
         _employeeService = new EmployeeService("Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True", _toastManager);
-=======
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
     }
 
     [AvaloniaHotReload]
@@ -415,9 +395,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-<<<<<<< HEAD
-    private async Task SaveDetails()
-=======
     private async Task ChooseFile()
     {
         try
@@ -451,28 +428,41 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                     .WithContent($"{selectedFile.Name}")
                     .DismissOnClick()
                     .ShowInfo();
-                
+
                 var file = files[0];
                 await using var stream = await file.OpenReadAsync();
-                
+
                 var bitmap = new Bitmap(stream);
-                
+
+                // Update UI control if present
                 if (EmployeeProfileImageControl != null)
                 {
                     EmployeeProfileImageControl.Source = bitmap;
                     EmployeeProfileImageControl.IsVisible = true;
                 }
+
+                // Convert to bytes for database storage
+                stream.Position = 0;
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                ProfileImage = memoryStream.ToArray();
+                ProfileImageSource = bitmap;
+
+                Debug.WriteLine($"✅ Profile image loaded: {ProfileImage.Length} bytes");
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+            _toastManager?.CreateToast("Image Error")
+                .WithContent($"Failed to load image: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
     }
 
     [RelayCommand]
-    private void SaveDetails()
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
+    private async Task SaveDetails()
     {
         ClearAllErrors();
         ValidateAllProperties();

@@ -1,5 +1,11 @@
 using AHON_TRACK.Models;
 using AHON_TRACK.ViewModels;
+using AHON_TRACK.Services.Interface;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -11,21 +17,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
-<<<<<<< HEAD
-using AHON_TRACK.Services.Interface;
 using System.Threading.Tasks;
-=======
-using System.Threading.Tasks;
-using AHON_TRACK.ViewModels;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using HotAvalonia;
-using ShadUI;
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -46,21 +38,17 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private string[] _middleInitialItems =
         ["A", "B", "C", "D", "E", "F", "G", "H",
             "I", "J", "K", "L", "M", "N", "O", "P",
-            "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]; // Revert change because of char to string issue
+            "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
     [ObservableProperty]
     private string[] _memberPackageItems = ["Boxing", "Muay Thai", "Crossfit", "Zumba"];
 
     [ObservableProperty]
     private string[] _memberStatusItems = ["Active", "Inactive", "Terminated"];
-<<<<<<< HEAD
 
-=======
-    
     [ObservableProperty]
     private Image? _memberProfileImageControl;
-    
->>>>>>> 3d0b72ea1b94d42a04b663f9d6bd8827b78aa8fc
+
     // Personal Details Section
     private string _memberFirstName = string.Empty;
     private string _selectedMiddleInitialItem = string.Empty;
@@ -88,6 +76,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private bool _isCashSelected;
     private bool _isGCashSelected;
     private bool _isMayaSelected;
+
+    // Status Selection
+    private bool _isActiveSelected;
+    private bool _isInactiveSelected;
+    private bool _isTerminatedSelected;
 
     public bool IsCashVisible => IsCashSelected;
     public bool IsGCashVisible => IsGCashSelected;
@@ -414,6 +407,66 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         }
     }
 
+    public bool IsActiveSelected
+    {
+        get => _isActiveSelected;
+        set
+        {
+            if (_isActiveSelected == value) return;
+            _isActiveSelected = value;
+
+            if (value)
+            {
+                _isInactiveSelected = false;
+                _isTerminatedSelected = false;
+                OnPropertyChanged(nameof(IsInactiveSelected));
+                OnPropertyChanged(nameof(IsTerminatedSelected));
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsInactiveSelected
+    {
+        get => _isInactiveSelected;
+        set
+        {
+            if (_isInactiveSelected == value) return;
+            _isInactiveSelected = value;
+
+            if (value)
+            {
+                _isActiveSelected = false;
+                _isTerminatedSelected = false;
+                OnPropertyChanged(nameof(IsActiveSelected));
+                OnPropertyChanged(nameof(IsTerminatedSelected));
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsTerminatedSelected
+    {
+        get => _isTerminatedSelected;
+        set
+        {
+            if (_isTerminatedSelected == value) return;
+            _isTerminatedSelected = value;
+
+            if (value)
+            {
+                _isActiveSelected = false;
+                _isInactiveSelected = false;
+                OnPropertyChanged(nameof(IsActiveSelected));
+                OnPropertyChanged(nameof(IsInactiveSelected));
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
     public string MemberFullName
     {
         get
@@ -506,10 +559,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
     private void PopulateFormWithMemberData(ManageMembersItem member)
     {
-        // Remove whitespaces from contact number
         MemberContactNumber = member.ContactNumber.Replace(" ", "");
 
-        // Parse the name using the enhanced algorithm
         var nameResult = ParseFullName(member.Name);
 
         MemberFirstName = nameResult.FirstName;
@@ -532,16 +583,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
         if (nameParts.Length == 1)
         {
-            // Only one part - treat as first name
             return (nameParts[0], string.Empty, string.Empty);
         }
 
-        // Look for middle initial (single character with optional dot, not at first or last position)
         int middleInitialIndex = FindMiddleInitialIndex(nameParts);
 
         if (middleInitialIndex != -1)
         {
-            // Found middle initial - everything before is first name, everything after is last name
             string firstName = string.Join(" ", nameParts.Take(middleInitialIndex));
             string middleInitial = nameParts[middleInitialIndex].TrimEnd('.');
             string lastName = string.Join(" ", nameParts.Skip(middleInitialIndex + 1));
@@ -549,59 +597,47 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             return (firstName, middleInitial, lastName);
         }
 
-        // No middle initial found - use strategy to split first and last name
         return SplitFirstAndLastName(nameParts);
     }
 
     private int FindMiddleInitialIndex(string[] nameParts)
     {
-        // Look for middle initial (not at first or last position)
         for (int i = 1; i < nameParts.Length - 1; i++)
         {
             string part = nameParts[i];
 
-            // Check if it's a single character or single character with dot
             if (part.Length == 1 || (part.Length == 2 && part.EndsWith(".")))
             {
                 return i;
             }
         }
 
-        return -1; // No middle initial found
+        return -1;
     }
 
     private (string FirstName, string MiddleInitial, string LastName) SplitFirstAndLastName(string[] nameParts)
     {
-        // Strategy for ambiguous cases without middle initial
-        // This addresses the "Juan Dela Cruz" ambiguity
-
         if (nameParts.Length == 2)
         {
-            // Simple case: First Last
             return (nameParts[0], string.Empty, nameParts[1]);
         }
 
-        // For 3+ parts without middle initial, we need a strategy
-        // Option 1: Favor compound last names (common in Filipino names like "Dela Cruz", "De Leon")
         if (HasCompoundLastNamePattern(nameParts))
         {
             return SplitWithCompoundLastName(nameParts);
         }
 
-        // Option 2: Default strategy - first part is first name, rest is last name
         return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
     }
 
     private bool HasCompoundLastNamePattern(string[] nameParts)
     {
-        // Common Filipino compound last name prefixes
         var compoundPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "de", "del", "dela", "delos", "delas", "van", "von", "da", "di", "du",
             "san", "santa", "santo", "mc", "mac", "o'"
         };
 
-        // Check if any part (except the first) starts with a compound prefix
         for (int i = 1; i < nameParts.Length; i++)
         {
             if (compoundPrefixes.Contains(nameParts[i]))
@@ -621,23 +657,19 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             "san", "santa", "santo", "mc", "mac", "o'"
         };
 
-        // Find the first compound prefix
         for (int i = 1; i < nameParts.Length; i++)
         {
             if (compoundPrefixes.Contains(nameParts[i]))
             {
-                // Everything before this index is first name
-                // Everything from this index onwards is last name
                 string firstName = string.Join(" ", nameParts.Take(i));
                 string lastName = string.Join(" ", nameParts.Skip(i));
                 return (firstName, string.Empty, lastName);
             }
         }
 
-        // Fallback - shouldn't reach here if HasCompoundLastNamePattern returned true
         return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
     }
-    
+
     [RelayCommand]
     private async Task ChooseFile()
     {
@@ -672,12 +704,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                     .WithContent($"{selectedFile.Name}")
                     .DismissOnClick()
                     .ShowInfo();
-                
+
                 var file = files[0];
                 await using var stream = await file.OpenReadAsync();
-                
+
                 var bitmap = new Bitmap(stream);
-                
+
                 if (MemberProfileImageControl != null)
                 {
                     MemberProfileImageControl.Source = bitmap;
@@ -705,72 +737,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         return null;
     }
 
-    private bool _isActiveSelected;
-    private bool _isInactiveSelected;
-    private bool _isTerminatedSelected;
-
-    public bool IsActiveSelected
-    {
-        get => _isActiveSelected;
-        set
-        {
-            if (_isActiveSelected == value) return;
-            _isActiveSelected = value;
-
-            if (value)
-            {
-                _isInactiveSelected = false;
-                _isTerminatedSelected = false;
-                OnPropertyChanged(nameof(IsInactiveSelected));
-                OnPropertyChanged(nameof(IsTerminatedSelected));
-            }
-
-            OnPropertyChanged();
-            Debug.WriteLine($"[Status] IsActiveSelected = {value}");
-        }
-    }
-
-    public bool IsInactiveSelected
-    {
-        get => _isInactiveSelected;
-        set
-        {
-            if (_isInactiveSelected == value) return;
-            _isInactiveSelected = value;
-
-            if (value)
-            {
-                _isActiveSelected = false;
-                _isTerminatedSelected = false;
-                OnPropertyChanged(nameof(IsActiveSelected));
-                OnPropertyChanged(nameof(IsTerminatedSelected));
-            }
-
-            OnPropertyChanged();
-            Debug.WriteLine($"[Status] IsInactiveSelected = {value}");
-        }
-    }
-
-    public bool IsTerminatedSelected
-    {
-        get => _isTerminatedSelected;
-        set
-        {
-            if (_isTerminatedSelected == value) return;
-            _isTerminatedSelected = value;
-
-            if (value)
-            {
-                _isActiveSelected = false;
-                _isInactiveSelected = false;
-                OnPropertyChanged(nameof(IsActiveSelected));
-                OnPropertyChanged(nameof(IsInactiveSelected));
-            }
-
-            OnPropertyChanged();
-            Debug.WriteLine($"[Status] IsTerminatedSelected = {value}");
-        }
-    }
     private string? GetSelectedStatus()
     {
         if (IsActiveSelected) return "Active";
@@ -778,8 +744,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         if (IsTerminatedSelected) return "Terminated";
         return null;
     }
-
-
 
     [RelayCommand]
     private async Task Payment()
@@ -796,8 +760,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 Age = MemberAge,
                 DateOfBirth = MemberBirthDate,
                 Validity = MembershipDuration?.ToString(),
-                MembershipType = "Boxing", // doesnt return the MembershipType because its null.
-                Status = "Active", // doesnt get the MemberStatus
+                MembershipType = MemberPackages,
+                Status = GetSelectedStatus() ?? "Active",
                 PaymentMethod = GetSelectedPaymentMethod(),
             };
 
