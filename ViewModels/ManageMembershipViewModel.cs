@@ -158,20 +158,21 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
         try
         {
-            var dbMembers = await _memberService.GetMemberAsync();
+            // Use the new tuple-based service method
+            var result = await _memberService.GetMembersAsync();
 
-            if (dbMembers is { Count: > 0 })
+            if (result.Success && result.Members is { Count: > 0 })
             {
                 // Map ManageMemberModel → ManageMemberItems
-                var memberItems = dbMembers.Select(m => new ManageMembersItem
+                var memberItems = result.Members.Select(m => new ManageMembersItem
                 {
                     ID = m.MemberID.ToString(),
                     AvatarSource = DefaultAvatarSource,
-                    Name = m.Name,
-                    ContactNumber = m.ContactNumber,
+                    Name = m.Name ?? string.Empty,
+                    ContactNumber = m.ContactNumber ?? string.Empty,
                     AvailedPackages = m.MembershipType ?? string.Empty,
-                    Status = m.Status,
-                    Validity = DateTime.TryParse(m.Validity, out var parsedDate) ? parsedDate : DateTime.MinValue
+                    Status = m.Status ?? "Active",
+                    Validity = DateTime.TryParse(m.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue
                 }).ToList();
 
                 OriginalMemberData = memberItems;
@@ -192,11 +193,19 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 ApplyMemberSort();
                 return; // Successfully loaded from database
             }
+            else if (!result.Success)
+            {
+                Debug.WriteLine($"[ManageMembership] Failed to load members: {result.Message}");
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent(result.Message)
+                    .DismissOnClick()
+                    .ShowError();
+            }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ManageMembership] Failed to load DB members: {ex.Message}");
-            _toastManager.CreateToast("Database Error")
+            _toastManager?.CreateToast("Database Error")
                 .WithContent("Could not load members from database. Showing sample data instead.")
                 .DismissOnClick()
                 .ShowWarning();
@@ -784,8 +793,26 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             return;
         }
 
-        // Just call the service - it handles its own success/error toasts
-        await _memberService.DeleteMemberAsync(member.ID);
+        // Convert string ID to int
+        if (int.TryParse(member.ID, out int memberId))
+        {
+            // Call the service - it returns a tuple now
+            var result = await _memberService.DeleteMemberAsync(memberId);
+
+            if (!result.Success)
+            {
+                // Service already showed error toast, just log it
+                Debug.WriteLine($"Failed to delete member: {result.Message}");
+            }
+        }
+        else
+        {
+            Debug.WriteLine($"Invalid member ID: {member.ID}");
+            _toastManager?.CreateToast("Invalid ID")
+                .WithContent("Member ID is not valid.")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
 
     private async Task DeleteMultipleMembersFromDatabase(List<ManageMembersItem> members)
@@ -797,9 +824,35 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             return;
         }
 
-        var memberIds = members.Select(m => m.ID).ToList();
-        // Just call the service - it handles its own success/error toasts
-        await _memberService.DeleteMultipleMembersAsync(memberIds);
+        // Convert string IDs to int list
+        var memberIds = new List<int>();
+        foreach (var member in members)
+        {
+            if (int.TryParse(member.ID, out int memberId))
+            {
+                memberIds.Add(memberId);
+            }
+        }
+
+        if (memberIds.Count > 0)
+        {
+            // Call the service - it returns a tuple now
+            var result = await _memberService.DeleteMultipleMembersAsync(memberIds);
+
+            if (!result.Success)
+            {
+                // Service already showed error toast, just log it
+                Debug.WriteLine($"Failed to delete members: {result.Message}");
+            }
+        }
+        else
+        {
+            Debug.WriteLine("No valid member IDs to delete");
+            _toastManager?.CreateToast("Invalid IDs")
+                .WithContent("No valid member IDs found.")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
 
 

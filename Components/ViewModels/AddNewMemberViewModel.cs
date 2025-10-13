@@ -1,6 +1,7 @@
 using AHON_TRACK.Models;
 using AHON_TRACK.ViewModels;
 using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Converters;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -15,6 +16,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -49,6 +51,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     [ObservableProperty]
     private Image? _memberProfileImageControl;
 
+    private byte[]? _memberProfilePictureBytes;
+
     // Personal Details Section
     private string _memberFirstName = string.Empty;
     private string _selectedMiddleInitialItem = string.Empty;
@@ -59,17 +63,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private int? _memberAge;
     private DateTime? _memberBirthDate;
 
-    // Address Section
-    private string _memberHouseAddress = string.Empty;
-    private string _memberHouseNumber = string.Empty;
-    private string _memberStreet = string.Empty;
-    private string _memberBarangay = string.Empty;
-    private string _memberCityTown = string.Empty;
-    private string _memberProvince = string.Empty;
-
     // Membership Plan 
     private int? _membershipDuration;
-    private DateTime? _memberDateJoined;
     private string _memberStatus = string.Empty;
 
     // Payment Method
@@ -78,7 +73,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private bool _isMayaSelected;
 
     // Status Selection
-    private bool _isActiveSelected;
+    private bool _isActiveSelected = true; // Default to Active
     private bool _isInactiveSelected;
     private bool _isTerminatedSelected;
 
@@ -187,7 +182,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         set => SetProperty(ref _memberContactNumber, value, true);
     }
 
-    [Required(ErrorMessage = "Position is required")]
+    [Required(ErrorMessage = "Package is required")]
     public string MemberPackages
     {
         get => _memberPackages;
@@ -224,92 +219,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             }
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
-    }
-
-    [Required(ErrorMessage = "House address is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string MemberHouseAddress
-    {
-        get => _memberHouseAddress;
-        set
-        {
-            SetProperty(ref _memberHouseAddress, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "House number is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 character long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
-    public string MemberHouseNumber
-    {
-        get => _memberHouseNumber;
-        set
-        {
-            SetProperty(ref _memberHouseNumber, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "Street is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberStreet
-    {
-        get => _memberStreet;
-        set
-        {
-            SetProperty(ref _memberStreet, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "Barangay is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberBarangay
-    {
-        get => _memberBarangay;
-        set
-        {
-            SetProperty(ref _memberBarangay, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "City/Town is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberCityTown
-    {
-        get => _memberCityTown;
-        set
-        {
-            SetProperty(ref _memberCityTown, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "Province is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberProvince
-    {
-        get => _memberProvince;
-        set
-        {
-            SetProperty(ref _memberProvince, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "Date joined is required")]
-    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? MemberDateJoined
-    {
-        get => _memberDateJoined;
-        set => SetProperty(ref _memberDateJoined, value, true);
     }
 
     [Required(ErrorMessage = "Status is required")]
@@ -543,6 +452,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     [AvaloniaHotReload]
     public void Initialize()
     {
+        IsActiveSelected = true;
     }
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
@@ -688,7 +598,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 [
                     new FilePickerFileType("Image Files")
                     {
-                        Patterns = ["*.png", "*.jpg"]
+                        Patterns = ["*.png", "*.jpg", "*.jpeg"]
                     },
                     new FilePickerFileType("All Files")
                     {
@@ -708,6 +618,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 var file = files[0];
                 await using var stream = await file.OpenReadAsync();
 
+                // Convert to bitmap for display
                 var bitmap = new Bitmap(stream);
 
                 if (MemberProfileImageControl != null)
@@ -715,11 +626,21 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                     MemberProfileImageControl.Source = bitmap;
                     MemberProfileImageControl.IsVisible = true;
                 }
+
+                // Convert to bytes for database storage
+                stream.Position = 0;
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                _memberProfilePictureBytes = memoryStream.ToArray();
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+            _toastManager?.CreateToast("Upload Error")
+                .WithContent($"Failed to upload image: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
     }
 
@@ -742,7 +663,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         if (IsActiveSelected) return "Active";
         if (IsInactiveSelected) return "Inactive";
         if (IsTerminatedSelected) return "Terminated";
-        return null;
+        return "Active"; // Default to Active
     }
 
     [RelayCommand]
@@ -750,26 +671,47 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     {
         try
         {
+            // Calculate ValidUntil date based on membership duration
+            DateTime? validUntilDate = null;
+            if (MembershipDuration.HasValue && MembershipDuration.Value > 0)
+            {
+                validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+            }
+
             var member = new ManageMemberModel
             {
                 FirstName = MemberFirstName,
-                MiddleInitial = SelectedMiddleInitialItem,
+                MiddleInitial = string.IsNullOrWhiteSpace(SelectedMiddleInitialItem) ? null : SelectedMiddleInitialItem,
                 LastName = MemberLastName,
                 Gender = MemberGender,
                 ContactNumber = MemberContactNumber,
                 Age = MemberAge,
                 DateOfBirth = MemberBirthDate,
-                Validity = MembershipDuration?.ToString(),
+                ValidUntil = validUntilDate?.ToString("MMM dd, yyyy"),
                 MembershipType = MemberPackages,
                 Status = GetSelectedStatus() ?? "Active",
                 PaymentMethod = GetSelectedPaymentMethod(),
+                ProfilePicture = _memberProfilePictureBytes
             };
 
-            await _memberService.AddMemberAsync(member);
+            // Use new service method
+            var result = await _memberService.AddMemberAsync(member);
 
-            _toastManager.CreateToast("Payment Successful!")
-                         .WithContent($"Member {member.FirstName} registered.")
-                         .ShowSuccess();
+            if (!result.Success)
+            {
+                _toastManager?.CreateToast("Registration Failed")
+                    .WithContent(result.Message)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            Debug.WriteLine($"[Payment] Member registered successfully with ID: {result.MemberId}");
+
+            _toastManager?.CreateToast("Payment Successful!")
+                .WithContent($"Member {member.FirstName} {member.LastName} registered successfully.")
+                .DismissOnClick()
+                .ShowSuccess();
 
             ClearAllFields();
             _pageManager.Navigate<ManageMembershipViewModel>();
@@ -777,9 +719,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         catch (Exception ex)
         {
             Debug.WriteLine($"[Payment] Error saving member: {ex.Message}");
-            _toastManager.CreateToast("Error")
-                         .WithContent("Failed to save member.")
-                         .ShowError();
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to save member: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
     }
 
@@ -820,14 +763,22 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         MemberPackages = string.Empty;
         MemberAge = null;
         MemberBirthDate = null;
-        MemberHouseAddress = string.Empty;
-        MemberHouseNumber = string.Empty;
-        MemberStreet = string.Empty;
-        MemberBarangay = string.Empty;
-        MemberCityTown = string.Empty;
-        MemberProvince = string.Empty;
-        MemberDateJoined = null;
         MemberStatus = string.Empty;
+        MembershipDuration = null;
+        IsCashSelected = false;
+        IsGCashSelected = false;
+        IsMayaSelected = false;
+        IsActiveSelected = true;
+        IsInactiveSelected = false;
+        IsTerminatedSelected = false;
+        _memberProfilePictureBytes = null;
+
+        if (MemberProfileImageControl != null)
+        {
+            MemberProfileImageControl.Source = null;
+            MemberProfileImageControl.IsVisible = false;
+        }
+
         ClearAllErrors();
     }
 

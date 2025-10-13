@@ -58,18 +58,18 @@ namespace AHON_TRACK.Services
 
                 const string query = @"
                     SELECT 
-                        mci.CheckInId,
+                        mci.RecordID,
                         m.Firstname + ' '+ m.Lastname AS FullName,
                         m.ContactNumber,
                         m.Status,
                         m.ProfilePicture,
-                        mci.CheckInTime,
-                        mci.CheckOutTime,
+                        mci.CheckIn,
+                        mci.CheckOut,
                         mci.DateAttendance
                     FROM MemberCheckIns mci
                     INNER JOIN Members m ON mci.MemberId = m.MemberId
                     WHERE CAST(mci.DateAttendance AS DATE) = @Date
-                    ORDER BY mci.CheckInTime DESC";
+                    ORDER BY mci.CheckIn ASC";
 
                 await using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@Date", date.Date);
@@ -87,15 +87,15 @@ namespace AHON_TRACK.Services
 
                     memberCheckIns.Add(new MemberPerson
                     {
-                        ID = reader.GetInt32("CheckInId"), // Use CheckInId for operations
+                        ID = reader.GetInt32("RecordID"), // Use CheckInId for operations
                         FirstName = firstName,
                         LastName = lastName,
                         ContactNumber = reader["ContactNumber"]?.ToString() ?? "",
                         MembershipType = "Gym Member", // You might want to add this to your Members table
                         Status = reader["Status"]?.ToString() ?? "",
                         DateAttendance = reader.GetDateTime("DateAttendance"),
-                        CheckInTime = reader.GetDateTime("CheckInTime"),
-                        CheckOutTime = reader.IsDBNull("CheckOutTime") ? null : reader.GetDateTime("CheckOutTime"),
+                        CheckInTime = reader.GetDateTime("CheckIn"),
+                        CheckOutTime = reader.IsDBNull("CheckOut") ? null : reader.GetDateTime("CheckOut"),
                         MemberPicture = GetMemberPicturePath(profilePictureBytes)
                     });
                 }
@@ -121,11 +121,11 @@ namespace AHON_TRACK.Services
                 // Check if member already checked in today
                 const string checkQuery = @"
                     SELECT COUNT(*) FROM MemberCheckIns 
-                    WHERE MemberId = @MemberId AND CAST(DateAttendance AS DATE) = CAST(GETDATE() AS DATE)
-                    AND CheckOutTime IS NULL";
+                    WHERE MemberID = @MemberID AND CAST(DateAttendance AS DATE) = CAST(GETDATE() AS DATE)
+                    AND CheckOut IS NULL";
 
                 await using var checkCommand = new SqlCommand(checkQuery, connection);
-                checkCommand.Parameters.AddWithValue("@MemberId", memberId);
+                checkCommand.Parameters.AddWithValue("@MemberID", memberId);
                 var existingCount = (int)await checkCommand.ExecuteScalarAsync();
 
                 if (existingCount > 0)
@@ -138,7 +138,7 @@ namespace AHON_TRACK.Services
 
                 // Insert new check-in record
                 const string insertQuery = @"
-                    INSERT INTO MemberCheckIns (MemberId, CheckInTime, DateAttendance)
+                    INSERT INTO MemberCheckIns (MemberID, CheckIn, DateAttendance)
                     VALUES (@MemberId, GETDATE(), CAST(GETDATE() AS DATE))";
 
                 await using var command = new SqlCommand(insertQuery, connection);
@@ -177,18 +177,18 @@ namespace AHON_TRACK.Services
 
                 const string updateQuery = @"
                     UPDATE MemberCheckIns 
-                    SET CheckOutTime = GETDATE() 
-                    WHERE CheckInId = @CheckInId AND CheckOutTime IS NULL";
+                    SET CheckOut = GETDATE() 
+                    WHERE RecordID = @RecordID AND CheckOut IS NULL";
 
                 await using var command = new SqlCommand(updateQuery, connection);
-                command.Parameters.AddWithValue("@CheckInId", memberCheckInId);
+                command.Parameters.AddWithValue("@RecordID", memberCheckInId);
 
                 var rowsAffected = await command.ExecuteNonQueryAsync();
 
                 if (rowsAffected > 0)
                 {
                     await LogActionAsync(connection, "Member Check-Out",
-                        $"Member checked out (CheckInId: {memberCheckInId})", true);
+                        $"Member checked out (Record ID: {memberCheckInId})", true);
                     return true;
                 }
             }
@@ -338,16 +338,16 @@ namespace AHON_TRACK.Services
                 await using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
 
-                const string deleteQuery = "DELETE FROM MemberCheckIns WHERE CheckInId = @CheckInId";
+                const string deleteQuery = "DELETE FROM MemberCheckIns WHERE RecordID = RecordId";
                 await using var command = new SqlCommand(deleteQuery, connection);
-                command.Parameters.AddWithValue("@CheckInId", memberCheckInId);
+                command.Parameters.AddWithValue("@RecordId", memberCheckInId);
 
                 var rowsAffected = await command.ExecuteNonQueryAsync();
 
                 if (rowsAffected > 0)
                 {
                     await LogActionAsync(connection, "Delete Member Check-In",
-                        $"Deleted member check-in record (CheckInId: {memberCheckInId})", true);
+                        $"Deleted member check-in record (RecordID: {memberCheckInId})", true);
                     return true;
                 }
             }
@@ -401,7 +401,7 @@ namespace AHON_TRACK.Services
                 const string query = @"SELECT m.MemberID, (m.Firstname + ' ' + m.Lastname) AS Name,
                     m.ContactNumber,
                     m.Status,
-                    m.Validity,
+                    m.ValidUntil,
                     m.ProfilePicture
                     FROM Members m
                     WHERE m.Status = 'Active'
@@ -417,9 +417,9 @@ namespace AHON_TRACK.Services
                         bytes = (byte[])reader["ProfilePicture"];
 
                     string validityDisplay = string.Empty;
-                    if (!reader.IsDBNull("Validity"))
+                    if (!reader.IsDBNull("ValidUntil"))
                     {
-                        var validityDate = reader.GetDateTime("Validity");
+                        var validityDate = reader.GetDateTime("ValidUntil");
                         validityDisplay = validityDate.ToString("MMM dd, yyyy");
                     }
 
@@ -429,7 +429,7 @@ namespace AHON_TRACK.Services
                         Name = reader["Name"]?.ToString() ?? string.Empty,
                         ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
                         Status = reader["Status"]?.ToString() ?? string.Empty,
-                        Validity = validityDisplay,
+                        ValidUntil = validityDisplay,
                         //ProfilePicture = ImageHelper.GetAvatarOrDefault(bytes)
                     });
                 }

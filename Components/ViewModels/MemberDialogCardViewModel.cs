@@ -35,7 +35,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private bool _isEditMode = false;
 
     [ObservableProperty]
-    private string _currentMemberId = string.Empty;
+    private int _currentMemberId = 0;  // Changed from string to int
 
     // Personal Details Section
     private string _memberFirstName = string.Empty;
@@ -46,15 +46,22 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private string _memberPackages = string.Empty;
     private int? _memberAge;
     private DateTime? _memberBirthDate;
+    private DateTime? _memberDateJoined;  // Unused, consider removing
 
     // Account Section
-    private DateTime? _memberDateJoined;
+    private DateTime? _memberValidUntil;  // Changed from MemberDateJoined
     private string _memberStatus = string.Empty;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly IMemberService _memberService;
+
+    public DateTime? MemberDateJoined
+    {
+        get => _memberDateJoined;
+        set => SetProperty(ref _memberDateJoined, value, true);
+    }
 
     [Required(ErrorMessage = "First name is required")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
@@ -115,7 +122,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         set => SetProperty(ref _memberContactNumber, value, true);
     }
 
-    [Required(ErrorMessage = "Position is required")]
+    [Required(ErrorMessage = "Package is required")]
     public string MemberPackages
     {
         get => _memberPackages;
@@ -150,12 +157,12 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         }
     }
 
-    [Required(ErrorMessage = "Date joined is required")]
+    [Required(ErrorMessage = "Valid until date is required")]
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? MemberDateJoined
+    public DateTime? MemberValidUntil  // Changed from MemberDateJoined
     {
-        get => _memberDateJoined;
-        set => SetProperty(ref _memberDateJoined, value, true);
+        get => _memberValidUntil;
+        set => SetProperty(ref _memberValidUntil, value, true);
     }
 
     [Required(ErrorMessage = "Status is required")]
@@ -188,7 +195,25 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         DialogTitle = "Edit Gym Member Details";
     }
 
+    // Overload to accept string (for backward compatibility)
     public async Task PopulateWithMemberDataAsync(string memberId)
+    {
+        if (int.TryParse(memberId, out int id))
+        {
+            await PopulateWithMemberDataAsync(id);
+        }
+        else
+        {
+            Debug.WriteLine($"[PopulateWithMemberData] Invalid member ID: {memberId}");
+            _toastManager?.CreateToast("Invalid ID")
+                .WithContent("The member ID is not valid.")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+
+    // Primary method accepting int
+    public async Task PopulateWithMemberDataAsync(int memberId)
     {
         CurrentMemberId = memberId;
 
@@ -200,32 +225,38 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
         try
         {
-            // Fetch full member data from database
-            var memberData = await _memberService.GetMemberByIdAsync(memberId);
+            // Fetch full member data from database using new service method
+            var result = await _memberService.GetMemberByIdAsync(memberId);
 
-            if (memberData == null)
+            if (!result.Success || result.Member == null)
             {
-                Debug.WriteLine($"[PopulateWithMemberData] No data found for member ID {memberId}");
+                Debug.WriteLine($"[PopulateWithMemberData] Failed to load member: {result.Message}");
+                _toastManager?.CreateToast("Load Error")
+                    .WithContent(result.Message)
+                    .DismissOnClick()
+                    .ShowError();
                 return;
             }
 
+            var memberData = result.Member;
+
             // Populate all fields
             MemberFirstName = memberData.FirstName ?? string.Empty;
-            SelectedMiddleInitialItem = memberData.MiddleInitial;
+            SelectedMiddleInitialItem = memberData.MiddleInitial ?? string.Empty;
             MemberLastName = memberData.LastName ?? string.Empty;
             MemberGender = memberData.Gender ?? string.Empty;
             MemberContactNumber = memberData.ContactNumber?.Replace(" ", "") ?? string.Empty;
             MemberPackages = memberData.MembershipType ?? string.Empty;
             MemberAge = memberData.Age;
             MemberBirthDate = memberData.DateOfBirth;
-            MemberStatus = memberData.Status ?? string.Empty;
+            MemberStatus = memberData.Status ?? "Active";
 
-            // Parse validity date
-            if (!string.IsNullOrEmpty(memberData.Validity))
+            // Parse ValidUntil date
+            if (!string.IsNullOrEmpty(memberData.ValidUntil))
             {
-                if (DateTime.TryParse(memberData.Validity, out var validityDate))
+                if (DateTime.TryParse(memberData.ValidUntil, out var validUntilDate))
                 {
-                    MemberDateJoined = validityDate;
+                    MemberValidUntil = validUntilDate;
                 }
             }
 
@@ -238,46 +269,16 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             Debug.WriteLine($"  Contact: {MemberContactNumber}");
             Debug.WriteLine($"  Package: {MemberPackages}");
             Debug.WriteLine($"  Status: {MemberStatus}");
+            Debug.WriteLine($"  Valid Until: {MemberValidUntil}");
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[PopulateWithMemberData] Error: {ex.Message}");
             _toastManager?.CreateToast("Load Error")
                 .WithContent($"Failed to load member data: {ex.Message}")
+                .DismissOnClick()
                 .ShowError();
         }
-    }
-
-    // Helper method to parse full name
-    private (string FirstName, string MiddleInitial, string LastName) ParseFullName(string fullName)
-    {
-        if (string.IsNullOrWhiteSpace(fullName))
-            return (string.Empty, string.Empty, string.Empty);
-
-        var nameParts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        if (nameParts.Length == 0)
-            return (string.Empty, string.Empty, string.Empty);
-
-        if (nameParts.Length == 1)
-            return (nameParts[0], string.Empty, string.Empty);
-
-        // Look for middle initial (single character with optional dot)
-        for (int i = 1; i < nameParts.Length - 1; i++)
-        {
-            string part = nameParts[i];
-            if (part.Length == 1 || (part.Length == 2 && part.EndsWith(".")))
-            {
-                // Found middle initial
-                string firstName = string.Join(" ", nameParts.Take(i));
-                string middleInitial = part.TrimEnd('.');
-                string lastName = string.Join(" ", nameParts.Skip(i + 1));
-                return (firstName, middleInitial, lastName);
-            }
-        }
-
-        // No middle initial found - first part is first name, rest is last name
-        return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
     }
 
     private int CalculateAge(DateTime birthDate)
@@ -295,30 +296,46 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         ClearAllErrors();
         ValidateAllProperties();
 
-        if (HasErrors) return;
+        if (HasErrors)
+        {
+            _toastManager?.CreateToast("Validation Error")
+                .WithContent("Please fix all validation errors before saving.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
 
         try
         {
             // Create member model with updated data
             var memberModel = new ManageMemberModel
             {
-                MemberID = int.Parse(CurrentMemberId),
+                MemberID = CurrentMemberId,
                 FirstName = MemberFirstName,
-                MiddleInitial = SelectedMiddleInitialItem,
+                MiddleInitial = string.IsNullOrWhiteSpace(SelectedMiddleInitialItem) ? null : SelectedMiddleInitialItem,
                 LastName = MemberLastName,
                 Gender = MemberGender,
                 ContactNumber = MemberContactNumber,
                 Age = MemberAge,
                 DateOfBirth = MemberBirthDate,
+                ValidUntil = MemberValidUntil?.ToString("MMM dd, yyyy"),
                 MembershipType = MemberPackages,
-                Status = MemberStatus,
-                Validity = MemberDateJoined?.ToString("MMM dd, yyyy")
+                Status = MemberStatus
             };
 
-            // Update in database
+            // Update in database using new service method
             if (_memberService != null)
             {
-                await _memberService.UpdateMemberAsync(CurrentMemberId, memberModel);
+                var result = await _memberService.UpdateMemberAsync(memberModel);
+
+                if (!result.Success)
+                {
+                    _toastManager?.CreateToast("Update Failed")
+                        .WithContent(result.Message)
+                        .DismissOnClick()
+                        .ShowError();
+                    return;
+                }
             }
 
             Debug.WriteLine($"[SaveDetails] Updated member ID: {CurrentMemberId}");
@@ -330,7 +347,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             Debug.WriteLine($"Packages: {MemberPackages}");
             Debug.WriteLine($"Age: {MemberAge}");
             Debug.WriteLine($"Date of Birth: {MemberBirthDate?.ToString("MMMM d, yyyy")}");
-            Debug.WriteLine($"Date Joined: {MemberDateJoined?.ToString("MMMM d, yyyy")}");
+            Debug.WriteLine($"Valid Until: {MemberValidUntil?.ToString("MMMM d, yyyy")}");
             Debug.WriteLine($"Status: {MemberStatus}");
 
             _dialogManager.Close(this, new CloseDialogOptions { Success = true });
@@ -340,6 +357,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             Debug.WriteLine($"[SaveDetails] Error: {ex.Message}");
             _toastManager?.CreateToast("Update Failed")
                 .WithContent($"Failed to update member: {ex.Message}")
+                .DismissOnClick()
                 .ShowError();
         }
     }
@@ -360,7 +378,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         MemberPackages = string.Empty;
         MemberAge = null;
         MemberBirthDate = null;
-        MemberDateJoined = null;
+        MemberValidUntil = null;
         MemberStatus = string.Empty;
         ClearAllErrors();
     }

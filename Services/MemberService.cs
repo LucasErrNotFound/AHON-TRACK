@@ -6,8 +6,6 @@ using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.Services
@@ -23,13 +21,527 @@ namespace AHON_TRACK.Services
             _toastManager = toastManager;
         }
 
+        #region Role-Based Access Control
+
+        private bool CanCreate()
+        {
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanUpdate()
+        {
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanDelete()
+        {
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private bool CanView()
+        {
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        #endregion
+
+        #region CREATE
+
+        public async Task<(bool Success, string Message, int? MemberId)> AddMemberAsync(ManageMemberModel member)
+        {
+            if (!CanCreate())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("You don't have permission to add members.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to add members.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Insert into Members table
+                string memberQuery = @"
+                    INSERT INTO Members 
+                    (Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
+                     ValidUntil, PackageID, Status, PaymentMethod, RegisteredByEmployeeID)
+                    OUTPUT INSERTED.MemberID
+                    VALUES 
+                    (@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
+                     @ValidUntil, @PackageID, @Status, @PaymentMethod, @RegisteredByEmployeeID)";
+
+                using var cmd = new SqlCommand(memberQuery, conn);
+                cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(member.MiddleInitial) ? (object)DBNull.Value : member.MiddleInitial.Substring(0, 1).ToUpper());
+                cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
+                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;
+                cmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Age", member.Age > 0 ? member.Age : (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@CustomerType", string.IsNullOrWhiteSpace(member.MembershipType) ? "Gym Member" : member.MembershipType);
+                cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
+                cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                int memberId = (int)await cmd.ExecuteScalarAsync();
+
+                await LogActionAsync(conn, "CREATE", $"Added new member: {member.FirstName} {member.LastName}", true);
+
+                _toastManager?.CreateToast("Member Added")
+                    .WithContent($"Successfully added {member.FirstName} {member.LastName}.")
+                    .DismissOnClick()
+                    .ShowSuccess();
+
+                return (true, "Member added successfully.", memberId);
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to add member: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"AddMemberAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"AddMemberAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        #endregion
+
+        #region READ
+
+        public async Task<(bool Success, string Message, List<ManageMemberModel>? Members)> GetMembersAsync()
+        {
+            if (!CanView())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("You don't have permission to view members.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to view members.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT 
+                        MemberID,
+                        Firstname,
+                        MiddleInitial,
+                        Lastname,
+                        LTRIM(RTRIM(Firstname + ISNULL(' ' + MiddleInitial + '.', '') + ' ' + Lastname)) AS Name,
+                        Gender,
+                        ContactNumber,
+                        Age,
+                        DateOfBirth,
+                        ValidUntil,
+                        PackageID,
+                        CustomerType,
+                        Status,
+                        PaymentMethod,
+                        ProfilePicture
+                    FROM Members
+                    ORDER BY Name;";
+
+                var members = new List<ManageMemberModel>();
+
+                using var cmd = new SqlCommand(query, conn);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    members.Add(new ManageMemberModel
+                    {
+                        MemberID = reader.GetInt32(0),
+                        FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                        MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                        Name = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                        Gender = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                        ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                        Age = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                        DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
+                        ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
+                        PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
+                        MembershipType = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+                        Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
+                        PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                        ProfilePicture = reader.IsDBNull(14) ? null : (byte[])reader[14],
+                        ProfileImageSource = reader.IsDBNull(14)
+                            ? ImageHelper.GetDefaultAvatar()
+                            : ImageHelper.BytesToBitmap((byte[])reader[14])
+                    });
+                }
+
+                return (true, "Members retrieved successfully.", members);
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to load members: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"GetMembersAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"GetMembersAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool Success, string Message, ManageMemberModel? Member)> GetMemberByIdAsync(int memberId)
+        {
+            if (!CanView())
+            {
+                return (false, "Insufficient permissions to view member.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                var query = @"SELECT MemberID, Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, 
+                             ContactNumber, Age, DateOfBirth, ValidUntil, PackageID, CustomerType, 
+                             Status, PaymentMethod, RegisteredByEmployeeID
+                      FROM Members 
+                      WHERE MemberID = @Id";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Id", memberId);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var member = new ManageMemberModel
+                    {
+                        MemberID = reader.GetInt32(0),
+                        FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                        MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                        Gender = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                        ProfilePicture = reader.IsDBNull(5) ? null : (byte[])reader[5],
+                        ProfileImageSource = reader.IsDBNull(5)
+                            ? ImageHelper.GetDefaultAvatar()
+                            : ImageHelper.BytesToBitmap((byte[])reader[5]),
+                        ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                        Age = reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                        DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
+                        ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
+                        PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
+                        MembershipType = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+                        Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
+                        PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                        RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14)
+                    };
+
+                    member.Name = $"{member.FirstName} {(string.IsNullOrWhiteSpace(member.MiddleInitial) ? "" : member.MiddleInitial + ". ")}{member.LastName}";
+
+                    return (true, "Member retrieved successfully.", member);
+                }
+
+                return (false, "Member not found.", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Error retrieving member: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"GetMemberByIdAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        #endregion
+
+        #region UPDATE
+
+        public async Task<(bool Success, string Message)> UpdateMemberAsync(ManageMemberModel member)
+        {
+            if (!CanUpdate())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("You don't have permission to update member data.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to update members.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Check if member exists
+                using var checkCmd = new SqlCommand(
+                    "SELECT COUNT(*) FROM Members WHERE MemberID = @memberId", conn);
+                checkCmd.Parameters.AddWithValue("@memberId", member.MemberID);
+
+                var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
+                if (!exists)
+                {
+                    _toastManager?.CreateToast("Member Not Found")
+                        .WithContent("The member you're trying to update doesn't exist.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Member not found.");
+                }
+
+                // Update member
+                string query = @"UPDATE Members 
+                     SET Firstname = @Firstname, 
+                         MiddleInitial = @MiddleInitial, 
+                         Lastname = @Lastname, 
+                         Gender = @Gender,
+                         ContactNumber = @ContactNumber, 
+                         Age = @Age,
+                         DateOfBirth = @DateOfBirth,
+                         ValidUntil = @ValidUntil,
+                         PackageID = @PackageID,
+                         CustomerType = @CustomerType,
+                         Status = @Status,
+                         PaymentMethod = @PaymentMethod,
+                         ProfilePicture = @ProfilePicture
+                     WHERE MemberID = @MemberID";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@MemberID", member.MemberID);
+                cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(member.MiddleInitial) ? (object)DBNull.Value : member.MiddleInitial.Substring(0, 1).ToUpper());
+                cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Age", member.Age > 0 ? member.Age : (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@CustomerType", member.MembershipType ?? "Gym Member");
+                cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
+                cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
+                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;
+
+                int rows = await cmd.ExecuteNonQueryAsync();
+                if (rows > 0)
+                {
+                    await LogActionAsync(conn, "UPDATE", $"Updated member: {member.FirstName} {member.LastName}", true);
+
+                    _toastManager?.CreateToast("Member Updated")
+                        .WithContent($"Successfully updated {member.FirstName} {member.LastName}.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Member updated successfully.");
+                }
+
+                return (false, "Failed to update member.");
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to update member: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region DELETE
+
+        public async Task<(bool Success, string Message)> DeleteMemberAsync(int memberId)
+        {
+            if (!CanDelete())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("Only administrators can delete members.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to delete members.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Get member name for logging
+                string memberName = string.Empty;
+                using var getNameCmd = new SqlCommand(
+                    "SELECT Firstname, Lastname FROM Members WHERE MemberID = @memberId", conn);
+                getNameCmd.Parameters.AddWithValue("@memberId", memberId);
+
+                using var nameReader = await getNameCmd.ExecuteReaderAsync();
+                if (await nameReader.ReadAsync())
+                {
+                    memberName = $"{nameReader[0]} {nameReader[1]}";
+                }
+                nameReader.Close();
+
+                if (string.IsNullOrEmpty(memberName))
+                {
+                    _toastManager?.CreateToast("Member Not Found")
+                        .WithContent("The member you're trying to delete doesn't exist.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Member not found.");
+                }
+
+                // Delete from Members table
+                using var deleteMemberCmd = new SqlCommand(
+                    "DELETE FROM Members WHERE MemberID = @memberId", conn);
+                deleteMemberCmd.Parameters.AddWithValue("@memberId", memberId);
+                int rowsAffected = await deleteMemberCmd.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    await LogActionAsync(conn, "DELETE", $"Deleted member: {memberName} (ID: {memberId})", true);
+
+                    _toastManager?.CreateToast("Member Deleted")
+                        .WithContent($"Successfully deleted {memberName}.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Member deleted successfully.");
+                }
+
+                return (false, "Failed to delete member.");
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to delete member: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"DeleteMemberAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"DeleteMemberAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        public async Task<(bool Success, string Message)> DeleteMultipleMembersAsync(List<int> memberIds)
+        {
+            if (!CanDelete())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("Only administrators can delete members.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to delete members.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                var idsParam = string.Join(",", memberIds);
+                var deleteQuery = $"DELETE FROM Members WHERE MemberID IN ({idsParam})";
+
+                using var command = new SqlCommand(deleteQuery, conn);
+                var rowsAffected = await command.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    await LogActionAsync(conn, "DELETE", $"Deleted {rowsAffected} members", true);
+
+                    _toastManager?.CreateToast("Members Deleted")
+                        .WithContent($"Successfully deleted {rowsAffected} members.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Members deleted successfully.");
+                }
+
+                return (false, "No members were deleted.");
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to delete members: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"DeleteMultipleMembersAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"DeleteMultipleMembersAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region UTILITY METHODS
+
         private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success)
         {
             try
             {
                 using var logCmd = new SqlCommand(
                     @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
-                      VALUES (@username, @role, @actionType, @description, @success, GETDATE()), @employeeID", conn);
+                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)", conn);
 
                 logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
                 logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
@@ -46,406 +558,84 @@ namespace AHON_TRACK.Services
             }
         }
 
-        public async Task<List<ManageMemberModel>> GetMemberAsync()
+        public async Task<int> GetTotalMemberCountAsync()
         {
-            var members = new List<ManageMemberModel>();
             try
             {
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-                const string query = @"
-        SELECT 
-            MemberId,
-            (Firstname + ' ' + ISNULL(MiddleInitial + '. ', '') + Lastname) AS Name,
-            ContactNumber,
-            Status,
-            MembershipType,
-            Validity,
-            ProfilePicture
-        FROM Members";
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
 
-                await using var command = new SqlCommand(query, connection);
-                await using var reader = await command.ExecuteReaderAsync();
+                string query = "SELECT COUNT(*) FROM Members";
+                using var cmd = new SqlCommand(query, conn);
 
-                while (await reader.ReadAsync())
-                {
-                    byte[]? bytes = null;
-                    if (!reader.IsDBNull(reader.GetOrdinal("ProfilePicture")))
-                        bytes = (byte[])reader["ProfilePicture"]; // Get bytes from DB (VARBINARY)
-
-                    string validityDisplay = string.Empty;
-                    if (!reader.IsDBNull(reader.GetOrdinal("Validity")))
-                    {
-                        var validityDate = reader.GetDateTime(reader.GetOrdinal("Validity"));
-                        validityDisplay = validityDate.ToString("MMM dd, yyyy");
-                    }
-
-                    members.Add(new ManageMemberModel
-                    {
-                        MemberID = reader.GetInt32(reader.GetOrdinal("MemberId")),
-                        Name = reader["Name"]?.ToString() ?? string.Empty,
-                        ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                        MembershipType = reader["MembershipType"]?.ToString() ?? string.Empty, // FIX: Added MembershipType
-                        Status = reader["Status"].ToString() ?? string.Empty,
-                        Validity = validityDisplay,
-                        //ProfilePicture = ImageHelper.GetAvatarOrDefault(bytes) // Convert bytes to Bitmap for UI
-                    });
-                }
+                var result = await cmd.ExecuteScalarAsync();
+                return Convert.ToInt32(result);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetMemberAsync] {ex.Message}");
-                _toastManager?.CreateToast("Database Error")
-                              .WithContent($"Failed to load members: {ex.Message}")
-                              .WithDelay(5)
-                              .ShowError();
+                System.Diagnostics.Debug.WriteLine($"GetTotalMemberCountAsync Error: {ex}");
+                return 0;
             }
-            return members;
         }
 
-        public async Task<bool> DeleteMemberAsync(string memberId)
+        public async Task<int> GetMemberCountByStatusAsync(string status)
         {
             try
             {
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
 
-                // First, get member info for logging
-                var memberInfo = await GetMemberByIdAsync(memberId);
+                string query = "SELECT COUNT(*) FROM Members WHERE Status = @Status";
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Status", status);
 
-                const string deleteQuery = "DELETE FROM Members WHERE MemberID = @MemberID";
-                await using var command = new SqlCommand(deleteQuery, connection);
-                command.Parameters.AddWithValue("@MemberID", int.Parse(memberId));
-
-                var rowsAffected = await command.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
-                {
-                    // Log successful deletion
-                    await LogActionAsync(
-                        connection,
-                        actionType: "Delete Member",
-                        description: $"Deleted member: {memberInfo?.Name ?? memberId}",
-                        success: true
-                    );
-
-                    _toastManager?.CreateToast("Member Deleted")
-                                 .WithContent($"Successfully deleted member")
-                                 .ShowSuccess();
-                    return true;
-                }
-                else
-                {
-                    _toastManager?.CreateToast("Delete Failed")
-                                 .WithContent("Member not found")
-                                 .ShowWarning();
-                    return false;
-                }
+                var result = await cmd.ExecuteScalarAsync();
+                return Convert.ToInt32(result);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DeleteMemberAsync] {ex.Message}");
-                _toastManager?.CreateToast("Database Error")
-                              .WithContent($"Failed to delete member: {ex.Message}")
-                              .WithDelay(5)
-                              .ShowError();
-
-                // Log failed deletion
-                try
-                {
-                    await using var conn = new SqlConnection(_connectionString);
-                    await conn.OpenAsync();
-                    await LogActionAsync(conn, "Delete Member", $"Failed to delete member {memberId}: {ex.Message}", success: false);
-                }
-                catch { /* swallow secondary errors */ }
-
-                return false;
+                System.Diagnostics.Debug.WriteLine($"GetMemberCountByStatusAsync Error: {ex}");
+                return 0;
             }
         }
 
-        public async Task<bool> DeleteMultipleMembersAsync(List<string> memberIds)
+        public async Task<(bool Success, int ActiveCount, int InactiveCount, int TerminatedCount)> GetMemberStatisticsAsync()
         {
+            if (!CanView())
+            {
+                return (false, 0, 0, 0);
+            }
+
             try
             {
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
 
-                var idsParam = string.Join(",", memberIds.Select(id => int.Parse(id)));
-                var deleteQuery = $"DELETE FROM Members WHERE MemberID IN ({idsParam})";
+                using var cmd = new SqlCommand(
+                    @"SELECT 
+                        SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) as ActiveCount,
+                        SUM(CASE WHEN Status = 'Inactive' THEN 1 ELSE 0 END) as InactiveCount,
+                        SUM(CASE WHEN Status = 'Terminated' THEN 1 ELSE 0 END) as TerminatedCount
+                      FROM Members", conn);
 
-                await using var command = new SqlCommand(deleteQuery, connection);
-                var rowsAffected = await command.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
-                {
-                    await LogActionAsync(
-                        connection,
-                        actionType: "Delete Multiple Members",
-                        description: $"Deleted {rowsAffected} members",
-                        success: true
-                    );
-
-                    _toastManager?.CreateToast("Members Deleted")
-                                 .WithContent($"Successfully deleted {rowsAffected} members")
-                                 .ShowSuccess();
-                    return true;
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DeleteMultipleMembersAsync] {ex.Message}");
-                _toastManager?.CreateToast("Database Error")
-                              .WithContent($"Failed to delete members: {ex.Message}")
-                              .WithDelay(5)
-                              .ShowError();
-                return false;
-            }
-        }
-
-        public async Task<ManageMemberModel?> GetMemberByIdAsync(string memberId)
-        {
-            try
-            {
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                const string query = @"
-            SELECT 
-                MemberId,
-                Firstname,
-                MiddleInitial,
-                Lastname,
-                Gender,
-                ContactNumber,
-                Age,
-                DateOfBirth,
-                MembershipType,
-                Status,
-                Validity,
-                ProfilePicture
-            FROM Members 
-            WHERE MemberId = @MemberId";
-
-                await using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@MemberId", int.Parse(memberId));
-                await using var reader = await command.ExecuteReaderAsync();
-
+                using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
-                    object profilePictureObj = ImageHelper.GetDefaultAvatar();
-                    if (!reader.IsDBNull(reader.GetOrdinal("ProfilePicture")))
-                    {
-                        profilePictureObj = (byte[])reader["ProfilePicture"];
-                    }
-
-                    string validityDisplay = string.Empty;
-                    if (!reader.IsDBNull(reader.GetOrdinal("Validity")))
-                    {
-                        var validityDate = reader.GetDateTime(reader.GetOrdinal("Validity"));
-                        validityDisplay = validityDate.ToString("MMM dd, yyyy");
-                    }
-
-                    DateTime? dateOfBirth = null;
-                    if (!reader.IsDBNull(reader.GetOrdinal("DateOfBirth")))
-                    {
-                        dateOfBirth = reader.GetDateTime(reader.GetOrdinal("DateOfBirth"));
-                    }
-
-                    int? age = null;
-                    if (!reader.IsDBNull(reader.GetOrdinal("Age")))
-                    {
-                        age = reader.GetInt32(reader.GetOrdinal("Age"));
-                    }
-
-                    string middleInitial = string.Empty;
-                    if (!reader.IsDBNull(reader.GetOrdinal("MiddleInitial")))
-                    {
-                        middleInitial = reader["MiddleInitial"]?.ToString()?.Trim().ToUpper() ?? string.Empty;
-                        // Ensure it's only one character
-                        if (middleInitial.Length > 1)
-                        {
-                            middleInitial = middleInitial.Substring(0, 1);
-                        }
-                    }
-
-                    Console.WriteLine($"[GetMemberByIdAsync] Middle Initial from DB: '{reader["MiddleInitial"]}' -> Processed: '{middleInitial}'");
-
-                    return new ManageMemberModel
-                    {
-                        MemberID = reader.GetInt32(reader.GetOrdinal("MemberId")),
-                        FirstName = reader["Firstname"]?.ToString() ?? string.Empty,
-                        MiddleInitial = middleInitial,
-                        LastName = reader["Lastname"]?.ToString() ?? string.Empty,
-                        Name = $"{reader["Firstname"]} {middleInitial}. {reader["Lastname"]}".Replace("  ", " ").Trim(),
-                        Gender = reader["Gender"]?.ToString() ?? string.Empty,
-                        ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                        Age = age,
-                        DateOfBirth = dateOfBirth,
-                        MembershipType = reader["MembershipType"]?.ToString() ?? string.Empty,
-                        Status = reader["Status"]?.ToString() ?? string.Empty,
-                        Validity = validityDisplay,
-                        //ProfilePicture = profilePictureObj
-                    };
+                    return (true,
+                        reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
+                        reader.IsDBNull(2) ? 0 : reader.GetInt32(2));
                 }
+
+                return (false, 0, 0, 0);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetMemberByIdAsync] {ex.Message}");
-            }
-            return null;
-        }
-
-
-        public async Task AddMemberAsync(ManageMemberModel member)
-        {
-            try
-            {
-                await using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                const string sql = @"
-INSERT INTO Members(Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, Validity, MembershipType, Status, PaymentMethod) VALUES(@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, @Validity, @MembershipType, @Status, @PaymentMethod)";
-
-                await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@Firstname", member.FirstName);
-                cmd.Parameters.AddWithValue("@MiddleInitial", member.MiddleInitial);
-                cmd.Parameters.AddWithValue("@Lastname", member.LastName);
-                cmd.Parameters.AddWithValue("@Gender", member.Gender);
-
-                /*byte[]? dbBytes = null;
-                switch (member.ProfilePicture)
-                {
-                    case byte[] bytes:
-                        dbBytes = bytes;
-                        break;
-                    case Avalonia.Media.Imaging.Bitmap bmp:
-                        dbBytes = ImageHelper.BitmapToBytes(bmp);
-                        break;
-                    case string s when s.StartsWith("avares://", StringComparison.OrdinalIgnoreCase):
-                        dbBytes = ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar());
-                        break;
-                    default:
-                        dbBytes = null;
-                        break;
-                }*/
-
-                //cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary).Value = (object?)dbBytes ?? DBNull.Value;
-                cmd.Parameters.AddWithValue("@ContactNumber", (object?)member.ContactNumber ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Age", (object?)member.Age ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@DateOfBirth", (object?)member.DateOfBirth ?? DBNull.Value);
-
-                // FIX: Convert validity months to actual date
-                DateTime? validityDate = null;
-                if (member.Validity != null)
-                {
-                    // Assuming member.Validity contains the number of months as string
-                    if (int.TryParse(member.Validity, out int months) && months > 0)
-                    {
-                        validityDate = DateTime.Now.AddMonths(months);
-                    }
-                }
-                cmd.Parameters.AddWithValue("@MembershipType", (object?)member.MembershipType ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Validity", (object?)validityDate ?? DBNull.Value);
-                Console.WriteLine($"Adding member with Status: '{member.Status}'");
-                cmd.Parameters.AddWithValue("@Status", member.Status);
-                cmd.Parameters.AddWithValue("@PaymentMethod", (object?)member.PaymentMethod ?? DBNull.Value);
-                await cmd.ExecuteNonQueryAsync();
-
-
-                string desc = $"Added new member: {member.FirstName} {member.MiddleInitial}. {member.LastName}";
-                await LogActionAsync(conn, actionType: "Add Member", description: desc, success: true);
-
-                _toastManager?.CreateToast("Member Added")
-                             .WithContent($"Successfully added {member.FirstName}")
-                             .ShowSuccess();
-            }
-            catch (SqlException ex)
-            {
-                Console.WriteLine($"[AddMemberAsync] SQL Error: {ex.Message}");
-                _toastManager?.CreateToast("Database Error")
-                              .WithContent(ex.Message)
-                              .WithDelay(5)
-                              .ShowError();
-
-                try
-                {
-                    await using var conn = new SqlConnection(_connectionString);
-                    await conn.OpenAsync();
-                    await LogActionAsync(conn, "Add Member", $"Failed to add {member.FirstName}: {ex.Message}", success: false);
-                }
-                catch { /* swallow secondary errors */ }
-
-                throw;
+                Console.WriteLine($"[GetMemberStatisticsAsync] {ex.Message}");
+                return (false, 0, 0, 0);
             }
         }
 
-        public async Task<bool> UpdateMemberAsync(string memberId, ManageMemberModel member)
-        {
-            try
-            {
-                await using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                const string sql = @"
-UPDATE Members 
-SET 
-    Firstname = @Firstname,
-    MiddleInitial = @MiddleInitial,
-    Lastname = @Lastname,
-    Gender = @Gender,
-    ContactNumber = @ContactNumber,
-    Age = @Age,
-    DateOfBirth = @DateOfBirth,
-    MembershipType = @MembershipType,
-    Status = @Status
-WHERE MemberID = @MemberID";
-
-                await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@MemberID", int.Parse(memberId));
-                cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@MiddleInitial", member.MiddleInitial ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Age", member.Age ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@MembershipType", member.MembershipType ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Status", member.Status ?? (object)DBNull.Value);
-
-                var rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
-                {
-                    string desc = $"Updated member: {member.FirstName} {member.MiddleInitial}. {member.LastName}";
-                    await LogActionAsync(conn, actionType: "Update Member", description: desc, success: true);
-
-                    _toastManager?.CreateToast("Member Updated")
-                                 .WithContent($"Successfully updated {member.FirstName}")
-                                 .ShowSuccess();
-                    return true;
-                }
-
-                return false;
-            }
-            catch (SqlException ex)
-            {
-                Console.WriteLine($"[UpdateMemberAsync] SQL Error: {ex.Message}");
-                _toastManager?.CreateToast("Database Error")
-                              .WithContent(ex.Message)
-                              .WithDelay(5)
-                              .ShowError();
-
-                try
-                {
-                    await using var conn = new SqlConnection(_connectionString);
-                    await conn.OpenAsync();
-                    await LogActionAsync(conn, "Update Member", $"Failed to update {member.FirstName}: {ex.Message}", success: false);
-                }
-                catch { /* swallow secondary errors */ }
-
-                return false;
-            }
-        }
+        #endregion
     }
 }
