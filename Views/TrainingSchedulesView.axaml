@@ -119,6 +119,7 @@
                                 Spacing="15">
                                 <CalendarDatePicker 
                                     Width="140"
+                                    shadui:ControlAssist.ReadOnly="True"
                                     SelectedDate="{CompiledBinding SelectedDate}"/>
                                 <ComboBox 
                                     Width="160"
