@@ -3,15 +3,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -177,7 +173,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
 	}
 
     [Required(ErrorMessage = "Quantity is required")]
-    [Range(1, 50, ErrorMessage = "Quantity must be between 1 and 50")]
+    [Range(1, 100, ErrorMessage = "Quantity must be between 1 and 100")]
     public int? SpecializedPackageQuantity
     {
         get => _specializedPackageQuantity;
@@ -320,7 +316,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
 		get 
 		{
 			bool hasValidInputs = !string.IsNullOrWhiteSpace(WalkInFirstName)
-				&& !string.IsNullOrWhiteSpace(SelectedMiddleInitialItem)
 				&& !string.IsNullOrWhiteSpace(WalkInLastName)
 				&& !string.IsNullOrWhiteSpace(WalkInContactNumber)
 				&& ContactNumberRegex().IsMatch(WalkInContactNumber)
@@ -342,6 +337,14 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
 	private void Payment() 
 	{
 		_toastManager.CreateToast("Payment Successful!").ShowSuccess();
+		_pageManager.Navigate<CheckInOutViewModel>();
+	}
+	
+	[RelayCommand]
+	private void Cancel() 
+	{
+		_toastManager.CreateToast("Log walk-in cancelled").ShowWarning();
+		_pageManager.Navigate<CheckInOutViewModel>();
 	}
 
 	public event PropertyChangedEventHandler? PropertyChanged;

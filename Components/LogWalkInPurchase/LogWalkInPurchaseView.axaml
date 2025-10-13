@@ -161,6 +161,8 @@
 												ParsingNumberStyle="Integer"
 												Watermark="Age"
 												Width="140"
+												Minimum="1"
+												Maximum="100"
 												Margin="30,32"
 												HorizontalAlignment="Left"/>
 										</StackPanel>
@@ -214,6 +216,8 @@
 												IsVisible="{CompiledBinding IsQuantityVisible, Mode=TwoWay}"
 												Value="{CompiledBinding SpecializedPackageQuantity, Mode=TwoWay}"
 												Width="130"
+												Minimum="1"
+												Maximum="100"
 												Margin="0,21"
 												shadui:ControlAssist.Label="Quantity"
 												FormatString="N0"
@@ -291,7 +295,7 @@
 										Padding="20,0,20,0"
 										Content="Cancel"
 										Classes="Outline"
-										Command="{CompiledBinding}"/>
+										Command="{CompiledBinding CancelCommand}" />
 								</StackPanel>
 							</shadui:Card>
 							<shadui:Card Grid.Column="1" Margin="20,0" Padding="40,40">
