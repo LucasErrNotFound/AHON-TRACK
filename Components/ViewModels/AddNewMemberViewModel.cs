@@ -43,7 +43,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
     [ObservableProperty]
-    private string[] _memberPackageItems = ["Boxing", "Muay Thai", "Crossfit", "Zumba"];
+    private List<PackageModel> _memberPackageItems = new();
+    [ObservableProperty]
+    private PackageModel? _selectedMemberPackageItem;
 
     [ObservableProperty]
     private string[] _memberStatusItems = ["Active", "Inactive", "Terminated"];
@@ -147,6 +149,26 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         }
     }
 
+    [Required(ErrorMessage = "Package is required")]
+    public string MemberPackages
+    {
+        get => _selectedMemberPackageItem?.packageName ?? _memberPackages;  // Changed from packageName to Name
+        set
+        {
+            SetProperty(ref _memberPackages, value, true);
+            // Try to find matching package in list
+            if (MemberPackageItems.Any())
+            {
+                var package = MemberPackageItems.FirstOrDefault(p => p.packageName == value);  // Changed from packageName to Name
+                if (package != null && _selectedMemberPackageItem != package)
+                {
+                    _selectedMemberPackageItem = package;
+                    OnPropertyChanged(nameof(SelectedMemberPackageItem));
+                }
+            }
+        }
+    }
+
     [Required(ErrorMessage = "Select your gender")]
     public string? MemberGender
     {
@@ -182,12 +204,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         set => SetProperty(ref _memberContactNumber, value, true);
     }
 
-    [Required(ErrorMessage = "Package is required")]
-    public string MemberPackages
-    {
-        get => _memberPackages;
-        set => SetProperty(ref _memberPackages, value, true);
-    }
+    /*public string MemberPackages
+     {
+         get => _memberPackages;
+         set => SetProperty(ref _memberPackages, value, true);
+     }*/
 
     [Required(ErrorMessage = "Age is required")]
     [Range(18, 80, ErrorMessage = "Age must be between 18 and 80")]
@@ -450,10 +471,61 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
         IsActiveSelected = true;
+        await LoadPackagesAsync();
     }
+
+    // Fix 3: Correct LoadPackagesAsync method
+    private async Task LoadPackagesAsync()
+    {
+        if (_memberService == null)
+        {
+            // Fallback to hardcoded packages if service is not available
+            MemberPackageItems = new List<PackageModel>
+        {
+            new PackageModel { packageID = 1, packageName = "Boxing" },
+            new PackageModel { packageID = 2, packageName = "Muay Thai" },
+            new PackageModel { packageID = 3, packageName = "Crossfit" },
+            new PackageModel { packageID = 4, packageName = "Zumba" }
+        };
+            return;
+        }
+
+        try
+        {
+            var result = await _memberService.GetAllPackagesAsync();  // Changed method name
+            if (result.Success && result.Packages != null && result.Packages.Any())
+            {
+                MemberPackageItems = result.Packages;
+            }
+            else
+            {
+                // Fallback to default packages
+                MemberPackageItems = new List<PackageModel>
+            {
+                new PackageModel { packageID = 1, packageName = "Boxing" },
+                new PackageModel { packageID = 2, packageName = "Muay Thai" },
+                new PackageModel { packageID = 3, packageName = "Crossfit" },
+                new PackageModel { packageID = 4, packageName = "Zumba" }
+            };
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to load packages: {ex.Message}");
+            // Fallback to default packages - FIXED TYPE HERE
+            MemberPackageItems = new List<PackageModel>  // Changed from List<PackageItem>
+        {
+            new PackageModel { packageID = 1, packageName = "Boxing" },
+            new PackageModel { packageID = 2, packageName = "Muay Thai" },
+            new PackageModel { packageID = 3, packageName = "Crossfit" },
+            new PackageModel { packageID = 4, packageName = "Zumba" }
+        };
+        }
+    }
+
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
     {
@@ -678,6 +750,17 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
             }
 
+            // Get PackageID from selected package
+            int? packageId = SelectedMemberPackageItem?.packageID;
+
+            // If no package selected but MemberPackages has value, try to find it
+            if (packageId == null && !string.IsNullOrEmpty(MemberPackages))
+            {
+                var package = MemberPackageItems.FirstOrDefault(p =>
+                    p.packageName.Equals(MemberPackages, StringComparison.OrdinalIgnoreCase));
+                packageId = package?.packageID;
+            }
+
             var member = new ManageMemberModel
             {
                 FirstName = MemberFirstName,
@@ -688,7 +771,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 Age = MemberAge,
                 DateOfBirth = MemberBirthDate,
                 ValidUntil = validUntilDate?.ToString("MMM dd, yyyy"),
-                MembershipType = MemberPackages,
+                PackageID = packageId,  // NOW USING PACKAGEID
+                MembershipType = MemberPackages,  // Keep name for display
                 Status = GetSelectedStatus() ?? "Active",
                 PaymentMethod = GetSelectedPaymentMethod(),
                 ProfilePicture = _memberProfilePictureBytes
@@ -707,6 +791,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             }
 
             Debug.WriteLine($"[Payment] Member registered successfully with ID: {result.MemberId}");
+            Debug.WriteLine($"[Payment] Package ID: {packageId}, Package Name: {MemberPackages}");
 
             _toastManager?.CreateToast("Payment Successful!")
                 .WithContent($"Member {member.FirstName} {member.LastName} registered successfully.")

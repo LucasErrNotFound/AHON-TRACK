@@ -137,22 +137,20 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
 
         foreach (var manageMember in manageMemberModels)
         {
-            // Parse the full name
             var nameParts = manageMember.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             string firstName = nameParts.Length > 0 ? nameParts[0] : "";
             string lastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
 
-            // Convert ProfilePicture to string path
             string picturePath = GetProfilePicturePath(manageMember.ProfilePicture);
 
             var memberPerson = new MemberPerson
             {
                 ID = manageMember.MemberID,
-                MemberID = manageMember.MemberID, // Add this line
+                MemberID = manageMember.MemberID,
                 FirstName = firstName,
                 LastName = lastName,
                 ContactNumber = manageMember.ContactNumber ?? "",
-                MembershipType = manageMember.MembershipType ?? "Gym Member",
+                MembershipType = manageMember.MembershipType ?? "None",  // Now shows package name
                 Status = manageMember.Status ?? "Active",
                 MemberPicture = picturePath,
                 CheckInTime = null,

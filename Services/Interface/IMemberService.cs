@@ -15,5 +15,7 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message)> UpdateMemberAsync(ManageMemberModel member);
         Task<(bool Success, string Message)> DeleteMemberAsync(int memberId);
         Task<(bool Success, string Message)> DeleteMultipleMembersAsync(List<int> memberIds);
+        Task<(bool Success, int? PackageID)> GetPackageIdByNameAsync(string packageName);
+        Task<(bool Success, List<PackageModel>? Packages)> GetAllPackagesAsync();
     }
 }

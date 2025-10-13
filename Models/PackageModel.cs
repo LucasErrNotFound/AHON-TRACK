@@ -10,6 +10,7 @@ namespace AHON_TRACK.Models
     {
         public int packageID { get; set; }
         public string packageName { get; set; }
+        public override string ToString() => packageName;
         public decimal price { get; set; }
         public string description { get; set; }
         public string duration { get; set; }

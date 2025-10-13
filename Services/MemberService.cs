@@ -6,6 +6,7 @@ using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.Services
@@ -87,7 +88,6 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@CustomerType", string.IsNullOrWhiteSpace(member.MembershipType) ? "Gym Member" : member.MembershipType);
                 cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
                 cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
@@ -129,6 +129,63 @@ namespace AHON_TRACK.Services
 
         #region READ
 
+        public async Task<(bool Success, List<PackageModel>? Packages)> GetAllPackagesAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = "SELECT PackageID, PackageName FROM Package ORDER BY PackageName";
+                using var cmd = new SqlCommand(query, conn);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                var packages = new List<PackageModel>();
+                while (await reader.ReadAsync())
+                {
+                    packages.Add(new PackageModel
+                    {
+                        packageID = reader.GetInt32(0),
+                        packageName = reader.GetString(1)
+                    });
+                }
+
+                return (true, packages);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetAllPackagesAsync Error: {ex}");
+                return (false, null);
+            }
+        }
+
+        public async Task<(bool Success, int? PackageID)> GetPackageIdByNameAsync(string packageName)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = "SELECT PackageID FROM Package WHERE PackageName = @PackageName";
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@PackageName", packageName);
+
+                var result = await cmd.ExecuteScalarAsync();
+
+                if (result != null && result != DBNull.Value)
+                {
+                    return (true, Convert.ToInt32(result));
+                }
+
+                return (false, null);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetPackageIdByNameAsync Error: {ex}");
+                return (false, null);
+            }
+        }
+
         public async Task<(bool Success, string Message, List<ManageMemberModel>? Members)> GetMembersAsync()
         {
             if (!CanView())
@@ -145,25 +202,27 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
+                // FIXED: Added JOIN with Packages table to get package name
                 string query = @"
-                    SELECT 
-                        MemberID,
-                        Firstname,
-                        MiddleInitial,
-                        Lastname,
-                        LTRIM(RTRIM(Firstname + ISNULL(' ' + MiddleInitial + '.', '') + ' ' + Lastname)) AS Name,
-                        Gender,
-                        ContactNumber,
-                        Age,
-                        DateOfBirth,
-                        ValidUntil,
-                        PackageID,
-                        CustomerType,
-                        Status,
-                        PaymentMethod,
-                        ProfilePicture
-                    FROM Members
-                    ORDER BY Name;";
+            SELECT 
+                m.MemberID,
+                m.Firstname,
+                m.MiddleInitial,
+                m.Lastname,
+                LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
+                m.Gender,
+                m.ContactNumber,
+                m.Age,
+                m.DateOfBirth,
+                m.ValidUntil,
+                m.PackageID,
+                p.PackageName,  -- Get the actual package name
+                m.Status,
+                m.PaymentMethod,
+                m.ProfilePicture
+            FROM Members m
+            LEFT JOIN Package p ON m.PackageID = p.PackageID
+            ORDER BY Name;";
 
                 var members = new List<ManageMemberModel>();
 
@@ -185,7 +244,7 @@ namespace AHON_TRACK.Services
                         DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
                         ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
                         PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
-                        MembershipType = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),  // Now reads PackageName
                         Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
                         PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
                         ProfilePicture = reader.IsDBNull(14) ? null : (byte[])reader[14],
@@ -219,6 +278,7 @@ namespace AHON_TRACK.Services
             }
         }
 
+        // Also fix GetMemberByIdAsync method
         public async Task<(bool Success, string Message, ManageMemberModel? Member)> GetMemberByIdAsync(int memberId)
         {
             if (!CanView())
@@ -231,11 +291,27 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                var query = @"SELECT MemberID, Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, 
-                             ContactNumber, Age, DateOfBirth, ValidUntil, PackageID, CustomerType, 
-                             Status, PaymentMethod, RegisteredByEmployeeID
-                      FROM Members 
-                      WHERE MemberID = @Id";
+                // FIXED: Added JOIN with Packages table
+                var query = @"
+            SELECT 
+                m.MemberID, 
+                m.Firstname, 
+                m.MiddleInitial, 
+                m.Lastname, 
+                m.Gender, 
+                m.ProfilePicture, 
+                m.ContactNumber, 
+                m.Age, 
+                m.DateOfBirth, 
+                m.ValidUntil, 
+                m.PackageID, 
+                p.PackageName,  -- Get package name from Packages table
+                m.Status, 
+                m.PaymentMethod, 
+                m.RegisteredByEmployeeID
+            FROM Members m
+            LEFT JOIN Package p ON m.PackageID = p.PackageID
+            WHERE m.MemberID = @Id";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", memberId);
@@ -259,7 +335,7 @@ namespace AHON_TRACK.Services
                         DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
                         ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
                         PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
-                        MembershipType = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),  // Now reads PackageName
                         Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
                         PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
                         RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14)
@@ -304,7 +380,6 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Check if member exists
                 using var checkCmd = new SqlCommand(
                     "SELECT COUNT(*) FROM Members WHERE MemberID = @memberId", conn);
                 checkCmd.Parameters.AddWithValue("@memberId", member.MemberID);
@@ -319,22 +394,21 @@ namespace AHON_TRACK.Services
                     return (false, "Member not found.");
                 }
 
-                // Update member
+                // REMOVED CustomerType from UPDATE
                 string query = @"UPDATE Members 
-                     SET Firstname = @Firstname, 
-                         MiddleInitial = @MiddleInitial, 
-                         Lastname = @Lastname, 
-                         Gender = @Gender,
-                         ContactNumber = @ContactNumber, 
-                         Age = @Age,
-                         DateOfBirth = @DateOfBirth,
-                         ValidUntil = @ValidUntil,
-                         PackageID = @PackageID,
-                         CustomerType = @CustomerType,
-                         Status = @Status,
-                         PaymentMethod = @PaymentMethod,
-                         ProfilePicture = @ProfilePicture
-                     WHERE MemberID = @MemberID";
+             SET Firstname = @Firstname, 
+                 MiddleInitial = @MiddleInitial, 
+                 Lastname = @Lastname, 
+                 Gender = @Gender,
+                 ContactNumber = @ContactNumber, 
+                 Age = @Age,
+                 DateOfBirth = @DateOfBirth,
+                 ValidUntil = @ValidUntil,
+                 PackageID = @PackageID,
+                 Status = @Status,
+                 PaymentMethod = @PaymentMethod,
+                 ProfilePicture = @ProfilePicture
+             WHERE MemberID = @MemberID";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@MemberID", member.MemberID);
@@ -347,7 +421,6 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@CustomerType", member.MembershipType ?? "Gym Member");
                 cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
                 cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
                 cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;

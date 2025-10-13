@@ -23,6 +23,7 @@ namespace AHON_TRACK.Models
         public string? ContactNumber { get; set; }
         public int? PackageID { get; set; }
         public string? MembershipType { get; set; }
+        //public string? CustomerType { get; set; }
         public int? Age { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string? ValidUntil { get; set; }

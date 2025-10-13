@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -56,6 +57,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly IMemberService _memberService;
+
+    private List<PackageModel> _memberPackageModels = new();
 
     public DateTime? MemberDateJoined
     {
@@ -189,10 +192,33 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
         IsEditMode = false;
         DialogTitle = "Edit Gym Member Details";
+
+        await LoadPackagesAsync();
+    }
+
+    public async Task LoadPackagesAsync()
+    {
+        if (_memberService == null) return;
+
+        try
+        {
+            var result = await _memberService.GetAllPackagesAsync();
+            if (result.Success && result.Packages != null && result.Packages.Any())
+            {
+                _memberPackageModels = result.Packages;
+
+                // Update the string array for UI binding
+                MemberPackageItems = result.Packages.Select(p => p.packageName).ToArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to load packages: {ex.Message}");
+        }
     }
 
     // Overload to accept string (for backward compatibility)
@@ -225,7 +251,12 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
         try
         {
-            // Fetch full member data from database using new service method
+            // Load packages first if not loaded
+            if (_memberPackageModels.Count == 0)
+            {
+                await LoadPackagesAsync();
+            }
+
             var result = await _memberService.GetMemberByIdAsync(memberId);
 
             if (!result.Success || result.Member == null)
@@ -240,18 +271,19 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
             var memberData = result.Member;
 
-            // Populate all fields
             MemberFirstName = memberData.FirstName ?? string.Empty;
             SelectedMiddleInitialItem = memberData.MiddleInitial ?? string.Empty;
             MemberLastName = memberData.LastName ?? string.Empty;
             MemberGender = memberData.Gender ?? string.Empty;
             MemberContactNumber = memberData.ContactNumber?.Replace(" ", "") ?? string.Empty;
+
+            // Set the package name for display
             MemberPackages = memberData.MembershipType ?? string.Empty;
+
             MemberAge = memberData.Age;
             MemberBirthDate = memberData.DateOfBirth;
             MemberStatus = memberData.Status ?? "Active";
 
-            // Parse ValidUntil date
             if (!string.IsNullOrEmpty(memberData.ValidUntil))
             {
                 if (DateTime.TryParse(memberData.ValidUntil, out var validUntilDate))
@@ -262,14 +294,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
             IsEditMode = true;
 
-            Debug.WriteLine($"[PopulateWithMemberData] Loaded member ID {memberId}");
-            Debug.WriteLine($"  Name: {MemberFirstName} {SelectedMiddleInitialItem}. {MemberLastName}");
-            Debug.WriteLine($"  Gender: {MemberGender}");
-            Debug.WriteLine($"  DOB: {MemberBirthDate}");
-            Debug.WriteLine($"  Contact: {MemberContactNumber}");
-            Debug.WriteLine($"  Package: {MemberPackages}");
-            Debug.WriteLine($"  Status: {MemberStatus}");
-            Debug.WriteLine($"  Valid Until: {MemberValidUntil}");
+            Debug.WriteLine($"[PopulateWithMemberData] Loaded member: {memberData.MembershipType}");
         }
         catch (Exception ex)
         {
@@ -307,7 +332,15 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
         try
         {
-            // Create member model with updated data
+            // Get PackageID from the selected package name
+            int? packageId = null;
+            if (!string.IsNullOrEmpty(MemberPackages))
+            {
+                var package = _memberPackageModels.FirstOrDefault(p =>
+                    p.packageName.Equals(MemberPackages, StringComparison.OrdinalIgnoreCase));
+                packageId = package?.packageID;
+            }
+
             var memberModel = new ManageMemberModel
             {
                 MemberID = CurrentMemberId,
@@ -319,11 +352,11 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 Age = MemberAge,
                 DateOfBirth = MemberBirthDate,
                 ValidUntil = MemberValidUntil?.ToString("MMM dd, yyyy"),
-                MembershipType = MemberPackages,
+                PackageID = packageId,  // Use PackageID
+                MembershipType = MemberPackages,  // Keep for display
                 Status = MemberStatus
             };
 
-            // Update in database using new service method
             if (_memberService != null)
             {
                 var result = await _memberService.UpdateMemberAsync(memberModel);
@@ -338,17 +371,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 }
             }
 
-            Debug.WriteLine($"[SaveDetails] Updated member ID: {CurrentMemberId}");
-            Debug.WriteLine($"First Name: {MemberFirstName}");
-            Debug.WriteLine($"Middle Initial: {SelectedMiddleInitialItem}");
-            Debug.WriteLine($"Last Name: {MemberLastName}");
-            Debug.WriteLine($"Gender: {MemberGender}");
-            Debug.WriteLine($"Contact No.: {MemberContactNumber}");
-            Debug.WriteLine($"Packages: {MemberPackages}");
-            Debug.WriteLine($"Age: {MemberAge}");
-            Debug.WriteLine($"Date of Birth: {MemberBirthDate?.ToString("MMMM d, yyyy")}");
-            Debug.WriteLine($"Valid Until: {MemberValidUntil?.ToString("MMMM d, yyyy")}");
-            Debug.WriteLine($"Status: {MemberStatus}");
+            Debug.WriteLine($"[SaveDetails] Updated member with Package ID: {packageId}");
 
             _dialogManager.Close(this, new CloseDialogOptions { Success = true });
         }
