@@ -7,6 +7,7 @@ using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -58,7 +59,7 @@ namespace AHON_TRACK.Services
                 const string query = @"
                     SELECT 
                         mci.CheckInId,
-                        m.Firstname + ' ' + ISNULL(m.MiddleInitial + '. ', '') + m.Lastname AS FullName,
+                        m.Firstname + ' '+ m.Lastname AS FullName,
                         m.ContactNumber,
                         m.Status,
                         m.ProfilePicture,
@@ -90,7 +91,7 @@ namespace AHON_TRACK.Services
                         FirstName = firstName,
                         LastName = lastName,
                         ContactNumber = reader["ContactNumber"]?.ToString() ?? "",
-                        MembershipType = "Member", // You might want to add this to your Members table
+                        MembershipType = "Gym Member", // You might want to add this to your Members table
                         Status = reader["Status"]?.ToString() ?? "",
                         DateAttendance = reader.GetDateTime("DateAttendance"),
                         CheckInTime = reader.GetDateTime("CheckInTime"),
@@ -204,93 +205,126 @@ namespace AHON_TRACK.Services
 
         #region Walk-in Check-in/out Operations
 
-        public async Task<List<WalkInPerson>> GetWalkInCheckInsAsync(DateTime date)
+        public async Task<bool> CheckInWalkInAsync(int customerID)
         {
-            var walkInCheckIns = new List<WalkInPerson>();
             try
             {
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
 
-                const string query = @"
-                    SELECT 
-                        CheckInId,
-                        FirstName,
-                        LastName,
-                        Age,
-                        ContactNumber,
-                        PackageType,
-                        CheckInTime,
-                        CheckOutTime,
-                        DateAttendance
-                    FROM WalkInCheckIns
-                    WHERE CAST(DateAttendance AS DATE) = @Date
-                    ORDER BY CheckInTime DESC";
+                // Check if already checked in today
+                using var checkCmd = new SqlCommand(@"
+            SELECT COUNT(*) FROM WalkInRecords 
+            WHERE CustomerID = @customerID 
+            AND CAST(CheckIn AS DATE) = CAST(GETDATE() AS DATE)", conn);
 
-                await using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@Date", date.Date);
-                await using var reader = await command.ExecuteReaderAsync();
+                checkCmd.Parameters.AddWithValue("@customerID", customerID);
+                var alreadyCheckedIn = (int)await checkCmd.ExecuteScalarAsync() > 0;
 
+                if (alreadyCheckedIn)
+                {
+                    _toastManager.CreateToast("Already Checked In")
+                        .WithContent("This walk-in customer is already checked in today")
+                        .ShowWarning();
+                    return false;
+                }
+
+                // Insert check-in record
+                using var cmd = new SqlCommand(@"
+            INSERT INTO WalkInRecords (CustomerID, CheckIn, CheckOut)
+            VALUES (@customerID, GETDATE(), NULL)", conn);
+
+                cmd.Parameters.AddWithValue("@customerID", customerID);
+
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error checking in walk-in: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> CheckOutWalkInAsync(int checkInID)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(@"
+            UPDATE WalkInRecords 
+            SET CheckOut = GETDATE() 
+            WHERE RecordID = @recordID", conn);
+
+                cmd.Parameters.AddWithValue("@recordID", checkInID);
+
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error checking out walk-in: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<List<WalkInPerson>> GetWalkInCheckInsAsync(DateTime date)
+        {
+            var walkIns = new List<WalkInPerson>();
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(@"
+    SELECT 
+        r.RecordID,
+        c.CustomerID,
+        c.FirstName,
+        c.LastName,
+        c.Age,
+        c.ContactNumber,
+        c.WalkinPackage AS Package,
+        r.CheckIn,
+        r.CheckOut,
+        r.RecordDate
+    FROM WalkInRecords r
+    INNER JOIN WalkInCustomers c ON r.CustomerID = c.CustomerID
+    WHERE r.RecordDate = CAST(@date AS DATE)
+    ORDER BY r.RecordID ASC", conn);
+
+
+                cmd.Parameters.AddWithValue("@date", date);
+
+                using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
-                    walkInCheckIns.Add(new WalkInPerson
+                    var checkIn = reader.IsDBNull(7) ? (DateTime?)null : reader.GetDateTime(7);
+                    var recordDate = reader.IsDBNull(9) ? (DateTime?)null : reader.GetDateTime(9);
+
+                    walkIns.Add(new WalkInPerson
                     {
-                        ID = reader.GetInt32("CheckInId"),
-                        FirstName = reader["FirstName"]?.ToString() ?? "",
-                        LastName = reader["LastName"]?.ToString() ?? "",
-                        Age = reader.GetInt32("Age"),
-                        ContactNumber = reader["ContactNumber"]?.ToString() ?? "",
-                        PackageType = reader["PackageType"]?.ToString() ?? "",
-                        DateAttendance = reader.GetDateTime("DateAttendance"),
-                        CheckInTime = reader.GetDateTime("CheckInTime"),
-                        CheckOutTime = reader.IsDBNull("CheckOutTime") ? null : reader.GetDateTime("CheckOutTime")
+                        ID = reader.GetInt32(0),
+                        FirstName = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        LastName = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                        Age = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                        ContactNumber = reader.IsDBNull(5) ? "" : reader.GetString(5),
+                        PackageType = reader.IsDBNull(6) ? "" : reader.GetString(6),
+                        DateAttendance = recordDate,
+                        CheckInTime = checkIn,
+                        CheckOutTime = reader.IsDBNull(8) ? null : reader.GetDateTime(8)
                     });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetWalkInCheckInsAsync] {ex.Message}");
-                _toastManager?.CreateToast("Database Error")
-                              .WithContent($"Failed to load walk-in check-ins: {ex.Message}")
-                              .WithDelay(5)
-                              .ShowError();
+                Debug.WriteLine($"Error getting walk-in check-ins: {ex.Message}");
             }
-            return walkInCheckIns;
-        }
 
-        public async Task<bool> CheckOutWalkInAsync(int walkInCheckInId)
-        {
-            try
-            {
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                const string updateQuery = @"
-                    UPDATE WalkInCheckIns 
-                    SET CheckOutTime = GETDATE() 
-                    WHERE CheckInId = @CheckInId AND CheckOutTime IS NULL";
-
-                await using var command = new SqlCommand(updateQuery, connection);
-                command.Parameters.AddWithValue("@CheckInId", walkInCheckInId);
-
-                var rowsAffected = await command.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
-                {
-                    await LogActionAsync(connection, "Walk-in Check-Out",
-                        $"Walk-in checked out (CheckInId: {walkInCheckInId})", true);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[CheckOutWalkInAsync] {ex.Message}");
-                _toastManager?.CreateToast("Check-Out Error")
-                              .WithContent($"Failed to check out walk-in: {ex.Message}")
-                              .WithDelay(5)
-                              .ShowError();
-            }
-            return false;
+            return walkIns;
         }
 
         #endregion
@@ -328,35 +362,27 @@ namespace AHON_TRACK.Services
             return false;
         }
 
-        public async Task<bool> DeleteWalkInCheckInAsync(int walkInCheckInId)
+        public async Task<bool> DeleteWalkInCheckInAsync(int checkInID)
         {
             try
             {
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
 
-                const string deleteQuery = "DELETE FROM WalkInCheckIns WHERE CheckInId = @CheckInId";
-                await using var command = new SqlCommand(deleteQuery, connection);
-                command.Parameters.AddWithValue("@CheckInId", walkInCheckInId);
+                using var cmd = new SqlCommand(@"
+            DELETE FROM WalkInRecords 
+            WHERE RecordID = @recordID", conn);
 
-                var rowsAffected = await command.ExecuteNonQueryAsync();
+                cmd.Parameters.AddWithValue("@recordID", checkInID);
 
-                if (rowsAffected > 0)
-                {
-                    await LogActionAsync(connection, "Delete Walk-in Check-In",
-                        $"Deleted walk-in check-in record (CheckInId: {walkInCheckInId})", true);
-                    return true;
-                }
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DeleteWalkInCheckInAsync] {ex.Message}");
-                _toastManager?.CreateToast("Delete Error")
-                              .WithContent($"Failed to delete walk-in check-in: {ex.Message}")
-                              .WithDelay(5)
-                              .ShowError();
+                Debug.WriteLine($"Error deleting walk-in check-in: {ex.Message}");
+                return false;
             }
-            return false;
         }
 
         #endregion
@@ -372,7 +398,7 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 // Simplified query - just get all active members
-                const string query = @"SELECT m.MemberID, (m.Firstname + ' '  + ISNULL(NULLIF(m.MiddleInitial, '') + '. ', '')  + m.Lastname) AS Name,
+                const string query = @"SELECT m.MemberID, (m.Firstname + ' ' + m.Lastname) AS Name,
                     m.ContactNumber,
                     m.Status,
                     m.Validity,

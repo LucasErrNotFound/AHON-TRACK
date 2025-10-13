@@ -664,7 +664,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     partial void OnSelectedDateChanged(DateTime value)
     {
-        FilterDataByDate(value);
+        //FilterDataByDate(value);
+        _ = LoadCheckInDataFromService(value);
     }
 
     private void FilterDataByDate(DateTime selectedDate)
