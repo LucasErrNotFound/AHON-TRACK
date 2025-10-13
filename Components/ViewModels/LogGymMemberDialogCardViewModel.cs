@@ -152,7 +152,7 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
                 FirstName = firstName,
                 LastName = lastName,
                 ContactNumber = manageMember.ContactNumber ?? "",
-                MembershipType = manageMember.MembershipType ?? "Member",
+                MembershipType = manageMember.MembershipType ?? "Gym Member",
                 Status = manageMember.Status ?? "Active",
                 MemberPicture = picturePath,
                 CheckInTime = null,
