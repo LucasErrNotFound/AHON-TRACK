@@ -267,7 +267,7 @@
                         Classes="Caption Muted"
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
-						Command="{CompiledBinding}"
+						Command="{CompiledBinding OpenFinancialReportsCommand}"
 						Content="Financial Reports"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Financial Reports'}">

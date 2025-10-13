@@ -25,6 +25,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
     private readonly ProductStockViewModel  _productStockViewModel;
     private readonly SupplierManagementViewModel _supplierManagementViewModel;
+    private readonly FinancialReportsViewModel _financialReportsViewModel;
     private readonly GymDemographicsViewModel  _gymDemographicsViewModel;
     private readonly GymAttendanceViewModel  _gymAttendanceViewModel;
     private readonly AuditLogsViewModel _auditLogsViewModel;
@@ -46,6 +47,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         EquipmentInventoryViewModel equipmentInventoryViewModel,
         ProductStockViewModel productStockViewModel,
         SupplierManagementViewModel supplierManagementViewModel,
+        FinancialReportsViewModel financialReportsViewModel,
         GymDemographicsViewModel gymDemographicsViewModel,
         GymAttendanceViewModel gymAttendanceViewModel,
         AuditLogsViewModel auditLogsViewModel,
@@ -63,6 +65,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _equipmentInventoryViewModel = equipmentInventoryViewModel;
         _productStockViewModel = productStockViewModel;
         _supplierManagementViewModel = supplierManagementViewModel;
+        _financialReportsViewModel = financialReportsViewModel;
         _gymDemographicsViewModel = gymDemographicsViewModel;
         _gymAttendanceViewModel = gymAttendanceViewModel;
         _auditLogsViewModel = auditLogsViewModel;
@@ -90,6 +93,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _equipmentInventoryViewModel = new EquipmentInventoryViewModel();
         _productStockViewModel = new ProductStockViewModel();
         _supplierManagementViewModel = new SupplierManagementViewModel();
+        _financialReportsViewModel = new FinancialReportsViewModel();
         _gymDemographicsViewModel = new GymDemographicsViewModel();
         _gymAttendanceViewModel = new GymAttendanceViewModel();
         _auditLogsViewModel = new AuditLogsViewModel();
@@ -178,10 +182,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenSupplierManagement() => SwitchPage(_supplierManagementViewModel);
 
-    /*
     [RelayCommand]
     private void OpenFinancialReports() => SwitchPage(_financialReportsViewModel);
-    */
 
     [RelayCommand]
     private void OpenGymDemographics() => SwitchPage(_gymDemographicsViewModel);
