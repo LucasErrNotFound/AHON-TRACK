@@ -24,7 +24,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	];
 
 	[ObservableProperty] 
-	private string _selectedSortFilterItem = "By ID";
+	private string _selectedSortFilterItem = "By newest to oldest";
 	
 	[ObservableProperty] 
 	private string[] _statusFilterItems = ["All", "Active", "Expired"];
@@ -252,6 +252,269 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				Status = "Active",
 				Validity = new DateTime(2025, 4, 18)
 			},
+			// Test Test
+			new ManageMembersItem
+			{
+				ID = "1001",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Jedd Calubayan",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Boxing",
+				Status = "Active",
+				Validity = new DateTime(2025, 6, 16)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1002",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Marc Torres",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "None",
+				Status = "Expired",
+				Validity = new DateTime(2025, 7, 16)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1003",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Mardie Dela Cruz",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "None",
+				Status = "Expired",
+				Validity = new DateTime(2025, 7, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1004",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Mark Dela Cruz",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 7, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1005",
+				AvatarSource = DefaultAvatarSource,
+				Name = "JL Taberdo",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Expired",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1006",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Robert Xyz B. Lucas",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1007",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Sianrey V. Flora",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1008",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Marion James Dela Roca",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			new ManageMembersItem
+			{
+				ID = "1001",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Jedd Calubayan",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Boxing",
+				Status = "Active",
+				Validity = new DateTime(2025, 6, 16)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1002",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Marc Torres",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "None",
+				Status = "Expired",
+				Validity = new DateTime(2025, 7, 16)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1003",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Mardie Dela Cruz",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "None",
+				Status = "Expired",
+				Validity = new DateTime(2025, 7, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1004",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Mark Dela Cruz",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 7, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1005",
+				AvatarSource = DefaultAvatarSource,
+				Name = "JL Taberdo",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Expired",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1006",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Robert Xyz B. Lucas",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1007",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Sianrey V. Flora",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1008",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Marion James Dela Roca",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			new ManageMembersItem
+			{
+				ID = "1001",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Jedd Calubayan",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Boxing",
+				Status = "Active",
+				Validity = new DateTime(2025, 6, 16)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1002",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Marc Torres",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "None",
+				Status = "Expired",
+				Validity = new DateTime(2025, 7, 16)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1003",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Mardie Dela Cruz",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "None",
+				Status = "Expired",
+				Validity = new DateTime(2025, 7, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1004",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Mark Dela Cruz",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 7, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1005",
+				AvatarSource = DefaultAvatarSource,
+				Name = "JL Taberdo",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Expired",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1006",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Robert Xyz B. Lucas",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1007",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Sianrey V. Flora",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			
+			new ManageMembersItem
+			{
+				ID = "1008",
+				AvatarSource = DefaultAvatarSource,
+				Name = "Marion James Dela Roca",
+				ContactNumber = "0975 994 3010",
+				AvailedPackages = "Gym",
+				Status = "Active",
+				Validity = new DateTime(2025, 4, 18)
+			},
+			// Ends Here
 		];
 	}
 	

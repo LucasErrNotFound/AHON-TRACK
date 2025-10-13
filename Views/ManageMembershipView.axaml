@@ -54,16 +54,17 @@
 				Margin="90,0" />
 		</StackPanel>
 		<ScrollViewer HorizontalScrollBarVisibility="Auto">
-			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="50,10,40,0" Spacing="16">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="50,10,10,0" Spacing="16">
 				<!--
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
 					-->
-				<Grid ColumnDefinitions="2* 3*">
+				<Grid ColumnDefinitions="3* 2*" ColumnSpacing="10">
 					<shadui:Card Margin="0,30" HorizontalAlignment="Left" VerticalAlignment="Top" Height="835">
 						<StackPanel Spacing="25">
-							<StackPanel Orientation="Horizontal">
+							<Grid ColumnDefinitions="Auto Auto Auto *">
 								<TextBox
+									Grid.Column="0"
 									Width="260"
 									HorizontalAlignment="Left"
 									shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingMember}"
@@ -80,6 +81,7 @@
 									</TextBox.InnerRightContent>
 								</TextBox>
 								<ComboBox
+									Grid.Column="1"
 									HorizontalAlignment="Left"
 									VerticalAlignment="Center"
 									PlaceholderText="Sort Data"
@@ -88,6 +90,7 @@
 									ItemsSource="{CompiledBinding SortFilterItems}"
 									SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
 								<ComboBox
+									Grid.Column="2"
 									HorizontalAlignment="Left"
 									VerticalAlignment="Center"
 									PlaceholderText="Filter"
@@ -96,11 +99,10 @@
 									SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
 								</ComboBox>
 								<Button
+									Grid.Column="3"
 									HorizontalAlignment="Right"
-									Margin="280,0,0,0"
 									Classes="Primary"
 									FontSize="16"
-									Width="200"
 									Height="40"
 									Padding="20,0,20,0"
 									Command="{CompiledBinding OpenAddNewMemberViewCommand}">
@@ -114,7 +116,7 @@
 										<TextBlock Text="Add New Member" VerticalAlignment="Center"/>
 									</StackPanel>
 								</Button>
-							</StackPanel>
+							</Grid>
 							<DataGrid
 								Height="720"
 								x:Name="ManageMemberDataGrid"
@@ -199,7 +201,7 @@
 										IsReadOnly="True"
 										FontSize="14"
 										IsVisible="{CompiledBinding ShowContactNumberColumn}"
-										Width="160" />
+										Width="140" />
 
 									<!--Membership Type Header Column-->
 									<DataGridTextColumn
@@ -336,12 +338,11 @@
 											</DataTemplate>
 										</DataGridTemplateColumn.CellTemplate>
 									</DataGridTemplateColumn>
-
 								</DataGrid.Columns>
 							</DataGrid>
 						</StackPanel>
 					</shadui:Card>
-					<shadui:Card Grid.Column="1" Margin="7,25,0,0" VerticalAlignment="Top" MaxHeight="837">
+					<shadui:Card Grid.Column="1" Margin="0,25,0,0" VerticalAlignment="Top" MaxHeight="837">
 						<Grid RowDefinitions="Auto Auto Auto Auto">
 							<StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
 								<shadui:Avatar
