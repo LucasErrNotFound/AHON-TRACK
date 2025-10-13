@@ -676,6 +676,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     [RelayCommand]
     private void Cancel()
     {
+        _toastManager.CreateToast("Add new member cancelled").ShowWarning();
         _pageManager.Navigate<ManageMembershipViewModel>();
     }
     
