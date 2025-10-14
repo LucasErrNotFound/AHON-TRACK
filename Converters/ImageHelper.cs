@@ -64,7 +64,7 @@ namespace AHON_TRACK.Converters
         }
 
         // Byte array to Bitmap conversion for UI display
-        public static Bitmap BytesToBitmap(byte[] bytes)
+        public static Bitmap BytesToBitmap(byte[]? bytes)
         {
             using var ms = new MemoryStream(bytes);
             return new Bitmap(ms);
