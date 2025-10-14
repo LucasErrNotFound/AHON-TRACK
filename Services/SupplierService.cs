@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using AHON_TRACK.Services.Interface;
 using System.Data;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.Services
 {
@@ -101,7 +102,7 @@ namespace AHON_TRACK.Services
 
                 var supplierId = (int)await cmd.ExecuteScalarAsync();
 
-                await LogActionAsync(conn, "CREATE", $"Added new supplier: {supplier.SupplierName}", true);
+                await LogActionAsync(conn, "Added new supplier.", $"Added new supplier: {supplier.SupplierName}", true);
 
                 _toastManager.CreateToast("Supplier Added")
                     .WithContent($"Successfully added supplier '{supplier.SupplierName}'.")
@@ -355,7 +356,7 @@ namespace AHON_TRACK.Services
 
                 await cmd.ExecuteNonQueryAsync();
 
-                await LogActionAsync(conn, "UPDATE", $"Updated supplier: {supplier.SupplierName}", true);
+                await LogActionAsync(conn, "Updated supplier data.", $"Updated supplier: {supplier.SupplierName}", true);
 
                 _toastManager.CreateToast("Supplier Updated")
                     .WithContent($"Successfully updated supplier '{supplier.SupplierName}'.")
@@ -410,7 +411,7 @@ namespace AHON_TRACK.Services
 
                 if (rowsAffected > 0)
                 {
-                    await LogActionAsync(conn, "UPDATE", $"Updated supplier status to: {newStatus}", true);
+                    await LogActionAsync(conn, "Updated supplier status.", $"Updated supplier status to: {newStatus}", true);
 
                     _toastManager.CreateToast("Status Updated")
                         .WithContent($"Supplier status updated to '{newStatus}'.")
@@ -476,7 +477,7 @@ namespace AHON_TRACK.Services
 
                 if (rowsAffected > 0)
                 {
-                    await LogActionAsync(conn, "DELETE", $"Deleted supplier: {supplierName}", true);
+                    await LogActionAsync(conn, "Deleted a supplier.", $"Deleted supplier: {supplierName}", true);
 
                     _toastManager.CreateToast("Supplier Deleted")
                         .WithContent($"Successfully deleted supplier '{supplierName}'.")
@@ -553,7 +554,7 @@ namespace AHON_TRACK.Services
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }
 
-                    await LogActionAsync(conn, "DELETE", $"Deleted {deletedCount} suppliers: {string.Join(", ", supplierNames)}", true);
+                    await LogActionAsync(conn, "Deleted multiple suppliers.", $"Deleted {deletedCount} suppliers: {string.Join(", ", supplierNames)}", true);
 
                     transaction.Commit();
 
@@ -608,6 +609,7 @@ namespace AHON_TRACK.Services
                 logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                 await logCmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
             }
             catch (Exception ex)
             {

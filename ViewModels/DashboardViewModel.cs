@@ -1,4 +1,5 @@
 ﻿using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using HotAvalonia;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
@@ -30,6 +31,8 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     private string _salesSummary = "You made 0 sales this month.";
     private string _trainingSessionsSummary = "You have 0 upcoming training schedules this week";
     private string _recentLogsSummary = "You have 0 recent action logs today";
+    public event EventHandler RecentLogsUpdated;
+    public void NotifyRecentLogsUpdated() => RecentLogsUpdated?.Invoke(this, EventArgs.Empty);
 
     #endregion
 
@@ -174,6 +177,13 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         InitializeSalesData();
         InitializeTrainingSessionsData();
         await RefreshRecentLogs();
+
+        DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
+        {
+            await RefreshRecentLogs();
+        };
+        DashboardEventService.Instance.SalesUpdated += async (s, e) => await LoadSalesFromDatabaseAsync();
+        DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
     }
 
     private void InitializeAvailableYears()
