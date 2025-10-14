@@ -392,57 +392,59 @@ namespace AHON_TRACK.Services
         public async Task<List<ManageMemberModel>> GetAvailableMembersForCheckInAsync()
         {
             var members = new List<ManageMemberModel>();
-            try
-            {
-                await using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                // Simplified query - just get all active members
-                const string query = @"SELECT m.MemberID, (m.Firstname + ' ' + m.Lastname) AS Name,
-                    m.ContactNumber,
-                    m.Status,
-                    m.ValidUntil,
-                    m.ProfilePicture
-                    FROM Members m
-                    WHERE m.Status = 'Active'
-                    ORDER BY MemberID;";
-
-                await using var command = new SqlCommand(query, connection);
-                await using var reader = await command.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
+                try
                 {
-                    byte[]? bytes = null;
-                    if (!reader.IsDBNull("ProfilePicture"))
-                        bytes = (byte[])reader["ProfilePicture"];
-
-                    string validityDisplay = string.Empty;
-                    if (!reader.IsDBNull("ValidUntil"))
+                    await using var connection = new SqlConnection(_connectionString);
+                    await connection.OpenAsync();
+            
+                    const string query = @"SELECT m.MemberID, (m.Firstname + ' ' + m.Lastname) AS Name,
+                        m.ContactNumber,
+                        m.Status,
+                        m.ValidUntil,
+                        m.ProfilePicture
+                        FROM Members m
+                        WHERE m.Status = 'Active'
+                        ORDER BY MemberID;";
+            
+                    await using var command = new SqlCommand(query, connection);
+                    await using var reader = await command.ExecuteReaderAsync();
+            
+                    while (await reader.ReadAsync())
                     {
-                        var validityDate = reader.GetDateTime("ValidUntil");
-                        validityDisplay = validityDate.ToString("MMM dd, yyyy");
+                        byte[]? bytes = null;
+                        if (!reader.IsDBNull("ProfilePicture"))
+                            bytes = (byte[])reader["ProfilePicture"];
+            
+                        string validityDisplay = string.Empty;
+                        if (!reader.IsDBNull("ValidUntil"))
+                        {
+                            var validityDate = reader.GetDateTime("ValidUntil");
+                            validityDisplay = validityDate.ToString("MMM dd, yyyy");
+                        }
+            
+                        members.Add(new ManageMemberModel
+                        {
+                            MemberID = reader.GetInt32("MemberId"),
+                            Name = reader["Name"]?.ToString() ?? string.Empty,
+                            ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
+                            Status = reader["Status"]?.ToString() ?? string.Empty,
+                            ValidUntil = validityDisplay,
+                            AvatarBytes = bytes,
+                            AvatarSource = bytes != null 
+                                ? ImageHelper.BytesToBitmap(bytes) 
+                                : ImageHelper.GetDefaultAvatar()
+                        });
                     }
-
-                    members.Add(new ManageMemberModel
-                    {
-                        MemberID = reader.GetInt32("MemberId"),
-                        Name = reader["Name"]?.ToString() ?? string.Empty,
-                        ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                        Status = reader["Status"]?.ToString() ?? string.Empty,
-                        ValidUntil = validityDisplay,
-                        //ProfilePicture = ImageHelper.GetAvatarOrDefault(bytes)
-                    });
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[GetAvailableMembersForCheckInAsync] {ex.Message}");
-                _toastManager?.CreateToast("Database Error")
-                              .WithContent($"Failed to load available members: {ex.Message}")
-                              .WithDelay(5)
-                              .ShowError();
-            }
-            return members;
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[GetAvailableMembersForCheckInAsync] {ex.Message}");
+                    _toastManager?.CreateToast("Database Error")
+                                  .WithContent($"Failed to load available members: {ex.Message}")
+                                  .WithDelay(5)
+                                  .ShowError();
+                }
+                return members;
         }
 
         #endregion

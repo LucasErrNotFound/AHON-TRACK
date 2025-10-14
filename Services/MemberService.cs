@@ -188,8 +188,8 @@ namespace AHON_TRACK.Services
                         MembershipType = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
                         Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
                         PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                        ProfilePicture = reader.IsDBNull(14) ? null : (byte[])reader[14],
-                        ProfileImageSource = reader.IsDBNull(14)
+                        AvatarBytes = reader.IsDBNull(14) ? null : (byte[])reader[14],
+                        AvatarSource = reader.IsDBNull(14)
                             ? ImageHelper.GetDefaultAvatar()
                             : ImageHelper.BytesToBitmap((byte[])reader[14])
                     });
@@ -250,8 +250,8 @@ namespace AHON_TRACK.Services
                         MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
                         LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
                         Gender = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                        ProfilePicture = reader.IsDBNull(5) ? null : (byte[])reader[5],
-                        ProfileImageSource = reader.IsDBNull(5)
+                        AvatarBytes = reader.IsDBNull(5) ? null : (byte[])reader[5],
+                        AvatarSource = reader.IsDBNull(5)
                             ? ImageHelper.GetDefaultAvatar()
                             : ImageHelper.BytesToBitmap((byte[])reader[5]),
                         ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
