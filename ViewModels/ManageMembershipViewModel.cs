@@ -7,8 +7,11 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -167,7 +170,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 var memberItems = result.Members.Select(m => new ManageMembersItem
                 {
                     ID = m.MemberID.ToString(),
-                    AvatarSource = DefaultAvatarSource,
+                    AvatarSource = m.AvatarBytes != null 
+                        ? ImageHelper.BytesToBitmap(m.AvatarBytes) 
+                        : ManageMemberModel.DefaultAvatarSource,
                     Name = m.Name ?? string.Empty,
                     ContactNumber = m.ContactNumber ?? string.Empty,
                     AvailedPackages = m.MembershipType ?? string.Empty,
@@ -246,7 +251,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             new ManageMembersItem
             {
                 ID = "1001",
-                AvatarSource = DefaultAvatarSource,
+                AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 Name = "Jedd Calubayan",
                 ContactNumber = "0975 994 3010",
                 AvailedPackages = "Boxing",
@@ -257,7 +262,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             new ManageMembersItem
             {
                 ID = "1002",
-                AvatarSource = DefaultAvatarSource,
+                AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 Name = "Marc Torres",
                 ContactNumber = "0975 994 3010",
                 AvailedPackages = "None",
@@ -268,7 +273,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             new ManageMembersItem
             {
                 ID = "1003",
-                AvatarSource = DefaultAvatarSource,
+                AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 Name = "Mardie Dela Cruz",
                 ContactNumber = "0975 994 3010",
                 AvailedPackages = "None",
@@ -279,7 +284,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             new ManageMembersItem
             {
                 ID = "1004",
-                AvatarSource = DefaultAvatarSource,
+                AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 Name = "Mark Dela Cruz",
                 ContactNumber = "0975 994 3010",
                 AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
@@ -290,7 +295,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             new ManageMembersItem
             {
                 ID = "1005",
-                AvatarSource = DefaultAvatarSource,
+                AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 Name = "JL Taberdo",
                 ContactNumber = "0975 994 3010",
                 AvailedPackages = "Gym",
@@ -301,7 +306,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             new ManageMembersItem
             {
                 ID = "1006",
-                AvatarSource = DefaultAvatarSource,
+                AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 Name = "Robert Xyz B. Lucas",
                 ContactNumber = "0975 994 3010",
                 AvailedPackages = "Gym",
@@ -312,7 +317,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             new ManageMembersItem
             {
                 ID = "1007",
-                AvatarSource = DefaultAvatarSource,
+                AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 Name = "Sianrey V. Flora",
                 ContactNumber = "0975 994 3010",
                 AvailedPackages = "Gym",
@@ -323,7 +328,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             new ManageMembersItem
             {
                 ID = "1008",
-                AvatarSource = DefaultAvatarSource,
+                AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 Name = "Marion James Dela Roca",
                 ContactNumber = "0975 994 3010",
                 AvailedPackages = "Gym",
@@ -960,7 +965,7 @@ public partial class ManageMembersItem : ObservableObject
     private string _iD = string.Empty;
 
     [ObservableProperty]
-    private string _avatarSource = string.Empty;
+    private Bitmap _avatarSource = ManageMemberModel.DefaultAvatarSource;
 
     [ObservableProperty]
     private string _name = string.Empty;
