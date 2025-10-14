@@ -11,6 +11,8 @@ namespace AHON_TRACK.Models
     public class ManageMemberModel
     {
         public int MemberID { get; set; }
+        public byte[] AvatarBytes { get; set; }
+        public Bitmap AvatarSource { get; set; }
         public string? Name { get; set; }
         public string FirstName { get; set; } = string.Empty;
         public string? MiddleInitial { get; set; }
