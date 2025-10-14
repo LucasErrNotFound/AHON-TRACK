@@ -224,7 +224,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private async Task PublishProduct()
     {
         ValidateAllProperties();
-
         if (HasErrors)
         {
             _toastManager?.CreateToast("Validation Error")
@@ -244,7 +243,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         }
 
         IsSaving = true;
-
         try
         {
             int? supplierIdToSave = null;
@@ -255,6 +253,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                     supplierIdToSave = supplierId;
                 }
             }
+
+            // ✅ FIX: Use null-coalescing to ensure 0 is treated as valid
+            int currentStock = ProductCurrentStock.HasValue ? ProductCurrentStock.Value : 0;
+            Console.WriteLine($"📦 Current Stock Value: {currentStock}");
+
+            string calculatedStatus = currentStock > 0 ? "In Stock" : "Out Of Stock";
+
+            // ✅ FIX: Handle image bytes properly for update
+            byte[]? imageBytesToSave = ProductImageBytes;
 
             var productModel = new ProductModel
             {
@@ -267,15 +274,16 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 DiscountedPrice = ProductDiscountedPrice,
                 IsPercentageDiscount = IsPercentageModeOn,
                 ProductImageFilePath = _productImageFilePath,
-                ProductImageBytes = _productImageBytes,
+                ProductImageBytes = imageBytesToSave, // ✅ Pass the image bytes
                 ExpiryDate = ProductExpiry,
-                Status = SelectedProductStatus ?? "In Stock",
+                Status = calculatedStatus,
                 Category = SelectedProductCategory ?? "None",
-                CurrentStock = ProductCurrentStock ?? 0
+                CurrentStock = currentStock // ✅ Explicitly 0 or positive
             };
 
-            (bool success, string message, int? productId) result;
+            Console.WriteLine($"💾 Saving product with Stock: {productModel.CurrentStock}, Status: {productModel.Status}");
 
+            (bool success, string message, int? productId) result;
             if (ViewContext == ProductViewContext.EditProduct)
             {
                 var updateResult = await _productService.UpdateProductAsync(productModel);
@@ -341,13 +349,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 FileTypeFilter =
                 [
                     new FilePickerFileType("Image Files")
-                    {
-                        Patterns = ["*.png", "*.jpg"]
-                    },
-                    new FilePickerFileType("All Files")
-                    {
-                        Patterns = ["*.*"]
-                    }
+                {
+                    Patterns = ["*.png", "*.jpg", "*.jpeg"]
+                },
+                new FilePickerFileType("All Files")
+                {
+                    Patterns = ["*.*"]
+                }
                 ]
             });
 
@@ -359,9 +367,10 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                     .DismissOnClick()
                     .ShowInfo();
 
-                var file = files[0];
-                await using var stream = await file.OpenReadAsync();
+                // ✅ Read the file and convert to bytes for database
+                await using var stream = await selectedFile.OpenReadAsync();
 
+                // Create bitmap for display
                 var bitmap = new Bitmap(stream);
 
                 if (ProductImageControl != null)
@@ -370,16 +379,25 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                     ProductImageControl.IsVisible = true;
                 }
 
-                // Also convert to bytes for database storage
+                // ✅ IMPORTANT: Reset stream position and read bytes for database
                 stream.Position = 0;
                 using var memoryStream = new System.IO.MemoryStream();
                 await stream.CopyToAsync(memoryStream);
                 ProductImageBytes = memoryStream.ToArray();
+
+                Console.WriteLine($"✅ Image loaded: {ProductImageBytes.Length} bytes");
+
+                // ✅ Store the file path as well (optional, for reference)
+                _productImageFilePath = selectedFile.Path.LocalPath;
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+            _toastManager.CreateToast("Error")
+                .WithContent($"Failed to load image: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
     }
 
@@ -418,7 +436,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
         ProductSKU = product.Sku;
-        ProductCurrentStock = product.CurrentStock;
+        ProductCurrentStock = product.CurrentStock; // ✅ This includes 0
 
         if (!string.IsNullOrEmpty(product.Supplier) &&
             ProductSupplierItems.Contains(product.Supplier))
@@ -430,9 +448,9 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             SelectedProductSupplier = "None";
         }
 
-        SelectedProductStatus = product.Status;
         SelectedProductCategory = product.Category;
 
+        // ✅ FIX: Properly handle image display
         if (!string.IsNullOrEmpty(product.Poster))
         {
             if (product.Poster.StartsWith("data:image/png;base64,"))
@@ -441,7 +459,17 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 try
                 {
                     ProductImageBytes = Convert.FromBase64String(base64Data);
-                    OnPropertyChanged(nameof(ProductImageBytes));
+
+                    // ✅ Create bitmap and display it
+                    if (ProductImageControl != null)
+                    {
+                        using var memoryStream = new System.IO.MemoryStream(ProductImageBytes);
+                        var bitmap = new Avalonia.Media.Imaging.Bitmap(memoryStream);
+                        ProductImageControl.Source = bitmap;
+                        ProductImageControl.IsVisible = true;
+                    }
+
+                    Console.WriteLine($"✅ Image loaded successfully: {ProductImageBytes.Length} bytes");
                 }
                 catch (Exception ex)
                 {
@@ -450,6 +478,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             }
             else if (!product.Poster.StartsWith("avares://"))
             {
+                // Handle file path
                 ProductImageFilePath = product.Poster;
             }
         }
