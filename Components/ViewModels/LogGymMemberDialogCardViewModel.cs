@@ -142,9 +142,6 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
             string firstName = nameParts.Length > 0 ? nameParts[0] : "";
             string lastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
 
-            // Convert ProfilePicture to string path
-            string picturePath = GetProfilePicturePath(manageMember.ProfilePicture);
-
             var memberPerson = new MemberPerson
             {
                 ID = manageMember.MemberID,
@@ -154,7 +151,7 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
                 ContactNumber = manageMember.ContactNumber ?? "",
                 MembershipType = manageMember.MembershipType ?? "Gym Member",
                 Status = manageMember.Status ?? "Active",
-                MemberPicture = picturePath,
+                AvatarSource = manageMember.AvatarSource,
                 CheckInTime = null,
                 CheckOutTime = null,
                 DateAttendance = null
@@ -165,17 +162,6 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
 
         return memberPersons;
     }
-
-    private string GetProfilePicturePath(object? profilePicture)
-    {
-        return profilePicture switch
-        {
-            string path when !string.IsNullOrEmpty(path) => path,
-            byte[] _ => "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
-            _ => "avares://AHON_TRACK/Assets/MainWindowView/user.png"
-        };
-    }
-
 
     private void LoadMembers(List<MemberPerson> members)
     {
@@ -195,16 +181,16 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
     {
         var sampleMembers = new List<MemberPerson>
         {
-            new() { ID = 2006, MemberPicture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png", FirstName = "Mardie", LastName = "Dela Cruz", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active", CheckInTime = DateTime.Now.AddHours(-1), CheckOutTime = DateTime.Now.AddHours(-1) },
-            new() { ID = 2005, MemberPicture = null, FirstName = "Cirilo", LastName = "Pagayunan Jr.", ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Active", CheckInTime = DateTime.Now.AddHours(-1), CheckOutTime = DateTime.Now.AddHours(-1) },
-            new() { ID = 2004, MemberPicture = null, FirstName = "Raymart", LastName = "Soneja", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive", CheckInTime = DateTime.Now.AddDays(-2), CheckOutTime = DateTime.Now.AddDays(-2) },
-            new() { ID = 2003, MemberPicture = null, FirstName = "Xyrus", LastName = "Jawili", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive", CheckInTime = DateTime.Now.AddDays(-2), CheckOutTime = DateTime.Now.AddDays(-2) },
-            new() { ID = 2002, MemberPicture = null, FirstName = "Nash", LastName = "Floralde", ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Terminated", CheckInTime = DateTime.Now.AddDays(-3), CheckOutTime = DateTime.Now.AddDays(-3) },
-            new() { ID = 2001, MemberPicture = null, FirstName = "Ry", LastName = "Estrada", ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Terminated", CheckInTime = DateTime.Now.AddDays(-3), CheckOutTime = DateTime.Now.AddDays(-3) },
-            new() { ID = 2007, MemberPicture = null, FirstName = "John", LastName = "Doe", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active", CheckInTime = DateTime.Now, CheckOutTime = null },
-            new() { ID = 2008, MemberPicture = null, FirstName = "Jane", LastName = "Smith", ContactNumber = "09123456789", MembershipType = "Premium", Status = "Active", CheckInTime = DateTime.Now, CheckOutTime = null },
-            new() { ID = 2009, MemberPicture = null, FirstName = "Mike", LastName = "Johnson", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active", CheckInTime = DateTime.Now, CheckOutTime = null },
-            new() { ID = 2010, MemberPicture = null, FirstName = "Sarah", LastName = "Williams", ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Active", CheckInTime = DateTime.Now, CheckOutTime = null }
+            new() { ID = 2006, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Mardie", LastName = "Dela Cruz", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active", CheckInTime = DateTime.Now.AddHours(-1), CheckOutTime = DateTime.Now.AddHours(-1) },
+            new() { ID = 2005, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Cirilo", LastName = "Pagayunan Jr.", ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Active", CheckInTime = DateTime.Now.AddHours(-1), CheckOutTime = DateTime.Now.AddHours(-1) },
+            new() { ID = 2004, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Raymart", LastName = "Soneja", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive", CheckInTime = DateTime.Now.AddDays(-2), CheckOutTime = DateTime.Now.AddDays(-2) },
+            new() { ID = 2003, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Xyrus", LastName = "Jawili", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Inactive", CheckInTime = DateTime.Now.AddDays(-2), CheckOutTime = DateTime.Now.AddDays(-2) },
+            new() { ID = 2002, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Nash", LastName = "Floralde", ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Terminated", CheckInTime = DateTime.Now.AddDays(-3), CheckOutTime = DateTime.Now.AddDays(-3) },
+            new() { ID = 2001, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Ry", LastName = "Estrada", ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Terminated", CheckInTime = DateTime.Now.AddDays(-3), CheckOutTime = DateTime.Now.AddDays(-3) },
+            new() { ID = 2007, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "John", LastName = "Doe", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active", CheckInTime = DateTime.Now, CheckOutTime = null },
+            new() { ID = 2008, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Jane", LastName = "Smith", ContactNumber = "09123456789", MembershipType = "Premium", Status = "Active", CheckInTime = DateTime.Now, CheckOutTime = null },
+            new() { ID = 2009, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Mike", LastName = "Johnson", ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active", CheckInTime = DateTime.Now, CheckOutTime = null },
+            new() { ID = 2010, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Sarah", LastName = "Williams", ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Active", CheckInTime = DateTime.Now, CheckOutTime = null }
         };
 
         LoadMembers(sampleMembers);

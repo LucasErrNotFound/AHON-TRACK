@@ -145,7 +145,7 @@
 														VerticalAlignment="Center"
 														HorizontalAlignment="Center"
 														Margin="8"
-														Source="{CompiledBinding MemberPicturePath}"/>
+														Source="{CompiledBinding AvatarSource}"/>
 												</Border>
 											</DataTemplate>
 										</DataGridTemplateColumn.CellTemplate>
