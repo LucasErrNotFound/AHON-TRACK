@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media.Imaging;
 
@@ -323,14 +324,14 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			// Today's data
 			new MemberPerson
             {
-                ID = 2006, MemberPicture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
+                ID = 2006, AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 FirstName = "Mardie", LastName = "Dela Cruz", ContactNumber = "09123456789",
                 MembershipType = "Gym Member", Status = "Active", DateAttendance = today, CheckInTime = today.AddHours(8),
                 CheckOutTime = null
             },
             new MemberPerson
             {
-                ID = 2005, MemberPicture = null, FirstName = "Cirilo", LastName = "Pagayunan Jr.",
+                ID = 2005, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Cirilo", LastName = "Pagayunan Jr.",
                 ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Active",
                 CheckInTime = today.AddHours(9), DateAttendance = today, CheckOutTime = null
             },
@@ -338,7 +339,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			// Yesterday's data
 			new MemberPerson
             {
-                ID = 2004, MemberPicture = null, FirstName = "Raymart", LastName = "Soneja",
+                ID = 2004, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Raymart", LastName = "Soneja",
                 ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Expired",
                 DateAttendance = today.AddDays(-1), CheckInTime = today.AddHours(8), CheckOutTime = null
             },
@@ -346,7 +347,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			// 2 days ago
 			new MemberPerson
             {
-                ID = 2003, MemberPicture = null, FirstName = "Xyrus", LastName = "Jawili",
+                ID = 2003, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Xyrus", LastName = "Jawili",
                 ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active",
                 DateAttendance = today.AddDays(-2), CheckInTime = today.AddHours(8), CheckOutTime = null
             },
@@ -354,13 +355,13 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 			// 3 days ago
 			new MemberPerson
             {
-                ID = 2002, MemberPicture = null, FirstName = "Nash", LastName = "Floralde",
+                ID = 2002, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Nash", LastName = "Floralde",
                 ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Expired",
                 DateAttendance = today.AddDays(-3), CheckInTime = today.AddHours(8), CheckOutTime = null
             },
             new MemberPerson
             {
-                ID = 2001, MemberPicture = null, FirstName = "Ry", LastName = "Estrada", ContactNumber = "09123456789",
+                ID = 2001, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Ry", LastName = "Estrada", ContactNumber = "09123456789",
                 MembershipType = "Free Trial", Status = "Expired", DateAttendance = today.AddDays(-3),
                 CheckInTime = today.AddHours(9), CheckOutTime = null
             }
@@ -749,10 +750,12 @@ public partial class MemberPerson : ViewModelBase
 {
     [ObservableProperty]
     private bool _isSelected;
+    
+    [ObservableProperty]
+    private Bitmap _avatarSource = ManageMemberModel.DefaultAvatarSource;
 
     public int ID { get; set; }
     public int MemberID { get; set; }
-    public string? MemberPicture { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string ContactNumber { get; set; } = string.Empty;
@@ -770,9 +773,6 @@ public partial class MemberPerson : ViewModelBase
     }
 
     public string DateFormatted => DateAttendance?.ToString("MMMM dd, yyyy") ?? string.Empty;
-    public string MemberPicturePath => string.IsNullOrEmpty(MemberPicture) || MemberPicture == "null"
-        ? "avares://AHON_TRACK/Assets/MainWindowView/user.png"
-        : MemberPicture;
 
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {
