@@ -302,7 +302,7 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
@@ -434,7 +434,7 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
@@ -525,7 +525,7 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
@@ -631,7 +631,7 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
@@ -715,7 +715,7 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
@@ -821,7 +821,7 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
