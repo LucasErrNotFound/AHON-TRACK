@@ -289,7 +289,7 @@
                                                         ClipToBounds="True"
                                                         Margin="5">
                                                         <shadui:Avatar
-                                                            Source="{CompiledBinding MemberPicturePath, Converter={StaticResource StringToBitMapConverter}}"
+                                                            Source="{CompiledBinding MemberPicturePath}"
                                                             Width="36"
                                                             Height="36"
                                                             VerticalAlignment="Center"

@@ -2,7 +2,6 @@ using AHON_TRACK.Models;
 using AHON_TRACK.ViewModels;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Converters;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
@@ -13,7 +12,6 @@ using HotAvalonia;
 using ShadUI;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
@@ -49,11 +47,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
     [ObservableProperty]
     private string[] _memberStatusItems = ["Active", "Inactive", "Terminated"];
-
+    
+    [ObservableProperty]
+    private Bitmap? _profileImageSource;
+    
     [ObservableProperty]
     private Image? _memberProfileImageControl;
-
-    private byte[]? _memberProfilePictureBytes;
 
     // Personal Details Section
     private string _memberFirstName = string.Empty;
@@ -262,6 +261,17 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             OnPropertyChanged(nameof(MembershipDurationQuantityHeader));
             OnPropertyChanged(nameof(MembershipDurationQuantitySummary));
             OnPropertyChanged(nameof(IsPaymentPossible));
+        }
+    }
+    
+    private byte[]? _profileImage;
+    public byte[]? ProfileImage
+    {
+        get => _profileImage;
+        set
+        {
+            SetProperty(ref _profileImage, value);
+            Debug.WriteLine($"ProfileImage updated: {(value != null ? $"{value.Length} bytes" : "null")}");
         }
     }
 
@@ -690,7 +700,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 var file = files[0];
                 await using var stream = await file.OpenReadAsync();
 
-                // Convert to bitmap for display
                 var bitmap = new Bitmap(stream);
 
                 if (MemberProfileImageControl != null)
@@ -699,11 +708,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                     MemberProfileImageControl.IsVisible = true;
                 }
 
-                // Convert to bytes for database storage
                 stream.Position = 0;
                 using var memoryStream = new MemoryStream();
                 await stream.CopyToAsync(memoryStream);
-                _memberProfilePictureBytes = memoryStream.ToArray();
+                ProfileImage = memoryStream.ToArray();
+                ProfileImageSource = bitmap;
             }
         }
         catch (Exception ex)
@@ -775,7 +784,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 MembershipType = MemberPackages,  // Keep name for display
                 Status = GetSelectedStatus() ?? "Active",
                 PaymentMethod = GetSelectedPaymentMethod(),
-                ProfilePicture = _memberProfilePictureBytes
+                ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
             };
 
             // Use new service method
@@ -856,17 +865,16 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         IsActiveSelected = true;
         IsInactiveSelected = false;
         IsTerminatedSelected = false;
-        _memberProfilePictureBytes = null;
-
-        if (MemberProfileImageControl != null)
-        {
-            MemberProfileImageControl.Source = null;
-            MemberProfileImageControl.IsVisible = false;
-        }
+        ProfileImage = null;
+        ProfileImageSource = ImageHelper.GetDefaultAvatar();
 
         ClearAllErrors();
+        
+        ImageResetRequested?.Invoke();
     }
 
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
+    
+    public event Action? ImageResetRequested;
 }
