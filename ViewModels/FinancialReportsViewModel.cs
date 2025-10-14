@@ -90,7 +90,9 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
                 "Boxing" => "#1E88E5",
                 "Muay Thai" => "#E53935",
                 "Crossfit" => "#43A047",
-                "Zumba" => "#8E24AA",
+                "Coaching" => "#8E24AA",
+                "Walk-Ins" => "#FFA500",
+                "Membership" => "#FF4500", 
                 _ => "#1976D2"
             };
 
@@ -110,13 +112,17 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         var boxingRevenue = new List<double>();
         var muayThaiRevenue = new List<double>();
         var crossfitRevenue = new List<double>();
-        var zumbaRevenue = new List<double>();
+        var coachingRevenue = new List<double>();
+        var walkInRevenue = new List<double>();
+        var membershipRevenue = new List<double>();
         var random = new Random();
 
         var boxingPrices = new[] { 450, 350 };
         var muayThaiPrices = new[] { 500, 400 };
         var crossfitPrices = new[] { 300, 250 };
-        var zumbaPrices = new[] { 200, 100 };
+        var coachingPrices = new[] { 200, 150 };
+        var walkInPrices = new[] { 150, 60 };
+        var membershipPrices = new[] { 500 };
 
         var currentDate = FinancialBreakdownSelectedFromDate;
         while (currentDate <= FinancialBreakdownSelectedToDate)
@@ -135,10 +141,18 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             var crossfitPrice = crossfitPrices[random.Next(crossfitPrices.Length)];
             crossfitRevenue.Add(crossfitPurchases * crossfitPrice);
         
-            var zumbaPurchases = random.Next(0, 20);
-            var zumbaPrice = zumbaPrices[random.Next(zumbaPrices.Length)];
-            zumbaRevenue.Add(zumbaPurchases * zumbaPrice);
+            var coachingPurchases = random.Next(0, 20);
+            var coachingPrice = coachingPrices[random.Next(coachingPrices.Length)];
+            coachingRevenue.Add(coachingPurchases * coachingPrice);
+            
+            var walkInPurchases = random.Next(0, 20);
+            var walkInPrice = walkInPrices[random.Next(walkInPrices.Length)];
+            walkInRevenue.Add(walkInPurchases * walkInPrice);
         
+            var membershipPurchases = random.Next(0, 20);
+            var membershipPrice = membershipPrices[random.Next(membershipPrices.Length)];
+            membershipRevenue.Add(membershipPurchases * membershipPrice);
+            
             currentDate = currentDate.AddDays(1);
         }
 
@@ -170,11 +184,27 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             },
             new StackedColumnSeries<double>
             {
-                Values = zumbaRevenue,
-                Name = "Zumba",
+                Values = coachingRevenue,
+                Name = "Coaching",
                 Fill = new SolidColorPaint(SKColors.Purple),
                 Stroke = null,
-                XToolTipLabelFormatter = point => $"Zumba: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
+                XToolTipLabelFormatter = point => $"Coaching: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
+            },
+            new StackedColumnSeries<double>
+            {
+            Values = walkInRevenue,
+            Name = "Walk-Ins",
+            Fill = new SolidColorPaint(SKColors.Orange),
+            Stroke = null,
+            XToolTipLabelFormatter = point => $"Walk-Ins: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
+            },
+            new StackedColumnSeries<double>
+            {
+                Values = membershipRevenue,
+                Name = "Membership",
+                Fill = new SolidColorPaint(SKColors.OrangeRed),
+                Stroke = null,
+                XToolTipLabelFormatter = point => $"Membership: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
             }
         ];
 
@@ -227,8 +257,9 @@ public class FinancialBreakdownPieData
     public double Value { get; set; }
     public double?[] Values { get; set; }
     public string Color { get; set; }
-    public bool IsTotal => Name is "Boxing" or "Muay Thai" or "Crossfit" or "Zumba";
+    public bool IsTotal => Name is "Boxing" or "Muay Thai" or "Crossfit" or "Coaching" or "Walk-Ins" or "Membership";
     public Func<ChartPoint, string> Formatter { get; }
+    public Func<ChartPoint, string> ToolTipFormatter { get; }
     
     public FinancialBreakdownPieData(string name, double value, string color)
     {
@@ -238,6 +269,7 @@ public class FinancialBreakdownPieData
         // If your pie chart expects an array, use [value] instead of [null, null, value]
         Values = [value];
         Color = color;
-        Formatter = _ => $"{name}{Environment.NewLine}₱{value:N2}";
+        Formatter = point => $"{point.StackedValue!.Share:P1}";
+        ToolTipFormatter = point => $"₱{value:N0}";
     }
 }

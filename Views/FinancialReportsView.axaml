@@ -202,22 +202,24 @@
                                 Height="400"
                                 InitialRotation="130"
                                 LegendPosition="Bottom"
-                                ZIndex="2"
+                                ZIndex="6"
                                 IsVisible="{CompiledBinding HasValidDateRange}"
                                 SeriesSource="{CompiledBinding FinancialBreakdownPieDataCollection}">
                                 <lvc:PieChart.SeriesTemplate>
                                     <DataTemplate x:DataType="viewModels:FinancialBreakdownPieData">
                                         <lvc:XamlPieSeries
-                                            SeriesName="{Binding Name}"
-                                            Values="{Binding Values}"
+                                            SeriesName="{CompiledBinding Name}"
+                                            Values="{CompiledBinding Values}"
                                             Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
-                                            Fill="{Binding Color, Converter={StaticResource StringToPaintConverter}}"
+                                            Fill="{CompiledBinding Color, Converter={StaticResource StringToPaintConverter}}"
                                             HoverPushout="15"
-                                            DataLabelsFormatter="{Binding Formatter}"
-                                            DataLabelsSize="15"
-                                            ShowDataLabels="{Binding IsTotal}"
-                                            DataLabelsPosition="Outer"
-                                            IsVisibleAtLegend="{Binding IsTotal}">
+                                            DataLabelsSize="18"
+                                            DataLabelsRotation="20"
+                                            DataLabelsPosition="Middle"
+                                            DataLabelsFormatter="{CompiledBinding Formatter}"
+                                            ShowDataLabels="{CompiledBinding IsTotal}"
+                                            IsVisibleAtLegend="{CompiledBinding IsTotal}"
+                                            ToolTipLabelFormatter="{CompiledBinding ToolTipFormatter}">
                                         </lvc:XamlPieSeries>
                                     </DataTemplate>
                                 </lvc:PieChart.SeriesTemplate>
