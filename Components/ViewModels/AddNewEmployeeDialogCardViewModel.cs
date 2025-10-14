@@ -338,28 +338,18 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                 EmployeeStatus = fullEmployee.Status ?? "Active";
 
                 // Profile Picture
-                if (fullEmployee.AvatarBytes != null)
-                {
-                    ProfileImage = fullEmployee.AvatarBytes;
-                    ProfileImageSource = ImageHelper.BytesToBitmap(fullEmployee.AvatarBytes);
-                }
-                else
-                {
-                    ProfileImageSource = ImageHelper.GetDefaultAvatar();
-                }
+                ProfileImage = fullEmployee.AvatarBytes;
+                ProfileImageSource = ImageHelper.BytesToBitmap(fullEmployee.AvatarBytes);
 
                 Debug.WriteLine($"✅ Successfully loaded employee data: {fullEmployee.FirstName} {fullEmployee.LastName}");
                 return;
             }
-            else
-            {
-                _toastManager?.CreateToast("Load Error")
-                    .WithContent($"Failed to load employee data: {message}")
-                    .DismissOnClick()
-                    .ShowError();
+            _toastManager.CreateToast("Load Error")
+                .WithContent($"Failed to load employee data: {message}")
+                .DismissOnClick()
+                .ShowError();
 
-                Debug.WriteLine($"❌ Failed to load employee: {message}");
-            }
+            Debug.WriteLine($"❌ Failed to load employee: {message}");
         }
 
         // Fallback to basic data
@@ -556,30 +546,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private void Cancel()
     {
         _dialogManager.Close(this);
-    }
-
-    public void SetProfileImageBytes(byte[]? imageBytes)
-    {
-        ProfileImage = imageBytes;
-
-        if (imageBytes != null)
-        {
-            try
-            {
-                ProfileImageSource = ImageHelper.BytesToBitmap(imageBytes);
-                Debug.WriteLine($"✅ Profile image set: {imageBytes.Length} bytes");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"❌ Error setting profile image: {ex.Message}");
-                ProfileImageSource = ImageHelper.GetDefaultAvatar();
-            }
-        }
-        else
-        {
-            ProfileImageSource = ImageHelper.GetDefaultAvatar();
-            Debug.WriteLine("ℹ️ No image bytes provided, using default avatar");
-        }
     }
 
     private void ClearAllFields()
