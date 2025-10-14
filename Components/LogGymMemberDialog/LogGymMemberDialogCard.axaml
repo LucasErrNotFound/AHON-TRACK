@@ -145,7 +145,7 @@
 														VerticalAlignment="Center"
 														HorizontalAlignment="Center"
 														Margin="8"
-														Source="{Binding MemberPicturePath, Converter={StaticResource StringToBitMapConverter}}"/>
+														Source="{CompiledBinding MemberPicturePath}"/>
 												</Border>
 											</DataTemplate>
 										</DataGridTemplateColumn.CellTemplate>

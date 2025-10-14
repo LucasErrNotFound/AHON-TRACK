@@ -169,7 +169,7 @@
 													Height="36"
 													VerticalAlignment="Center"
 													HorizontalAlignment="Center"
-													Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"
+													Source="{CompiledBinding AvatarSource}"
 													Margin="8" />
 											</DataTemplate>
 										</DataGridTemplateColumn.CellTemplate>
@@ -339,7 +339,7 @@
 						<Grid RowDefinitions="Auto Auto Auto Auto">
 							<StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
 								<shadui:Avatar
-									Source="{CompiledBinding SelectedMember.AvatarSource, Converter={StaticResource StringToBitmapConverter}, FallbackValue='/Assets/MainWindowView/user-admin.png'}"
+									Source="{CompiledBinding SelectedMember.AvatarSource}"
 									Width="100"
 									Height="100" />
 								<TextBlock
