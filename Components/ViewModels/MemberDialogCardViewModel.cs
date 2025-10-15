@@ -10,8 +10,14 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using AHON_TRACK.Converters;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -37,6 +43,12 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
     [ObservableProperty]
     private int _currentMemberId = 0;  // Changed from string to int
+
+    [ObservableProperty]
+    private Image? _memberProfileImageControl;
+
+    [ObservableProperty]
+    private Bitmap? _profileImageSource;
 
     // Personal Details Section
     private string _memberFirstName = string.Empty;
@@ -175,6 +187,17 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         set => SetProperty(ref _memberStatus, value, true);
     }
 
+    private byte[]? _profileImage;
+    public byte[]? ProfileImage
+    {
+        get => _profileImage;
+        set
+        {
+            SetProperty(ref _profileImage, value);
+            Debug.WriteLine($"ProfileImage updated: {(value != null ? $"{value.Length} bytes" : "null")}");
+        }
+    }
+
     public MemberDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IMemberService memberService)
     {
         _dialogManager = dialogManager;
@@ -231,7 +254,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         else
         {
             Debug.WriteLine($"[PopulateWithMemberData] Invalid member ID: {memberId}");
-            _toastManager?.CreateToast("Invalid ID")
+            _toastManager.CreateToast("Invalid ID")
                 .WithContent("The member ID is not valid.")
                 .DismissOnClick()
                 .ShowError();
@@ -284,6 +307,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             MemberBirthDate = memberData.DateOfBirth;
             MemberStatus = memberData.Status ?? "Active";
 
+
+            // Parse ValidUntil date
             if (!string.IsNullOrEmpty(memberData.ValidUntil))
             {
                 if (DateTime.TryParse(memberData.ValidUntil, out var validUntilDate))
@@ -299,7 +324,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         catch (Exception ex)
         {
             Debug.WriteLine($"[PopulateWithMemberData] Error: {ex.Message}");
-            _toastManager?.CreateToast("Load Error")
+            _toastManager.CreateToast("Load Error")
                 .WithContent($"Failed to load member data: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
@@ -313,6 +338,73 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
         if (birthDate.Date > today.AddYears(-age)) age--;
         return age;
+    }
+
+    [RelayCommand]
+    private async Task ChooseFile()
+    {
+        try
+        {
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+
+            var files = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Select Image File",
+                AllowMultiple = false,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Image Files")
+                    {
+                        Patterns = ["*.png", "*.jpg"]
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = ["*.*"]
+                    }
+                ]
+            });
+
+            if (files.Count > 0)
+            {
+                var selectedFile = files[0];
+                _toastManager.CreateToast("Image file selected")
+                    .WithContent($"{selectedFile.Name}")
+                    .DismissOnClick()
+                    .ShowInfo();
+
+                var file = files[0];
+                await using var stream = await file.OpenReadAsync();
+
+                var bitmap = new Bitmap(stream);
+
+                // Update UI control if present
+                if (MemberProfileImageControl != null)
+                {
+                    MemberProfileImageControl.Source = bitmap;
+                    MemberProfileImageControl.IsVisible = true;
+                }
+
+                // Convert to bytes for database storage
+                stream.Position = 0;
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                ProfileImage = memoryStream.ToArray();
+                ProfileImageSource = bitmap;
+
+                Debug.WriteLine($"✅ Profile image loaded: {ProfileImage.Length} bytes");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+            _toastManager.CreateToast("Image Error")
+                .WithContent($"Failed to load image: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
 
     [RelayCommand]
@@ -352,8 +444,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 Age = MemberAge,
                 DateOfBirth = MemberBirthDate,
                 ValidUntil = MemberValidUntil?.ToString("MMM dd, yyyy"),
-                PackageID = packageId,  // Use PackageID
-                MembershipType = MemberPackages,  // Keep for display
+                MembershipType = MemberPackages,
                 Status = MemberStatus
             };
 
@@ -403,6 +494,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         MemberBirthDate = null;
         MemberValidUntil = null;
         MemberStatus = string.Empty;
+        ProfileImage = null;
+        ProfileImageSource = ImageHelper.GetDefaultAvatar();
         ClearAllErrors();
     }
 }

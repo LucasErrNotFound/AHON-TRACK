@@ -1,10 +1,5 @@
-using System;
-using System.Diagnostics;
-using Avalonia;
+using AHON_TRACK.Components.ViewModels;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
 
 namespace AHON_TRACK.Components.MemberDialog;
 
@@ -13,34 +8,13 @@ public partial class MemberDialogCard : UserControl
     public MemberDialogCard()
     {
         InitializeComponent();
-    }
-    
-    private async void Button_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        try
+        
+        Loaded += (s, e) =>
         {
-            var topLevel = TopLevel.GetTopLevel(this);
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            if (DataContext is MemberDialogCardViewModel vm)
             {
-                AllowMultiple = false,
-                Title = "Select an image file",
-                FileTypeFilter = [FilePickerFileTypes.ImageJpg, FilePickerFileTypes.ImagePng, FilePickerFileTypes.ImageAll]
-            });
-
-            if (files.Count <= 0) return;
-            var file = files[0];
-            await using var stream = await file.OpenReadAsync();
-        
-            var bitmap = new Bitmap(stream);
-            var profileImage = this.FindControl<Image>("EmployeeProfileImage");
-        
-            if (profileImage == null) return;
-            profileImage.Source = bitmap;
-            profileImage.IsVisible = true; // Ensure the image is visible after loading
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
-        }
+                vm.MemberProfileImageControl = this.FindControl<Image>("MemberProfileImage");
+            }
+        };
     }
 }

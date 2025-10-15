@@ -138,7 +138,7 @@
 									Name="EmployeeProfileImage"
 									Stretch="UniformToFill"
 									IsVisible="True"
-									Source="{Binding ProfileImageSource}"/>
+									Source="{CompiledBinding ProfileImageSource}"/>
 								<!--new binds-->
 								<!-- Profile image placeholder -->
 							</Border>

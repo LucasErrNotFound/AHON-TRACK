@@ -133,16 +133,16 @@
 								ClipToBounds="True">
 
 								<Image
-									Name="EmployeeProfileImage"
+									Name="MemberProfileImage"
 									Stretch="UniformToFill"
 									IsVisible="True"
-									Source="avares://AHON_TRACK/Assets/ManageEmployeesView/default-profile-picture.png"/>
+									Source="{CompiledBinding ProfileImageSource}"/>
 								<!-- Profile image placeholder -->
 							</Border>
 							<Button
 								Classes="Outline"
 								HorizontalAlignment="Center"
-								Click="Button_Click">
+								Command="{CompiledBinding ChooseFileCommand}">
 								<StackPanel Orientation="Horizontal">
 									<Svg
 										Width="20"
