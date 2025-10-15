@@ -1,14 +1,15 @@
-﻿using AHON_TRACK.ViewModels;
+﻿using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using ShadUI;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AHON_TRACK.Services.Interface;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -93,6 +94,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _addNewEmployeeDialogCardViewModel = new AddNewEmployeeDialogCardViewModel();
+        _employeeService = null!;
     }
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
@@ -176,6 +178,10 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         IsFromCurrentUser = true;
         SetDefaultValues();
         EmployeeFullNameHeader = "My Profile";
+        if (CurrentUserModel.LastLogin.HasValue)
+            EmployeeLastLogin = CurrentUserModel.LastLogin.Value.ToString("MMMM dd, yyyy - hh:mm tt");
+        else
+            EmployeeLastLogin = "Never logged in";
     }
 
     private void SetDefaultValues()

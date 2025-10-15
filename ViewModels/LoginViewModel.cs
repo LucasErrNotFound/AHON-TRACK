@@ -125,7 +125,7 @@ public partial class LoginViewModel : ViewModelBase
             conn.Open();
 
             // 🔹 Try Admins
-            string adminQuery = "SELECT AdminID FROM Admins WHERE Username = @user AND Password = @pass";
+            string adminQuery = "SELECT EmployeeID FROM Employees WHERE Username = @user AND Password = @pass";
             using (var adminCmd = new SqlCommand(adminQuery, conn))
             {
                 adminCmd.Parameters.AddWithValue("@user", username);
@@ -135,7 +135,7 @@ public partial class LoginViewModel : ViewModelBase
                 if (adminId != null)
                 {
                     // ✅ Update LastLogin for Admin
-                    var update = new SqlCommand("UPDATE Admins SET LastLogin = @lastLogin WHERE AdminID = @id", conn);
+                    var update = new SqlCommand("UPDATE Employees SET LastLogin = @lastLogin WHERE EmployeeID = @id", conn);
                     update.Parameters.AddWithValue("@lastLogin", DateTime.Now);
                     update.Parameters.AddWithValue("@id", adminId);
                     update.ExecuteNonQuery();
@@ -144,15 +144,18 @@ public partial class LoginViewModel : ViewModelBase
                     CurrentUserModel.Username = username;
                     CurrentUserModel.Role = "Admin";
 
+                    var lastLogin = GetLastLoginDate(conn, username);
+                    CurrentUserModel.LastLogin = lastLogin; //
+
                     role = "Admin";
 
-                    LogAction(conn, username, role, "Login", "Login successful", true);
+                    LogAction(conn, username, role, "Log in successful.", "Login successful", true);
                     return true;
                 }
             }
 
             // 🔹 Try Staffs
-            string staffQuery = "SELECT StaffID FROM Staffs WHERE Username = @user AND Password = @pass";
+            string staffQuery = "SELECT EmployeeID FROM Employees WHERE Username = @user AND Password = @pass";
             using (var staffCmd = new SqlCommand(staffQuery, conn))
             {
                 staffCmd.Parameters.AddWithValue("@user", username);
@@ -162,7 +165,7 @@ public partial class LoginViewModel : ViewModelBase
                 if (staffId != null)
                 {
                     // ✅ Update LastLogin for Staff
-                    var update = new SqlCommand("UPDATE Staffs SET LastLogin = @lastLogin WHERE StaffID = @id", conn);
+                    var update = new SqlCommand("UPDATE Employees SET LastLogin = @lastLogin WHERE EmployeeID = @id", conn);
                     update.Parameters.AddWithValue("@lastLogin", DateTime.Now);
                     update.Parameters.AddWithValue("@id", staffId);
                     update.ExecuteNonQuery();
@@ -171,6 +174,9 @@ public partial class LoginViewModel : ViewModelBase
                     CurrentUserModel.UserId = Convert.ToInt32(staffId);
                     CurrentUserModel.Username = username;
                     CurrentUserModel.Role = "Staff";
+
+                    var lastLogin = GetLastLoginDate(conn, username);
+                    CurrentUserModel.LastLogin = lastLogin; //
 
                     role = "Staff";
 
@@ -205,6 +211,26 @@ public partial class LoginViewModel : ViewModelBase
         }
     }
 
+    private DateTime? GetLastLoginDate(SqlConnection conn, string username)
+    {
+        string query = @"
+        SELECT TOP 1 LogDateTime
+        FROM SystemLogs
+        WHERE Username = @username AND ActionType = 'Login'
+              AND IsSuccessful = 1
+        ORDER BY LogDateTime DESC";
+
+        using (var cmd = new SqlCommand(query, conn))
+        {
+            cmd.Parameters.AddWithValue("@username", username);
+            var result = cmd.ExecuteScalar();
+
+            if (result != null && result != DBNull.Value)
+                return Convert.ToDateTime(result);
+        }
+
+        return null;
+    }
 
     private void LogAction(SqlConnection conn, string username, string role, string actionType, string description, bool? success = null)
     {

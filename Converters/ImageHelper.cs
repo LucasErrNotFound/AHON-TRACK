@@ -204,7 +204,7 @@ namespace AHON_TRACK.Converters
         }
 
         // Create a simple fallback bitmap if default avatar fails to load
-        private static Bitmap CreateFallbackBitmap()
+        public static Bitmap CreateFallbackBitmap()
         {
             try
             {

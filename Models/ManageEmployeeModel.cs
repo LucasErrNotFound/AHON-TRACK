@@ -34,7 +34,7 @@ namespace AHON_TRACK.Models
         public string Barangay { get; set; }
         public string ZipCode { get; set; }
 
-        public string LastLogin { get; set; } = "Never logged in";
+        public string? LastLogin { get; set; } = "Never logged in";
 
         public byte[]? ProfilePicture { get; set; }
         public int EmployeeId { get; set; }
@@ -45,5 +45,6 @@ namespace AHON_TRACK.Models
         public string? CityTown { get; set; }
         public string? Province { get; set; }
         public string? Password { get; set; }
+
     }
 }

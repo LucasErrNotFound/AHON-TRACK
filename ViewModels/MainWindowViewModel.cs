@@ -1,4 +1,6 @@
 ﻿using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -17,16 +19,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly PageManager _pageManager;
     private readonly DashboardViewModel _dashboardViewModel;
     private readonly ManageEmployeesViewModel _manageEmployeesViewModel;
-	private readonly CheckInOutViewModel _checkInOutViewModel;
-	private readonly ManageMembershipViewModel _manageMembershipViewModel;
+    private readonly CheckInOutViewModel _checkInOutViewModel;
+    private readonly ManageMembershipViewModel _manageMembershipViewModel;
     private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
     private readonly ManageBillingViewModel _manageBillingViewModel;
     private readonly ProductPurchaseViewModel _productPurchaseViewModel;
     private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
-    private readonly ProductStockViewModel  _productStockViewModel;
+    private readonly ProductStockViewModel _productStockViewModel;
     private readonly SupplierManagementViewModel _supplierManagementViewModel;
-    private readonly GymDemographicsViewModel  _gymDemographicsViewModel;
-    private readonly GymAttendanceViewModel  _gymAttendanceViewModel;
+    private readonly GymDemographicsViewModel _gymDemographicsViewModel;
+    private readonly GymAttendanceViewModel _gymAttendanceViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
@@ -37,8 +39,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         ToastManager toastManager,
         DashboardViewModel dashboardViewModel,
         ManageEmployeesViewModel manageEmployeesViewModel,
-		CheckInOutViewModel checkInOutViewModel,
-		ManageMembershipViewModel manageMembershipViewModel,
+        CheckInOutViewModel checkInOutViewModel,
+        ManageMembershipViewModel manageMembershipViewModel,
         TrainingSchedulesViewModel trainingSchedulesViewModel,
         ManageBillingViewModel billingViewModel,
         ProductPurchaseViewModel productPurchaseViewModel,
@@ -53,8 +55,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _dashboardViewModel = dashboardViewModel;
-		_checkInOutViewModel = checkInOutViewModel;
-		_manageMembershipViewModel = manageMembershipViewModel;
+        _checkInOutViewModel = checkInOutViewModel;
+        _manageMembershipViewModel = manageMembershipViewModel;
         _trainingSchedulesViewModel = trainingSchedulesViewModel;
         _manageBillingViewModel = billingViewModel;
         _productPurchaseViewModel = productPurchaseViewModel;
@@ -76,10 +78,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _dashboardViewModel = new DashboardViewModel();
+
+        // Create a design-time dashboard service with a dummy connection string
+        var designTimeDashboardService = new DashboardService("Server=localhost;Database=AHON_TRACK;Integrated Security=true;TrustServerCertificate=true;");
+
+        _dashboardViewModel = new DashboardViewModel(_pageManager, designTimeDashboardService);
         _manageEmployeesViewModel = new ManageEmployeesViewModel();
-		_checkInOutViewModel = new CheckInOutViewModel();
-		_manageMembershipViewModel = new ManageMembershipViewModel();
+        _checkInOutViewModel = new CheckInOutViewModel();
+        _manageMembershipViewModel = new ManageMembershipViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
         _manageBillingViewModel = new ManageBillingViewModel();
@@ -161,7 +167,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand]
     private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
-    
+
     [RelayCommand]
     private void OpenProductPurchase() => SwitchPage(_productPurchaseViewModel);
 

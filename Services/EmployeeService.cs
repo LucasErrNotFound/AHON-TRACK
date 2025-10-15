@@ -66,85 +66,76 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Check for duplicate username
-                using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Employees WHERE Username = @username", conn);
-                checkCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
+                using var transaction = conn.BeginTransaction();
 
-                var count = (int)await checkCmd.ExecuteScalarAsync();
-                if (count > 0)
+                try
                 {
-                    _toastManager?.CreateToast("Duplicate Username")
-                        .WithContent($"Username '{employee.Username}' already exists.")
+                    // Check for duplicate username
+                    using var checkCmd = new SqlCommand(
+                        "SELECT COUNT(*) FROM Employees WHERE Username = @username", conn, transaction);
+                    checkCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
+
+                    var count = (int)await checkCmd.ExecuteScalarAsync();
+                    if (count > 0)
+                    {
+                        transaction.Rollback();
+                        _toastManager?.CreateToast("Duplicate Username")
+                            .WithContent($"Username '{employee.Username}' already exists.")
+                            .DismissOnClick()
+                            .ShowWarning();
+                        return (false, "Username already exists.", null);
+                    }
+
+                    // Insert into Employees table
+                    string employeeQuery = @"
+                        INSERT INTO Employees 
+                        (FirstName, MiddleInitial, LastName, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
+                         HouseAddress, HouseNumber, Street, Barangay, CityTown, Province, 
+                         Username, Password, Status, Position, CreatedAt)
+                        OUTPUT INSERTED.EmployeeId
+                        VALUES 
+                        (@FirstName, @MiddleInitial, @LastName, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
+                         @HouseAddress, @HouseNumber, @Street, @Barangay, @CityTown, @Province, 
+                         @Username, @Password, @Status, @Position, GETDATE())";
+
+                    using var cmd = new SqlCommand(employeeQuery, conn, transaction);
+                    cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(employee.MiddleInitial) ? (object)DBNull.Value : employee.MiddleInitial);
+                    cmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Gender", employee.Gender ?? (object)DBNull.Value);
+                    cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = employee.ProfilePicture ?? (object)DBNull.Value;
+                    cmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Age", employee.Age > 0 ? employee.Age : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DateOfBirth", employee.DateOfBirth ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@HouseAddress", employee.HouseAddress ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@HouseNumber", employee.HouseNumber ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Street", employee.Street ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Password", employee.Password ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
+                    cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
+
+                    int employeeId = (int)await cmd.ExecuteScalarAsync();
+
+                    await LogActionAsync(conn, "CREATE", $"Added new {employee.Position}: {employee.FirstName} {employee.LastName}", true, transaction);
+
+                    transaction.Commit();
+
+                    _toastManager?.CreateToast("Employee Added")
+                        .WithContent($"Successfully added {employee.FirstName} {employee.LastName}.")
                         .DismissOnClick()
-                        .ShowWarning();
-                    return (false, "Username already exists.", null);
+                        .ShowSuccess();
+
+                    return (true, "Employee added successfully.", employeeId);
                 }
-
-                // Insert into Employees table
-                string employeeQuery = @"
-                    INSERT INTO Employees 
-                    (FirstName, MiddleInitial, LastName, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
-                     HouseAddress, HouseNumber, Street, Barangay, CityTown, Province, 
-                     Username, Password, Status, Position)
-                    OUTPUT INSERTED.EmployeeId
-                    VALUES 
-                    (@FirstName, @MiddleInitial, @LastName, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
-                     @HouseAddress, @HouseNumber, @Street, @Barangay, @CityTown, @Province, 
-                     @Username, @Password, @Status, @Position)";
-
-                using var cmd = new SqlCommand(employeeQuery, conn);
-                cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(employee.MiddleInitial) ? (object)DBNull.Value : employee.MiddleInitial);
-                cmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Gender", employee.Gender ?? (object)DBNull.Value);
-                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = employee.ProfilePicture ?? (object)DBNull.Value;
-                cmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Age", employee.Age > 0 ? employee.Age : (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DateOfBirth", employee.DateOfBirth ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@HouseAddress", employee.HouseAddress ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@HouseNumber", employee.HouseNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Street", employee.Street ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Password", employee.Password ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
-                cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
-
-                int employeeId = (int)await cmd.ExecuteScalarAsync();
-
-                // Insert into Admins or Staffs table
-                if (employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                catch
                 {
-                    string adminQuery = @"INSERT INTO Admins (EmployeeID, Username, Password) 
-                                         VALUES (@EmployeeID, @Username, @Password)";
-                    using var adminCmd = new SqlCommand(adminQuery, conn);
-                    adminCmd.Parameters.AddWithValue("@EmployeeID", employeeId);
-                    adminCmd.Parameters.AddWithValue("@Username", employee.Username);
-                    adminCmd.Parameters.AddWithValue("@Password", employee.Password);
-                    await adminCmd.ExecuteNonQueryAsync();
+                    transaction.Rollback();
+                    throw;
                 }
-                else if (employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    string staffQuery = @"INSERT INTO Staffs (EmployeeID, Username, Password) 
-                                         VALUES (@EmployeeID, @Username, @Password)";
-                    using var staffCmd = new SqlCommand(staffQuery, conn);
-                    staffCmd.Parameters.AddWithValue("@EmployeeID", employeeId);
-                    staffCmd.Parameters.AddWithValue("@Username", employee.Username);
-                    staffCmd.Parameters.AddWithValue("@Password", employee.Password);
-                    await staffCmd.ExecuteNonQueryAsync();
-                }
-
-                await LogActionAsync(conn, "CREATE", $"Added new {employee.Position}: {employee.FirstName} {employee.LastName}", true);
-
-                _toastManager?.CreateToast("Employee Added")
-                    .WithContent($"Successfully added {employee.FirstName} {employee.LastName}.")
-                    .DismissOnClick()
-                    .ShowSuccess();
-
-                return (true, "Employee added successfully.", employeeId);
             }
             catch (SqlException ex)
             {
@@ -202,7 +193,7 @@ namespace AHON_TRACK.Services
                         DateJoined,
                         ProfilePicture
                     FROM Employees
-                    ORDER BY Name;";
+                    ORDER BY Name";
 
                 var employees = new List<ManageEmployeeModel>();
 
@@ -269,7 +260,7 @@ namespace AHON_TRACK.Services
 
                 var query = @"SELECT EmployeeId, FirstName, MiddleInitial, LastName, Username, ContactNumber, 
                              Position, ProfilePicture, Status, DateJoined, Gender, Age, DateOfBirth,
-                             HouseAddress, HouseNumber, Street, Barangay, CityTown, Province
+                             HouseAddress, HouseNumber, Street, Barangay, CityTown, Province, Password
                       FROM Employees 
                       WHERE EmployeeId = @Id";
 
@@ -300,6 +291,7 @@ namespace AHON_TRACK.Services
                         Barangay = reader.IsDBNull(16) ? string.Empty : reader.GetString(16),
                         CityTown = reader.IsDBNull(17) ? string.Empty : reader.GetString(17),
                         Province = reader.IsDBNull(18) ? string.Empty : reader.GetString(18),
+                        Password = reader.IsDBNull(19) ? string.Empty : reader.GetString(19),
                         AvatarBytes = reader.IsDBNull(7) ? null : (byte[])reader[7],
                         AvatarSource = reader.IsDBNull(7)
                             ? ImageHelper.GetDefaultAvatar()
@@ -328,9 +320,7 @@ namespace AHON_TRACK.Services
         public async Task<(bool Success, string Message, ManageEmployeeModel? Employee)> ViewEmployeeProfileAsync(int employeeId)
         {
             if (!CanView())
-            {
                 return (false, "Insufficient permissions to view employee profile.", null);
-            }
 
             try
             {
@@ -338,14 +328,13 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 string query = @"
-                    SELECT e.EmployeeId, e.FirstName, e.MiddleInitial, e.LastName, e.Gender, e.ProfilePicture, 
-                           e.ContactNumber, e.Age, e.DateOfBirth, e.HouseAddress, e.HouseNumber, e.Street, 
-                           e.Barangay, e.CityTown, e.Province, e.Username, e.Position, e.Status, e.DateJoined, e.Password,
-                           COALESCE(a.LastLogin, s.LastLogin) AS LastLogin
-                    FROM Employees e
-                    LEFT JOIN Admins a ON e.EmployeeId = a.EmployeeId
-                    LEFT JOIN Staffs s ON e.EmployeeId = s.EmployeeId
-                    WHERE e.EmployeeId = @Id;";
+                    SELECT 
+                        EmployeeID, FirstName, MiddleInitial, LastName, Gender, ProfilePicture, 
+                        ContactNumber, Age, DateOfBirth, HouseAddress, HouseNumber, Street, 
+                        Barangay, CityTown, Province, Username, Position, Status, 
+                        DateJoined, Password, LastLogin
+                    FROM Employees
+                    WHERE EmployeeID = @Id";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", employeeId);
@@ -423,92 +412,110 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Check if employee exists
-                using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Employees WHERE EmployeeId = @employeeId", conn);
-                checkCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
+                using var transaction = conn.BeginTransaction();
 
-                var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
-                if (!exists)
+                try
                 {
-                    _toastManager?.CreateToast("Employee Not Found")
-                        .WithContent("The employee you're trying to update doesn't exist.")
-                        .DismissOnClick()
-                        .ShowWarning();
-                    return (false, "Employee not found.");
+                    // Check if employee exists
+                    using var checkCmd = new SqlCommand(
+                        "SELECT COUNT(*) FROM Employees WHERE EmployeeId = @employeeId", conn, transaction);
+                    checkCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
+
+                    var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
+                    if (!exists)
+                    {
+                        transaction.Rollback();
+                        _toastManager?.CreateToast("Employee Not Found")
+                            .WithContent("The employee you're trying to update doesn't exist.")
+                            .DismissOnClick()
+                            .ShowWarning();
+                        return (false, "Employee not found.");
+                    }
+
+                    // Check for duplicate username (excluding current employee)
+                    using var dupCmd = new SqlCommand(
+                        "SELECT COUNT(*) FROM Employees WHERE Username = @username AND EmployeeId != @employeeId", conn, transaction);
+                    dupCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
+                    dupCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
+
+                    var duplicateCount = (int)await dupCmd.ExecuteScalarAsync();
+                    if (duplicateCount > 0)
+                    {
+                        transaction.Rollback();
+                        _toastManager?.CreateToast("Duplicate Username")
+                            .WithContent($"Another employee with username '{employee.Username}' already exists.")
+                            .DismissOnClick()
+                            .ShowWarning();
+                        return (false, "Username already exists.");
+                    }
+
+                    // Update employee
+                    string query = @"UPDATE Employees 
+                         SET FirstName = @FirstName, 
+                             MiddleInitial = @MiddleInitial, 
+                             LastName = @LastName, 
+                             Gender = @Gender,
+                             Username = @Username,
+                             Password = @Password,
+                             ContactNumber = @ContactNumber, 
+                             Age = @Age,
+                             DateOfBirth = @DateOfBirth,
+                             HouseAddress = @HouseAddress,
+                             HouseNumber = @HouseNumber,
+                             Street = @Street,
+                             Barangay = @Barangay,
+                             CityTown = @CityTown,
+                             Province = @Province,
+                             Position = @Position,
+                             Status = @Status,
+                             ProfilePicture = @ProfilePicture,
+                             UpdatedAt = GETDATE()
+                         WHERE EmployeeId = @EmployeeId";
+
+                    using var cmd = new SqlCommand(query, conn, transaction);
+                    cmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                    cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(employee.MiddleInitial) ? (object)DBNull.Value : employee.MiddleInitial);
+                    cmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Gender", employee.Gender ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Password", employee.Password ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Age", employee.Age > 0 ? employee.Age : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DateOfBirth", employee.DateOfBirth ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@HouseAddress", employee.HouseAddress ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@HouseNumber", employee.HouseNumber ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Street", employee.Street ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
+                    cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = employee.ProfilePicture ?? (object)DBNull.Value;
+
+                    int rows = await cmd.ExecuteNonQueryAsync();
+                    if (rows > 0)
+                    {
+                        await LogActionAsync(conn, "UPDATE", $"Updated employee: {employee.FirstName} {employee.LastName}", true, transaction);
+
+                        transaction.Commit();
+
+                        _toastManager?.CreateToast("Employee Updated")
+                            .WithContent($"Successfully updated {employee.FirstName} {employee.LastName}.")
+                            .DismissOnClick()
+                            .ShowSuccess();
+
+                        return (true, "Employee updated successfully.");
+                    }
+
+                    transaction.Rollback();
+                    return (false, "Failed to update employee.");
                 }
-
-                // Check for duplicate username (excluding current employee)
-                using var dupCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Employees WHERE Username = @username AND EmployeeId != @employeeId", conn);
-                dupCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
-                dupCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
-
-                var duplicateCount = (int)await dupCmd.ExecuteScalarAsync();
-                if (duplicateCount > 0)
+                catch
                 {
-                    _toastManager?.CreateToast("Duplicate Username")
-                        .WithContent($"Another employee with username '{employee.Username}' already exists.")
-                        .DismissOnClick()
-                        .ShowWarning();
-                    return (false, "Username already exists.");
+                    transaction.Rollback();
+                    throw;
                 }
-
-                // Update employee
-                string query = @"UPDATE Employees 
-                     SET FirstName = @FirstName, 
-                         MiddleInitial = @MiddleInitial, 
-                         LastName = @LastName, 
-                         Gender = @Gender,
-                         Username = @Username, 
-                         ContactNumber = @ContactNumber, 
-                         Age = @Age,
-                         DateOfBirth = @DateOfBirth,
-                         HouseAddress = @HouseAddress,
-                         HouseNumber = @HouseNumber,
-                         Street = @Street,
-                         Barangay = @Barangay,
-                         CityTown = @CityTown,
-                         Province = @Province,
-                         Position = @Position,
-                         Status = @Status,
-                         ProfilePicture = @ProfilePicture
-                     WHERE EmployeeId = @EmployeeId";
-
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
-                cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(employee.MiddleInitial) ? (object)DBNull.Value : employee.MiddleInitial);
-                cmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Gender", employee.Gender ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Age", employee.Age > 0 ? employee.Age : (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DateOfBirth", employee.DateOfBirth ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@HouseAddress", employee.HouseAddress ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@HouseNumber", employee.HouseNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Street", employee.Street ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
-                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = employee.ProfilePicture ?? (object)DBNull.Value;
-
-                int rows = await cmd.ExecuteNonQueryAsync();
-                if (rows > 0)
-                {
-                    await LogActionAsync(conn, "UPDATE", $"Updated employee: {employee.FirstName} {employee.LastName}", true);
-
-                    _toastManager?.CreateToast("Employee Updated")
-                        .WithContent($"Successfully updated {employee.FirstName} {employee.LastName}.")
-                        .DismissOnClick()
-                        .ShowSuccess();
-
-                    return (true, "Employee updated successfully.");
-                }
-
-                return (false, "Failed to update employee.");
             }
             catch (SqlException ex)
             {
@@ -571,6 +578,7 @@ namespace AHON_TRACK.Services
 
                     if (string.IsNullOrEmpty(employeeName))
                     {
+                        transaction.Rollback();
                         _toastManager?.CreateToast("Employee Not Found")
                             .WithContent("The employee you're trying to delete doesn't exist.")
                             .DismissOnClick()
@@ -578,17 +586,12 @@ namespace AHON_TRACK.Services
                         return (false, "Employee not found.");
                     }
 
-                    // Delete from Staffs table
-                    using var deleteStaffCmd = new SqlCommand(
-                        "DELETE FROM Staffs WHERE EmployeeID = @employeeId", conn, transaction);
-                    deleteStaffCmd.Parameters.AddWithValue("@employeeId", employeeId);
-                    await deleteStaffCmd.ExecuteNonQueryAsync();
-
-                    // Delete from Admins table
-                    using var deleteAdminCmd = new SqlCommand(
-                        "DELETE FROM Admins WHERE EmployeeID = @employeeId", conn, transaction);
-                    deleteAdminCmd.Parameters.AddWithValue("@employeeId", employeeId);
-                    await deleteAdminCmd.ExecuteNonQueryAsync();
+                    // Set PerformedByEmployeeID to NULL in SystemLogs (preserves audit trail)
+                    using var updateLogsCmd = new SqlCommand(
+                        "UPDATE SystemLogs SET PerformedByEmployeeID = NULL WHERE PerformedByEmployeeID = @employeeId",
+                        conn, transaction);
+                    updateLogsCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                    await updateLogsCmd.ExecuteNonQueryAsync();
 
                     // Delete from Employees table
                     using var deleteEmpCmd = new SqlCommand(
@@ -598,7 +601,7 @@ namespace AHON_TRACK.Services
 
                     if (rowsAffected > 0)
                     {
-                        await LogActionAsync(conn, "DELETE", $"Deleted employee: {employeeName} (ID: {employeeId})", true);
+                        await LogActionAsync(conn, "DELETE", $"Deleted employee: {employeeName} (ID: {employeeId})", true, transaction);
                         transaction.Commit();
 
                         _toastManager?.CreateToast("Employee Deleted")
@@ -641,15 +644,17 @@ namespace AHON_TRACK.Services
         }
 
         #endregion
+
         #region UTILITY METHODS
 
-        private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success)
+        private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success, SqlTransaction transaction = null)
         {
             try
             {
                 using var logCmd = new SqlCommand(
                     @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
-                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)", conn);
+                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)",
+                    conn, transaction);
 
                 logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
                 logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);

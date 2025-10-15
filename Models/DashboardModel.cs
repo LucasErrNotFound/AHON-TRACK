@@ -1,4 +1,6 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using AHON_TRACK.Converters;
+using Avalonia.Media.Imaging;
+using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,7 +46,7 @@ public class RecentLog
 
     // New property for display
     public string FormattedDateTime { get; set; }
-    public string AvatarSource { get; set; } = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+    public Bitmap AvatarSource { get; set; } = ImageHelper.GetDefaultAvatar();
 }
 
 // Main Dashboard Model - handles all data operations
@@ -266,7 +268,7 @@ public class DashboardModel
                     ActionLogName = reader["ActionLogName"].ToString(), // comes from SQL alias
                     LogDateTime = logDateTime,
                     FormattedDateTime = formattedDate,
-                    AvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png"
+                    AvatarSource = ImageHelper.GetDefaultAvatar()
                 });
             }
         }

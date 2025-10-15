@@ -1,5 +1,7 @@
 ﻿using AHON_TRACK.Models;
+using AHON_TRACK.Services;
 using AHON_TRACK.Services.Events;
+using AHON_TRACK.Services.Interface;
 using HotAvalonia;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
@@ -21,7 +23,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     #region Private Fields
 
     private readonly PageManager _pageManager;
-    private readonly DashboardModel _dashboardModel;
+    private readonly IDashboardService _dashboardService;
     private int _selectedYearIndex;
     private ISeries[] _series = [];
     private ObservableCollection<int> _availableYears = [];
@@ -31,6 +33,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     private string _salesSummary = "You made 0 sales this month.";
     private string _trainingSessionsSummary = "You have 0 upcoming training schedules this week";
     private string _recentLogsSummary = "You have 0 recent action logs today";
+
     public event EventHandler RecentLogsUpdated;
     public void NotifyRecentLogsUpdated() => RecentLogsUpdated?.Invoke(this, EventArgs.Empty);
 
@@ -142,27 +145,11 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     #region Constructor
 
-    public DashboardViewModel()
+    public DashboardViewModel(PageManager pageManager, IDashboardService dashboardService)
     {
-        _pageManager = new PageManager(new ServiceProvider());
-        _dashboardModel = new DashboardModel();
-        InitializeViewModel();
-    }
-
-    // Constructor for dependency injection (if needed)
-    public DashboardViewModel(DashboardModel dashboardModel, PageManager pageManager)
-    {
-        _pageManager = pageManager;
-        _dashboardModel = dashboardModel ?? throw new ArgumentNullException(nameof(dashboardModel));
-        InitializeViewModel();
-    }
-
-    // Constructor for dependency injection without DashboardModel (if DashboardModel is not registered)
-    public DashboardViewModel(PageManager pageManager)
-    {
-        _pageManager = pageManager;
-        _dashboardModel = new DashboardModel();
-        InitializeViewModel();
+        _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
+        _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
+        _ = InitializeViewModel();
     }
 
     #endregion
@@ -171,11 +158,11 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     private async Task InitializeViewModel()
     {
-        InitializeAvailableYears();
+        await InitializeAvailableYears();
         InitializeAxes();
-        InitializeChart();
-        InitializeSalesData();
-        InitializeTrainingSessionsData();
+        await InitializeChart();
+        await InitializeSalesData();
+        await InitializeTrainingSessionsData();
         await RefreshRecentLogs();
 
         DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
@@ -186,22 +173,32 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
     }
 
-    private void InitializeAvailableYears()
+    private async Task InitializeAvailableYears()
     {
-        var years = _dashboardModel.GetAvailableYears();
-        AvailableYears = new ObservableCollection<int>(years);
+        try
+        {
+            var years = await _dashboardService.GetAvailableYearsAsync();
+            AvailableYears = new ObservableCollection<int>(years);
+
+            if (AvailableYears.Count > 0)
+            {
+                SelectedYearIndex = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading available years: {ex.Message}");
+        }
     }
 
-    private void InitializeSalesData()
+    private async Task InitializeSalesData()
     {
-        var salesData = _dashboardModel.GetSampleSalesData();
-        RecentSales = new ObservableCollection<SalesItem>(salesData);
+        await LoadSalesFromDatabaseAsync();
     }
 
-    private void InitializeTrainingSessionsData()
+    private async Task InitializeTrainingSessionsData()
     {
-        var sessionsData = _dashboardModel.GetSampleTrainingSessionsData();
-        UpcomingTrainingSessions = new ObservableCollection<TrainingSession>(sessionsData);
+        await LoadTrainingSessionsFromDatabaseAsync();
     }
 
     public async Task RefreshRecentLogs()
@@ -214,37 +211,37 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         XAxes =
         [
             new Axis
-                {
-                    Name = "Months",
-                    NamePaint = new SolidColorPaint(SKColors.Red),
-                    Labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-                    LabelsPaint = new SolidColorPaint(SKColors.DarkGray),
-                    TextSize = 13,
-                    MinStep = 1,
-                }
+            {
+                Name = "Months",
+                NamePaint = new SolidColorPaint(SKColors.Red),
+                Labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                LabelsPaint = new SolidColorPaint(SKColors.DarkGray),
+                TextSize = 13,
+                MinStep = 1,
+            }
         ];
 
         YAxes =
         [
             new Axis
+            {
+                Name = "Profit",
+                NamePaint = new SolidColorPaint(SKColors.Green),
+                LabelsPaint = new SolidColorPaint(SKColors.DarkGray),
+                TextSize = 13,
+                SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
                 {
-                    Name = "Profit",
-                    NamePaint = new SolidColorPaint(SKColors.Green),
-                    LabelsPaint = new SolidColorPaint(SKColors.DarkGray),
-                    TextSize = 13,
-                    SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
-                    {
-                        StrokeThickness = 2,
-                        PathEffect = new DashEffect([3, 3])
-                    },
-                    Labeler = value => Labelers.FormatCurrency(value, ",", ".", "₱"),
-                }
+                    StrokeThickness = 2,
+                    PathEffect = new DashEffect([3, 3])
+                },
+                Labeler = value => Labelers.FormatCurrency(value, ",", ".", "₱"),
+            }
         ];
     }
 
-    private void InitializeChart()
+    private async Task InitializeChart()
     {
-        UpdateChartData();
+        await UpdateChartData();
     }
 
     #endregion
@@ -255,17 +252,21 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     {
         try
         {
-            var salesFromDb = await _dashboardModel.GetSalesFromDatabaseAsync();
+            var salesFromDb = await _dashboardService.GetSalesAsync(5);
 
             RecentSales.Clear();
             foreach (var sale in salesFromDb)
             {
                 RecentSales.Add(sale);
             }
+
+            // Update summary using service
+            var summary = await _dashboardService.GenerateSalesSummaryAsync(5);
+            SalesSummary = summary;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading sales data: {ex.Message}"); // Don't ask me why this is a Console-based error handling :)
+            Console.WriteLine($"Error loading sales data: {ex.Message}");
         }
     }
 
@@ -273,17 +274,21 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     {
         try
         {
-            var sessionsFromDb = await _dashboardModel.GetTrainingSessionsFromDatabaseAsync();
+            var sessionsFromDb = await _dashboardService.GetTrainingSessionsAsync(5);
 
             UpcomingTrainingSessions.Clear();
             foreach (var session in sessionsFromDb)
             {
                 UpcomingTrainingSessions.Add(session);
             }
+
+            // Update summary using service
+            var summary = await _dashboardService.GenerateTrainingSessionsSummaryAsync(5);
+            TrainingSessionsSummary = summary;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading training sessions data: {ex.Message}"); // Don't ask me why this is a Console-based error handling :)
+            Console.WriteLine($"Error loading training sessions data: {ex.Message}");
         }
     }
 
@@ -291,9 +296,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     {
         try
         {
-            var logsFromDb = await _dashboardModel.GetRecentLogsFromDatabaseAsync(
-                DashboardModel.connectionString // Pass it here
-            );
+            var logsFromDb = await _dashboardService.GetRecentLogsAsync(5);
 
             RecentLogs.Clear();
             foreach (var log in logsFromDb)
@@ -301,7 +304,9 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
                 RecentLogs.Add(log);
             }
 
-            UpdateRecentLogsSummary(); // This will call the GenerateRecentLogsSummary method
+            // Update summary using service
+            var summary = await _dashboardService.GenerateRecentLogSummaryAsync(5);
+            RecentLogsSummary = summary;
         }
         catch (Exception ex)
         {
@@ -315,7 +320,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     public void AddSale(SalesItem newSale)
     {
-        RecentSales.Insert(0, newSale); // Add to the beginning for "recent" sales
+        RecentSales.Insert(0, newSale);
         UpdateSalesSummary();
     }
 
@@ -331,9 +336,18 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     public void AddTrainingSession(TrainingSession newSession)
     {
-        // Use model to find the correct insertion index
         var sessionsList = UpcomingTrainingSessions.ToList();
-        var insertIndex = _dashboardModel.FindInsertionIndex(sessionsList, newSession);
+        var insertIndex = 0;
+
+        for (int i = 0; i < sessionsList.Count; i++)
+        {
+            if (newSession.Date < sessionsList[i].Date)
+            {
+                insertIndex = i;
+                break;
+            }
+            insertIndex = i + 1;
+        }
 
         UpcomingTrainingSessions.Insert(insertIndex, newSession);
         UpdateTrainingSessionsSummary();
@@ -351,7 +365,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     public void AddRecentLog(RecentLog newLog)
     {
-        RecentLogs.Insert(0, newLog); // Add to the beginning for "recent" logs
+        RecentLogs.Insert(0, newLog);
         UpdateRecentLogsSummary();
     }
 
@@ -360,38 +374,46 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         RecentLogs.Remove(log);
         UpdateRecentLogsSummary();
     }
+
     #endregion
 
     #region Chart Operations
 
-    private void UpdateChartData()
+    private async Task UpdateChartData()
     {
         if (_selectedYearIndex >= 0 && _selectedYearIndex < AvailableYears.Count)
         {
-            int selectedYear = AvailableYears[_selectedYearIndex];
-            var data = _dashboardModel.GetDataForYear(selectedYear);
+            try
+            {
+                int selectedYear = AvailableYears[_selectedYearIndex];
+                var data = await _dashboardService.GetSalesDataForYearAsync(selectedYear);
 
-            Series =
-            [
-                new ColumnSeries<int>
+                Series =
+                [
+                    new ColumnSeries<int>
                     {
                         Values = data,
                         Fill = new SolidColorPaint(SKColors.DarkSlateBlue),
                         MaxBarWidth = 50,
                         Name = $"{selectedYear} Sales"
                     }
-            ];
+                ];
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading chart data: {ex.Message}");
+            }
         }
     }
 
-    public void AddYear(int year)
+    public async Task AddYear(int year)
     {
         if (!AvailableYears.Contains(year))
         {
             var insertIndex = AvailableYears.Count;
             for (int i = 0; i < AvailableYears.Count; i++)
             {
-                if (AvailableYears[i] > year)
+                if (AvailableYears[i] < year)
                 {
                     insertIndex = i;
                     break;
@@ -399,9 +421,6 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
             }
 
             AvailableYears.Insert(insertIndex, year);
-
-            // Use model to add year data
-            _dashboardModel.AddYearData(year);
         }
     }
 
@@ -412,19 +431,20 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     private void UpdateSalesSummary()
     {
         var count = RecentSales?.Count ?? 0;
-        SalesSummary = _dashboardModel.GenerateSalesSummary(count);
+        var total = RecentSales?.Sum(s => s.Amount) ?? 0;
+        SalesSummary = $"Total Sales: {count} orders, ₱{total:N2}";
     }
 
     private void UpdateTrainingSessionsSummary()
     {
         var count = UpcomingTrainingSessions?.Count ?? 0;
-        TrainingSessionsSummary = _dashboardModel.GenerateTrainingSessionsSummary(count);
+        TrainingSessionsSummary = $"Upcoming Training Sessions: {count}";
     }
 
     private void UpdateRecentLogsSummary()
     {
         var count = RecentLogs?.Count ?? 0;
-        RecentLogsSummary = _dashboardModel.GenerateRecentLogsSummary(count);
+        RecentLogsSummary = $"You have {count} recent action logs today";
     }
 
     #endregion
@@ -438,7 +458,8 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     public new event PropertyChangedEventHandler? PropertyChanged;
 
-    private new void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    private new void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     #endregion
 }
