@@ -138,9 +138,21 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
         foreach (var manageMember in manageMemberModels)
         {
             // Parse the full name
-            var nameParts = manageMember.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            string firstName = nameParts.Length > 0 ? nameParts[0] : "";
-            string lastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : "";
+            var name = manageMember.Name ?? "";
+            string firstName, lastName;
+
+            int lastSpaceIndex = name.LastIndexOf(' ');
+            if (lastSpaceIndex > 0)
+            {
+                firstName = name.Substring(0, lastSpaceIndex);
+                lastName = name.Substring(lastSpaceIndex + 1);
+            }
+            else
+            {
+                // If there is no space, the whole name is first name
+                firstName = name;
+                lastName = "";
+            }
 
             var memberPerson = new MemberPerson
             {

@@ -750,7 +750,7 @@ public partial class MemberPerson : ViewModelBase
 {
     [ObservableProperty]
     private bool _isSelected;
-    
+
     [ObservableProperty]
     private Bitmap _avatarSource = ManageMemberModel.DefaultAvatarSource;
 
