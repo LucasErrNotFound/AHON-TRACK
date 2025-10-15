@@ -124,7 +124,6 @@ public partial class LoginViewModel : ViewModelBase
             using var conn = new SqlConnection(ConnectionString);
             conn.Open();
 
-            // 🔹 Try Admins
             string adminQuery = "SELECT AdminID FROM Admins WHERE Username = @user AND Password = @pass";
             using (var adminCmd = new SqlCommand(adminQuery, conn))
             {
@@ -134,7 +133,6 @@ public partial class LoginViewModel : ViewModelBase
                 var adminId = adminCmd.ExecuteScalar();
                 if (adminId != null)
                 {
-                    // ✅ Update LastLogin for Admin
                     var update = new SqlCommand("UPDATE Admins SET LastLogin = @lastLogin WHERE AdminID = @id", conn);
                     update.Parameters.AddWithValue("@lastLogin", DateTime.Now);
                     update.Parameters.AddWithValue("@id", adminId);
@@ -143,6 +141,25 @@ public partial class LoginViewModel : ViewModelBase
                     CurrentUserModel.UserId = Convert.ToInt32(adminId);
                     CurrentUserModel.Username = username;
                     CurrentUserModel.Role = "Admin";
+                    
+                    using (var getCmd = new SqlCommand(
+                               "SELECT a.EmployeeID, e.FirstName, e.LastName " +
+                               "FROM Admins a " +
+                               "JOIN Employees e ON a.EmployeeID = e.EmployeeID " +
+                               "WHERE a.AdminID = @id", conn))
+                    {
+                        getCmd.Parameters.AddWithValue("@id", adminId);
+                        using var r = getCmd.ExecuteReader();
+                        if (r.Read())
+                        {
+                            var employeeId = r.GetInt32(0);
+                            var first = r["FirstName"].ToString() ?? "";
+                            var last = r["LastName"].ToString() ?? "";
+
+                            CurrentUserModel.UserId = employeeId;
+                            CurrentUserModel.Name = $"{first} {last}".Trim();
+                        }
+                    }
 
                     role = "Admin";
 
@@ -151,7 +168,6 @@ public partial class LoginViewModel : ViewModelBase
                 }
             }
 
-            // 🔹 Try Staffs
             string staffQuery = "SELECT StaffID FROM Staffs WHERE Username = @user AND Password = @pass";
             using (var staffCmd = new SqlCommand(staffQuery, conn))
             {
@@ -161,16 +177,33 @@ public partial class LoginViewModel : ViewModelBase
                 var staffId = staffCmd.ExecuteScalar();
                 if (staffId != null)
                 {
-                    // ✅ Update LastLogin for Staff
                     var update = new SqlCommand("UPDATE Staffs SET LastLogin = @lastLogin WHERE StaffID = @id", conn);
                     update.Parameters.AddWithValue("@lastLogin", DateTime.Now);
                     update.Parameters.AddWithValue("@id", staffId);
                     update.ExecuteNonQuery();
 
-                    // Save current user globally
                     CurrentUserModel.UserId = Convert.ToInt32(staffId);
                     CurrentUserModel.Username = username;
                     CurrentUserModel.Role = "Staff";
+                    
+                    using (var getCmd = new SqlCommand(
+                               "SELECT s.EmployeeID, e.FirstName, e.LastName " +
+                               "FROM Staffs s " +
+                               "JOIN Employees e ON s.EmployeeID = e.EmployeeID " +
+                               "WHERE s.StaffID = @id", conn))
+                    {
+                        getCmd.Parameters.AddWithValue("@id", staffId);
+                        using var r = getCmd.ExecuteReader();
+                        if (r.Read())
+                        {
+                            var employeeId = r.GetInt32(0);
+                            var first = r["FirstName"].ToString() ?? "";
+                            var last = r["LastName"].ToString() ?? "";
+
+                            CurrentUserModel.UserId = employeeId;
+                            CurrentUserModel.Name = $"{first} {last}".Trim();
+                        }
+                    }
 
                     role = "Staff";
 
@@ -204,7 +237,6 @@ public partial class LoginViewModel : ViewModelBase
             return false;
         }
     }
-
 
     private void LogAction(SqlConnection conn, string username, string role, string actionType, string description, bool? success = null)
     {

@@ -357,9 +357,9 @@
 											Margin="0,0,8,0"
 											CornerRadius="{DynamicResource XlCornerRadius}"
 											Fallback="CN"
-											Source="avares://AHON_TRACK/Assets/MainWindowView/user-admin.png"/>
+											Source="{CompiledBinding CurrentUser.AvatarSource}"/>
 										<StackPanel Grid.Column="1" VerticalAlignment="Center">
-											<TextBlock Classes="Small" Text="Mardie Dela Cruz" />
+											<TextBlock Classes="Small" Text="{CompiledBinding CurrentUser.Name}" />
 											<TextBlock
                                                 Margin="0,-4,0,0"
                                                 Classes="Caption"
@@ -385,9 +385,9 @@
 										Margin="0,0,8,0"
 										CornerRadius="{DynamicResource XlCornerRadius}"
 										Fallback="CN"
-										Source="avares://AHON_TRACK/Assets/MainWindowView/user-admin.png"/>
+										Source="{CompiledBinding CurrentUser.AvatarSource}"/>
 									<StackPanel Grid.Column="1" VerticalAlignment="Center">
-										<TextBlock Classes="Small" Text="Mardie Dela Cruz"/>
+										<TextBlock Classes="Small" Text="{CompiledBinding CurrentUser.Name}"/>
 										<TextBlock
 											Margin="0,-4,0,0"
 											Classes="Caption"
