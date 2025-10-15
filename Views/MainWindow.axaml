@@ -363,7 +363,7 @@
 											<TextBlock
                                                 Margin="0,-4,0,0"
                                                 Classes="Caption"
-                                                Text="Gym Admin" />
+                                                Text="{CompiledBinding CurrentUser.Role}" />
 										</StackPanel>
 										<Viewbox
                                             Grid.Column="2"
@@ -391,7 +391,7 @@
 										<TextBlock
 											Margin="0,-4,0,0"
 											Classes="Caption"
-											Text="Gym Admin"/>
+											Text="{CompiledBinding CurrentUser.Role}"/>
 									</StackPanel>
 								</Grid>
 							</shadui:MenuItemAssist.Label>

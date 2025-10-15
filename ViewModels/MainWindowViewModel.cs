@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using AHON_TRACK.Models;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -102,6 +103,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _currentRoute = "dashboard";
+
+    [ObservableProperty] 
+    private CurrentUserModel? _currentUser = new();
 
     private bool _shouldShowSuccessLogOutToast = false;
 
