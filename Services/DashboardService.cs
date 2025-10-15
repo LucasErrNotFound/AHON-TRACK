@@ -1,12 +1,12 @@
-﻿using AHON_TRACK.Models;
+﻿using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
+using Avalonia.Media.Imaging;
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-
 
 namespace AHON_TRACK.Services
 {
@@ -20,7 +20,8 @@ namespace AHON_TRACK.Services
                 ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        // ✅ Get sales data
+        #region SALES
+
         public async Task<IEnumerable<SalesItem>> GetSalesAsync(int topN = 5)
         {
             var sales = new List<SalesItem>();
@@ -74,7 +75,87 @@ namespace AHON_TRACK.Services
             }
         }
 
-        // ✅ Training Sessions
+        public string GenerateSalesSummary(IEnumerable<SalesItem> sales)
+        {
+            try
+            {
+                int count = sales.Count();
+                decimal total = sales.Sum(s => s.Amount);
+                return $"Total Sales: {count} orders, ₱{total:N2}";
+            }
+            catch
+            {
+                return "Sales summary unavailable";
+            }
+        }
+
+        public async Task<IEnumerable<int>> GetAvailableYearsAsync()
+        {
+            var years = new List<int>();
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = "SELECT DISTINCT YEAR(SaleDate) AS Year FROM Sales ORDER BY Year DESC;";
+
+                using var cmd = new SqlCommand(query, conn);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    years.Add(Convert.ToInt32(reader["Year"]));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetAvailableYearsAsync] Error: {ex.Message}");
+            }
+
+            return years;
+        }
+
+        public async Task<int[]> GetSalesDataForYearAsync(int year)
+        {
+            var salesData = new int[12];
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT MONTH(SaleDate) AS Month, SUM(Amount) AS TotalSales
+                    FROM Sales
+                    WHERE YEAR(SaleDate) = @Year
+                    GROUP BY MONTH(SaleDate)
+                    ORDER BY Month;";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Year", year);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    int month = Convert.ToInt32(reader["Month"]);
+                    salesData[month - 1] = reader["TotalSales"] == DBNull.Value
+                        ? 0
+                        : Convert.ToInt32(reader["TotalSales"]);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetSalesDataForYearAsync] Error: {ex.Message}");
+            }
+
+            return salesData;
+        }
+
+        #endregion
+
+        #region TRAINING SESSIONS
+
         public async Task<IEnumerable<TrainingSession>> GetTrainingSessionsAsync(int topN = 5)
         {
             var sessions = new List<TrainingSession>();
@@ -137,86 +218,6 @@ namespace AHON_TRACK.Services
             }
         }
 
-        // ✅ Get available years for sales
-        public async Task<IEnumerable<int>> GetAvailableYearsAsync()
-        {
-            var years = new List<int>();
-
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                string query = "SELECT DISTINCT YEAR(SaleDate) AS Year FROM Sales ORDER BY Year DESC;";
-
-                using var cmd = new SqlCommand(query, conn);
-                using var reader = await cmd.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    years.Add(Convert.ToInt32(reader["Year"]));
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[GetAvailableYearsAsync] Error: {ex.Message}");
-            }
-
-            return years;
-        }
-
-        // ✅ Get sales data for chart
-        public async Task<int[]> GetSalesDataForYearAsync(int year)
-        {
-            var salesData = new int[12]; // Jan–Dec
-
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                string query = @"
-                    SELECT MONTH(SaleDate) AS Month, SUM(Amount) AS TotalSales
-                    FROM Sales
-                    WHERE YEAR(SaleDate) = @Year
-                    GROUP BY MONTH(SaleDate)
-                    ORDER BY Month;";
-
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Year", year);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    int month = Convert.ToInt32(reader["Month"]);
-                    salesData[month - 1] = reader["TotalSales"] == DBNull.Value
-                        ? 0
-                        : Convert.ToInt32(reader["TotalSales"]);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[GetSalesDataForYearAsync] Error: {ex.Message}");
-            }
-
-            return salesData;
-        }
-
-        // ✅ Summary helpers
-        public string GenerateSalesSummary(IEnumerable<SalesItem> sales)
-        {
-            try
-            {
-                int count = sales.Count();
-                decimal total = sales.Sum(s => s.Amount);
-                return $"Total Sales: {count} orders, ₱{total:N2}";
-            }
-            catch
-            {
-                return "Sales summary unavailable";
-            }
-        }
-
         public string GenerateTrainingSessionsSummary(IEnumerable<TrainingSession> sessions)
         {
             try
@@ -230,7 +231,10 @@ namespace AHON_TRACK.Services
             }
         }
 
-        // recent logs
+        #endregion
+
+        #region RECENT LOGS
+
         public async Task<IEnumerable<RecentLog>> GetRecentLogsAsync(int topN = 5)
         {
             var logs = new List<RecentLog>();
@@ -241,13 +245,15 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 string query = @"
-            SELECT TOP (@TopN) 
-                Username, 
-                Role AS UserType, 
-                ActionType AS ActionLogName, 
-                LogDateTime
-            FROM SystemLogs
-            ORDER BY LogDateTime DESC;";
+SELECT TOP (@TopN)
+    sl.Username,
+    sl.Role AS UserType,
+    sl.ActionDescription AS ActionLogName,
+    sl.LogDateTime,
+    e.ProfilePicture
+FROM SystemLogs sl
+LEFT JOIN Employees e ON sl.PerformedByEmployeeID = e.EmployeeID
+ORDER BY sl.LogDateTime DESC;";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@TopN", topN);
@@ -259,6 +265,25 @@ namespace AHON_TRACK.Services
                     DateTime logDateTime = (DateTime)reader["LogDateTime"];
                     string formattedDate = logDateTime.ToString("MM/dd/yyyy hh:mm tt");
 
+                    Bitmap avatar;
+
+                    if (reader["ProfilePicture"] != DBNull.Value)
+                    {
+                        try
+                        {
+                            var bytes = (byte[])reader["ProfilePicture"];
+                            avatar = ImageHelper.BytesToBitmap(bytes);
+                        }
+                        catch
+                        {
+                            avatar = ImageHelper.GetDefaultAvatarSafe() ?? ImageHelper.CreateFallbackBitmap();
+                        }
+                    }
+                    else
+                    {
+                        avatar = ImageHelper.GetDefaultAvatarSafe() ?? ImageHelper.CreateFallbackBitmap();
+                    }
+
                     logs.Add(new RecentLog
                     {
                         Username = reader["Username"].ToString(),
@@ -266,19 +291,19 @@ namespace AHON_TRACK.Services
                         ActionLogName = reader["ActionLogName"].ToString(),
                         LogDateTime = logDateTime,
                         FormattedDateTime = formattedDate,
-                        AvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png"
+                        AvatarSource = avatar
                     });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error fetching logs: {ex.Message}");
+                Console.WriteLine($"[GetRecentLogsAsync] Error: {ex.Message}");
             }
 
             return logs;
         }
 
-        public async Task<string> GenerateRecentLogSummaryAsync(int topN = 5) // ✅ match interface name
+        public async Task<string> GenerateRecentLogSummaryAsync(int topN = 5)
         {
             try
             {
@@ -292,5 +317,6 @@ namespace AHON_TRACK.Services
             }
         }
 
+        #endregion
     }
 }
