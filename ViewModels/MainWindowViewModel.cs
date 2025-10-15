@@ -31,6 +31,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly AuditLogsViewModel _auditLogsViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
+    private readonly SettingsDialogCardViewModel _settingsDialogCardViewModel;
 
     // Primary constructor for DI
     public MainWindowViewModel(
@@ -51,7 +52,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         GymDemographicsViewModel gymDemographicsViewModel,
         GymAttendanceViewModel gymAttendanceViewModel,
         AuditLogsViewModel auditLogsViewModel,
-        EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
+        EmployeeProfileInformationViewModel employeeProfileInformationViewModel,
+        SettingsDialogCardViewModel settingsDialogCardViewModel)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
@@ -74,6 +76,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _pageManager.OnNavigate = SwitchPage;
         _manageEmployeesViewModel = manageEmployeesViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
+        _settingsDialogCardViewModel = settingsDialogCardViewModel;
     }
 
     // Design-time constructor
@@ -202,6 +205,24 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             { "IsCurrentUser", true }
         };
         _pageManager.Navigate<EmployeeProfileInformationViewModel>(parameters);
+    }
+    
+    [RelayCommand]
+    private void OpenSettingsDialog()
+    {
+        _settingsDialogCardViewModel.Initialize();
+        DialogManager.CreateDialog(_settingsDialogCardViewModel)
+            .WithSuccessCallback(_ =>
+                ToastManager.CreateToast("Settings Saved!")
+                    .WithContent("Your changes have been applied successfully")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                ToastManager.CreateToast("Changes Discarded!")
+                    .WithContent("No settings were modified")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(670)
+            .Show();
     }
 
     private void OnAcceptExit() => Environment.Exit(0);

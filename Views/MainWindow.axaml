@@ -405,7 +405,7 @@
 								</MenuItem.Icon>
 							</MenuItem>
 							<!--Show Setting: Command property missing-->
-							<MenuItem Header="Settings">
+							<MenuItem Header="Settings" Command="{CompiledBinding OpenSettingsDialogCommand}">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
 										<Svg Path="avares://AHON_TRACK/Assets/MainWindowView/setting-icon.svg"/>
