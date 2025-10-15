@@ -136,7 +136,7 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = "SELECT PackageID, PackageName FROM Package ORDER BY PackageName";
+                string query = "SELECT PackageID, PackageName FROM Packages ORDER BY PackageName";
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
 
@@ -166,7 +166,7 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = "SELECT PackageID FROM Package WHERE PackageName = @PackageName";
+                string query = "SELECT PackageID FROM Packages WHERE PackageName = @PackageName";
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@PackageName", packageName);
 
@@ -221,7 +221,7 @@ namespace AHON_TRACK.Services
                 m.PaymentMethod,
                 m.ProfilePicture
             FROM Members m
-            LEFT JOIN Package p ON m.PackageID = p.PackageID
+            LEFT JOIN Packages p ON m.PackageID = p.PackageID
             ORDER BY Name;";
 
                 var members = new List<ManageMemberModel>();
@@ -310,7 +310,7 @@ namespace AHON_TRACK.Services
                 m.PaymentMethod, 
                 m.RegisteredByEmployeeID
             FROM Members m
-            LEFT JOIN Package p ON m.PackageID = p.PackageID
+            LEFT JOIN Packages p ON m.PackageID = p.PackageID
             WHERE m.MemberID = @Id";
 
                 using var cmd = new SqlCommand(query, conn);
@@ -380,6 +380,7 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
+                // Check if member exists
                 using var checkCmd = new SqlCommand(
                     "SELECT COUNT(*) FROM Members WHERE MemberID = @memberId", conn);
                 checkCmd.Parameters.AddWithValue("@memberId", member.MemberID);
@@ -394,7 +395,32 @@ namespace AHON_TRACK.Services
                     return (false, "Member not found.");
                 }
 
-                // REMOVED CustomerType from UPDATE
+                // ✅ GET EXISTING IMAGE - This is the fix!
+                byte[]? existingImage = null;
+                using var getImageCmd = new SqlCommand(
+                    "SELECT ProfilePicture FROM Members WHERE MemberID = @memberId", conn);
+                getImageCmd.Parameters.AddWithValue("@memberId", member.MemberID);
+
+                var imageResult = await getImageCmd.ExecuteScalarAsync();
+                if (imageResult != null && imageResult != DBNull.Value)
+                {
+                    existingImage = (byte[])imageResult;
+                }
+
+                // ✅ USE NEW IMAGE IF PROVIDED, OTHERWISE KEEP EXISTING
+                byte[]? imageToSave = existingImage; // Start with existing image
+
+                // Only update if new image is provided
+                if (member.ProfilePicture != null && member.ProfilePicture.Length > 0)
+                {
+                    imageToSave = member.ProfilePicture;
+                }
+                // If member.AvatarBytes is provided (from file picker), use that
+                else if (member.AvatarBytes != null && member.AvatarBytes.Length > 0)
+                {
+                    imageToSave = member.AvatarBytes;
+                }
+
                 string query = @"UPDATE Members 
              SET Firstname = @Firstname, 
                  MiddleInitial = @MiddleInitial, 
@@ -423,7 +449,16 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
                 cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
-                cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;
+
+                // ✅ USE THE PRESERVED OR NEW IMAGE
+                if (imageToSave != null && imageToSave.Length > 0)
+                {
+                    cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = imageToSave;
+                }
+                else
+                {
+                    cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = DBNull.Value;
+                }
 
                 int rows = await cmd.ExecuteNonQueryAsync();
                 if (rows > 0)
