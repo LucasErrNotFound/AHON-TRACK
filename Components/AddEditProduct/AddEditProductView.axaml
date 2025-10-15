@@ -223,7 +223,7 @@
                                     FormatString="N0"
                                     ShowButtonSpinner="False"
                                     Watermark="0"
-                                    Minimum="1"
+                                    Minimum="0"
                                     Maximum="500"
                                     Value="{CompiledBinding CurrentStock, Mode=TwoWay}">
 									<NumericUpDown.InnerLeftContent>

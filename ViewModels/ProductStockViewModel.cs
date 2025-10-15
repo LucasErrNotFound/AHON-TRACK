@@ -242,7 +242,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
-        _ = LoadProductDataAsync();
     }
 
     [RelayCommand]
@@ -265,7 +264,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
-        _ = LoadProductDataAsync();
     }
 
     private async Task OnSubmitDeleteSingleItem(ProductStock? product)
@@ -281,6 +279,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             OriginalProductData.Remove(product);
             CurrentFilteredProductData.Remove(product);
             UpdateProductCounts();
+            _ = LoadProductDataAsync();
 
             // Service already shows success toast
         }
@@ -307,6 +306,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             }
 
             UpdateProductCounts();
+            _ = LoadProductDataAsync();
             // Service already shows success toast
         }
     }
