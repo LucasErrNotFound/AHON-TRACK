@@ -10,11 +10,12 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface IPackageService
     {
-        Task AddPackageAsync(string packageName, decimal price);
-        Task AddPackageAsync(string packageName, decimal price, string description, string duration, string features1, string features2, string features3, string features4, string features5, decimal discount, string discountType, string discountFor, DateTime validFrom, DateTime validTo);
-        Task AddPackageAsync(PackageModel package);
+        Task<(bool Success, string Message, int? PackageId)> AddPackageAsync(PackageModel package);
         Task<List<Package>> GetPackagesAsync();
+        Task<(bool Success, string Message, PackageModel? Package)> GetPackageByIdAsync(int packageId);
+        Task<(bool Success, string Message, List<Package>? Packages)> GetPackagesByDurationAsync(string duration);
         Task<bool> UpdatePackageAsync(PackageModel package);
         Task<bool> DeletePackageAsync(int packageId);
+        Task<(bool Success, string Message, int DeletedCount)> DeleteMultiplePackagesAsync(List<int> packageIds);
     }
 }
