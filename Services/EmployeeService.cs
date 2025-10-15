@@ -383,7 +383,7 @@ namespace AHON_TRACK.Services
                     };
 
                     employee.Name = $"{employee.FirstName} {(string.IsNullOrWhiteSpace(employee.MiddleInitial) ? "" : employee.MiddleInitial + ". ")}{employee.LastName}";
-                    employee.Birthdate = employee.DateOfBirth?.ToString("yyyy-MM-dd") ?? string.Empty;
+                    employee.Birthdate = employee.DateOfBirth?.ToString("MMMM d, yyyy") ?? string.Empty;
                     employee.CityProvince = $"{employee.CityTown}, {employee.Province}".TrimEnd(',', ' ');
 
                     return (true, "Employee profile retrieved successfully.", employee);

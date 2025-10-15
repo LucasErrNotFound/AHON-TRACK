@@ -143,7 +143,9 @@ public partial class LoginViewModel : ViewModelBase
                     CurrentUserModel.Role = "Admin";
                     
                     using (var getCmd = new SqlCommand(
-                               "SELECT a.EmployeeID, e.FirstName, e.LastName " +
+                               "SELECT a.EmployeeID, e.FirstName, e.LastName, e.Age, e.DateOfBirth, " +
+                               "e.ContactNumber, e.Gender, e.HouseAddress, e.HouseNumber, e.Street, " +
+                               "e.Barangay, e.CityTown, e.Province, e.DateJoined, a.LastLogin, e.ProfilePicture " +
                                "FROM Admins a " +
                                "JOIN Employees e ON a.EmployeeID = e.EmployeeID " +
                                "WHERE a.AdminID = @id", conn))
@@ -158,13 +160,34 @@ public partial class LoginViewModel : ViewModelBase
 
                             CurrentUserModel.UserId = employeeId;
                             CurrentUserModel.Name = $"{first} {last}".Trim();
+                            CurrentUserModel.Age = r["Age"] != DBNull.Value ? Convert.ToInt32(r["Age"]) : 0;
+                            CurrentUserModel.DateOfBirth = r["DateOfBirth"] != DBNull.Value 
+                                ? Convert.ToDateTime(r["DateOfBirth"]).ToString("MMMM d, yyyy") 
+                                : string.Empty;
+                            CurrentUserModel.ContactNumber = r["ContactNumber"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.Gender = r["Gender"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.HouseAddress = r["HouseAddress"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.HouseNumber = r["HouseNumber"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.Street = r["Street"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.Barangay = r["Barangay"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.CityTown = r["CityTown"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.ZipCode = r["Province"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.DateJoined = r["DateJoined"] != DBNull.Value 
+                                ? Convert.ToDateTime(r["DateJoined"]) 
+                                : (DateTime?)null;
+                            CurrentUserModel.LastLogin = r["LastLogin"] != DBNull.Value 
+                                ? Convert.ToDateTime(r["LastLogin"]).ToString("MMMM d, yyyy 'at' h:mm tt") 
+                                : "Never logged in";
+                            CurrentUserModel.AvatarBytes = r["ProfilePicture"] != DBNull.Value 
+                                ? (byte[])r["ProfilePicture"] 
+                                : null;
                         }
+                        
+                        role = "Admin";
+                        
+                        LogAction(conn, username, role, "Login", "Login successful", true);
+                        return true;
                     }
-
-                    role = "Admin";
-
-                    LogAction(conn, username, role, "Login", "Login successful", true);
-                    return true;
                 }
             }
 
@@ -187,7 +210,9 @@ public partial class LoginViewModel : ViewModelBase
                     CurrentUserModel.Role = "Staff";
                     
                     using (var getCmd = new SqlCommand(
-                               "SELECT s.EmployeeID, e.FirstName, e.LastName " +
+                               "SELECT s.EmployeeID, e.FirstName, e.LastName, e.Age, e.DateOfBirth, " +
+                               "e.ContactNumber, e.Gender, e.HouseAddress, e.HouseNumber, e.Street, " +
+                               "e.Barangay, e.CityTown, e.Province, e.DateJoined, s.LastLogin, e.ProfilePicture " +
                                "FROM Staffs s " +
                                "JOIN Employees e ON s.EmployeeID = e.EmployeeID " +
                                "WHERE s.StaffID = @id", conn))
@@ -202,13 +227,34 @@ public partial class LoginViewModel : ViewModelBase
 
                             CurrentUserModel.UserId = employeeId;
                             CurrentUserModel.Name = $"{first} {last}".Trim();
+                            CurrentUserModel.Age = r["Age"] != DBNull.Value ? Convert.ToInt32(r["Age"]) : 0;
+                            CurrentUserModel.DateOfBirth = r["DateOfBirth"] != DBNull.Value 
+                                ? Convert.ToDateTime(r["DateOfBirth"]).ToString("MMMM d, yyyy") 
+                                : string.Empty;
+                            CurrentUserModel.ContactNumber = r["ContactNumber"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.Gender = r["Gender"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.HouseAddress = r["HouseAddress"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.HouseNumber = r["HouseNumber"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.Street = r["Street"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.Barangay = r["Barangay"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.CityTown = r["CityTown"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.ZipCode = r["Province"]?.ToString() ?? string.Empty;
+                            CurrentUserModel.DateJoined = r["DateJoined"] != DBNull.Value 
+                                ? Convert.ToDateTime(r["DateJoined"]) 
+                                : (DateTime?)null;
+                            CurrentUserModel.LastLogin = r["LastLogin"] != DBNull.Value 
+                                ? Convert.ToDateTime(r["LastLogin"]).ToString("MMMM d, yyyy 'at' h:mm tt") 
+                                : "Never logged in";
+                            CurrentUserModel.AvatarBytes = r["ProfilePicture"] != DBNull.Value 
+                                ? (byte[])r["ProfilePicture"] 
+                                : null;
                         }
+                        
+                        role = "Staff";
+
+                        LogAction(conn, username, role, "Login successful.", "Login successful", true);
+                        return true;
                     }
-
-                    role = "Staff";
-
-                    LogAction(conn, username, role, "Login successful.", "Login successful", true);
-                    return true;
                 }
             }
 

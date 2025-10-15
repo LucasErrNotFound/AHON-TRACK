@@ -8,6 +8,7 @@ using ShadUI;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media.Imaging;
@@ -157,7 +158,6 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             EmployeeFullName = fullEmployee.Name;
             EmployeeFullNameHeader = $"{fullEmployee.Name}'s Profile";
             EmployeePhoneNumber = fullEmployee.ContactNumber;
-
             EmployeeAge = fullEmployee.Age;
             EmployeeBirthDate = fullEmployee.Birthdate;
             EmployeeGender = fullEmployee.Gender;
@@ -168,12 +168,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             EmployeeBarangay = fullEmployee.Barangay;
             EmployeeCityProvince = fullEmployee.CityProvince;
             EmployeeZipCode = fullEmployee.ZipCode;
-
-            // Profile Picture
-            if (fullEmployee.AvatarSource != null)
-            {
-                //
-            }
+            EmployeeAvatarSource = fullEmployee.AvatarSource;
         }
     }
 
@@ -186,23 +181,26 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     private void SetDefaultValues()
     {
-        //EmployeeID = CurrentUserModel.UserId;
+        EmployeeID = CurrentUserModel.UserId ?? 0;
         EmployeePosition = CurrentUserModel.Role;
-        //EmployeeStatus = CurrentUserModel.Status;
-        // EmployeeDateJoined = CurrentUserModel.DateJoined;
+        EmployeeStatus = "Active"; // Default status for current user
+        EmployeeDateJoined = CurrentUserModel.DateJoined.HasValue 
+            ? CurrentUserModel.DateJoined.Value.ToString("MMMM d, yyyy") 
+            : "N/A";
         EmployeeFullName = CurrentUserModel.Name;
-        EmployeeFullNameHeader = IsFromCurrentUser ? "My Profile" : "John Doe's Profile";
+        EmployeeFullNameHeader = IsFromCurrentUser ? "My Profile" : $"{CurrentUserModel.Name}'s Profile";
         EmployeeAge = CurrentUserModel.Age;
-        // EmployeeBirthDate = CurrentUserModel.BirthDate;
+        EmployeeBirthDate = CurrentUserModel.DateOfBirth;
         EmployeeGender = CurrentUserModel.Gender;
-        // EmployeePhoneNumber = CurrentUserModel.PhoneNumber;
+        EmployeePhoneNumber = CurrentUserModel.ContactNumber;
         EmployeeLastLogin = CurrentUserModel.LastLogin;
         EmployeeHouseAddress = CurrentUserModel.HouseAddress;
         EmployeeHouseNumber = CurrentUserModel.HouseNumber;
         EmployeeStreet = CurrentUserModel.Street;
         EmployeeBarangay = CurrentUserModel.Barangay;
-        //EmployeeCityProvince = CurrentUserModel.CityProvince;
+        EmployeeCityProvince = CurrentUserModel.CityTown;
         EmployeeZipCode = CurrentUserModel.ZipCode;
+        EmployeeAvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
     }
 
     [RelayCommand]

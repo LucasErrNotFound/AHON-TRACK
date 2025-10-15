@@ -1,4 +1,7 @@
-﻿namespace AHON_TRACK.Models;
+﻿using AHON_TRACK.Converters;
+using Avalonia.Media.Imaging;
+
+namespace AHON_TRACK.Models;
 
 public class CurrentUserModel : ManageEmployeeModel
 {
@@ -23,4 +26,23 @@ public class CurrentUserModel : ManageEmployeeModel
 
     // Optional: avatar bytes/source if you want to surface profile picture globally
     public static byte[]? AvatarBytes { get; set; }
+    
+    public static Bitmap? AvatarBitmap 
+    { 
+        get 
+        {
+            if (AvatarBytes != null && AvatarBytes.Length > 0)
+            {
+                try
+                {
+                    return ImageHelper.BytesToBitmap(AvatarBytes);
+                }
+                catch
+                {
+                    return ImageHelper.GetDefaultAvatarSafe();
+                }
+            }
+            return ImageHelper.GetDefaultAvatarSafe();
+        }
+    }
 }
