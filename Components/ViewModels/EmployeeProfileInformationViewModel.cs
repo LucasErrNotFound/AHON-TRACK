@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
+using Avalonia.Media.Imaging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -75,6 +76,9 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     [ObservableProperty]
     private string _employeeZipCode = string.Empty;
+    
+    [ObservableProperty]
+    private Bitmap? _employeeAvatarSource;
 
     [ObservableProperty]
     private ManageEmployeesItem? _selectedEmployeeData;
@@ -182,23 +186,23 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     private void SetDefaultValues()
     {
-        EmployeeID = 13203;
+        //EmployeeID = CurrentUserModel.UserId;
         EmployeePosition = CurrentUserModel.Role;
-        EmployeeStatus = "Active";
-        EmployeeDateJoined = "January 15, 2023";
-        EmployeeFullName = "John Doe";
+        //EmployeeStatus = CurrentUserModel.Status;
+        // EmployeeDateJoined = CurrentUserModel.DateJoined;
+        EmployeeFullName = CurrentUserModel.Name;
         EmployeeFullNameHeader = IsFromCurrentUser ? "My Profile" : "John Doe's Profile";
-        EmployeeAge = 31;
-        EmployeeBirthDate = "1993-05-20";
-        EmployeeGender = "Male";
-        EmployeePhoneNumber = "09837756473";
-        EmployeeLastLogin = "July 10, 2025 4:30PM";
-        EmployeeHouseAddress = "123 Main";
-        EmployeeHouseNumber = "123";
-        EmployeeStreet = "Main Street";
-        EmployeeBarangay = "Maungib";
-        EmployeeCityProvince = "Cebu City, Cebu";
-        EmployeeZipCode = "6000";
+        EmployeeAge = CurrentUserModel.Age;
+        // EmployeeBirthDate = CurrentUserModel.BirthDate;
+        EmployeeGender = CurrentUserModel.Gender;
+        // EmployeePhoneNumber = CurrentUserModel.PhoneNumber;
+        EmployeeLastLogin = CurrentUserModel.LastLogin;
+        EmployeeHouseAddress = CurrentUserModel.HouseAddress;
+        EmployeeHouseNumber = CurrentUserModel.HouseNumber;
+        EmployeeStreet = CurrentUserModel.Street;
+        EmployeeBarangay = CurrentUserModel.Barangay;
+        //EmployeeCityProvince = CurrentUserModel.CityProvince;
+        EmployeeZipCode = CurrentUserModel.ZipCode;
     }
 
     [RelayCommand]
