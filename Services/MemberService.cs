@@ -294,24 +294,24 @@ namespace AHON_TRACK.Services
                 // FIXED: Added JOIN with Packages table
                 var query = @"
             SELECT 
-                m.MemberID, 
-                m.Firstname, 
-                m.MiddleInitial, 
-                m.Lastname, 
-                m.Gender, 
-                m.ProfilePicture, 
-                m.ContactNumber, 
-                m.Age, 
-                m.DateOfBirth, 
-                m.ValidUntil, 
-                m.PackageID, 
-                p.PackageName,  -- Get package name from Packages table
-                m.Status, 
-                m.PaymentMethod, 
-                m.RegisteredByEmployeeID
-            FROM Members m
-            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-            WHERE m.MemberID = @Id";
+    m.MemberID, 
+    m.Firstname, 
+    m.MiddleInitial, 
+    m.Lastname, 
+    m.Gender, 
+    m.ProfilePicture, 
+    m.ContactNumber, 
+    m.Age, 
+    m.DateOfBirth, 
+    m.ValidUntil, 
+    m.PackageID, 
+    p.PackageName,  
+    m.Status, 
+    m.PaymentMethod, 
+    m.DateJoined
+FROM Members m
+LEFT JOIN Packages p ON m.PackageID = p.PackageID
+WHERE m.MemberID = @Id;";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", memberId);
@@ -327,18 +327,17 @@ namespace AHON_TRACK.Services
                         LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
                         Gender = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
                         AvatarBytes = reader.IsDBNull(5) ? null : (byte[])reader[5],
-                        AvatarSource = reader.IsDBNull(5)
-                            ? ImageHelper.GetDefaultAvatar()
-                            : ImageHelper.BytesToBitmap((byte[])reader[5]),
+                        AvatarSource = reader.IsDBNull(5) ? ImageHelper.GetDefaultAvatar() : ImageHelper.BytesToBitmap((byte[])reader[5]),
                         ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
                         Age = reader.IsDBNull(7) ? null : reader.GetInt32(7),
                         DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
                         ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
                         PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
-                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),  // Now reads PackageName
+                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),  // from Packages.PackageName
                         Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
                         PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                        RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14)
+                        RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),
+                        DateJoined = reader.IsDBNull(15) ? DateTime.MinValue : reader.GetDateTime(15)
                     };
 
                     member.Name = $"{member.FirstName} {(string.IsNullOrWhiteSpace(member.MiddleInitial) ? "" : member.MiddleInitial + ". ")}{member.LastName}";
