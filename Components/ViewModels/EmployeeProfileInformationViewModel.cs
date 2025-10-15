@@ -75,6 +75,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     [ObservableProperty]
     private string _employeeZipCode = string.Empty;
 
+    [ObservableProperty]
     private ManageEmployeesItem? _selectedEmployeeData;
 
     public EmployeeProfileInformationViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, IEmployeeService employeeService)
