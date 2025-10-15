@@ -8,6 +8,7 @@ using ShadUI;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 
 namespace AHON_TRACK.Components.ViewModels;
@@ -182,7 +183,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private void SetDefaultValues()
     {
         EmployeeID = 13203;
-        EmployeePosition = "Software Engineer";
+        EmployeePosition = CurrentUserModel.Role;
         EmployeeStatus = "Active";
         EmployeeDateJoined = "January 15, 2023";
         EmployeeFullName = "John Doe";
