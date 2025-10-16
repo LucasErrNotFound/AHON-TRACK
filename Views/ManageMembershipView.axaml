@@ -531,7 +531,23 @@
 									<Button
 										Classes="Destructive"
 										Padding="20,0,20,0"
-										Command="{CompiledBinding ShowDeleteMemberCommand}">
+										IsVisible="{CompiledBinding !IsRefundButtonVisible}"
+										Command="{CompiledBinding ShowRefundMemberDialogCommand}">
+										<StackPanel Orientation="Horizontal">
+											<Svg
+												Width="18"
+												Height="18"
+												Margin="0,0,10,0"
+												VerticalAlignment="Center"
+												Path="avares://AHON_TRACK/Assets/ManageMembershipView/delete-icon.svg" />
+											<TextBlock Text="Refund" Foreground="White" VerticalAlignment="Center" />
+										</StackPanel>
+									</Button>
+									<Button
+										Classes="Destructive"
+										Padding="20,0,20,0"
+										IsVisible="{CompiledBinding IsRefundButtonVisible}"
+										Command="{CompiledBinding ShowDeleteMemberDialogCommand}">
 										<StackPanel Orientation="Horizontal">
 											<Svg
 												Width="18"
@@ -561,6 +577,7 @@
 									<Button
 										Classes="Primary"
 										Padding="20,0,20,0"
+										IsEnabled="{CompiledBinding IsRenewButtonEnabled}"
 										Command="{CompiledBinding OpenRenewMemberViewCommand}">
 										<StackPanel Orientation="Horizontal">
 											<Svg

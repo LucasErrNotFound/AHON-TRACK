@@ -82,7 +82,26 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
 	[ObservableProperty]
 	private ManageMembersItem? _selectedMember;
+	
+	public bool IsRefundButtonVisible =>
+		!new[] { "Active" }
+			.Any(status => SelectedMember is not null && SelectedMember.Status.
+				Equals(status, StringComparison.OrdinalIgnoreCase));
 
+	public bool IsUpgradeButtonEnabled =>
+		!new[] { "Expired" }
+			.Any(status => SelectedMember is not null && SelectedMember.Status.
+				Equals(status, StringComparison.OrdinalIgnoreCase));
+	
+	public bool IsRenewButtonEnabled =>
+		!new[] { "Active" }
+			.Any(status => SelectedMember is not null && SelectedMember.Status
+				.Equals(status, StringComparison.OrdinalIgnoreCase));
+	
+	public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
+	public bool IsExpiredVisible => SelectedMember?.Status.Equals("expired", StringComparison.OrdinalIgnoreCase) ?? false;
+	public bool HasSelectedMember => SelectedMember is not null;
+	
 	private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 	
 	private readonly DialogManager _dialogManager;
@@ -90,14 +109,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	private readonly PageManager _pageManager;
 	private readonly MemberDialogCardViewModel  _memberDialogCardViewModel;
 	private readonly AddNewMemberViewModel _addNewMemberViewModel;
-
-	public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
-	public bool IsExpiredVisible => SelectedMember?.Status.Equals("expired", StringComparison.OrdinalIgnoreCase) ?? false;
-	public bool HasSelectedMember => SelectedMember is not null;
-
-	public bool IsUpgradeButtonEnabled =>
-		!new[] { "Expired" }
-			.Any(status => SelectedMember is not null && SelectedMember.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
 
 	public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel)
 	{
@@ -125,7 +136,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		OnPropertyChanged(nameof(IsActiveVisible));
 		OnPropertyChanged(nameof(IsExpiredVisible));
 		OnPropertyChanged(nameof(HasSelectedMember));
+		OnPropertyChanged(nameof(IsRefundButtonVisible));
 		OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
+		OnPropertyChanged(nameof(IsRenewButtonEnabled));
 	}
 
 	[AvaloniaHotReload]
@@ -157,6 +170,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		{
 			SelectedMember = MemberItems[0];
 		}
+		
 		ApplyMemberStatusFilter();
 		ApplyMemberSort();
 	}
@@ -316,89 +330,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		}
 	}
 	
-	private void ApplyMemberSort()
-	{
-		if (OriginalMemberData.Count == 0) return;
-
-		if (SelectedSortFilterItem == "Reset Data")
-		{
-			SelectedStatusFilterItem = "All";
-			SelectedSortFilterItem = "By ID";
-			CurrentFilteredData = OriginalMemberData.OrderBy(m => m.ID).ToList();
-			RefreshMemberItems(CurrentFilteredData);
-			return;
-		}
-
-		// First apply status filter to get the base filtered data
-		List<ManageMembersItem> baseFilteredData;
-		if (SelectedStatusFilterItem == "All")
-		{
-			baseFilteredData = OriginalMemberData.ToList();
-		}
-		else
-		{
-			baseFilteredData = OriginalMemberData
-				.Where(member => member.Status == SelectedStatusFilterItem)
-				.ToList();
-		}
-
-		// Then apply sorting to the filtered data
-		List<ManageMembersItem> sortedList = SelectedSortFilterItem switch
-		{
-			"By ID" => baseFilteredData.OrderBy(m => m.ID).ToList(),
-			"Names by A-Z" => baseFilteredData.OrderBy(m => m.Name).ToList(),
-			"Names by Z-A" => baseFilteredData.OrderByDescending(m => m.Name).ToList(),
-			"By newest to oldest" => baseFilteredData.OrderByDescending(m => m.Validity).ToList(),
-			"By oldest to newest" => baseFilteredData.OrderBy(m => m.Validity).ToList(),
-			_ => baseFilteredData.ToList()
-		};
-		CurrentFilteredData = sortedList;
-		RefreshMemberItems(sortedList);
-	}
-	
-	private void ApplyMemberStatusFilter()
-	{
-		if (OriginalMemberData.Count == 0) return;
-	
-		List<ManageMembersItem> filteredList;
-		if (SelectedStatusFilterItem == "All")
-		{
-			filteredList = OriginalMemberData.ToList();
-		}
-		else
-		{
-			filteredList = OriginalMemberData
-				.Where(member => member.Status == SelectedStatusFilterItem)
-				.ToList();
-		}
-
-		// Apply current sorting to the filtered data
-		List<ManageMembersItem> sortedList = SelectedSortFilterItem switch
-		{
-			"By ID" => filteredList.OrderBy(m => m.ID).ToList(),
-			"Names by A-Z" => filteredList.OrderBy(m => m.Name).ToList(),
-			"Names by Z-A" => filteredList.OrderByDescending(m => m.Name).ToList(),
-			"By newest to oldest" => filteredList.OrderByDescending(m => m.Validity).ToList(),
-			"By oldest to newest" => filteredList.OrderBy(m => m.Validity).ToList(),
-			"Reset Data" => filteredList.ToList(),
-			_ => filteredList.ToList()
-		};
-
-		CurrentFilteredData = sortedList;
-		RefreshMemberItems(sortedList);
-	}
-	
-	private void RefreshMemberItems(List<ManageMembersItem> items)
-	{
-		MemberItems.Clear();
-		foreach (var item in items)
-		{
-			item.PropertyChanged += OnMemberPropertyChanged;
-			MemberItems.Add(item);
-		}
-		UpdateCounts();
-	}
-	
     [RelayCommand]
     private void SortReset()
     {
@@ -452,22 +383,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         }
         UpdateCounts();
     }
-
-	private void OnMemberPropertyChanged(object? sender, PropertyChangedEventArgs e)
-	{
-		if (e.PropertyName == nameof(ManageMembersItem.IsSelected))
-		{
-			UpdateCounts();
-		}
-	}
-	
-	private void UpdateCounts()
-	{
-		SelectedCount = MemberItems.Count(x => x.IsSelected);
-		TotalCount = MemberItems.Count;
-
-		SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
-	}
 	
     [RelayCommand]
     private async Task ShowCopySingleMemberName(ManageMembersItem? member)
@@ -660,73 +575,16 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             .Dismissible()
             .Show();
     }
-
-    private async Task OnSubmitDeleteSingleItem(ManageMembersItem member)
-    {
-        await DeleteMemberFromDatabase(member);
-        member.PropertyChanged -= OnMemberPropertyChanged;
-        MemberItems.Remove(member);
-        UpdateCounts();
-
-        _toastManager.CreateToast($"Delete {member.Name} Account")
-            .WithContent($"{member.Name}'s Account deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
-    }
-    private async Task OnSubmitDeleteMultipleItems(ManageMembersItem member)
-    {
-        var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
-        if (!selectedMembers.Any()) return;
-
-        foreach (var members in selectedMembers)
-        {
-            await DeleteMemberFromDatabase(member);
-            members.PropertyChanged -= OnMemberPropertyChanged;
-            MemberItems.Remove(members);
-        }
-        UpdateCounts();
-
-        _toastManager.CreateToast($"Delete Selected Accounts")
-            .WithContent($"Multiple accounts deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
-    }
-
-    // Helper method to delete from database
-    private async Task DeleteMemberFromDatabase(ManageMembersItem member)
-    {
-        // using var connection = new SqlConnection(connectionString);
-        // await connection.ExecuteAsync("DELETE FROM Members WHERE ID = @ID", new { IDI = member.ID });
-
-        await Task.Delay(100); // Just an animation/simulation of async operation
-    }
     
-    partial void OnSearchStringResultChanged(string value)
+    [RelayCommand]
+    private void OpenAddNewMemberView()
     {
-	    SearchMembersCommand.Execute(null);
-    }
+	    _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+	    {
+		    ["Context"] = MemberViewContext.AddNew
+	    });
+    } 
     
-    partial void OnSelectedSortFilterItemChanged(string value)
-    {
-	    ApplyMemberSort();
-    }
-    
-    partial void OnSelectedStatusFilterItemChanged(string value)
-    {
-	    ApplyMemberStatusFilter();
-    }
-
-	[RelayCommand]
-	private void OpenAddNewMemberView()
-	{
-		_pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
-		{
-			["Context"] = MemberViewContext.AddNew
-		});
-	} 
-	
 	[RelayCommand]
 	private void OpenUpgradeMemberView()
 	{
@@ -750,23 +608,53 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	} 
 	
 	[RelayCommand]
-	private void ShowDeleteMember()
+	private void ShowDeleteMemberDialog()
 	{
+		if (SelectedMember is null)
+		{
+			_toastManager.CreateToast("No Member Selected")
+				.WithContent("Please select a member to delete")
+				.DismissOnClick()
+				.ShowError();
+			return;
+		}
+		
 		_dialogManager
 			.CreateDialog(
 				"Are you absolutely sure?",
-				"This action cannot be undone. This will permanently delete and remove this member's data from your server.")
-			.WithPrimaryButton("Continue",
-				() => _toastManager.CreateToast("Delete data")
-					.WithContent("Data deleted successfully!")
-					.DismissOnClick()
-					.ShowSuccess()
-				, DialogButtonStyle.Destructive)
+				"Deleting this member will permanently remove all of their data, records, and related information from the system. This action cannot be undone.")
+			.WithPrimaryButton("Delete Member", () => OnSubmitDeleteSingleItem(SelectedMember),
+				DialogButtonStyle.Destructive)
 			.WithCancelButton("Cancel")
 			.WithMaxWidth(512)
 			.Dismissible()
 			.Show();
-	} 
+	}
+	
+	[RelayCommand]
+	private void ShowRefundMemberDialog()
+	{
+		if (SelectedMember is null)
+		{
+			_toastManager.CreateToast("No Member Selected")
+				.WithContent("Please select a member to refund")
+				.DismissOnClick()
+				.ShowError();
+			return;
+		}
+		
+		_dialogManager
+			.CreateDialog(
+				"Confirm Refund",
+				"Are you sure you want to process a refund for this member? Once confirmed, the transaction will be reversed and recorded in the system.")
+			.WithPrimaryButton("Confirm Refund",
+				() => OnSubmitRefundMember(SelectedMember),
+				DialogButtonStyle.Destructive)
+			.WithCancelButton("Cancel")
+			.WithMaxWidth(512)
+			.Dismissible()
+			.Show();
+	}
 	
 	[RelayCommand]
 	private void ShowModifyMemberDialog(ManageMembersItem? member)
@@ -795,7 +683,188 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 			.Dismissible()
 			.Show();
 	}
+    
+	private void ApplyMemberSort()
+	{
+		if (OriginalMemberData.Count == 0) return;
+
+		if (SelectedSortFilterItem == "Reset Data")
+		{
+			SelectedStatusFilterItem = "All";
+			SelectedSortFilterItem = "By ID";
+			CurrentFilteredData = OriginalMemberData.OrderBy(m => m.ID).ToList();
+			RefreshMemberItems(CurrentFilteredData);
+			return;
+		}
+
+		// First apply status filter to get the base filtered data
+		List<ManageMembersItem> baseFilteredData;
+		if (SelectedStatusFilterItem == "All")
+		{
+			baseFilteredData = OriginalMemberData.ToList();
+		}
+		else
+		{
+			baseFilteredData = OriginalMemberData
+				.Where(member => member.Status == SelectedStatusFilterItem)
+				.ToList();
+		}
+
+		// Then apply sorting to the filtered data
+		List<ManageMembersItem> sortedList = SelectedSortFilterItem switch
+		{
+			"By ID" => baseFilteredData.OrderBy(m => m.ID).ToList(),
+			"Names by A-Z" => baseFilteredData.OrderBy(m => m.Name).ToList(),
+			"Names by Z-A" => baseFilteredData.OrderByDescending(m => m.Name).ToList(),
+			"By newest to oldest" => baseFilteredData.OrderByDescending(m => m.Validity).ToList(),
+			"By oldest to newest" => baseFilteredData.OrderBy(m => m.Validity).ToList(),
+			_ => baseFilteredData.ToList()
+		};
+		CurrentFilteredData = sortedList;
+		RefreshMemberItems(sortedList);
+	}
+	
+	private void ApplyMemberStatusFilter()
+	{
+		if (OriginalMemberData.Count == 0) return;
+	
+		List<ManageMembersItem> filteredList;
+		if (SelectedStatusFilterItem == "All")
+		{
+			filteredList = OriginalMemberData.ToList();
+		}
+		else
+		{
+			filteredList = OriginalMemberData
+				.Where(member => member.Status == SelectedStatusFilterItem)
+				.ToList();
+		}
+
+		// Apply current sorting to the filtered data
+		List<ManageMembersItem> sortedList = SelectedSortFilterItem switch
+		{
+			"By ID" => filteredList.OrderBy(m => m.ID).ToList(),
+			"Names by A-Z" => filteredList.OrderBy(m => m.Name).ToList(),
+			"Names by Z-A" => filteredList.OrderByDescending(m => m.Name).ToList(),
+			"By newest to oldest" => filteredList.OrderByDescending(m => m.Validity).ToList(),
+			"By oldest to newest" => filteredList.OrderBy(m => m.Validity).ToList(),
+			"Reset Data" => filteredList.ToList(),
+			_ => filteredList.ToList()
+		};
+
+		CurrentFilteredData = sortedList;
+		RefreshMemberItems(sortedList);
+	}
+	
+	private void RefreshMemberItems(List<ManageMembersItem> items)
+	{
+		MemberItems.Clear();
+		foreach (var item in items)
+		{
+			item.PropertyChanged += OnMemberPropertyChanged;
+			MemberItems.Add(item);
+		}
+		UpdateCounts();
+	}
+    
+    private void UpdateCounts()
+    {
+	    SelectedCount = MemberItems.Count(x => x.IsSelected);
+	    TotalCount = MemberItems.Count;
+
+	    SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
+    }
+
+    private async Task OnSubmitDeleteSingleItem(ManageMembersItem member)
+    {
+	    await DeleteMemberFromDatabase(member);
+	    member.PropertyChanged -= OnMemberPropertyChanged;
+	    MemberItems.Remove(member);
+	    UpdateCounts();
+
+	    _toastManager.CreateToast($"Delete {member.Name} Account")
+		    .WithContent($"{member.Name}'s Account deleted successfully!")
+		    .DismissOnClick()
+		    .WithDelay(6)
+		    .ShowSuccess();
+    }
+    
+    private async Task OnSubmitDeleteMultipleItems(ManageMembersItem member)
+    {
+	    var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
+	    if (!selectedMembers.Any()) return;
+
+	    foreach (var members in selectedMembers)
+	    {
+		    await DeleteMemberFromDatabase(member);
+		    members.PropertyChanged -= OnMemberPropertyChanged;
+		    MemberItems.Remove(members);
+	    }
+	    UpdateCounts();
+
+	    _toastManager.CreateToast($"Delete Selected Accounts")
+		    .WithContent($"Multiple accounts deleted successfully!")
+		    .DismissOnClick()
+		    .WithDelay(6)
+		    .ShowSuccess();
+    }
+    
+    private async Task OnSubmitRefundMember(ManageMembersItem member)
+    {
+	    // Process refund - revert payment transaction
+	    // Will ONLY refund gym membership, not including packages, etc.
+	    await ProcessRefundTransaction(member);
+    
+	    // Show success toast for refund
+	    _toastManager.CreateToast("Refund Processed")
+		    .WithContent($"Refund for {member.Name} has been successfully processed and recorded.")
+		    .DismissOnClick()
+		    .WithDelay(6)
+		    .ShowSuccess();
+    
+	    // After refund is processed, delete the member from the system
+	    await OnSubmitDeleteSingleItem(member); // Execute this after all of those stuff above
+    }
+    
+    // Helper method to delete from database
+    private async Task DeleteMemberFromDatabase(ManageMembersItem member)
+    {
+        // using var connection = new SqlConnection(connectionString);
+        // await connection.ExecuteAsync("DELETE FROM Members WHERE ID = @ID", new { IDI = member.ID });
+
+        await Task.Delay(100); // Just an animation/simulation of async operation
+    }
+    
+    private async Task ProcessRefundTransaction(ManageMembersItem member)
+    {
+	    await Task.Delay(100); // Simulation of async database operation
+	    // Will ONLY refund gym membership, not including packages, etc.
+    }
+    
+    partial void OnSearchStringResultChanged(string value)
+    {
+	    SearchMembersCommand.Execute(null);
+    }
+    
+    partial void OnSelectedSortFilterItemChanged(string value)
+    {
+	    ApplyMemberSort();
+    }
+    
+    partial void OnSelectedStatusFilterItemChanged(string value)
+    {
+	    ApplyMemberStatusFilter();
+    }
+    
+    private void OnMemberPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+	    if (e.PropertyName == nameof(ManageMembersItem.IsSelected))
+	    {
+		    UpdateCounts();
+	    }
+    }
 }
+
 public partial class ManageMembersItem : ObservableObject
 {
     [ObservableProperty]
