@@ -256,6 +256,7 @@
                                         PlaceholderText="Select your options"
                                         Margin="0,-4,0,0"
                                         ItemsSource="{CompiledBinding MemberStatusItems}"
+                                        IsEnabled="False"
                                         SelectedIndex="0"/>
                                 </StackPanel>
                             </Grid>

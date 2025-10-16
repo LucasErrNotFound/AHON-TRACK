@@ -41,7 +41,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private string[] _memberPackageItems = ["Boxing", "Muay Thai", "Crossfit", "Zumba"];
 
     [ObservableProperty]
-    private string[] _memberStatusItems = ["Active", "Inactive", "Terminated"];
+    private string[] _memberStatusItems = ["Active", "Expired"];
     
     [ObservableProperty]
     private Image? _memberProfileImageControl;
