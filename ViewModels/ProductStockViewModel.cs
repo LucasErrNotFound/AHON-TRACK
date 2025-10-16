@@ -78,9 +78,9 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _productService = null!;
+        _productService = null!; // Will use sample data
 
-        LoadProductData();
+        _ = LoadProductDataAsync();
         UpdateProductCounts();
     }
 

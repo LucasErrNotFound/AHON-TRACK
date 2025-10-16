@@ -108,6 +108,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _employeeService = employeeService;
         //LoadEmployeesAsync();
+        _ = LoadEmployeesFromDatabaseAsync(); ;
         _ = UpdateCounts();
 
     }
@@ -120,6 +121,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _addNewEmployeeDialogCardViewModel = new AddNewEmployeeDialogCardViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _employeeService = null!;
+        _ = LoadEmployeesFromDatabaseAsync();
     }
 
 

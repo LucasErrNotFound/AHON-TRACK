@@ -114,7 +114,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         _memberDialogCardViewModel = memberDialogCardViewModel;
         _addNewMemberViewModel = addNewMemberViewModel;
 
-        LoadSampleData();
+        _ = LoadMemberDataAsync();
         UpdateCounts();
     }
 
@@ -126,6 +126,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         _pageManager = new PageManager(new ServiceProvider());
         _memberDialogCardViewModel = new MemberDialogCardViewModel();
         _addNewMemberViewModel = new AddNewMemberViewModel();
+
+        _ = LoadMemberDataAsync();
     }
 
     partial void OnSelectedMemberChanged(ManageMembersItem? value)
@@ -170,8 +172,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 var memberItems = result.Members.Select(m => new ManageMembersItem
                 {
                     ID = m.MemberID.ToString(),
-                    AvatarSource = m.AvatarBytes != null 
-                        ? ImageHelper.BytesToBitmap(m.AvatarBytes) 
+                    AvatarSource = m.AvatarBytes != null
+                        ? ImageHelper.BytesToBitmap(m.AvatarBytes)
                         : ManageMemberModel.DefaultAvatarSource,
                     Name = m.Name ?? string.Empty,
                     ContactNumber = m.ContactNumber ?? string.Empty,
