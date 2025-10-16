@@ -33,6 +33,7 @@
 		<converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter"/>
 		<converters:DateToStringConverter x:Key="DateToStringConverter"/>
 		<converters:StringToBitmapConverter x:Key="StringToBitmapConverter"/>
+		<converters:StatusToDeleteEnabledConverter x:Key="StatusToDeleteEnabledConverter"/>
 	</UserControl.Resources>
 
 	<DockPanel LastChildFill="True">
@@ -325,12 +326,14 @@
 															Header="Delete"
 															Foreground="{DynamicResource DestructiveColor}"
 															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+															IsEnabled="{CompiledBinding Status, Converter={StaticResource StatusToDeleteEnabledConverter}, FallbackValue=False}"
 															CommandParameter="{CompiledBinding}"
 															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"/>
 														<MenuItem
 															Header="Delete Selected"
 															Foreground="{DynamicResource DestructiveColor}"
 															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+															IsEnabled="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).CanDeleteSelectedMembers, FallbackValue={x:Null}}"
 															CommandParameter="{CompiledBinding}"
 															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"/>
 													</MenuItem>
