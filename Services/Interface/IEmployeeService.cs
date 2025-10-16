@@ -27,5 +27,8 @@ namespace AHON_TRACK.Services.Interface
         Task<int> GetTotalEmployeeCountAsync();
         Task<int> GetEmployeeCountByStatusAsync(string status);
         Task<(bool Success, int ActiveCount, int InactiveCount, int TerminatedCount)> GetEmployeeStatisticsAsync();
+
+        // Hashed Password
+        Task<(bool Success, string Message, int? EmployeeId, string? Role)> AuthenticateUserAsync(string username, string password);
     }
 }

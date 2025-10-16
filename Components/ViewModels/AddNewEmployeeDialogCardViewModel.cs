@@ -339,7 +339,9 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
                 // Profile Picture
                 ProfileImage = fullEmployee.AvatarBytes;
-                ProfileImageSource = ImageHelper.BytesToBitmap(fullEmployee.AvatarBytes);
+                ProfileImageSource = fullEmployee.AvatarBytes != null
+    ? ImageHelper.BytesToBitmap(fullEmployee.AvatarBytes)
+    : ImageHelper.GetDefaultAvatar();
 
                 Debug.WriteLine($"✅ Successfully loaded employee data: {fullEmployee.FirstName} {fullEmployee.LastName}");
                 return;

@@ -173,15 +173,60 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         }
     }
 
-    public void InitializeCurrentUserProfile()
+    private async void InitializeCurrentUserProfile()
     {
         IsFromCurrentUser = true;
-        SetDefaultValues();
-        EmployeeFullNameHeader = "My Profile";
-        if (CurrentUserModel.LastLogin.HasValue)
-            EmployeeLastLogin = CurrentUserModel.LastLogin.Value.ToString("MMMM dd, yyyy - hh:mm tt");
+
+        // Get the current user's employee ID from CurrentUserModel
+        int? currentUserId = CurrentUserModel.UserId;
+
+        if (currentUserId.HasValue)
+        {
+            var (success, message, fullEmployee) = await _employeeService.ViewEmployeeProfileAsync(currentUserId.Value);
+
+            if (!success || fullEmployee == null)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+                SetDefaultValues(); // Fallback
+                return;
+            }
+
+            // Load full employee data
+            EmployeeID = fullEmployee.ID;
+            EmployeePosition = fullEmployee.Position;
+            EmployeeStatus = fullEmployee.Status;
+            EmployeeDateJoined = fullEmployee.DateJoined == DateTime.MinValue
+                ? "N/A"
+                : fullEmployee.DateJoined.ToString("MMMM d, yyyy");
+            EmployeeFullName = fullEmployee.Name;
+            EmployeeFullNameHeader = "My Profile";
+            EmployeePhoneNumber = fullEmployee.ContactNumber;
+            EmployeeAge = fullEmployee.Age;
+            EmployeeBirthDate = fullEmployee.Birthdate;
+            EmployeeGender = fullEmployee.Gender;
+            EmployeeLastLogin = fullEmployee.LastLogin;
+            EmployeeHouseAddress = fullEmployee.HouseAddress;
+            EmployeeHouseNumber = fullEmployee.HouseNumber;
+            EmployeeStreet = fullEmployee.Street;
+            EmployeeBarangay = fullEmployee.Barangay;
+            EmployeeCityProvince = fullEmployee.CityProvince;
+            EmployeeZipCode = fullEmployee.ZipCode;
+
+            // Profile Picture
+            if (fullEmployee.AvatarSource != null)
+            {
+                // Set avatar if needed
+            }
+        }
         else
-            EmployeeLastLogin = "Never logged in";
+        {
+            // No user logged in, use defaults
+            SetDefaultValues();
+            EmployeeFullNameHeader = "My Profile";
+        }
     }
 
     private void SetDefaultValues()
