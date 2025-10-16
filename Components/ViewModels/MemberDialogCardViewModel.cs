@@ -16,12 +16,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
     [ObservableProperty]
-    private string[] _memberPackageItems = ["Boxing", "Muay Thai", "Crossfit", "Zumba"];
-
-    [ObservableProperty]
-    private string[] _memberStatusItems = ["Active", "Inactive", "Terminated"];
-
-    [ObservableProperty]
     private string _dialogTitle = "Edit Gym Member Details";
 
     [ObservableProperty]
@@ -115,7 +109,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     }
 
     [Required(ErrorMessage = "Age is required")]
-    [Range(18, 80, ErrorMessage = "Age must be between 18 and 80")]
+    [Range(3, 100, ErrorMessage = "Age must be between 3 and 100")]
     public int? MemberAge
     {
         get => _memberAge;
