@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -82,6 +81,18 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
 	[ObservableProperty]
 	private ManageMembersItem? _selectedMember;
+
+	public bool CanDeleteSelectedMembers
+	{
+		get
+		{
+			var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
+			if (selectedMembers.Count == 0) return false;
+        
+			// Only allow deletion if ALL selected members are Expired
+			return selectedMembers.All(member => member.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase));
+		}
+	}
 	
 	public bool IsRefundButtonVisible =>
 		!new[] { "Active" }
@@ -139,6 +150,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		OnPropertyChanged(nameof(IsRefundButtonVisible));
 		OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
 		OnPropertyChanged(nameof(IsRenewButtonEnabled));
+		OnPropertyChanged(nameof(CanDeleteSelectedMembers));
 	}
 
 	[AvaloniaHotReload]
@@ -540,25 +552,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [RelayCommand]
     private void ShowSingleItemDeletionDialog(ManageMembersItem? member)
     {
-        if (member == null) return;
-
-        try
-        {
-            Debug.WriteLine($"Showing deletion dialog for member: {member.Name}");
-            _dialogManager.CreateDialog("" +
-                "Are you absolutely sure?",
-                $"This action cannot be undone. This will permanently delete {member.Name} and remove the data from your database.")
-                .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(member), DialogButtonStyle.Destructive)
-                .WithCancelButton("Cancel")
-                .WithMaxWidth(512)
-                .Dismissible()
-                .Show();
-            Debug.WriteLine("Deletion dialog shown successfully.");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error showing deletion dialog: {ex.Message}");
-        }
+	    if (member == null) return;
+    
+	    ShowDeleteConfirmationDialog(member);
     }
 
     [RelayCommand]
@@ -618,17 +614,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				.ShowError();
 			return;
 		}
-		
-		_dialogManager
-			.CreateDialog(
-				"Are you absolutely sure?",
-				"Deleting this member will permanently remove all of their data, records, and related information from the system. This action cannot be undone.")
-			.WithPrimaryButton("Delete Member", () => OnSubmitDeleteSingleItem(SelectedMember),
-				DialogButtonStyle.Destructive)
-			.WithCancelButton("Cancel")
-			.WithMaxWidth(512)
-			.Dismissible()
-			.Show();
+    
+		ShowDeleteConfirmationDialog(SelectedMember);
 	}
 	
 	[RelayCommand]
@@ -774,12 +761,29 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
 	    SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
     }
+    
+    private void ShowDeleteConfirmationDialog(ManageMembersItem member)
+    {
+	    _dialogManager
+		    .CreateDialog(
+			    "Are you absolutely sure?",
+			    "Deleting this member will permanently remove all of their data, records, and related information from the system. This action cannot be undone.")
+		    .WithPrimaryButton("Delete Member", () => OnSubmitDeleteSingleItem(member),
+			    DialogButtonStyle.Destructive)
+		    .WithCancelButton("Cancel")
+		    .WithMaxWidth(512)
+		    .Dismissible()
+		    .Show();
+    }
 
     private async Task OnSubmitDeleteSingleItem(ManageMembersItem member)
     {
 	    await DeleteMemberFromDatabase(member);
 	    member.PropertyChanged -= OnMemberPropertyChanged;
+	    
 	    MemberItems.Remove(member);
+	    OriginalMemberData.Remove(member);
+	    CurrentFilteredData.Remove(member);
 	    UpdateCounts();
 
 	    _toastManager.CreateToast($"Delete {member.Name} Account")
@@ -798,7 +802,10 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	    {
 		    await DeleteMemberFromDatabase(member);
 		    members.PropertyChanged -= OnMemberPropertyChanged;
+		    
 		    MemberItems.Remove(members);
+		    OriginalMemberData.Remove(members);
+		    CurrentFilteredData.Remove(members);
 	    }
 	    UpdateCounts();
 
