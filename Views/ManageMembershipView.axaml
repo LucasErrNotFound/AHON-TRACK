@@ -34,6 +34,7 @@
 		<converters:DateToStringConverter x:Key="DateToStringConverter"/>
 		<converters:StringToBitmapConverter x:Key="StringToBitmapConverter"/>
 		<converters:StatusToDeleteEnabledConverter x:Key="StatusToDeleteEnabledConverter"/>
+		<converters:StatusAndCanDeleteSelectedConverter x:Key="StatusAndCanDeleteSelectedConverter"/>
 	</UserControl.Resources>
 
 	<DockPanel LastChildFill="True">
@@ -333,9 +334,17 @@
 															Header="Delete Selected"
 															Foreground="{DynamicResource DestructiveColor}"
 															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
-															IsEnabled="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).CanDeleteSelectedMembers, FallbackValue={x:Null}}"
 															CommandParameter="{CompiledBinding}"
-															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"/>
+															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+															<MenuItem.IsEnabled>
+																<MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+																	<!-- current row's Status -->
+																	<Binding Path="Status" />
+																	<!-- view-model global flag -->
+																	<Binding Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).CanDeleteSelectedMembers" />
+																</MultiBinding>
+															</MenuItem.IsEnabled>
+														</MenuItem>
 													</MenuItem>
 												</Menu>
 											</DataTemplate>
