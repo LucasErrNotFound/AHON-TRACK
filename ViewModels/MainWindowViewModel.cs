@@ -9,7 +9,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using Avalonia.Media.Imaging;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -106,6 +108,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty] 
     private CurrentUserModel? _currentUser = new();
+
+    [ObservableProperty] 
+    private Bitmap? _avatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
 
     private bool _shouldShowSuccessLogOutToast = false;
 

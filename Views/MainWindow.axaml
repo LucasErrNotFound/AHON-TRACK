@@ -337,10 +337,9 @@
 								<Panel>
 									<shadui:Avatar
 										CornerRadius="{DynamicResource LgCornerRadius}"
-										Fallback="CN"
 										IsVisible="{CompiledBinding !$parent[shadui:Sidebar].Expanded}"
                                         Opacity="{CompiledBinding !$parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.Opaque}}"
-										Source="avares://AHON_TRACK/Assets/MainWindowView/user-admin.png">
+										Source="{CompiledBinding AvatarSource}">
 										<shadui:Avatar.Transitions>
 											<Transitions>
 												<DoubleTransition Property="Opacity" Duration="0:0:0.20"/>
@@ -356,8 +355,7 @@
 											Height="36"
 											Margin="0,0,8,0"
 											CornerRadius="{DynamicResource XlCornerRadius}"
-											Fallback="CN"
-											Source="{CompiledBinding CurrentUser.AvatarSource}"/>
+											Source="{CompiledBinding AvatarSource}"/>
 										<StackPanel Grid.Column="1" VerticalAlignment="Center">
 											<TextBlock Classes="Small" Text="{CompiledBinding CurrentUser.Name}" />
 											<TextBlock
@@ -384,8 +382,7 @@
 										Height="36"
 										Margin="0,0,8,0"
 										CornerRadius="{DynamicResource XlCornerRadius}"
-										Fallback="CN"
-										Source="{CompiledBinding CurrentUser.AvatarSource}"/>
+										Source="{CompiledBinding AvatarSource}"/>
 									<StackPanel Grid.Column="1" VerticalAlignment="Center">
 										<TextBlock Classes="Small" Text="{CompiledBinding CurrentUser.Name}"/>
 										<TextBlock
