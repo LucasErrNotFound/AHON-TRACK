@@ -63,6 +63,7 @@ namespace AHON_TRACK;
 [Singleton<IPackageService, PackageService>]
 [Singleton<ISupplierService, SupplierService>]
 [Singleton<IWalkInService, WalkInService>]
+[Singleton<IProductPurchaseService, ProductPurchaseService>]
 
 public partial class ServiceProvider
 {

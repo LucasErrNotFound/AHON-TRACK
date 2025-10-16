@@ -1,19 +1,22 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using HotAvalonia;
-using ShadUI;
-using System.ComponentModel;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -109,22 +112,24 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private bool _isMayaSelected;
-    
+
     [ObservableProperty]
     private string _currentTransactionId = "GM-2025-001234"; // Initial/default ID
 
     private int _lastIdNumber = 1234; // Track the numeric part
-    
+
     private readonly Dictionary<string, Bitmap> _imageCache = new();
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly IProductPurchaseService _productPurchaseService;
 
     public ProductPurchaseViewModel(
         DialogManager dialogManager,
         ToastManager toastManager,
-        PageManager pageManager)
+        PageManager pageManager,
+        IProductPurchaseService productPurchaseService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
@@ -135,6 +140,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         LoadCustomerList();
         LoadProductOptions();
         LoadPackageOptions();
+        _productPurchaseService = productPurchaseService;
     }
 
     public ProductPurchaseViewModel()
@@ -142,6 +148,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _productPurchaseService = null!;
 
         LoadCustomerList();
         LoadProductOptions();
@@ -152,9 +159,15 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     public void Initialize()
     {
         if (IsInitialized) return;
-        LoadCustomerList();
-        LoadProductOptions();
-        LoadPackageOptions();
+        _ = LoadCustomerListFromDatabaseAsync();
+        _ = LoadProductsFromDatabaseAsync();
+        _ = LoadPackagesFromDatabaseAsync();
+        if (_productPurchaseService == null)
+        {
+            LoadCustomerList();
+            LoadProductOptions();
+            LoadPackageOptions();
+        }
         IsInitialized = true;
     }
 
@@ -175,24 +188,112 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         UpdateCustomerCounts();
     }
 
+    private async Task LoadCustomerListFromDatabaseAsync()
+    {
+        var customers = await _productPurchaseService.GetAllCustomersAsync();
+
+        OriginalCustomerList = customers.Select(c => new Customer
+        {
+            ID = c.CustomerID,
+            FirstName = c.FirstName,
+            LastName = c.LastName,
+            CustomerType = c.CustomerType
+        }).ToList();
+
+        CurrentCustomerList = OriginalCustomerList.ToList();
+
+        CustomerList.Clear();
+        foreach (var customer in CurrentCustomerList)
+        {
+            customer.PropertyChanged += OnCustomerPropertyChanged;
+            CustomerList.Add(customer);
+        }
+
+        // Apply the filter based on the currently selected filter value
+        ApplyCustomerFilter();
+        UpdateCustomerCounts();
+
+        // 🔥 Trigger UI update if filter combo changes after loading
+        OnSelectedCustomerTypeFilterItemChanged(SelectedCustomerTypeFilterItem);
+    }
+
+    private Product ConvertToProduct(SellingModel selling)
+    {
+        return new Product
+        {
+            Title = selling.Title,
+            Description = selling.Description,
+            Category = selling.Category,
+            Price = (int)selling.Price,
+            StockCount = selling.Stock,
+            Poster = selling.ImagePath != null ? new Bitmap(new MemoryStream(selling.ImagePath)) : null
+        };
+    }
+
+    private Package ConvertToPackage(SellingModel selling)
+    {
+        return new Package
+        {
+            Title = selling.Title,
+            Description = selling.Description,
+            Price = (int)selling.Price,
+            IsAddedToCart = false
+        };
+    }
+
+    private async Task LoadProductsFromDatabaseAsync()
+    {
+        var products = await _productPurchaseService.GetAllProductsAsync();
+        var productModels = products.Select(ConvertToProduct).ToList();
+
+        // 🔹 Keep master copy
+        OriginalProductList = productModels;
+        CurrentProductList = productModels.ToList();
+
+        // 🔹 Update displayed list
+        ProductList.Clear();
+        foreach (var product in productModels)
+            ProductList.Add(product);
+        ApplyProductFilter();
+    }
+
+    private async Task LoadPackagesFromDatabaseAsync()
+    {
+        var packages = await _productPurchaseService.GetAllGymPackagesAsync();
+        var packageModels = packages.Select(ConvertToPackage).ToList();
+
+        // 🔹 Keep master copy
+        OriginalPackageList = packageModels;
+
+        // 🔹 Update displayed list
+        PackageList.Clear();
+        foreach (var package in packageModels)
+            PackageList.Add(package);
+        ApplyProductFilter();
+    }
+
     private void LoadProductOptions()
     {
+        // Prevent overwriting DB-loaded list
+        if (OriginalProductList != null && OriginalProductList.Count >= 0)
+            return;
+
         var products = GetProductData();
         OriginalProductList = products;
         CurrentProductList = products.ToList();
 
         ProductList.Clear();
         foreach (var product in CurrentProductList)
-        {
             ProductList.Add(product);
-        }
+
         ApplyProductFilter();
     }
 
     private void LoadPackageOptions()
     {
-        //var packages = _packageService.GetPackages();
-        //OriginalPackageList = packages;
+        if (OriginalPackageList != null && OriginalPackageList.Count >= 0)
+            return;
+
         ApplyProductFilter();
     }
 
@@ -201,75 +302,33 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         return
         [
             new Customer
-            {
-                ID = 1001,
-                FirstName = "Robert Xyz",
-                LastName = "Lucas",
-                CustomerType = "Gym Member"
-            },
-            new Customer
-            {
-                ID = 1002,
-                FirstName = "Sianrey",
-                LastName = "Flora",
-                CustomerType = "Gym Member"
-            },
-            new Customer
-            {
-                ID = 1003,
-                FirstName = "Mardie",
-                LastName = "Dela Cruz",
-                CustomerType = "Walk-in"
-            },
-            new Customer
-            {
-                ID = 1004,
-                FirstName = "Mark",
-                LastName = "Dela Cruz",
-                CustomerType = "Gym Member"
-            },
-            new Customer
-            {
-                ID = 1005,
-                FirstName = "John Carlo",
-                LastName = "Casidor",
-                CustomerType = "Walk-in"
-            },
-            new Customer
-            {
-                ID = 1006,
-                FirstName = "Marc",
-                LastName = "Torres",
-                CustomerType = "Gym Member"
-            },
-            new Customer
-            {
-                ID = 1007,
-                FirstName = "John Maverick",
-                LastName = "Lim",
-                CustomerType = "Gym Member"
-            },
-            new Customer
-            {
-                ID = 1008,
-                FirstName = "Jav",
-                LastName = "Agustin",
-                CustomerType = "Walk-in"
-            },
-            new Customer
-            {
-                ID = 1009,
-                FirstName = "Adriel",
-                LastName = "Del Rosario",
-                CustomerType = "Walk-in"
-            },
-            new Customer
-            {
-                ID = 1010,
-                FirstName = "Uriel Simon",
-                LastName = "Rivera",
-                CustomerType = "Gym Member"
-            }
+                {
+                    ID = 1001,
+                    FirstName = "Robert Xyz",
+                    LastName = "Lucas",
+                    CustomerType = "Gym Member"
+                },
+                new Customer
+                {
+                    ID = 1002,
+                    FirstName = "Sianrey",
+                    LastName = "Flora",
+                    CustomerType = "Gym Member"
+                },
+                new Customer
+                {
+                    ID = 1003,
+                    FirstName = "Mardie",
+                    LastName = "Dela Cruz",
+                    CustomerType = "Walk-in"
+                },
+                new Customer
+                {
+                    ID = 1004,
+                    FirstName = "Mark",
+                    LastName = "Dela Cruz",
+                    CustomerType = "Gym Member"
+                }
         ];
     }
 
@@ -278,50 +337,50 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         return
         [
             new Product
-            {
-                Title = "Gold Standard Whey Protein",
-                Description = "5lbs Premium Whey Protein",
-                Category = "Supplements",
-                Price = 2500,
-                StockCount = 15,
-                Poster = GetCachedImage("protein-powder-display.png")
-            },
-            new Product
-            {
-                Title = "Creatine XPLODE Powder",
-                Description = "1.1lbs Creatine Monohydrate",
-                Category = "Supplements",
-                Price = 1050,
-                StockCount = 8,
-                Poster = GetCachedImage("creatine-display.png")
-            },
-            new Product
-            {
-                Title = "Insane Labz PSYCHOTIC",
-                Description = "7.6oz PreWorkout Peaches & Cream",
-                Category = "Supplements",
-                Price = 900,
-                StockCount = 7,
-                Poster = GetCachedImage("preworkout-display.png")
-            },
-            new Product
-            {
-                Title = "Cobra Energy Drink",
-                Description = "Yellow Blast Flavor",
-                Category = "Drinks",
-                Price = 35,
-                StockCount = 5,
-                Poster = GetCachedImage("cobra-yellow-drink-display.png")
-            },
-            new Product
-            {
-                Title = "Cobra Energy Drink",
-                Description = "Yellow Blast Flavor",
-                Category = "Drinks",
-                Price = 35,
-                StockCount = 3,
-                Poster = GetCachedImage("cobra-yellow-drink-display.png")
-            }
+                {
+                    Title = "Gold Standard Whey Protein",
+                    Description = "5lbs Premium Whey Protein",
+                    Category = "Supplements",
+                    Price = 2500,
+                    StockCount = 15,
+                    Poster = GetCachedImage("protein-powder-display.png")
+                },
+                new Product
+                {
+                    Title = "Creatine XPLODE Powder",
+                    Description = "1.1lbs Creatine Monohydrate",
+                    Category = "Supplements",
+                    Price = 1050,
+                    StockCount = 8,
+                    Poster = GetCachedImage("creatine-display.png")
+                },
+                new Product
+                {
+                    Title = "Insane Labz PSYCHOTIC",
+                    Description = "7.6oz PreWorkout Peaches & Cream",
+                    Category = "Supplements",
+                    Price = 900,
+                    StockCount = 7,
+                    Poster = GetCachedImage("preworkout-display.png")
+                },
+                new Product
+                {
+                    Title = "Cobra Energy Drink",
+                    Description = "Yellow Blast Flavor",
+                    Category = "Drinks",
+                    Price = 35,
+                    StockCount = 5,
+                    Poster = GetCachedImage("cobra-yellow-drink-display.png")
+                },
+                new Product
+                {
+                    Title = "Cobra Energy Drink",
+                    Description = "Yellow Blast Flavor",
+                    Category = "Drinks",
+                    Price = 35,
+                    StockCount = 3,
+                    Poster = GetCachedImage("cobra-yellow-drink-display.png")
+                }
         ];
     }
 
@@ -343,20 +402,22 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private void ApplyCustomerFilter()
     {
-        if (OriginalCustomerList == null || OriginalCustomerList.Count == 0) return;
+        if (OriginalCustomerList is null || OriginalCustomerList.Count == 0)
+            return;
 
-        List<Customer> filteredList;
+        var filteredList = SelectedCustomerTypeFilterItem switch
+        {
+            "Walk-in" => OriginalCustomerList
+                .Where(c => c.CustomerType.Equals("Walk-in", StringComparison.OrdinalIgnoreCase))
+                .ToList(),
 
-        if (SelectedCustomerTypeFilterItem == "All")
-        {
-            filteredList = OriginalCustomerList.ToList();
-        }
-        else
-        {
-            filteredList = OriginalCustomerList
-                .Where(customer => customer.CustomerType == SelectedCustomerTypeFilterItem)
-                .ToList();
-        }
+            "Gym Member" => OriginalCustomerList
+                .Where(c => c.CustomerType.Equals("Gym Member", StringComparison.OrdinalIgnoreCase))
+                .ToList(),
+
+            _ => OriginalCustomerList.ToList() // "All"
+        };
+
         CurrentCustomerList = filteredList;
 
         CustomerList.Clear();
@@ -365,47 +426,52 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             customer.PropertyChanged += OnCustomerPropertyChanged;
             CustomerList.Add(customer);
         }
+
         UpdateCustomerCounts();
     }
 
     private void ApplyProductFilter()
     {
+        // Prevent null errors
+        if (OriginalProductList == null || _originalPackageList == null)
+            return;
+
         ProductList.Clear();
         PackageList.Clear();
 
+        // 🔹 If user selects "Gym Packages"
         if (SelectedProductFilterItem == "Gym Packages")
         {
-            if (_originalPackageList != null && _originalPackageList.Count > 0)
-            {
-                foreach (var package in _originalPackageList)
-                {
-                    PackageList.Add(package);
-                }
-            }
+            foreach (var package in _originalPackageList)
+                PackageList.Add(package);
+
+            ProductSearchStringResult = string.Empty;
+            return;
         }
-        else
+
+        // 🔹 Otherwise, filter products
+        IEnumerable<Product> filteredList = OriginalProductList;
+
+        if (!string.IsNullOrWhiteSpace(SelectedProductFilterItem) && SelectedProductFilterItem != "All")
         {
-            if (OriginalProductList == null || OriginalProductList.Count == 0) return;
-
-            List<Product> filteredList;
-
-            if (SelectedProductFilterItem == "All")
-            {
-                filteredList = OriginalProductList.ToList();
-            }
-            else
-            {
-                filteredList = OriginalProductList
-                    .Where(product => product.Category == SelectedProductFilterItem)
-                    .ToList();
-            }
-
-            CurrentProductList = filteredList;
-            foreach (var product in filteredList)
-            {
-                ProductList.Add(product);
-            }
+            filteredList = filteredList
+                .Where(p => p.Category.Equals(SelectedProductFilterItem, StringComparison.OrdinalIgnoreCase));
         }
+
+        // 🔹 Optional: search filter
+        if (!string.IsNullOrWhiteSpace(ProductSearchStringResult))
+        {
+            filteredList = filteredList
+                .Where(p =>
+                    (!string.IsNullOrEmpty(p.Title) && p.Title.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(p.Description) && p.Description.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase))
+                );
+        }
+
+        // 🔹 Apply result to view
+        foreach (var product in filteredList)
+            ProductList.Add(product);
+
         ProductSearchStringResult = string.Empty;
     }
 
@@ -594,7 +660,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             .WithContent(toastContent)
             .DismissOnClick()
             .ShowSuccess();
-        
+
         CurrentTransactionId = GenerateNewTransactionId();
         ClearCart();
     }
@@ -707,14 +773,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         //if (_packageService != null)
         //  _packageService.PackagesChanged -= OnPackagesChanged;
     }
-    
+
     private string GenerateNewTransactionId()
     {
         _lastIdNumber++;
         var year = DateTime.Today.Year;
         return $"GM-{year}-{_lastIdNumber:D6}";
     }
-    
+
     partial void OnIsCashSelectedChanged(bool value)
     {
         if (value)
@@ -783,9 +849,9 @@ public partial class Product : ObservableObject
     [ObservableProperty]
     private int _stockCount;
 
-    [ObservableProperty] 
-    private Bitmap? _poster; 
-    
+    [ObservableProperty]
+    private Bitmap? _poster;
+
     [ObservableProperty]
     private bool _isAddedToCart;
 
@@ -852,9 +918,9 @@ public partial class CartItem : ObservableObject
     public decimal TotalPrice => Price * Quantity;
     public string FormattedPrice => $"₱{Price:N2}";
     public string FormattedTotalPrice => $"₱{TotalPrice:N2}";
-    
+
     private static Bitmap? _defaultProductBitmap;
-    
+
     public static Bitmap DefaultProductBitmap
     {
         get
@@ -872,14 +938,14 @@ public partial class CartItem : ObservableObject
             return _defaultProductBitmap;
         }
     }
-    
+
     public Bitmap DisplayPoster => Poster ?? DefaultProductBitmap;
-    
+
     partial void OnPosterChanged(Bitmap? value)
     {
         OnPropertyChanged(nameof(DisplayPoster));
     }
-    
+
     partial void OnQuantityChanged(int value)
     {
         OnPropertyChanged(nameof(TotalPrice));

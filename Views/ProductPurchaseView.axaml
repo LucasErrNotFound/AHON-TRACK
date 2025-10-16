@@ -489,17 +489,19 @@
 													</Border>
 												</Grid>
 												<Button
-                                                    Classes="Primary"
-                                                    Width="260"
-                                                    Margin="0,30,0,0">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Svg
-                                                            Width="18"
-                                                            Height="18"
-                                                            Margin="0,0,10,0"
-                                                            VerticalAlignment="Center"
-                                                            Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
-														<TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center"/>
+    Classes="Primary"
+    Width="260"
+    Margin="0,30,0,0"
+    Command="{Binding $parent[UserControl].((viewModels:ProductPurchaseViewModel)DataContext).AddToCartCommand}"
+    CommandParameter="{Binding}">
+													<StackPanel Orientation="Horizontal">
+														<Svg
+															Width="18"
+															Height="18"
+															Margin="0,0,10,0"
+															VerticalAlignment="Center"
+															Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
+														<TextBlock Text="Add to Cart" Foreground="White" VerticalAlignment="Center" />
 													</StackPanel>
 												</Button>
 											</StackPanel>
@@ -555,22 +557,24 @@
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
 
-                                                    <Button 
-                                                        Classes="Primary" 
-                                                        HorizontalAlignment="Center"
-                                                        Padding="65,0" 
-                                                        Margin="0,30,0,0">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <Svg 
-                                                                Width="18" 
-                                                                Height="18" 
-                                                                Margin="0,0,10,0"
-                                                                VerticalAlignment="Center"
-                                                                Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
+													<Button
+    Classes="Primary"
+    HorizontalAlignment="Center"
+    Padding="65,0"
+    Margin="0,30,0,0"
+    Command="{Binding $parent[UserControl].((viewModels:ProductPurchaseViewModel)DataContext).AddToCartCommand}"
+    CommandParameter="{Binding}">
+														<StackPanel Orientation="Horizontal">
+															<Svg
+																Width="18"
+																Height="18"
+																Margin="0,0,10,0"
+																VerticalAlignment="Center"
+																Path="avares://AHON_TRACK/Assets/ProductPurchaseView/shopping-cart-icon.svg" />
 															<TextBlock
-                                                                Text="Add to Cart"
-                                                                Foreground="White"
-                                                                VerticalAlignment="Center" />
+																Text="Add to Cart"
+																Foreground="White"
+																VerticalAlignment="Center" />
 														</StackPanel>
 													</Button>
 												</StackPanel>
