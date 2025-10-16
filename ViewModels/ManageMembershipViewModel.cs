@@ -86,9 +86,18 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	{
 		get
 		{
+			// If there is no checked items, can't delete
 			var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
 			if (selectedMembers.Count == 0) return false;
-        
+
+			// If the currently selected row is present and its status is not expired,
+			// then "Delete Selected" should be disabled when opening the menu for that row.
+			if (SelectedMember is not null && 
+			    !SelectedMember.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+			{
+				return false;
+			}
+
 			// Only allow deletion if ALL selected members are Expired
 			return selectedMembers.All(member => member.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase));
 		}
@@ -760,6 +769,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	    TotalCount = MemberItems.Count;
 
 	    SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
+
+	    OnPropertyChanged(nameof(CanDeleteSelectedMembers));
     }
     
     private void ShowDeleteConfirmationDialog(ManageMembersItem member)
