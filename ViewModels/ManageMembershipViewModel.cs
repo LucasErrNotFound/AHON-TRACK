@@ -173,6 +173,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "Boxing",
 				Status = "Active",
+				Gender = "Male",
+				BirthDate = new DateTime(2000, 1, 1),
 				Validity = new DateTime(2025, 6, 16)
 			},
 			
@@ -184,6 +186,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "None",
 				Status = "Expired",
+				Gender = "Male",
+				BirthDate = new DateTime(2004, 5, 1),
 				Validity = new DateTime(2025, 7, 16)
 			},
 			
@@ -195,6 +199,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "None",
 				Status = "Expired",
+				Gender = "Male",
+				BirthDate = new DateTime(2002, 11, 12),
 				Validity = new DateTime(2025, 7, 18)
 			},
 			
@@ -206,6 +212,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
 				Status = "Active",
+				Gender = "Female",
+				BirthDate = new DateTime(2004, 5, 9),
 				Validity = new DateTime(2025, 7, 18)
 			},
 			
@@ -217,6 +225,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "Gym",
 				Status = "Expired",
+				Gender = "Male",
+				BirthDate = new DateTime(2002, 5, 9),
 				Validity = new DateTime(2025, 4, 18)
 			},
 			
@@ -228,6 +238,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "Gym",
 				Status = "Active",
+				Gender = "Male",
+				BirthDate = new DateTime(2004, 5, 21),
 				Validity = new DateTime(2025, 4, 18)
 			},
 			
@@ -239,6 +251,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "Gym",
 				Status = "Active",
+				Gender = "Male",
+				BirthDate = new DateTime(2004, 9, 9),
 				Validity = new DateTime(2025, 4, 18)
 			},
 			
@@ -250,271 +264,10 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 				ContactNumber = "0975 994 3010",
 				AvailedPackages = "Gym",
 				Status = "Active",
+				Gender = "Male",
+				BirthDate = new DateTime(2001, 5, 9),
 				Validity = new DateTime(2025, 4, 18)
-			},
-			// Test Test
-			new ManageMembersItem
-			{
-				ID = "1001",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Jedd Calubayan",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Boxing",
-				Status = "Active",
-				Validity = new DateTime(2025, 6, 16)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1002",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Marc Torres",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "None",
-				Status = "Expired",
-				Validity = new DateTime(2025, 7, 16)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1003",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Mardie Dela Cruz",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "None",
-				Status = "Expired",
-				Validity = new DateTime(2025, 7, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1004",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Mark Dela Cruz",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 7, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1005",
-				AvatarSource = DefaultAvatarSource,
-				Name = "JL Taberdo",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Expired",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1006",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Robert Xyz B. Lucas",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1007",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Sianrey V. Flora",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1008",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Marion James Dela Roca",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			new ManageMembersItem
-			{
-				ID = "1001",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Jedd Calubayan",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Boxing",
-				Status = "Active",
-				Validity = new DateTime(2025, 6, 16)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1002",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Marc Torres",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "None",
-				Status = "Expired",
-				Validity = new DateTime(2025, 7, 16)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1003",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Mardie Dela Cruz",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "None",
-				Status = "Expired",
-				Validity = new DateTime(2025, 7, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1004",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Mark Dela Cruz",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 7, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1005",
-				AvatarSource = DefaultAvatarSource,
-				Name = "JL Taberdo",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Expired",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1006",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Robert Xyz B. Lucas",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1007",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Sianrey V. Flora",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1008",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Marion James Dela Roca",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			new ManageMembersItem
-			{
-				ID = "1001",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Jedd Calubayan",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Boxing",
-				Status = "Active",
-				Validity = new DateTime(2025, 6, 16)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1002",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Marc Torres",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "None",
-				Status = "Expired",
-				Validity = new DateTime(2025, 7, 16)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1003",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Mardie Dela Cruz",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "None",
-				Status = "Expired",
-				Validity = new DateTime(2025, 7, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1004",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Mark Dela Cruz",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Muay thai, Boxing, Crossfit, Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 7, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1005",
-				AvatarSource = DefaultAvatarSource,
-				Name = "JL Taberdo",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Expired",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1006",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Robert Xyz B. Lucas",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1007",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Sianrey V. Flora",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			
-			new ManageMembersItem
-			{
-				ID = "1008",
-				AvatarSource = DefaultAvatarSource,
-				Name = "Marion James Dela Roca",
-				ContactNumber = "0975 994 3010",
-				AvailedPackages = "Gym",
-				Status = "Active",
-				Validity = new DateTime(2025, 4, 18)
-			},
-			// Ends Here
+			}
 		];
 	}
 	
@@ -1016,9 +769,18 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	} 
 	
 	[RelayCommand]
-	private void ShowModifyMemberDialog(ManageMembersItem member)
+	private void ShowModifyMemberDialog(ManageMembersItem? member)
 	{
-		_memberDialogCardViewModel.Initialize();
+		if (member is null)
+		{
+			_toastManager.CreateToast("No Member Selected")
+				.WithContent("Please select a member to modify")
+				.DismissOnClick()
+				.ShowError();
+			return;
+		}
+		
+		_memberDialogCardViewModel.InitializeForEditMode(member);
 		_dialogManager.CreateDialog(_memberDialogCardViewModel)
 			.WithSuccessCallback(_ =>
 				_toastManager.CreateToast("Modified an existing gym member information")
@@ -1052,6 +814,12 @@ public partial class ManageMembersItem : ObservableObject
     private string _contactNumber = string.Empty;
     
     [ObservableProperty]
+    private string _gender = string.Empty;
+    
+    [ObservableProperty]
+    private int _age;
+    
+    [ObservableProperty]
     private string _availedPackages = string.Empty;
 
     [ObservableProperty]
@@ -1059,6 +827,9 @@ public partial class ManageMembersItem : ObservableObject
 
     [ObservableProperty]
     private DateTime _validity;
+    
+    [ObservableProperty]
+    private DateTime _birthDate;
 
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {

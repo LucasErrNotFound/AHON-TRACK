@@ -186,6 +186,7 @@
 					<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91">
 						<CalendarDatePicker
 							shadui:ControlAssist.Label="Date of Birth"
+							shadui:ControlAssist.ReadOnly="True"
 							Width="150"
 							HorizontalAlignment="Left"
 							SelectedDate="{CompiledBinding MemberBirthDate}"/>

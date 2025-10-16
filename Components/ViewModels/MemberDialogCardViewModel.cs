@@ -38,13 +38,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private string _memberLastName = string.Empty;
     private string _memberGender = string.Empty;
     private string _memberContactNumber = string.Empty;
-    private string _memberPackages = string.Empty;
     private int? _memberAge;
     private DateTime? _memberBirthDate;
-
-    // Account Section
-    private DateTime? _memberDateJoined;
-    private string _memberStatus = string.Empty;
     
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -109,13 +104,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         set => SetProperty(ref _memberContactNumber, value, true);
     }
 
-    [Required(ErrorMessage = "Position is required")]
-    public string MemberPackages
-    {
-        get => _memberPackages;
-        set => SetProperty(ref _memberPackages, value, true);
-    }
-
     [Required(ErrorMessage = "Age is required")]
     [Range(3, 100, ErrorMessage = "Age must be between 3 and 100")]
     public int? MemberAge
@@ -143,21 +131,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             }
         }
     }
-    
-    [Required(ErrorMessage = "Date joined is required")]
-    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? MemberDateJoined
-    {
-        get => _memberDateJoined;
-        set => SetProperty(ref _memberDateJoined, value, true);
-    }
-
-    [Required(ErrorMessage = "Status is required")]
-    public string MemberStatus
-    {
-        get => _memberStatus;
-        set => SetProperty(ref _memberStatus, value, true);
-    }
 
     public MemberDialogCardViewModel(DialogManager  dialogManager, ToastManager toastManager, PageManager pageManager)
     {
@@ -179,6 +152,25 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         IsEditMode = false;
         DialogTitle = "Edit Gym Member Details";
         ClearAllFields();
+    }
+
+    public void InitializeForEditMode(ManageMembersItem? member)
+    {
+        IsEditMode = true;
+        ClearAllErrors();
+
+        var nameParts = member?.Name.Split(' ') ?? [];
+
+        MemberFirstName = nameParts.Length > 0 ? nameParts[0] : "John";
+        SelectedMiddleInitialItem = nameParts.Length > 2 ? nameParts[1].TrimEnd('.') : "A";
+        MemberLastName = nameParts.Length > 1 ? nameParts[^1] : "Doe";
+        MemberGender = member?.Gender;
+        
+        MemberContactNumber = !string.IsNullOrEmpty(member?.ContactNumber) ?
+            member.ContactNumber.Replace(" ", "") : "09123456789";
+
+        MemberAge = member?.Age;
+        MemberBirthDate = member?.BirthDate;
     }
     
     private int CalculateAge(DateTime birthDate)
@@ -203,13 +195,9 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         Debug.WriteLine($"Last Name: {MemberLastName}");
         Debug.WriteLine($"Gender: {MemberGender}");
         Debug.WriteLine($"Contact No.: {MemberContactNumber}");
-        Debug.WriteLine($"Position: {MemberPackages}");
         Debug.WriteLine($"Age: {MemberAge}");
         Debug.WriteLine($"Date of Birth: {MemberBirthDate?.ToString("MMMM d, yyyy")}");
 
-        // Member Data Details Debugging
-        Debug.WriteLine($"Date Joined: {MemberDateJoined?.ToString("MMMM d, yyyy")}");
-        Debug.WriteLine($"Status: {MemberStatus}");
 
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
@@ -280,11 +268,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         MemberLastName = string.Empty;
         MemberGender = null;
         MemberContactNumber = string.Empty;
-        MemberPackages = string.Empty;
         MemberAge = null;
         MemberBirthDate = null;
-        MemberDateJoined = null;
-        MemberStatus = string.Empty;
         ClearAllErrors();
     }
 }
