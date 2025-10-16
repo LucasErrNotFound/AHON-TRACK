@@ -186,7 +186,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     }
 
     [Required(ErrorMessage = "Age is required")]
-    [Range(18, 80, ErrorMessage = "Age must be between 18 and 80")]
+    [Range(3, 100, ErrorMessage = "Age must be between 3 and 100")]
     public int? MemberAge
     {
         get => _memberAge;

@@ -118,7 +118,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     }
 
     [Required(ErrorMessage = "Age is required")]
-    [Range(18, 80, ErrorMessage = "Age must be between 18 and 80")]
+    [Range(3, 100, ErrorMessage = "Age must be between 3 and 100")]
     public int? WalkInAge
     {
         get => _walkInAge;
