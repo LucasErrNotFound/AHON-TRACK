@@ -2,7 +2,12 @@ using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using AHON_TRACK.ViewModels;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -20,6 +25,9 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
     [ObservableProperty]
     private string _dialogDescription = "Please fill out the form to edit this gym member's information";
+    
+    [ObservableProperty]
+    private Image? _memberProfileImageControl;
 
     [ObservableProperty]
     private bool _isEditMode = false;
@@ -210,6 +218,59 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private void Cancel()
     {
         _dialogManager.Close(this);
+    }
+    
+    [RelayCommand]
+    private async Task ChooseFile()
+    {
+        try
+        {
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+
+            var files = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Select Image File",
+                AllowMultiple = false,
+                FileTypeFilter =
+                [
+                    new FilePickerFileType("Image Files")
+                    {
+                        Patterns = ["*.png", "*.jpg"]
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = ["*.*"]
+                    }
+                ]
+            });
+
+            if (files.Count > 0)
+            {
+                var selectedFile = files[0];
+                _toastManager.CreateToast("Image file selected")
+                    .WithContent($"{selectedFile.Name}")
+                    .DismissOnClick()
+                    .ShowInfo();
+                
+                var file = files[0];
+                await using var stream = await file.OpenReadAsync();
+                
+                var bitmap = new Bitmap(stream);
+                
+                if (MemberProfileImageControl != null)
+                {
+                    MemberProfileImageControl.Source = bitmap;
+                    MemberProfileImageControl.IsVisible = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+        }
     }
 
     private void ClearAllFields()

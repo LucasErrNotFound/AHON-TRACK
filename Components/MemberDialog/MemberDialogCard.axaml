@@ -133,23 +133,23 @@
 								ClipToBounds="True">
 
 								<Image
-									Name="EmployeeProfileImage"
+									Name="MemberProfileImage"
 									Stretch="UniformToFill"
 									IsVisible="True"
-									Source="avares://AHON_TRACK/Assets/ManageEmployeesView/default-profile-picture.png"/>
+									Source="avares://AHON_TRACK/Assets/ManageMembershipView/default-profile-picture.png"/>
 								<!-- Profile image placeholder -->
 							</Border>
 							<Button
 								Classes="Outline"
 								HorizontalAlignment="Center"
-								Click="Button_Click">
+								Command="{CompiledBinding ChooseFileCommand}">
 								<StackPanel Orientation="Horizontal">
 									<Svg
 										Width="20"
 										Height="20"
 										VerticalAlignment="Center"
 										Margin="0,0,7,0"
-										Path="avares://AHON_TRACK/Assets/ManageEmployeesView/upload-icon.svg"/>
+										Path="avares://AHON_TRACK/Assets/ManageMembershipView/upload-icon.svg"/>
 									<TextBlock Text="Choose File" VerticalAlignment="Center"/>
 								</StackPanel>
 							</Button>
