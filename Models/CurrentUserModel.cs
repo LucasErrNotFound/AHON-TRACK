@@ -25,24 +25,5 @@ public class CurrentUserModel : ManageEmployeeModel
     public static System.DateTime? DateJoined { get; set; } = null;
 
     // Optional: avatar bytes/source if you want to surface profile picture globally
-    public static byte[]? AvatarBytes { get; set; }
-    
-    public static Bitmap? AvatarBitmap 
-    { 
-        get 
-        {
-            if (AvatarBytes != null && AvatarBytes.Length > 0)
-            {
-                try
-                {
-                    return ImageHelper.BytesToBitmap(AvatarBytes);
-                }
-                catch
-                {
-                    return ImageHelper.GetDefaultAvatarSafe();
-                }
-            }
-            return ImageHelper.GetDefaultAvatarSafe();
-        }
-    }
+    public new static byte[]? AvatarBytes { get; set; }
 }
