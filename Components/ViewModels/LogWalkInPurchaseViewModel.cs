@@ -9,9 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -144,7 +142,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     }
 
     [Required(ErrorMessage = "Age is required")]
-    [Range(18, 80, ErrorMessage = "Age must be between 18 and 80")]
+    [Range(3, 100, ErrorMessage = "Age must be between 3 and 100")]
     public int? WalkInAge
     {
         get => _walkInAge;
@@ -189,8 +187,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
                 SpecializedPackageQuantity = 1;
             }
 
-            // Trigger updates for quantity-related properties
-            //UpdateQuantityRelatedPropertie();
             _ = CheckFreeTrialEligibilityAsync();
         }
     }
@@ -217,7 +213,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     }
 
     [Required(ErrorMessage = "Quantity is required")]
-    [Range(1, 50, ErrorMessage = "Quantity must be between 1 and 50")]
+    [Range(1, 100, ErrorMessage = "Quantity must be between 1 and 100")]
     public int? SpecializedPackageQuantity
     {
         get => _specializedPackageQuantity;
@@ -405,7 +401,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
                 && !string.IsNullOrWhiteSpace(WalkInLastName)
                 && !string.IsNullOrWhiteSpace(WalkInContactNumber)
                 && ContactNumberRegex().IsMatch(WalkInContactNumber)
-                && (WalkInAge >= 18 && WalkInAge <= 80)
+                && (WalkInAge >= 3 && WalkInAge <= 100)
                 && !string.IsNullOrWhiteSpace(WalkInGender)
                 && !string.IsNullOrWhiteSpace(SelectedWalkInTypeItem)
                 && !string.IsNullOrWhiteSpace(SelectedSpecializedPackageItem);
@@ -457,7 +453,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     }
 
     [RelayCommand]
-    private async Task Payment()
+    private async Task PaymentAsync()
     {
         if (_walkInService == null)
         {

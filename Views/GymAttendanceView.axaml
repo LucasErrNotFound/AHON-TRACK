@@ -58,35 +58,12 @@
         </StackPanel>
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15">
-                    <CalendarDatePicker
-                        shadui:ControlAssist.Label="From"
-                        shadui:ControlAssist.ReadOnly="True"
-                        SelectedDate="{CompiledBinding AttendanceGroupSelectedFromDate}" />
-                    <CalendarDatePicker
-                        shadui:ControlAssist.Label="To"
-                        shadui:ControlAssist.ReadOnly="True"
-                        SelectedDate="{CompiledBinding AttendanceGroupSelectedToDate}" />
-                    <Button
-                        Classes="Primary"
-                        VerticalAlignment="Bottom">
-                        <StackPanel Orientation="Horizontal">
-                            <Svg
-                                Width="20"
-                                Height="20"
-                                Path="avares://AHON_TRACK/Assets/GymDemographicsView/download-icon.svg"
-                                VerticalAlignment="Center"
-                                Margin="0,0,8,0" />
-                            <TextBlock Text="Download" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Interaction.Behaviors>
                         <scroll:VerticalScrollViewerAnimatedBehavior />
                     </Interaction.Behaviors>
-                    <StackPanel>
-                        <UniformGrid Margin="-6,0" Columns="4">
+                    <StackPanel Margin="0,30,0,0">
+                        <UniformGrid Margin="-6,0,-6,20" Columns="4">
                             <UniformGrid.Resources>
                                 <LinearGradientBrush
                                     x:Key="GreenGradient"
@@ -175,6 +152,29 @@
                                 </dashboard:OverviewCard.Icon>
                             </dashboard:OverviewCard>
                         </UniformGrid>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15" Margin="0,0,0,10">
+                            <CalendarDatePicker
+                                shadui:ControlAssist.Label="From"
+                                shadui:ControlAssist.ReadOnly="True"
+                                SelectedDate="{CompiledBinding AttendanceGroupSelectedFromDate}" />
+                            <CalendarDatePicker
+                                shadui:ControlAssist.Label="To"
+                                shadui:ControlAssist.ReadOnly="True"
+                                SelectedDate="{CompiledBinding AttendanceGroupSelectedToDate}" />
+                            <Button
+                                Classes="Primary"
+                                VerticalAlignment="Bottom">
+                                <StackPanel Orientation="Horizontal">
+                                    <Svg
+                                        Width="20"
+                                        Height="20"
+                                        Path="avares://AHON_TRACK/Assets/GymDemographicsView/download-icon.svg"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,8,0" />
+                                    <TextBlock Text="Download" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                         <Grid RowDefinitions="* *" ColumnDefinitions="2* *" ColumnSpacing="30" Margin="0,15,0,0">
                             <shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True" VerticalAlignment="Top">
                                 <StackPanel>
@@ -183,7 +183,7 @@
                                         FontSize="20"
                                         FontWeight="SemiBold" />
                                     <lvc:CartesianChart
-                                        Height="330"
+                                        Height="400"
                                         Series="{CompiledBinding AttendanceSeriesCollection}"
                                         XAxes="{CompiledBinding AttendanceLineChartXAxes}"
                                         LegendPosition="Bottom">
@@ -197,9 +197,10 @@
                                         FontSize="20"
                                         FontWeight="SemiBold" />
                                     <lvc:PieChart
-                                        Height="430"
+                                        Height="400"
                                         InitialRotation="130"
                                         LegendPosition="Bottom"
+                                        ZIndex="2"
                                         SeriesSource="{CompiledBinding CustomerTypePieDataCollection}">
                                         <lvc:PieChart.SeriesTemplate>
                                             <DataTemplate x:DataType="viewModels:CustomerPieData">

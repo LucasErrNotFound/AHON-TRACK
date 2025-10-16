@@ -68,6 +68,7 @@
                                     VerticalAlignment="Top"
                                     Margin="0,-2"
                                     shadui:ControlAssist.Label="Date Today"
+                                    shadui:ControlAssist.ReadOnly="True"
                                     SelectedDate="{CompiledBinding SelectedDate}"
                                     IsEnabled="True" />
                                 <Button
@@ -234,6 +235,7 @@
                                     VerticalAlignment="Top"
                                     Margin="0,-2"
                                     shadui:ControlAssist.Label="Date Today"
+                                    shadui:ControlAssist.ReadOnly="True"
                                     SelectedDate="{CompiledBinding SelectedDate}"
                                     IsEnabled="True" />
                                 <Button

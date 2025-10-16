@@ -8,7 +8,7 @@
     x:DataType="viewModel:MemberDialogCardViewModel"
     mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="580"
     Width="950"
-    Height="580"
+    MaxHeight="580"
     x:Class="AHON_TRACK.Components.MemberDialog.MemberDialogCard">
 
 	<Design.DataContext>
@@ -192,48 +192,11 @@
 					</StackPanel>
 				</Grid>
 
-				<TextBlock Text="Membership Details" Classes="h4" Margin="0,30"/>
-				<Grid RowDefinitions="Auto" ColumnDefinitions="Auto Auto Auto">
-
-					<!-- Date Joined Section -->
-					<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,-3,15,0">
-						<CalendarDatePicker
-							shadui:ControlAssist.Label="Date Joined"
-							Width="150"
-							HorizontalAlignment="Left"
-							SelectedDate="{CompiledBinding MemberDateJoined}"/>
-					</StackPanel>
-
-					<!-- Row 2: Status Field -->
-					<StackPanel Grid.Row="0" Grid.Column="1" Margin="10,-4,0,0">
-						<ComboBox
-							HorizontalAlignment="Left"
-							Width="160"
-							shadui:ControlAssist.Label="Status"
-							PlaceholderText="-"
-							ItemsSource="{CompiledBinding MemberStatusItems}"
-							SelectedItem="{CompiledBinding MemberStatus, Mode=TwoWay}">
-						</ComboBox>
-					</StackPanel>
-
-					<!-- Purchased Package/s Field -->
-					<StackPanel Grid.Row="0" Grid.Column="2" Margin="20,-4,0,0">
-						<ComboBox
-							HorizontalAlignment="Left"
-							Width="170"
-							shadui:ControlAssist.Label="Purchased Package/s"
-							PlaceholderText="-"
-							ItemsSource="{CompiledBinding MemberPackageItems}"
-							SelectedItem="{CompiledBinding MemberPackages, Mode=TwoWay}">
-						</ComboBox>
-					</StackPanel>
-				</Grid>
-
 				<!-- Action Buttons -->
 				<StackPanel
 					Orientation="Horizontal"
 					HorizontalAlignment="Right"
-					Margin="0,30,20,0" Spacing="25">
+					Margin="0,50,20,0" Spacing="25">
 					<Button
 						FontSize="16"
 						Height="40"

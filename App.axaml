@@ -26,5 +26,59 @@
     <Application.Styles>
 		<shadui:ShadTheme/>
 		<StyleInclude Source="avares://AHON_TRACK/Styles/Index.axaml"/>
+        <Style Selector="DataGrid">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border
+                        x:Name="DataGridBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        ClipToBounds="True"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                        <Border ClipToBounds="True" CornerRadius="{TemplateBinding CornerRadius}">
+                            <Grid
+                                x:Name="Grid"
+                                ClipToBounds="True"
+                                ColumnDefinitions="*, Auto"
+                                RowDefinitions="Auto,*,Auto">
+                                <Border
+                                    x:Name="PART_HeaderBackground"
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    BorderBrush="{DynamicResource BorderColor}"
+                                    BorderThickness="0,0,0,1">
+                                    <DataGridColumnHeadersPresenter Name="PART_ColumnHeadersPresenter" />
+                                </Border>
+
+                                <DataGridRowsPresenter 
+                                    Name="PART_RowsPresenter" 
+                                    Grid.Row="1" 
+                                    Grid.Column="0">
+                                    <DataGridRowsPresenter.GestureRecognizers>
+                                        <ScrollGestureRecognizer 
+                                            CanHorizontallyScroll="True"
+                                            CanVerticallyScroll="True" />
+                                    </DataGridRowsPresenter.GestureRecognizers>
+                                </DataGridRowsPresenter>
+
+                                <ScrollBar
+                                    Name="PART_VerticalScrollbar"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    Orientation="Vertical" />
+
+                                <ScrollBar
+                                    Name="PART_HorizontalScrollbar"
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Orientation="Horizontal" />
+                            </Grid>
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
     </Application.Styles>
 </Application>

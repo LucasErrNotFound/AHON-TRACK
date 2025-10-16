@@ -27,10 +27,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
     private readonly ProductStockViewModel _productStockViewModel;
     private readonly SupplierManagementViewModel _supplierManagementViewModel;
-    private readonly GymDemographicsViewModel _gymDemographicsViewModel;
-    private readonly GymAttendanceViewModel _gymAttendanceViewModel;
+    private readonly FinancialReportsViewModel _financialReportsViewModel;
+    private readonly GymDemographicsViewModel  _gymDemographicsViewModel;
+    private readonly GymAttendanceViewModel  _gymAttendanceViewModel;
+    private readonly AuditLogsViewModel _auditLogsViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
+    private readonly SettingsDialogCardViewModel _settingsDialogCardViewModel;
 
     // Primary constructor for DI
     public MainWindowViewModel(
@@ -47,9 +50,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         EquipmentInventoryViewModel equipmentInventoryViewModel,
         ProductStockViewModel productStockViewModel,
         SupplierManagementViewModel supplierManagementViewModel,
+        FinancialReportsViewModel financialReportsViewModel,
         GymDemographicsViewModel gymDemographicsViewModel,
         GymAttendanceViewModel gymAttendanceViewModel,
-        EmployeeProfileInformationViewModel employeeProfileInformationViewModel)
+        AuditLogsViewModel auditLogsViewModel,
+        EmployeeProfileInformationViewModel employeeProfileInformationViewModel,
+        SettingsDialogCardViewModel settingsDialogCardViewModel)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
@@ -63,13 +69,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _equipmentInventoryViewModel = equipmentInventoryViewModel;
         _productStockViewModel = productStockViewModel;
         _supplierManagementViewModel = supplierManagementViewModel;
+        _financialReportsViewModel = financialReportsViewModel;
         _gymDemographicsViewModel = gymDemographicsViewModel;
         _gymAttendanceViewModel = gymAttendanceViewModel;
+        _auditLogsViewModel = auditLogsViewModel;
 
         // Set up page navigation callback
         _pageManager.OnNavigate = SwitchPage;
         _manageEmployeesViewModel = manageEmployeesViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
+        _settingsDialogCardViewModel = settingsDialogCardViewModel;
     }
 
     // Design-time constructor
@@ -93,8 +102,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _equipmentInventoryViewModel = new EquipmentInventoryViewModel();
         _productStockViewModel = new ProductStockViewModel();
         _supplierManagementViewModel = new SupplierManagementViewModel();
+        _financialReportsViewModel = new FinancialReportsViewModel();
         _gymDemographicsViewModel = new GymDemographicsViewModel();
         _gymAttendanceViewModel = new GymAttendanceViewModel();
+        _auditLogsViewModel = new AuditLogsViewModel();
     }
 
     [ObservableProperty]
@@ -180,21 +191,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenSupplierManagement() => SwitchPage(_supplierManagementViewModel);
 
-    /*
     [RelayCommand]
     private void OpenFinancialReports() => SwitchPage(_financialReportsViewModel);
-    */
 
     [RelayCommand]
     private void OpenGymDemographics() => SwitchPage(_gymDemographicsViewModel);
 
-    /*
-    [RelayCommand]
-    private void OpenEquipmentUsageReports() => SwitchPage(_equipmentUsageReportsViewModel);
-    */
-
     [RelayCommand]
     private void OpenGymAttendanceReports() => SwitchPage(_gymAttendanceViewModel);
+    
+    [RelayCommand]
+    private void OpenAuditLogs() => SwitchPage(_auditLogsViewModel);
 
     [RelayCommand]
     private void OpenViewProfile()
@@ -204,6 +211,24 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             { "IsCurrentUser", true }
         };
         _pageManager.Navigate<EmployeeProfileInformationViewModel>(parameters);
+    }
+    
+    [RelayCommand]
+    private void OpenSettingsDialog()
+    {
+        _settingsDialogCardViewModel.Initialize();
+        DialogManager.CreateDialog(_settingsDialogCardViewModel)
+            .WithSuccessCallback(_ =>
+                ToastManager.CreateToast("Settings Saved!")
+                    .WithContent("Your changes have been applied successfully")
+                    .DismissOnClick()
+                    .ShowSuccess())
+            .WithCancelCallback(() =>
+                ToastManager.CreateToast("Changes Discarded!")
+                    .WithContent("No settings were modified")
+                    .DismissOnClick()
+                    .ShowWarning()).WithMaxWidth(670)
+            .Show();
     }
 
     private void OnAcceptExit() => Environment.Exit(0);

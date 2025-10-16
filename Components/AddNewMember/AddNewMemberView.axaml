@@ -207,6 +207,8 @@
                                     <NumericUpDown
                                         Value="{CompiledBinding MemberAge, Mode=TwoWay}"
                                         shadui:ControlAssist.Label="Age"
+                                        Minimum="1"
+                                        Maximum="100"
                                         ShowButtonSpinner="False"
                                         FormatString="N0"
                                         Watermark="Age"
@@ -254,6 +256,7 @@
                                         PlaceholderText="Select your options"
                                         Margin="0,-4,0,0"
                                         ItemsSource="{CompiledBinding MemberStatusItems}"
+                                        IsEnabled="False"
                                         SelectedIndex="0"/>
                                 </StackPanel>
                             </Grid>

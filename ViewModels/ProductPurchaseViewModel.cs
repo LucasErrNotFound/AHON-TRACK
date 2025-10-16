@@ -109,7 +109,12 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private bool _isMayaSelected;
+    
+    [ObservableProperty]
+    private string _currentTransactionId = "GM-2025-001234"; // Initial/default ID
 
+    private int _lastIdNumber = 1234; // Track the numeric part
+    
     private readonly Dictionary<string, Bitmap> _imageCache = new();
 
     private readonly DialogManager _dialogManager;
@@ -322,10 +327,16 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private Bitmap GetCachedImage(string imageName)
     {
-        if (!_imageCache.ContainsKey(imageName))
+        if (_imageCache.TryGetValue(imageName, out Bitmap? value)) return value;
+        try
         {
             var uri = new Uri($"avares://AHON_TRACK/Assets/ProductPurchaseView/{imageName}");
             _imageCache[imageName] = new Bitmap(AssetLoader.Open(uri));
+        }
+        catch
+        {
+            // If image fails to load, return null (will fall back to default in CartItem)
+            return CartItem.DefaultProductBitmap;
         }
         return _imageCache[imageName];
     }
@@ -583,6 +594,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             .WithContent(toastContent)
             .DismissOnClick()
             .ShowSuccess();
+        
+        CurrentTransactionId = GenerateNewTransactionId();
         ClearCart();
     }
 
@@ -694,7 +707,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         //if (_packageService != null)
         //  _packageService.PackagesChanged -= OnPackagesChanged;
     }
-
+    
+    private string GenerateNewTransactionId()
+    {
+        _lastIdNumber++;
+        var year = DateTime.Today.Year;
+        return $"GM-{year}-{_lastIdNumber:D6}";
+    }
+    
     partial void OnIsCashSelectedChanged(bool value)
     {
         if (value)
@@ -763,9 +783,9 @@ public partial class Product : ObservableObject
     [ObservableProperty]
     private int _stockCount;
 
-    [ObservableProperty]
-    private Bitmap _poster;
-
+    [ObservableProperty] 
+    private Bitmap? _poster; 
+    
     [ObservableProperty]
     private bool _isAddedToCart;
 
@@ -832,7 +852,34 @@ public partial class CartItem : ObservableObject
     public decimal TotalPrice => Price * Quantity;
     public string FormattedPrice => $"₱{Price:N2}";
     public string FormattedTotalPrice => $"₱{TotalPrice:N2}";
-
+    
+    private static Bitmap? _defaultProductBitmap;
+    
+    public static Bitmap DefaultProductBitmap
+    {
+        get
+        {
+            if (_defaultProductBitmap != null) return _defaultProductBitmap;
+            try
+            {
+                var uri = new Uri("avares://AHON_TRACK/Assets/ProductPurchaseView/DefaultPurchaseIcon.png");
+                _defaultProductBitmap = new Bitmap(AssetLoader.Open(uri));
+            }
+            catch
+            {
+                // If default image also fails, _defaultProductBitmap remains null
+            }
+            return _defaultProductBitmap;
+        }
+    }
+    
+    public Bitmap DisplayPoster => Poster ?? DefaultProductBitmap;
+    
+    partial void OnPosterChanged(Bitmap? value)
+    {
+        OnPropertyChanged(nameof(DisplayPoster));
+    }
+    
     partial void OnQuantityChanged(int value)
     {
         OnPropertyChanged(nameof(TotalPrice));

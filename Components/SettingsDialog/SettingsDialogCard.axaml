@@ -1,0 +1,233 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:AHON_TRACK.Components.ViewModels"
+    xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
+    x:DataType="vm:SettingsDialogCardViewModel"
+    mc:Ignorable="d" d:DesignWidth="670" d:DesignHeight="700"
+    Width="670"
+    Height="420"
+    x:Class="AHON_TRACK.Components.SettingsDialog.SettingsDialogCard">
+    
+    <Design.DataContext>
+        <vm:SettingsDialogCardViewModel />
+    </Design.DataContext>
+    
+    <UserControl.Styles>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
+        
+        <Style Selector="TabItem /template/ ContentPresenter#ContentPresenter">
+            <Setter Property="Foreground" Value="Black"/>
+        </Style>
+        
+        <Style Selector="TabItem:selected /template/ Border#SelectedBorder">
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="BoxShadow" Value="0 0 0 0 Transparent"/>
+        </Style>
+        
+        <Style Selector="TabItem:not(:selected) /template/ Border#SelectedBorder">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BoxShadow" Value="0 0 0 0 Transparent"/>
+        </Style>
+        
+        <Style Selector="TabItem:not(:selected):pointerover /template/ Border#SelectedBorder">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+    </UserControl.Styles>
+    
+    <Border
+        Background="White"
+        BorderBrush="White"
+        BorderThickness="1"
+        Padding="30">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Interaction.Behaviors>
+                <scroll:VerticalScrollViewerAnimatedBehavior />
+            </Interaction.Behaviors>
+            <StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Classes="h3" Text="Settings" />
+                    <TextBlock 
+                        Classes="Caption Muted" 
+                        Text="Manage your app preferences and control where files are saved."
+                        TextWrapping="WrapWithOverflow"/>
+                </StackPanel>
+                <Separator Margin="0,10"/>
+                <StackPanel>
+                    <TabControl>
+                        <TabControl.Template>
+                            <ControlTemplate TargetType="TabControl">
+                                <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="5">
+                                    <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
+                                        <ItemsPresenter Name="PART_ItemsPresenter" /> 
+                                    </StackPanel>
+                                    <Separator Grid.Column="1" Width="1" Height="250" Margin="0,0,20,0"/>
+                                    <Border
+                                        Grid.Column="2"
+                                        Background="Transparent">
+                                        <ContentPresenter
+                                            Name="PART_SelectedContentHost"
+                                            Content="{TemplateBinding SelectedContent}"
+                                            ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch" />
+                                    </Border>
+                                </Grid>
+                            </ControlTemplate>
+                        </TabControl.Template>
+                        <TabControl.Items>
+                                <TabItem Header="General">
+                                    <StackPanel>
+                                        <Grid ColumnDefinitions="Auto Auto">
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock 
+                                                    Text="Set Download Path"
+                                                    FontSize="16"
+                                                    FontWeight="SemiBold"/>
+                                                <TextBlock 
+                                                    Text="Choose where downloaded files will be saved."
+                                                    Classes="Caption Muted" />
+                                                <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,10,0,0">
+                                                    <TextBox
+                                                        Name="DownloadTextBox"
+                                                        IsReadOnly="True"
+                                                        IsEnabled="True"
+                                                        Classes="Clearable"
+                                                        Width="270"/>
+                                                    <Button 
+                                                        Classes="Outline"
+                                                        Content="Browse"
+                                                        Command="{CompiledBinding SetDownloadPathCommand}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Separator Margin="0,20"/>
+                                        <Grid ColumnDefinitions="1.5* *" ColumnSpacing="50">
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock 
+                                                    Text="Software Theme"
+                                                    FontSize="16"
+                                                    FontWeight="SemiBold"/>
+                                                <TextBlock 
+                                                    Text="Change how the app looks."
+                                                    Classes="Caption Muted" />
+                                            </StackPanel>
+                                            <StackPanel 
+                                                Grid.Column="1" 
+                                                HorizontalAlignment="Left" 
+                                                VerticalAlignment="Center">
+                                                <ToggleSwitch IsChecked="{CompiledBinding IsDarkMode, Mode=TwoWay}">
+                                                    <ToggleSwitch.OffContent>
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            Classes="Small"
+                                                            Text="Light Mode" />
+                                                    </ToggleSwitch.OffContent>
+                                                    <ToggleSwitch.OnContent>
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            Classes="Small"
+                                                            Text="Dark Mode" />
+                                                    </ToggleSwitch.OnContent>
+                                                </ToggleSwitch>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Separator Margin="0,20"/>
+                                    </StackPanel>
+                                </TabItem>
+                                <TabItem Header="Backup &amp; Recovery">
+                                    <StackPanel>
+                                        <Grid RowDefinitions="* *" ColumnDefinitions="Auto *" RowSpacing="30">
+                                            <!-- Backup Now Section -->
+                                            <StackPanel Grid.Row="0" Grid.Column="0">
+                                                <TextBlock 
+                                                    Text="Backup Now"
+                                                    FontSize="16"
+                                                    FontWeight="SemiBold"/>
+                                                <TextBlock 
+                                                    Text="Backup your data immediately."
+                                                    Classes="Caption Muted" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Button Classes="Outline" Command="{CompiledBinding BackupNowCommand}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Backup" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                            
+                                            <!-- Schedule Backup Section -->
+                                            <StackPanel Grid.Row="1" Grid.Column="0">
+                                                <TextBlock 
+                                                    Text="Schedule a Backup"
+                                                    FontSize="16"
+                                                    FontWeight="SemiBold"/>
+                                                <TextBlock 
+                                                    Text="Schedule your backup for every:"
+                                                    Classes="Caption Muted" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <ComboBox
+                                                    Width="110"
+                                                    ItemsSource="{CompiledBinding BackupFrequencyOptions}"
+                                                    SelectedItem="{CompiledBinding SelectedBackupFrequency, Mode=TwoWay}" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <Grid 
+                                            RowDefinitions="* *" 
+                                            ColumnDefinitions="* *" 
+                                            RowSpacing="5"
+                                            Margin="0,30,0,0">
+                                            <!-- Recover Section -->
+                                            <StackPanel Grid.Row="0" Grid.Column="0">
+                                                <TextBlock 
+                                                    Text="Recover Data"
+                                                    FontSize="16"
+                                                    FontWeight="SemiBold"
+                                                    HorizontalAlignment="Left"/>
+                                                <TextBlock 
+                                                    Text="Recover your data from an existing backup. (JSON file)"
+                                                    Width="500"
+                                                    Classes="Caption Muted"
+                                                    HorizontalAlignment="Left"/>
+                                            </StackPanel>
+                                            <TextBox 
+                                                Grid.Row="1" 
+                                                Grid.Column="0"
+                                                Name="RecoverDataTextBox"
+                                                HorizontalAlignment="Left"
+                                                Classes="Clearable"
+                                                IsReadOnly="True"
+                                                IsEnabled="True"
+                                                Width="270" />
+                                            <Button 
+                                                Grid.Row="1" 
+                                                Grid.Column="1" 
+                                                HorizontalAlignment="Right"
+                                                Classes="Outline"
+                                                Content="Browse"
+                                                Command="{CompiledBinding SelectRecoveryFileCommand}"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </TabItem>
+                            </TabControl.Items>
+                    </TabControl>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                    <Button Classes="Destructive" Content="Cancel" Command="{CompiledBinding CancelCommand}"/>
+                    <Button Classes="Primary" Content="Apply" Command="{CompiledBinding ApplyCommand}"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

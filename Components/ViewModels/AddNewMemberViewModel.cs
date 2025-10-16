@@ -46,7 +46,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private PackageModel? _selectedMemberPackageItem;
 
     [ObservableProperty]
-    private string[] _memberStatusItems = ["Active", "Inactive", "Terminated"];
+    private string[] _memberStatusItems = ["Active", "Expired"];
     
     [ObservableProperty]
     private Bitmap? _profileImageSource;
@@ -210,7 +210,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
      }*/
 
     [Required(ErrorMessage = "Age is required")]
-    [Range(18, 80, ErrorMessage = "Age must be between 18 and 80")]
+    [Range(3, 100, ErrorMessage = "Age must be between 3 and 100")]
     public int? MemberAge
     {
         get => _memberAge;
@@ -728,6 +728,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     [RelayCommand]
     private void Cancel()
     {
+        _toastManager.CreateToast("Add new member cancelled").ShowWarning();
         _pageManager.Navigate<ManageMembershipViewModel>();
     }
 
