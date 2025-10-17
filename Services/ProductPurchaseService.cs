@@ -174,34 +174,137 @@ namespace AHON_TRACK.Services
                         stockCmd.Parameters.AddWithValue("@ProductID", item.SellingID);
                         await stockCmd.ExecuteNonQueryAsync();
                     }
-                    else if (item.Category == CategoryConstants.GymPackage && customer.CustomerType == CategoryConstants.Member)
+                    else if (item.Category == CategoryConstants.GymPackage)
                     {
-                        // Get package duration (number of sessions)
+                        // Get package duration and parse it
                         string getPackageDuration = @"
                             SELECT Duration FROM Packages WHERE PackageID = @PackageID;";
 
-                        using var pkgCmd = new SqlCommand(getPackageDuration, conn, transaction);
-                        pkgCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
-                        var packageDuration = await pkgCmd.ExecuteScalarAsync();
+                        int sessionsLeft = 1; // Default for one-time packages
+                        using (var pkgCmd = new SqlCommand(getPackageDuration, conn, transaction))
+                        {
+                            pkgCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+                            var result = await pkgCmd.ExecuteScalarAsync();
 
-                        int sessionsLeft = packageDuration != DBNull.Value ? Convert.ToInt32(packageDuration) : 1;
+                            if (result != null && result != DBNull.Value)
+                            {
+                                string durationStr = result.ToString()?.Trim() ?? "";
 
-                        // Insert or update member sessions
-                        string upsertSession = @"
-                            MERGE INTO MemberSessions AS target
-                            USING (SELECT @CustomerID AS CustomerID, @PackageID AS PackageID) AS source
-                            ON target.CustomerID = source.CustomerID AND target.PackageID = source.PackageID
-                            WHEN MATCHED THEN
-                                UPDATE SET SessionsLeft = target.SessionsLeft + @SessionsLeft
-                            WHEN NOT MATCHED THEN
-                                INSERT (CustomerID, PackageID, SessionsLeft, StartDate)
-                                VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());";
+                                // Map your exact duration values to session counts
+                                sessionsLeft = durationStr.ToLower() switch
+                                {
+                                    "one-time only" => 1,
+                                    "monthly" => 30,
+                                    _ => 1 // Default to 1 if unknown
+                                };
+                            }
+                        }
 
-                        using var sessionCmd = new SqlCommand(upsertSession, conn, transaction);
-                        sessionCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
-                        sessionCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
-                        sessionCmd.Parameters.AddWithValue("@SessionsLeft", sessionsLeft * item.Quantity);
-                        await sessionCmd.ExecuteNonQueryAsync();
+                        // Handle sessions based on customer type
+                        if (customer.CustomerType == CategoryConstants.Member)
+                        {
+                            // Member Sessions Logic
+                            string checkExisting = @"
+                                SELECT SessionID, SessionsLeft 
+                                FROM MemberSessions 
+                                WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
+
+                            int? existingSessionId = null;
+                            int existingSessionsLeft = 0;
+
+                            using (var checkCmd = new SqlCommand(checkExisting, conn, transaction))
+                            {
+                                checkCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
+                                checkCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+
+                                using var reader = await checkCmd.ExecuteReaderAsync();
+                                if (await reader.ReadAsync())
+                                {
+                                    existingSessionId = reader.GetInt32(0);
+                                    existingSessionsLeft = reader.GetInt32(1);
+                                }
+                            }
+
+                            if (existingSessionId.HasValue)
+                            {
+                                // Update existing session
+                                string updateSession = @"
+                                    UPDATE MemberSessions 
+                                    SET SessionsLeft = SessionsLeft + @NewSessions
+                                    WHERE SessionID = @SessionID;";
+
+                                using var updateCmd = new SqlCommand(updateSession, conn, transaction);
+                                updateCmd.Parameters.AddWithValue("@SessionID", existingSessionId.Value);
+                                updateCmd.Parameters.AddWithValue("@NewSessions", sessionsLeft * item.Quantity);
+                                await updateCmd.ExecuteNonQueryAsync();
+                            }
+                            else
+                            {
+                                // Insert new session
+                                string insertSession = @"
+                                    INSERT INTO MemberSessions (CustomerID, PackageID, SessionsLeft, StartDate)
+                                    VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());";
+
+                                using var insertCmd = new SqlCommand(insertSession, conn, transaction);
+                                insertCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
+                                insertCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+                                insertCmd.Parameters.AddWithValue("@SessionsLeft", sessionsLeft * item.Quantity);
+                                await insertCmd.ExecuteNonQueryAsync();
+                            }
+                        }
+                        else if (customer.CustomerType == CategoryConstants.WalkIn)
+                        {
+                            // Walk-In Sessions Logic
+                            string checkExisting = @"
+                                SELECT SessionID, SessionsLeft 
+                                FROM WalkInSessions 
+                                WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
+
+                            int? existingSessionId = null;
+                            int existingSessionsLeft = 0;
+
+                            using (var checkCmd = new SqlCommand(checkExisting, conn, transaction))
+                            {
+                                checkCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
+                                checkCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+
+                                using var reader = await checkCmd.ExecuteReaderAsync();
+                                if (await reader.ReadAsync())
+                                {
+                                    existingSessionId = reader.GetInt32(0);
+                                    existingSessionsLeft = reader.GetInt32(1);
+                                }
+                            }
+
+                            if (existingSessionId.HasValue)
+                            {
+                                // Update existing session
+                                string updateSession = @"
+                                    UPDATE WalkInSessions 
+                                    SET SessionsLeft = SessionsLeft + @NewSessions
+                                    WHERE SessionID = @SessionID;";
+
+                                using var updateCmd = new SqlCommand(updateSession, conn, transaction);
+                                updateCmd.Parameters.AddWithValue("@SessionID", existingSessionId.Value);
+                                updateCmd.Parameters.AddWithValue("@NewSessions", sessionsLeft * item.Quantity);
+                                await updateCmd.ExecuteNonQueryAsync();
+                            }
+                            else
+                            {
+                                // Insert new session with expiry date (e.g., 30 days from now for monthly)
+                                DateTime? expiryDate = sessionsLeft == 30 ? DateTime.Now.AddDays(30) : null;
+
+                                string insertSession = @"
+                                    INSERT INTO WalkInSessions (CustomerID, PackageID, SessionsLeft, StartDate)
+                                    VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());";
+
+                                using var insertCmd = new SqlCommand(insertSession, conn, transaction);
+                                insertCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
+                                insertCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+                                insertCmd.Parameters.AddWithValue("@SessionsLeft", sessionsLeft * item.Quantity);
+                                await insertCmd.ExecuteNonQueryAsync();
+                            }
+                        }
                     }
                 }
 
@@ -449,7 +552,17 @@ namespace AHON_TRACK.Services
 
         #region UTILITY
 
-
+        private static int TryParseNumericDuration(string durationStr)
+        {
+            // Try to extract numbers from the string
+            // e.g., "30 days" -> 30, "90 days" -> 90
+            var numbers = System.Text.RegularExpressions.Regex.Match(durationStr, @"\d+");
+            if (numbers.Success && int.TryParse(numbers.Value, out int result))
+            {
+                return result;
+            }
+            return 1; // Default fallback
+        }
 
         #endregion
     }
