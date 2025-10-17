@@ -1,55 +1,60 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Events;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using LiveChartsCore;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ShadUI;
 using SkiaSharp;
-using CommunityToolkit.Mvvm.Input;
-using LiveChartsCore.Kernel.Events;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Drawing;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
 public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private DateTime _demographicsGroupSelectedFromDate = DateTime.Today;
-    
+    private DateTime _demographicsGroupSelectedFromDate = DateTime.Today.AddMonths(-1);
+
     [ObservableProperty]
-    private DateTime _demographicsGroupSelectedToDate = DateTime.Today.AddMonths(1);
-    
-    [ObservableProperty] 
+    private DateTime _demographicsGroupSelectedToDate = DateTime.Today;
+
+    [ObservableProperty]
     private ISeries[] _populationSeriesCollection;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private Axis[] _populationLineChartXAxes;
-    
+
     [ObservableProperty]
     private PieData[] _genderPieDataCollection;
-    
+
     public Axis[] XAxes { get; set; }
     public Axis[] YAxes { get; set; }
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-
-    public GymDemographicsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    private readonly DataCountingService _dataCountingService;
+    public GymDemographicsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, DataCountingService dataCountingService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        
-        UpdateSeriesFill(Color.DodgerBlue);
+        _dataCountingService = dataCountingService;
+
+        /*UpdateSeriesFill(Color.DodgerBlue);
         UpdateDemographicsGroupChart();
-        UpdatePopulationChart();
-        
+        UpdatePopulationChart();*/
+
         XAxes =
         [
             new Axis
@@ -77,10 +82,15 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
                 SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
                 {
                     StrokeThickness = 1,
-                    PathEffect = new DashEffect([3, 3]) 
+                    PathEffect = new DashEffect([3, 3])
                 }
             }
         ];
+        _ = LoadDemographicsAsync();
+        DashboardEventService.Instance.OnPopulationDataChanged += async () =>
+        {
+            await LoadDemographicsAsync();
+        };
     }
 
     public GymDemographicsViewModel()
@@ -88,14 +98,102 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _dataCountingService = null!;
     }
 
     [AvaloniaHotReload]
     public void Initialize()
     {
         ((ColumnSeries<double>)AgeSeries[0]).Values = GenerateRandomValues();
+        _ = LoadDemographicsAsync();
     }
-    
+
+
+
+
+    private async Task LoadDemographicsAsync()
+    {
+        try
+        {
+            var from = DemographicsGroupSelectedFromDate;
+            var to = DemographicsGroupSelectedToDate;
+
+            var (ageGroups, genderCounts, populationCounts) =
+                await _dataCountingService.GetGymDemographicsAsync(from, to);
+
+            _toastManager.CreateToast($"Loaded demographics: {ageGroups.Count} age groups, {genderCounts.Count} genders, {populationCounts.Count} population points");
+
+            // --- AGE GROUP CHART ---
+            var ageLabels = new[] { "18-29", "30-39", "40-54", "55+" };
+            var ageValues = ageLabels.Select(label =>
+                ageGroups.TryGetValue(label, out var count) ? (double)count : 0).ToArray();
+
+            AgeSeries = new ISeries[]
+            {
+            new ColumnSeries<double>
+            {
+                Values = ageValues,
+                Fill = new SolidColorPaint(SKColors.DodgerBlue)
+            }
+            };
+
+            // --- GENDER PIE DATA ---
+            var maleCount = genderCounts.ContainsKey("Male") ? genderCounts["Male"] : 0;
+            var femaleCount = genderCounts.ContainsKey("Female") ? genderCounts["Female"] : 0;
+            var total = Math.Max(1, maleCount + femaleCount); // prevent divide by zero
+
+            GenderPieDataCollection = new[]
+            {
+            new PieData("Male", new double?[]{ maleCount }, "#1976D2"),
+            new PieData("Female", new double?[]{ femaleCount }, "#D32F2F")
+        };
+
+            // --- POPULATION LINE CHART ---
+            var orderedPop = populationCounts.OrderBy(x => x.Key).ToList();
+            var days = orderedPop.Select(x => x.Key.ToString("MMM dd")).ToArray();
+            var populations = orderedPop.Select(x => (double)x.Value).ToArray();
+
+            if (populationCounts.Count == 0)
+            {
+                _toastManager.CreateToast("No population data found in the selected date range.");
+            }
+
+            PopulationSeriesCollection = new ISeries[]
+            {
+            new LineSeries<double>
+            {
+                Values = populations,
+                ShowDataLabels = false,
+                Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(100)),
+                Stroke = new SolidColorPaint(SKColors.Red) { StrokeThickness = 2 },
+                GeometryFill = new SolidColorPaint(SKColors.Red),
+                GeometryStroke = new SolidColorPaint(SKColors.Black) { StrokeThickness = 2 },
+                LineSmoothness = 0.3
+            }
+            };
+
+            PopulationLineChartXAxes = new Axis[]
+            {
+            new Axis
+            {
+                Labels = days,
+                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+                TextSize = 12,
+                MinStep = 1
+            }
+            };
+
+            OnPropertyChanged(nameof(AgeSeries));
+            OnPropertyChanged(nameof(GenderPieDataCollection));
+            OnPropertyChanged(nameof(PopulationSeriesCollection));
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast($"Failed to load demographics: {ex.Message}");
+        }
+    }
+
+
     private void UpdateSeriesFill(Color primary)
     {
         var color = new SKColor(primary.R, primary.G, primary.B, primary.A);
@@ -119,7 +217,7 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
     private void OnPointMeasured(ChartPoint point)
     {
         // This is straight from their documentation, NOT FROM CHATGPT/CLAUDE !!! - LucasErrNotFound
-        
+
         // the PointMeasured command/event is called every time a point is measured,
         // this happens when the chart loads, rezizes or when the data changes, this method
         // is called for every point in the series.
@@ -130,7 +228,7 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         // a different color for each point.
         point.Context.Visual.Fill = GetPaint(point.Index);
     }
-    
+
     [RelayCommand]
     private void OnHoveredPointsChanged(HoverCommandArgs args)
     {
@@ -172,7 +270,7 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         var days = new List<string>();
         var populations = new List<double>();
         var random = new Random();
-    
+
         var currentDate = DemographicsGroupSelectedFromDate;
         while (currentDate <= DemographicsGroupSelectedToDate)
         {
@@ -180,7 +278,7 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
             populations.Add(random.Next(1, 100));
             currentDate = currentDate.AddDays(1);
         }
-    
+
         PopulationSeriesCollection =
         [
             new LineSeries<double>
@@ -194,7 +292,7 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
                 LineSmoothness = 0.3
             }
         ];
-    
+
         PopulationLineChartXAxes =
         [
             new Axis
@@ -206,18 +304,18 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
             }
         ];
     }
-    
+
     private void UpdateDemographicsGroupChart()
     {
         var random = new Random();
         var values = new double[4];
-    
+
         // Generate random values for age groups
         for (var i = 0; i < values.Length; i++)
         {
             values[i] = random.Next(1, 500);
         }
-    
+
         AgeSeries =
         [
             new ColumnSeries<double>
@@ -226,30 +324,32 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
                 Fill = new SolidColorPaint(SKColors.Transparent)
             }
         ];
-    
+
         // Generate random values for pie chart (Male/Female distribution)
         var malePercentage = random.Next(30, 70);
         var femalePercentage = 100 - malePercentage;
-    
-        GenderPieDataCollection = 
+
+        GenderPieDataCollection =
         [
             new PieData("Male", [null, null, malePercentage], "#1976D2"),
             new PieData("Female", [null, null, femalePercentage], "#D32F2F")
         ];
-    
+
         OnPropertyChanged(nameof(AgeSeries));
     }
 
     partial void OnDemographicsGroupSelectedFromDateChanged(DateTime value)
     {
-        UpdateDemographicsGroupChart();
-        UpdatePopulationChart();
+        _ = LoadDemographicsAsync();
+        /*UpdateDemographicsGroupChart();
+        UpdatePopulationChart();*/
     }
 
     partial void OnDemographicsGroupSelectedToDateChanged(DateTime value)
     {
-        UpdateDemographicsGroupChart();
-        UpdatePopulationChart();
+        _ = LoadDemographicsAsync();
+        /*UpdateDemographicsGroupChart();
+        UpdatePopulationChart();*/
     }
 }
 

@@ -660,6 +660,7 @@ WHERE m.MemberID = @Id;";
 
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
+                DashboardEventService.Instance.NotifyPopulationDataChanged();
             }
             catch (Exception ex)
             {

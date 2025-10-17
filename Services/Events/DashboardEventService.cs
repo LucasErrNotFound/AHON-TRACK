@@ -14,6 +14,12 @@ namespace AHON_TRACK.Services.Events
         public event EventHandler RecentLogsUpdated;
         public event EventHandler SalesUpdated;
         public event EventHandler TrainingSessionsUpdated;
+        public event Action? OnPopulationDataChanged;
+
+        public void NotifyPopulationDataChanged()
+        {
+            OnPopulationDataChanged?.Invoke();
+        }
 
         public void NotifyRecentLogsUpdated() => RecentLogsUpdated?.Invoke(this, EventArgs.Empty);
         public void NotifySalesUpdated() => SalesUpdated?.Invoke(this, EventArgs.Empty);
