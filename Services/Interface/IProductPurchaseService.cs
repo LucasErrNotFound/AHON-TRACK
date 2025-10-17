@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AHON_TRACK.Converters;
 
 namespace AHON_TRACK.Services.Interface
 {
     public interface IProductPurchaseService
     {
+        Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod);
         Task<List<CustomerModel>> GetAllCustomersAsync();
         Task<List<SellingModel>> GetAllProductsAsync();
         Task<List<SellingModel>> GetAllGymPackagesAsync();

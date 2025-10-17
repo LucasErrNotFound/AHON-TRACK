@@ -440,6 +440,7 @@ public partial class Package : ObservableObject
     public string SelectedDiscountType { get; set; } = string.Empty;
     public DateOnly? DiscountValidFrom { get; set; }
     public DateOnly? DiscountValidTo { get; set; }
+    public int Id { get; internal set; }
 
     [ObservableProperty]
     private bool _isAddedToCart;

@@ -15,6 +15,8 @@ namespace AHON_TRACK.Models
         public string? Category { get; set; }
         public decimal Price { get; set; }
         public int Stock { get; set; }
+        public int Quantity { get; set; } = 1;
         public byte[]? ImagePath { get; set; }
+        public decimal TotalPrice => Price * Quantity;
     }
 }

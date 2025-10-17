@@ -1,6 +1,5 @@
+using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
-using AHON_TRACK.Services;
-using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -15,7 +14,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
@@ -24,10 +22,10 @@ namespace AHON_TRACK.ViewModels;
 public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private string[] _productFilterItems = ["Supplements", "Drinks", "Products", "Gym Packages"];
+    private string[] _productFilterItems = [CategoryConstants.Supplements, CategoryConstants.Drinks, CategoryConstants.Equipment, CategoryConstants.GymPackage];
 
     [ObservableProperty]
-    private string _selectedProductFilterItem = "Supplements";
+    private string _selectedProductFilterItem = CategoryConstants.Supplements;
 
     [ObservableProperty]
     private string[] _customerTypeFilterItems = ["All", "Walk-in", "Gym Member"];
@@ -114,9 +112,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     private bool _isMayaSelected;
 
     [ObservableProperty]
-    private string _currentTransactionId = "GM-2025-001234"; // Initial/default ID
+    private string _currentTransactionId = "GM-2025-001234";
 
-    private int _lastIdNumber = 1234; // Track the numeric part
+    private int _lastIdNumber = 1234;
 
     private readonly Dictionary<string, Bitmap> _imageCache = new();
 
@@ -134,12 +132,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-
-        // += OnPackagesChanged;
-
-        LoadCustomerList();
-        LoadProductOptions();
-        LoadPackageOptions();
         _productPurchaseService = productPurchaseService;
     }
 
@@ -159,22 +151,24 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     public void Initialize()
     {
         if (IsInitialized) return;
+
         _ = LoadCustomerListFromDatabaseAsync();
         _ = LoadProductsFromDatabaseAsync();
         _ = LoadPackagesFromDatabaseAsync();
+
         if (_productPurchaseService == null)
         {
             LoadCustomerList();
             LoadProductOptions();
             LoadPackageOptions();
         }
+
         IsInitialized = true;
     }
 
     private void LoadCustomerList()
     {
         var customers = GetCustomerData();
-
         OriginalCustomerList = customers;
         CurrentCustomerList = customers.ToList();
 
@@ -184,46 +178,54 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             customer.PropertyChanged += OnCustomerPropertyChanged;
             CustomerList.Add(customer);
         }
+
         ApplyCustomerFilter();
         UpdateCustomerCounts();
     }
 
     private async Task LoadCustomerListFromDatabaseAsync()
     {
-        var customers = await _productPurchaseService.GetAllCustomersAsync();
-
-        OriginalCustomerList = customers.Select(c => new Customer
+        try
         {
-            ID = c.CustomerID,
-            FirstName = c.FirstName,
-            LastName = c.LastName,
-            CustomerType = c.CustomerType
-        }).ToList();
+            var customers = await _productPurchaseService.GetAllCustomersAsync();
 
-        CurrentCustomerList = OriginalCustomerList.ToList();
+            OriginalCustomerList = customers.Select(c => new Customer
+            {
+                ID = c.CustomerID,
+                FirstName = c.FirstName ?? string.Empty,
+                LastName = c.LastName ?? string.Empty,
+                CustomerType = c.CustomerType ?? string.Empty
+            }).ToList();
 
-        CustomerList.Clear();
-        foreach (var customer in CurrentCustomerList)
-        {
-            customer.PropertyChanged += OnCustomerPropertyChanged;
-            CustomerList.Add(customer);
+            CurrentCustomerList = OriginalCustomerList.ToList();
+
+            CustomerList.Clear();
+            foreach (var customer in CurrentCustomerList)
+            {
+                customer.PropertyChanged += OnCustomerPropertyChanged;
+                CustomerList.Add(customer);
+            }
+
+            ApplyCustomerFilter();
+            UpdateCustomerCounts();
+            OnSelectedCustomerTypeFilterItemChanged(SelectedCustomerTypeFilterItem);
         }
-
-        // Apply the filter based on the currently selected filter value
-        ApplyCustomerFilter();
-        UpdateCustomerCounts();
-
-        // 🔥 Trigger UI update if filter combo changes after loading
-        OnSelectedCustomerTypeFilterItemChanged(SelectedCustomerTypeFilterItem);
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Load Error")
+                .WithContent($"Failed to load customers: {ex.Message}")
+                .ShowError();
+        }
     }
 
     private Product ConvertToProduct(SellingModel selling)
     {
         return new Product
         {
-            Title = selling.Title,
-            Description = selling.Description,
-            Category = selling.Category,
+            ID = selling.SellingID,
+            Title = selling.Title ?? string.Empty,
+            Description = selling.Description ?? string.Empty,
+            Category = selling.Category ?? string.Empty,
             Price = (int)selling.Price,
             StockCount = selling.Stock,
             Poster = selling.ImagePath != null ? new Bitmap(new MemoryStream(selling.ImagePath)) : null
@@ -234,8 +236,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     {
         return new Package
         {
-            Title = selling.Title,
-            Description = selling.Description,
+            PackageId = selling.SellingID,
+            Title = selling.Title ?? string.Empty,
+            Description = selling.Description ?? string.Empty,
             Price = (int)selling.Price,
             IsAddedToCart = false
         };
@@ -243,39 +246,54 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private async Task LoadProductsFromDatabaseAsync()
     {
-        var products = await _productPurchaseService.GetAllProductsAsync();
-        var productModels = products.Select(ConvertToProduct).ToList();
+        try
+        {
+            var products = await _productPurchaseService.GetAllProductsAsync();
+            var productModels = products.Select(ConvertToProduct).ToList();
 
-        // 🔹 Keep master copy
-        OriginalProductList = productModels;
-        CurrentProductList = productModels.ToList();
+            OriginalProductList = productModels;
+            CurrentProductList = productModels.ToList();
 
-        // 🔹 Update displayed list
-        ProductList.Clear();
-        foreach (var product in productModels)
-            ProductList.Add(product);
-        ApplyProductFilter();
+            ProductList.Clear();
+            foreach (var product in productModels)
+                ProductList.Add(product);
+
+            ApplyProductFilter();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Load Error")
+                .WithContent($"Failed to load products: {ex.Message}")
+                .ShowError();
+        }
     }
 
     private async Task LoadPackagesFromDatabaseAsync()
     {
-        var packages = await _productPurchaseService.GetAllGymPackagesAsync();
-        var packageModels = packages.Select(ConvertToPackage).ToList();
+        try
+        {
+            var packages = await _productPurchaseService.GetAllGymPackagesAsync();
+            var packageModels = packages.Select(ConvertToPackage).ToList();
 
-        // 🔹 Keep master copy
-        OriginalPackageList = packageModels;
+            OriginalPackageList = packageModels;
 
-        // 🔹 Update displayed list
-        PackageList.Clear();
-        foreach (var package in packageModels)
-            PackageList.Add(package);
-        ApplyProductFilter();
+            PackageList.Clear();
+            foreach (var package in packageModels)
+                PackageList.Add(package);
+
+            ApplyProductFilter();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Load Error")
+                .WithContent($"Failed to load packages: {ex.Message}")
+                .ShowError();
+        }
     }
 
     private void LoadProductOptions()
     {
-        // Prevent overwriting DB-loaded list
-        if (OriginalProductList != null && OriginalProductList.Count >= 0)
+        if (OriginalProductList != null && OriginalProductList.Count > 0)
             return;
 
         var products = GetProductData();
@@ -291,7 +309,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private void LoadPackageOptions()
     {
-        if (OriginalPackageList != null && OriginalPackageList.Count >= 0)
+        if (OriginalPackageList != null && OriginalPackageList.Count > 0)
             return;
 
         ApplyProductFilter();
@@ -402,20 +420,20 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private void ApplyCustomerFilter()
     {
-        if (OriginalCustomerList is null || OriginalCustomerList.Count == 0)
+        if (OriginalCustomerList == null || OriginalCustomerList.Count == 0)
             return;
 
         var filteredList = SelectedCustomerTypeFilterItem switch
         {
             "Walk-in" => OriginalCustomerList
-                .Where(c => c.CustomerType.Equals("Walk-in", StringComparison.OrdinalIgnoreCase))
+                .Where(c => c.CustomerType.Equals(CategoryConstants.WalkIn, StringComparison.OrdinalIgnoreCase))
                 .ToList(),
 
             "Gym Member" => OriginalCustomerList
-                .Where(c => c.CustomerType.Equals("Gym Member", StringComparison.OrdinalIgnoreCase))
+                .Where(c => c.CustomerType.Equals(CategoryConstants.Member, StringComparison.OrdinalIgnoreCase))
                 .ToList(),
 
-            _ => OriginalCustomerList.ToList() // "All"
+            _ => OriginalCustomerList.ToList()
         };
 
         CurrentCustomerList = filteredList;
@@ -432,43 +450,37 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private void ApplyProductFilter()
     {
-        // Prevent null errors
-        if (OriginalProductList == null || _originalPackageList == null)
+        if (OriginalProductList == null || OriginalPackageList == null)
             return;
 
         ProductList.Clear();
         PackageList.Clear();
 
-        // 🔹 If user selects "Gym Packages"
-        if (SelectedProductFilterItem == "Gym Packages")
+        if (SelectedProductFilterItem == CategoryConstants.GymPackage)
         {
-            foreach (var package in _originalPackageList)
+            foreach (var package in OriginalPackageList)
                 PackageList.Add(package);
 
             ProductSearchStringResult = string.Empty;
             return;
         }
 
-        // 🔹 Otherwise, filter products
         IEnumerable<Product> filteredList = OriginalProductList;
 
-        if (!string.IsNullOrWhiteSpace(SelectedProductFilterItem) && SelectedProductFilterItem != "All")
+        if (!string.IsNullOrWhiteSpace(SelectedProductFilterItem))
         {
-            filteredList = filteredList
-                .Where(p => p.Category.Equals(SelectedProductFilterItem, StringComparison.OrdinalIgnoreCase));
+            filteredList = filteredList.Where(p =>
+                p.Category.Equals(SelectedProductFilterItem, StringComparison.OrdinalIgnoreCase));
         }
 
-        // 🔹 Optional: search filter
         if (!string.IsNullOrWhiteSpace(ProductSearchStringResult))
         {
-            filteredList = filteredList
-                .Where(p =>
-                    (!string.IsNullOrEmpty(p.Title) && p.Title.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase)) ||
-                    (!string.IsNullOrEmpty(p.Description) && p.Description.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase))
-                );
+            filteredList = filteredList.Where(p =>
+                (!string.IsNullOrEmpty(p.Title) && p.Title.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(p.Description) && p.Description.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase))
+            );
         }
 
-        // 🔹 Apply result to view
         foreach (var product in filteredList)
             ProductList.Add(product);
 
@@ -534,7 +546,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             ProductList.Clear();
             PackageList.Clear();
 
-            if (SelectedProductFilterItem == "Gym Packages")
+            if (SelectedProductFilterItem == CategoryConstants.GymPackage)
             {
                 var filteredPackages = OriginalPackageList.Where(package =>
                     package.Title.Contains(ProductSearchStringResult, StringComparison.OrdinalIgnoreCase) ||
@@ -542,9 +554,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 ).ToList();
 
                 foreach (var package in filteredPackages)
-                {
                     PackageList.Add(package);
-                }
             }
             else
             {
@@ -554,9 +564,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 ).ToList();
 
                 foreach (var product in filteredProducts)
-                {
                     ProductList.Add(product);
-                }
             }
         }
         finally
@@ -568,13 +576,28 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private void AddToCart(object item)
     {
+        if (item == null) return;
+
         CartItem? cartItem = null;
 
         if (item is Product product)
         {
+            // Check if already in cart
+            var existingItem = CartItems.FirstOrDefault(c =>
+                c.ItemType == CartItemType.Product && c.SellingID == product.ID);
+
+            if (existingItem != null)
+            {
+                _toastManager.CreateToast("Already in Cart")
+                    .WithContent($"{product.Title} is already in the cart.")
+                    .ShowWarning();
+                return;
+            }
+
             cartItem = new CartItem
             {
                 Id = Guid.NewGuid(),
+                SellingID = product.ID,
                 ItemType = CartItemType.Product,
                 Title = product.Title,
                 Description = product.Description,
@@ -588,16 +611,28 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
         else if (item is Package package)
         {
+            var existingItem = CartItems.FirstOrDefault(c =>
+                c.ItemType == CartItemType.Package && c.SellingID == package.PackageId);
+
+            if (existingItem != null)
+            {
+                _toastManager.CreateToast("Already in Cart")
+                    .WithContent($"{package.Title} is already in the cart.")
+                    .ShowWarning();
+                return;
+            }
+
             cartItem = new CartItem
             {
                 Id = Guid.NewGuid(),
+                SellingID = package.PackageId,
                 ItemType = CartItemType.Package,
                 Title = package.Title,
                 Description = package.Description,
                 Price = package.Price,
-                MaxQuantity = 999, // Packages typically don't have stock limits
+                MaxQuantity = 999,
                 Quantity = 1,
-                Poster = null, // Packages don't have posters in your current setup
+                Poster = null,
                 SourcePackage = package
             };
             package.IsAddedToCart = true;
@@ -615,15 +650,13 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private void RemoveFromCart(CartItem cartItem)
     {
+        if (cartItem == null) return;
+
         if (cartItem.SourceProduct != null)
-        {
             cartItem.SourceProduct.IsAddedToCart = false;
-        }
 
         if (cartItem.SourcePackage != null)
-        {
             cartItem.SourcePackage.IsAddedToCart = false;
-        }
 
         cartItem.PropertyChanged -= OnCartItemPropertyChanged;
         CartItems.Remove(cartItem);
@@ -631,53 +664,105 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         UpdateCartEmptyState();
     }
 
+    //
+
     [RelayCommand]
-    private void Payment()
+    private async Task PaymentAsync()
     {
-        var customerName = SelectedCustomer != null
-            ? $"{SelectedCustomer.FirstName} {SelectedCustomer.LastName}"
-            : "No customer selected";
+        // Validation
+        if (SelectedCustomer == null)
+        {
+            _toastManager.CreateToast("No Customer")
+                .WithContent("Please select a customer first.")
+                .ShowWarning();
+            return;
+        }
 
-        var paymentMethod = IsCashSelected ? "Cash" :
-            IsGCashSelected ? "GCash" :
-            IsMayaSelected ? "Maya" :
-            "No payment method selected";
+        if (CartItems.Count == 0)
+        {
+            _toastManager.CreateToast("Empty Cart")
+                .WithContent("Add products to the cart before checking out.")
+                .ShowWarning();
+            return;
+        }
 
-        var cartItemsList = string.Join(", ", CartItems.Select(item =>
-            $"{item.Title} (Qty: {item.Quantity})"));
+        if (!IsCashSelected && !IsGCashSelected && !IsMayaSelected)
+        {
+            _toastManager.CreateToast("Select Payment Method")
+                .WithContent("Please select Cash, GCash, or Maya before proceeding.")
+                .ShowWarning();
+            return;
+        }
 
-        /* Alternative: More detailed cart info
-        var detailedCartInfo = string.Join("\n", CartItems.Select(item => 
-            $"• {item.Title} - Qty: {item.Quantity} - {item.FormattedTotalPrice}"));
-        */
+        try
+        {
+            // Determine payment method
+            string paymentMethod = IsCashSelected ? CategoryConstants.Cash :
+                                  IsGCashSelected ? CategoryConstants.GCash :
+                                  CategoryConstants.Maya;
 
-        var toastContent = $"Customer: {customerName}\n" +
-                           $"Payment Method: {paymentMethod}\n" +
-                           $"Total: {FormattedTotalPrice}\n" +
-                           $"Items:\n{cartItemsList}"; // or detailedCartInfo
+            // Convert cart items to SellingModel list
+            var sellingItems = CartItems.Select(item => new SellingModel
+            {
+                SellingID = item.SellingID,
+                Title = item.Title,
+                Category = item.ItemType == CartItemType.Product ? CategoryConstants.Product : CategoryConstants.GymPackage,
+                Price = item.Price,
+                Quantity = item.Quantity
+            }).ToList();
 
-        _toastManager.CreateToast("Gym Purchase")
-            .WithContent(toastContent)
-            .DismissOnClick()
-            .ShowSuccess();
+            // Create customer model
+            var customerModel = new CustomerModel
+            {
+                CustomerID = SelectedCustomer.ID ?? 0,
+                FirstName = SelectedCustomer.FirstName,
+                LastName = SelectedCustomer.LastName,
+                CustomerType = SelectedCustomer.CustomerType
+            };
 
-        CurrentTransactionId = GenerateNewTransactionId();
-        ClearCart();
+            // Get logged-in employee ID
+            int employeeId = CurrentUserModel.UserId ?? 0;
+
+            // Process payment
+            bool success = await _productPurchaseService.ProcessPaymentAsync(
+                sellingItems,
+                customerModel,
+                employeeId,
+                paymentMethod
+            );
+
+            if (success)
+            {
+                _toastManager.CreateToast("Purchase Complete")
+                    .WithContent($"Purchase successful for {SelectedCustomer.FirstName} {SelectedCustomer.LastName}!\nTotal: {FormattedTotalPrice}\nPayment: {paymentMethod}")
+                    .ShowSuccess();
+
+                ClearCart();
+                CurrentTransactionId = GenerateNewTransactionId();
+
+                // Reload products to update stock counts
+                await LoadProductsFromDatabaseAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Error")
+                .WithContent($"Failed to process payment: {ex.Message}")
+                .ShowError();
+        }
     }
+
+    //
 
     private void ClearCart()
     {
         foreach (var cartItem in CartItems.ToList())
         {
             if (cartItem.SourceProduct != null)
-            {
                 cartItem.SourceProduct.IsAddedToCart = false;
-            }
 
             if (cartItem.SourcePackage != null)
-            {
                 cartItem.SourcePackage.IsAddedToCart = false;
-            }
 
             cartItem.PropertyChanged -= OnCartItemPropertyChanged;
         }
@@ -692,11 +777,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         SelectedCustomer = null;
     }
 
+
     private void UpdateCustomerCounts()
     {
         SelectedCount = CustomerList.Count(x => x.IsSelected);
         TotalCount = CustomerList.Count;
-
         SelectAll = CustomerList.Count > 0 && CustomerList.All(x => x.IsSelected);
     }
 
@@ -731,7 +816,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     partial void OnSelectedCustomerChanged(Customer? value)
     {
         CustomerFullName = value != null ? $"{value.FirstName} {value.LastName}" : "Customer Name";
-        UpdateCartEmptyState(); // Update empty cart message when customer changes
+        UpdateCartEmptyState();
         OnPropertyChanged(nameof(IsPaymentPossible));
     }
 
@@ -748,9 +833,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     private void OnCartItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(CartItem.Quantity))
-        {
             UpdateCartTotals();
-        }
     }
 
     private void UpdateCartTotals()
@@ -770,8 +853,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     public void Dispose()
     {
-        //if (_packageService != null)
-        //  _packageService.PackagesChanged -= OnPackagesChanged;
+        foreach (var customer in CustomerList)
+            customer.PropertyChanged -= OnCustomerPropertyChanged;
+
+        foreach (var cartItem in CartItems)
+            cartItem.PropertyChanged -= OnCartItemPropertyChanged;
     }
 
     private string GenerateNewTransactionId()
@@ -811,7 +897,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         OnPropertyChanged(nameof(IsPaymentPossible));
     }
 
-    public bool IsPaymentPossible => SelectedCustomer != null && !IsCartEmpty && (IsCashSelected || IsGCashSelected || IsMayaSelected);
+    public bool IsPaymentPossible =>
+        SelectedCustomer != null &&
+        !IsCartEmpty &&
+        (IsCashSelected || IsGCashSelected || IsMayaSelected);
 }
 
 public partial class Customer : ObservableObject
@@ -830,10 +919,15 @@ public partial class Customer : ObservableObject
 
     [ObservableProperty]
     private string _customerType = string.Empty;
+
+    public string FullName => $"{FirstName} {LastName}";
 }
 
 public partial class Product : ObservableObject
 {
+    [ObservableProperty]
+    private int _iD;
+
     [ObservableProperty]
     private string _title = string.Empty;
 
@@ -860,29 +954,36 @@ public partial class Product : ObservableObject
 
     public IBrush StockForeground => StockCount switch
     {
-        < 5 => new SolidColorBrush(Color.FromRgb(239, 68, 68)),   // Red-500 (Critical)
-        < 10 => new SolidColorBrush(Color.FromRgb(245, 158, 11)), // Amber-500 (Warning)
-        _ => new SolidColorBrush(Color.FromRgb(34, 197, 94))      // Green-500 (Good)
+        < 5 => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        < 10 => new SolidColorBrush(Color.FromRgb(245, 158, 11)),
+        _ => new SolidColorBrush(Color.FromRgb(34, 197, 94))
     };
 
     public IBrush StockBackground => StockCount switch
     {
-        < 5 => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),   // Red-500 with alpha
-        < 10 => new SolidColorBrush(Color.FromArgb(25, 245, 158, 11)), // Amber-500 with alpha
-        _ => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94))      // Green-500 with alpha
+        < 5 => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+        < 10 => new SolidColorBrush(Color.FromArgb(25, 245, 158, 11)),
+        _ => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94))
     };
 
     public IBrush StockBorder => StockCount switch
     {
-        < 5 => new SolidColorBrush(Color.FromRgb(239, 68, 68)),   // Red-500 (Critical)
-        < 10 => new SolidColorBrush(Color.FromRgb(245, 158, 11)), // Amber-500 (Warning)
-        _ => new SolidColorBrush(Color.FromRgb(34, 197, 94))      // Green-500 (Good)
+        < 5 => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        < 10 => new SolidColorBrush(Color.FromRgb(245, 158, 11)),
+        _ => new SolidColorBrush(Color.FromRgb(34, 197, 94))
     };
 
     partial void OnStockCountChanged(int value)
     {
         OnPropertyChanged(nameof(StockForeground));
         OnPropertyChanged(nameof(StockBackground));
+        OnPropertyChanged(nameof(StockBorder));
+        OnPropertyChanged(nameof(FormattedStockCount));
+    }
+
+    partial void OnPriceChanged(int value)
+    {
+        OnPropertyChanged(nameof(FormattedPrice));
     }
 }
 
@@ -890,6 +991,9 @@ public partial class CartItem : ObservableObject
 {
     [ObservableProperty]
     private Guid _id;
+
+    [ObservableProperty]
+    private int _sellingID;
 
     [ObservableProperty]
     private CartItemType _itemType;
@@ -933,7 +1037,7 @@ public partial class CartItem : ObservableObject
             }
             catch
             {
-                // If default image also fails, _defaultProductBitmap remains null
+                // Default bitmap remains null if image fails to load
             }
             return _defaultProductBitmap;
         }
@@ -959,6 +1063,7 @@ public partial class CartItem : ObservableObject
         OnPropertyChanged(nameof(FormattedTotalPrice));
     }
 }
+
 
 public enum CartItemType
 {
