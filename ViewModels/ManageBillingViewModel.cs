@@ -309,16 +309,18 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                     if (packageData != null && _packageService != null)
                     {
                         // Save to database using SystemService
-                        await _packageService.AddPackageAsync(packageData);
+                        var result = await _packageService.AddPackageAsync(packageData);
 
-                        LoadPackageOptionsAsync();
+                        if (result.Success)
+                        {
+                            LoadPackageOptionsAsync();
 
-
-                        // Show success message
-                        _toastManager.CreateToast("Package Created Successfully")
-                            .WithContent($"Package '{packageData.packageName}' has been added to the database!")
-                            .DismissOnClick()
-                            .ShowSuccess();
+                            // Show success message
+                            _toastManager.CreateToast("Package Created Successfully")
+                                .WithContent($"Package '{packageData.packageName}' has been added to the database!")
+                                .DismissOnClick()
+                                .ShowSuccess();
+                        }
                     }
                     else if (packageData == null)
                     {

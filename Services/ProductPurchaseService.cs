@@ -737,6 +737,7 @@ ORDER BY s.SaleDate DESC;";
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
                 DashboardEventService.Instance.NotifySalesUpdated();
+                DashboardEventService.Instance.NotifyChartDataUpdated();
             }
             catch (Exception ex)
             {

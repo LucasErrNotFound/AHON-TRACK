@@ -1,6 +1,7 @@
 ﻿using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
+using AHON_TRACK.ViewModels;
 using Avalonia.Media.Imaging;
 using Microsoft.Data.SqlClient;
 using System;
@@ -384,6 +385,217 @@ ORDER BY sl.LogDateTime DESC;";
             {
                 Console.WriteLine($"[GenerateRecentLogSummaryAsync] Error: {ex.Message}");
                 return "Logs unavailable";
+            }
+        }
+
+        #endregion
+
+        // Add these methods to your DashboardService class (in the #region Audit Logs section)
+        // Make sure to add this using statement at the top of your DashboardService.cs file:
+        // using AHON_TRACK.ViewModels;
+
+        #region AUDIT LOGS
+
+        /// <summary>
+        /// Gets audit logs with optional filtering
+        /// </summary>
+        /// <param name="topN">Number of logs to retrieve (0 for all)</param>
+        /// <param name="selectedDate">Optional date filter</param>
+        /// <param name="position">Optional position filter (Admin, Staff, or null for all)</param>
+        /// <returns>Collection of audit logs as AuditLogItems</returns>
+        public async Task<IEnumerable<AuditLogItems>> GetAuditLogsAsync(
+    int topN = 0,
+    DateTime? selectedDate = null,
+    string? position = null)
+        {
+            var logs = new List<AuditLogItems>();
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                var queryBuilder = new System.Text.StringBuilder(@"
+            SELECT ");
+
+                if (topN > 0)
+                    queryBuilder.Append("TOP (@TopN) ");
+
+                queryBuilder.Append(@"
+            ID,
+            ProfilePicture,
+            Name,
+            Username,
+            Position,
+            DateAndTime,
+            Action,
+            Role,
+            ActionType,
+            IsSuccessful
+            FROM vw_AuditLogs
+            WHERE 1=1");
+
+                if (selectedDate.HasValue)
+                    queryBuilder.Append(" AND CAST(DateAndTime AS DATE) = CAST(@SelectedDate AS DATE)");
+
+                if (!string.IsNullOrEmpty(position) && position != "All")
+                    queryBuilder.Append(" AND Position = @Position");
+
+                queryBuilder.Append(" ORDER BY DateAndTime DESC;");
+
+                using var cmd = new SqlCommand(queryBuilder.ToString(), conn);
+
+                if (topN > 0)
+                    cmd.Parameters.AddWithValue("@TopN", topN);
+                if (selectedDate.HasValue)
+                    cmd.Parameters.AddWithValue("@SelectedDate", selectedDate.Value.Date);
+                if (!string.IsNullOrEmpty(position) && position != "All")
+                    cmd.Parameters.AddWithValue("@Position", position);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    Bitmap? profilePicture = null;
+
+                    if (reader["ProfilePicture"] != DBNull.Value)
+                    {
+                        try
+                        {
+                            var bytes = (byte[])reader["ProfilePicture"];
+                            profilePicture = ImageHelper.BytesToBitmap(bytes);
+                        }
+                        catch
+                        {
+                            profilePicture = ImageHelper.GetDefaultAvatarSafe() ?? ImageHelper.CreateFallbackBitmap();
+                        }
+                    }
+                    else
+                    {
+                        profilePicture = ImageHelper.GetDefaultAvatarSafe() ?? ImageHelper.CreateFallbackBitmap();
+                    }
+
+                    logs.Add(new AuditLogItems
+                    {
+                        ID = reader["ID"]?.ToString() ?? "0",
+                        AvatarSource = profilePicture,
+                        Name = reader["Name"]?.ToString() ?? "Unknown",
+                        Username = reader["Username"]?.ToString() ?? "Unknown",
+                        Position = reader["Position"]?.ToString() ?? "Unknown",
+                        DateAndTime = reader["DateAndTime"] == DBNull.Value
+                            ? DateTime.MinValue
+                            : (DateTime)reader["DateAndTime"],
+                        Action = reader["Action"]?.ToString() ?? "No action recorded"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetAuditLogsAsync] Error: {ex.Message}");
+            }
+
+            return logs;
+        }
+
+        /// <summary>
+        /// Gets all available dates that have audit log entries
+        /// </summary>
+        public async Task<IEnumerable<DateTime>> GetAuditLogDatesAsync()
+        {
+            var dates = new List<DateTime>();
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+            SELECT DISTINCT CAST(LogDateTime AS DATE) AS LogDate
+            FROM SystemLogs
+            WHERE LogDateTime IS NOT NULL
+            ORDER BY LogDate DESC;";
+
+                using var cmd = new SqlCommand(query, conn);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    dates.Add((DateTime)reader["LogDate"]);
+                }
+
+                // If no dates found, add today
+                if (dates.Count == 0)
+                {
+                    dates.Add(DateTime.Today);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetAuditLogDatesAsync] Error: {ex.Message}");
+                dates.Add(DateTime.Today);
+            }
+
+            return dates;
+        }
+
+        /// <summary>
+        /// Gets count of audit logs for a specific date
+        /// </summary>
+        public async Task<int> GetAuditLogCountByDateAsync(DateTime date)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+            SELECT COUNT(*) 
+            FROM SystemLogs
+            WHERE CAST(LogDateTime AS DATE) = CAST(@Date AS DATE);";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Date", date.Date);
+
+                var result = await cmd.ExecuteScalarAsync();
+                return Convert.ToInt32(result);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetAuditLogCountByDateAsync] Error: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets audit logs summary for display
+        /// </summary>
+        public async Task<string> GenerateAuditLogsSummaryAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+            SELECT COUNT(*) AS TodayCount
+            FROM SystemLogs
+            WHERE CAST(LogDateTime AS DATE) = CAST(GETDATE() AS DATE);";
+
+                using var cmd = new SqlCommand(query, conn);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                if (await reader.ReadAsync())
+                {
+                    int count = Convert.ToInt32(reader["TodayCount"]);
+                    return $"You have {count} audit log{(count != 1 ? "s" : "")} today";
+                }
+
+                return "No audit logs today";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GenerateAuditLogsSummaryAsync] Error: {ex.Message}");
+                return "Audit logs unavailable";
             }
         }
 

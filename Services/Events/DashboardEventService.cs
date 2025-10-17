@@ -20,6 +20,8 @@ namespace AHON_TRACK.Services.Events
         {
             OnPopulationDataChanged?.Invoke();
         }
+        public event EventHandler? ChartDataUpdated;
+        public void NotifyChartDataUpdated() => ChartDataUpdated?.Invoke(this, EventArgs.Empty);
 
         public void NotifyRecentLogsUpdated() => RecentLogsUpdated?.Invoke(this, EventArgs.Empty);
         public void NotifySalesUpdated() => SalesUpdated?.Invoke(this, EventArgs.Empty);

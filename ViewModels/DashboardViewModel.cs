@@ -169,6 +169,10 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         {
             await RefreshRecentLogs();
         };
+        DashboardEventService.Instance.ChartDataUpdated += async (s, e) =>
+        {
+            await UpdateChartData(); // Direct chart refresh
+        };
         DashboardEventService.Instance.SalesUpdated += async (s, e) => await LoadSalesFromDatabaseAsync();
         DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
     }
@@ -205,6 +209,8 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     {
         await LoadRecentLogsFromDatabaseAsync();
     }
+
+
 
     private void InitializeAxes()
     {

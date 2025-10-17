@@ -1,4 +1,5 @@
 ﻿using AHON_TRACK.Models;
+using AHON_TRACK.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,12 @@ namespace AHON_TRACK.Services.Interface
         Task<IEnumerable<RecentLog>> GetRecentLogsAsync(int topN = 5);
         Task<string> GenerateRecentLogSummaryAsync(int topN = 5);
         Task<int[]> GetSalesDataForYearAsync(int year);
+
+        // AUDIT LOGS
+        Task<IEnumerable<AuditLogItems>> GetAuditLogsAsync(int topN = 0, DateTime? selectedDate = null, string? position = null);
+        Task<IEnumerable<DateTime>> GetAuditLogDatesAsync();
+        Task<int> GetAuditLogCountByDateAsync(DateTime date);
+        Task<string> GenerateAuditLogsSummaryAsync();
     }
 
 
