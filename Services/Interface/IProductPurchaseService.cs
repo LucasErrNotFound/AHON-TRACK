@@ -14,5 +14,7 @@ namespace AHON_TRACK.Services.Interface
         Task<List<CustomerModel>> GetAllCustomersAsync();
         Task<List<SellingModel>> GetAllProductsAsync();
         Task<List<SellingModel>> GetAllGymPackagesAsync();
+        Task<List<InvoiceModel>> GetInvoicesByDateAsync(DateTime date);
+        Task<List<RecentPurchaseModel>> GetRecentPurchasesAsync(int limit = 50);
     }
 }

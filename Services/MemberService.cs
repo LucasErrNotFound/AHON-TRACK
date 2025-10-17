@@ -1,5 +1,6 @@
 ﻿using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using Microsoft.Data.SqlClient;
 using ShadUI;
@@ -658,6 +659,7 @@ WHERE m.MemberID = @Id;";
                 logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                 await logCmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
             }
             catch (Exception ex)
             {

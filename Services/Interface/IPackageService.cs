@@ -17,5 +17,6 @@ namespace AHON_TRACK.Services.Interface
         Task<bool> UpdatePackageAsync(PackageModel package);
         Task<bool> DeletePackageAsync(int packageId);
         Task<(bool Success, string Message, int DeletedCount)> DeleteMultiplePackagesAsync(List<int> packageIds);
+        event EventHandler? PackagesChanged;
     }
 }

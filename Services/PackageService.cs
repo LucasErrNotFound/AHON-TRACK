@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.Services
 {
@@ -17,6 +18,8 @@ namespace AHON_TRACK.Services
         private readonly string _connectionString;
         private readonly ToastManager _toastManager;
         private const string FEATURE_SEPARATOR = "|";
+
+        public event EventHandler? PackagesChanged;
 
         public PackageService(string connectionString, ToastManager toastManager)
         {
@@ -104,6 +107,8 @@ namespace AHON_TRACK.Services
                 {
                     logDescription += $", Discount: {package.discount}{(package.discountType?.ToLower() == "percentage" ? "%" : " fixed")} for {package.discountFor ?? "All"}, Final Price: ₱{discountedPrice:N2}";
                 }
+                PackagesChanged?.Invoke(this, EventArgs.Empty);
+                PackageEventService.Instance.NotifyPackagesChanged();
 
                 await LogActionAsync(conn, "Added new package", logDescription, true);
 
@@ -394,6 +399,8 @@ namespace AHON_TRACK.Services
 
                 if (rowsAffected > 0)
                 {
+                    PackagesChanged?.Invoke(this, EventArgs.Empty);
+                    PackageEventService.Instance.NotifyPackagesChanged();
                     await LogActionAsync(conn, "Updated a package", $"Updated package: '{package.packageName}' (ID: {package.packageID})", true);
 
                     _toastManager.CreateToast("Package Updated")
@@ -479,6 +486,8 @@ namespace AHON_TRACK.Services
 
                 if (rowsAffected > 0)
                 {
+                    PackagesChanged?.Invoke(this, EventArgs.Empty);
+                    PackageEventService.Instance.NotifyPackagesChanged();
                     await LogActionAsync(conn, "Deleted a package", $"Deleted package: '{packageName}' (ID: {packageId})", true);
 
                     _toastManager.CreateToast("Package Deleted")
@@ -565,7 +574,8 @@ namespace AHON_TRACK.Services
                         deleteCmd.Parameters.AddWithValue("@packageID", packageId);
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }
-
+                    PackagesChanged?.Invoke(this, EventArgs.Empty);
+                    PackageEventService.Instance.NotifyPackagesChanged();
                     await LogActionAsync(conn, "Deleted multiple packages", $"Deleted {deletedCount} packages: {string.Join(", ", packageNames)}", true);
 
                     transaction.Commit();
@@ -621,6 +631,8 @@ namespace AHON_TRACK.Services
                 logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                 await logCmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
+                PackageEventService.Instance.NotifyPackagesChanged();
             }
             catch (Exception ex)
             {

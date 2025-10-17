@@ -15,7 +15,7 @@ public class SalesItem
     public string CustomerType { get; set; } = "Gym Member";
     public string ProductName { get; set; } = string.Empty;
     public decimal Amount { get; init; }
-    public string AvatarSource { get; set; } = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+    public Bitmap? AvatarSource { get; set; }
 
     // Formatted currency for display
     public string FormattedAmount => $"+₱{Amount:F2}";

@@ -394,7 +394,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
                     {
                         Values = data,
                         Fill = new SolidColorPaint(SKColors.DarkSlateBlue),
-                        MaxBarWidth = 50,
+                        MaxBarWidth = 45,
                         Name = $"{selectedYear} Sales"
                     }
                 ];

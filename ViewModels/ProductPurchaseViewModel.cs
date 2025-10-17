@@ -15,6 +15,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -133,6 +134,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _toastManager = toastManager;
         _pageManager = pageManager;
         _productPurchaseService = productPurchaseService;
+        _ = LoadCustomerListFromDatabaseAsync();
+        _ = LoadProductsFromDatabaseAsync();
+        _ = LoadPackagesFromDatabaseAsync();
+        PackageEventService.Instance.PackagesChanged += (s, e) => OnPackagesChanged();
     }
 
     public ProductPurchaseViewModel()
@@ -141,10 +146,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _productPurchaseService = null!;
-
-        LoadCustomerList();
-        LoadProductOptions();
-        LoadPackageOptions();
+        _ = LoadCustomerListFromDatabaseAsync();
+        _ = LoadProductsFromDatabaseAsync();
+        _ = LoadPackagesFromDatabaseAsync();
     }
 
     [AvaloniaHotReload]
@@ -822,7 +826,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private void OnPackagesChanged()
     {
-        LoadPackageOptions();
+        _ = LoadPackagesFromDatabaseAsync();
 
         if (SelectedProductFilterItem == "Gym Packages")
         {
@@ -858,6 +862,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         foreach (var cartItem in CartItems)
             cartItem.PropertyChanged -= OnCartItemPropertyChanged;
+        PackageEventService.Instance.PackagesChanged -= (s, e) => OnPackagesChanged();
     }
 
     private string GenerateNewTransactionId()
@@ -1039,7 +1044,7 @@ public partial class CartItem : ObservableObject
             {
                 // Default bitmap remains null if image fails to load
             }
-            return _defaultProductBitmap;
+            return DefaultProductBitmap;
         }
     }
 

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.Services
 {
@@ -820,6 +821,7 @@ namespace AHON_TRACK.Services
                 logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                 await logCmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
             }
             catch (Exception ex)
             {

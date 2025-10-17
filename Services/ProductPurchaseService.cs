@@ -1,4 +1,6 @@
-﻿using AHON_TRACK.Models;
+﻿using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using Microsoft.Data.SqlClient;
@@ -8,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AHON_TRACK.Converters;
 
 namespace AHON_TRACK.Services
 {
@@ -195,6 +196,7 @@ namespace AHON_TRACK.Services
                                 {
                                     "one-time only" => 1,
                                     "monthly" => 30,
+                                    "weekly" => 7,
                                     _ => 1 // Default to 1 if unknown
                                 };
                             }
@@ -329,16 +331,28 @@ namespace AHON_TRACK.Services
                 await dailyCmd.ExecuteNonQueryAsync();
 
                 transaction.Commit();
+                string itemsList = string.Join(", ", cartItems.Select(i => $"{i.Title} x{i.Quantity}"));
+                await LogActionAsync(conn, "Purchase",
+                    $"Payment processed for {customer.FirstName} {customer.LastName} ({customer.CustomerType}). Total: ₱{totalAmount:N2} via {paymentMethod}. Items: {itemsList}",
+                    true);
 
                 _toastManager.CreateToast("Payment Successful")
                     .WithContent($"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}")
                     .ShowSuccess();
-
                 return true;
             }
             catch (Exception ex)
             {
                 transaction.Rollback();
+                // Log failed transaction
+                try
+                {
+                    await LogActionAsync(conn, "Purchase",
+                        $"Failed to process payment for {customer?.FirstName} {customer?.LastName}. Error: {ex.Message}",
+                        false);
+                }
+                catch { /* Ignore logging errors */ }
+
                 _toastManager.CreateToast("Payment Failed")
                     .WithContent($"Transaction failed: {ex.Message}")
                     .ShowError();
@@ -533,6 +547,159 @@ namespace AHON_TRACK.Services
             return customers;
         }
 
+        public async Task<List<RecentPurchaseModel>> GetRecentPurchasesAsync(int limit = 50)
+        {
+            var recentPurchases = new List<RecentPurchaseModel>();
+
+            if (!CanView())
+            {
+                _toastManager.CreateToast("Access Denied")
+                    .WithContent("You do not have permission to view purchase data.")
+                    .ShowError();
+                return recentPurchases;
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT TOP (@Limit)
+    s.SaleID,
+    s.SaleDate,
+    s.Amount,
+    s.Quantity,
+    CASE 
+        WHEN s.ProductID IS NOT NULL THEN p.ProductName
+        WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
+        ELSE 'Unknown Item'
+    END AS ItemName,
+    CASE 
+        WHEN s.ProductID IS NOT NULL THEN 'Product'
+        WHEN s.PackageID IS NOT NULL THEN 'Gym Package'
+        ELSE 'Unknown'
+    END AS ItemType,
+    CASE 
+        WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
+        WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
+        ELSE 'Unknown Customer'
+    END AS CustomerName,
+    CASE 
+        WHEN s.MemberID IS NOT NULL THEN 'Gym Member'
+        WHEN s.CustomerID IS NOT NULL THEN 'Walk-in'
+        ELSE 'Unknown'
+    END AS CustomerType,
+    ProfilePicture AS AvatarSource
+FROM Sales s
+LEFT JOIN Products p ON s.ProductID = p.ProductID
+LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
+LEFT JOIN Members m ON s.MemberID = m.MemberID
+LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
+ORDER BY s.SaleDate DESC;";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Limit", limit);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    recentPurchases.Add(new RecentPurchaseModel
+                    {
+                        SaleID = reader.GetInt32(reader.GetOrdinal("SaleID")),
+                        PurchaseDate = reader.GetDateTime(reader.GetOrdinal("SaleDate")),
+                        Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
+                        Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                        ItemName = reader["ItemName"]?.ToString() ?? "Unknown Item",
+                        ItemType = reader["ItemType"]?.ToString() ?? "Unknown",
+                        CustomerName = reader["CustomerName"]?.ToString() ?? "Unknown Customer",
+                        CustomerType = reader["CustomerType"]?.ToString() ?? "Unknown",
+                        AvatarSource = reader["AvatarSource"] != DBNull.Value
+                            ? (byte[])reader["AvatarSource"]
+                            : null
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Error loading recent purchases: {ex.Message}")
+                    .ShowError();
+            }
+
+            return recentPurchases;
+        }
+
+        public async Task<List<InvoiceModel>> GetInvoicesByDateAsync(DateTime date)
+        {
+            var invoices = new List<InvoiceModel>();
+
+            if (!CanView())
+            {
+                _toastManager.CreateToast("Access Denied")
+                    .WithContent("You do not have permission to view invoice data.")
+                    .ShowError();
+                return invoices;
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string query = @"
+                    SELECT 
+                        s.SaleID,
+                        CASE 
+                            WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
+                            WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
+                            ELSE 'Unknown Customer'
+                        END AS CustomerName,
+                        CASE 
+                            WHEN s.ProductID IS NOT NULL THEN p.ProductName
+                            WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
+                            ELSE 'Unknown Item'
+                        END AS PurchasedItem,
+                        s.Quantity,
+                        s.Amount,
+                        s.SaleDate
+                    FROM Sales s
+                    LEFT JOIN Products p ON s.ProductID = p.ProductID
+                    LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
+                    LEFT JOIN Members m ON s.MemberID = m.MemberID
+                    LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
+                    WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
+                    ORDER BY s.SaleDate DESC;";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@SelectedDate", date.Date);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    invoices.Add(new InvoiceModel
+                    {
+                        ID = reader.GetInt32(reader.GetOrdinal("SaleID")),
+                        CustomerName = reader["CustomerName"]?.ToString() ?? "Unknown",
+                        PurchasedItem = reader["PurchasedItem"]?.ToString() ?? "Unknown",
+                        Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                        Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
+                        DatePurchased = reader.GetDateTime(reader.GetOrdinal("SaleDate"))
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Error loading invoices: {ex.Message}")
+                    .ShowError();
+            }
+
+            return invoices;
+        }
+
         #endregion
 
 
@@ -552,16 +719,29 @@ namespace AHON_TRACK.Services
 
         #region UTILITY
 
-        private static int TryParseNumericDuration(string durationStr)
+        private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success)
         {
-            // Try to extract numbers from the string
-            // e.g., "30 days" -> 30, "90 days" -> 90
-            var numbers = System.Text.RegularExpressions.Regex.Match(durationStr, @"\d+");
-            if (numbers.Success && int.TryParse(numbers.Value, out int result))
+            try
             {
-                return result;
+                using var logCmd = new SqlCommand(
+                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)", conn);
+
+                logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
+                logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
+                logCmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
+                logCmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
+                logCmd.Parameters.AddWithValue("@success", success);
+                logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                await logCmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
+                DashboardEventService.Instance.NotifySalesUpdated();
             }
-            return 1; // Default fallback
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LogActionAsync] {ex.Message}");
+            }
         }
 
         #endregion

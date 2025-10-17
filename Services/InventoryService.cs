@@ -1,4 +1,5 @@
 ﻿using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using Microsoft.Data.SqlClient;
@@ -71,6 +72,7 @@ namespace AHON_TRACK.Services
                 logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                 await logCmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
             }
             catch (Exception ex)
             {

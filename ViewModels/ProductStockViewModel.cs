@@ -12,6 +12,7 @@ using HotAvalonia;
 using ShadUI;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -78,7 +79,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _productService = null!; // Will use sample data
+        _productService = null!; // No service available in default constructor
 
         _ = LoadProductDataAsync();
         UpdateProductCounts();

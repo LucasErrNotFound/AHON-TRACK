@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AHON_TRACK.Models
 {
-    public class WalkInSession
+    public class WalkInSessionModel
     {
         public int SessionID { get; set; }
         public int CustomerID { get; set; }
