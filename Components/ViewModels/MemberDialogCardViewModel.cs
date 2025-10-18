@@ -18,6 +18,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -455,6 +456,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                     return;
                 }
             }
+
+            DashboardEventService.Instance.NotifyMemberUpdated();
 
             Debug.WriteLine($"[SaveDetails] Updated member with Package ID: {packageId}");
 

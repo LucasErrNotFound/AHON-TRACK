@@ -292,27 +292,28 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // FIXED: Added JOIN with Packages table
+                // FIXED: Reordered columns to match the reader indices
                 var query = @"
             SELECT 
-    m.MemberID, 
-    m.Firstname, 
-    m.MiddleInitial, 
-    m.Lastname, 
-    m.Gender, 
-    m.ProfilePicture, 
-    m.ContactNumber, 
-    m.Age, 
-    m.DateOfBirth, 
-    m.ValidUntil, 
-    m.PackageID, 
-    p.PackageName,  
-    m.Status, 
-    m.PaymentMethod, 
-    m.DateJoined
-FROM Members m
-LEFT JOIN Packages p ON m.PackageID = p.PackageID
-WHERE m.MemberID = @Id;";
+                m.MemberID,                 -- 0
+                m.Firstname,                -- 1
+                m.MiddleInitial,            -- 2
+                m.Lastname,                 -- 3
+                m.Gender,                   -- 4
+                m.ProfilePicture,           -- 5
+                m.ContactNumber,            -- 6
+                m.Age,                      -- 7
+                m.DateOfBirth,              -- 8
+                m.ValidUntil,               -- 9
+                m.PackageID,                -- 10
+                p.PackageName,              -- 11
+                m.Status,                   -- 12
+                m.PaymentMethod,            -- 13
+                m.RegisteredByEmployeeID,   -- 14
+                m.DateJoined                -- 15
+            FROM Members m
+            LEFT JOIN Packages p ON m.PackageID = p.PackageID
+            WHERE m.MemberID = @Id;";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", memberId);
@@ -334,11 +335,11 @@ WHERE m.MemberID = @Id;";
                         DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
                         ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
                         PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
-                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),  // from Packages.PackageName
+                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),
                         Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
                         PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                        RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),
-                        DateJoined = reader.IsDBNull(15) ? DateTime.MinValue : reader.GetDateTime(15)
+                        RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),  // Now correct!
+                        DateJoined = reader.IsDBNull(15) ? DateTime.MinValue : reader.GetDateTime(15)  // Now correct!
                     };
 
                     member.Name = $"{member.FirstName} {(string.IsNullOrWhiteSpace(member.MiddleInitial) ? "" : member.MiddleInitial + ". ")}{member.LastName}";
@@ -661,6 +662,9 @@ WHERE m.MemberID = @Id;";
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
                 DashboardEventService.Instance.NotifyPopulationDataChanged();
+                DashboardEventService.Instance.NotifyMemberDeleted();
+                DashboardEventService.Instance.NotifyMemberUpdated();
+                DashboardEventService.Instance.NotifyMemberAdded();
             }
             catch (Exception ex)
             {

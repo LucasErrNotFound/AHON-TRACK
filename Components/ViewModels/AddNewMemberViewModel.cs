@@ -18,6 +18,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -47,10 +48,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
     [ObservableProperty]
     private string[] _memberStatusItems = ["Active", "Expired"];
-    
+
     [ObservableProperty]
     private Bitmap? _profileImageSource;
-    
+
     [ObservableProperty]
     private Image? _memberProfileImageControl;
 
@@ -263,7 +264,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
-    
+
     private byte[]? _profileImage;
     public byte[]? ProfileImage
     {
@@ -808,6 +809,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 .DismissOnClick()
                 .ShowSuccess();
 
+            DashboardEventService.Instance.NotifyMemberAdded();
+
             ClearAllFields();
             _pageManager.Navigate<ManageMembershipViewModel>();
         }
@@ -870,12 +873,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         ProfileImageSource = ImageHelper.GetDefaultAvatar();
 
         ClearAllErrors();
-        
+
         ImageResetRequested?.Invoke();
     }
 
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
-    
+
     public event Action? ImageResetRequested;
 }

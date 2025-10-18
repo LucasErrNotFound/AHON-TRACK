@@ -1,6 +1,7 @@
 ﻿using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -10,7 +11,6 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
-using Microsoft.Data.SqlClient;
 using ShadUI;
 using System;
 using System.Collections.Generic;
@@ -92,8 +92,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
-    public ObservableCollection<ManageEmployeeModel> Employees { get; }
-        = new ObservableCollection<ManageEmployeeModel>();
+    private static List<ManageEmployeesItem>? _cachedEmployees; // add this at class level
+    private bool _isSubscribedToEvents;
+
+    public ObservableCollection<ManageEmployeeModel> Employees { get; } = new ObservableCollection<ManageEmployeeModel>();
 
     public ManageEmployeesViewModel(
         DialogManager dialogManager,
@@ -107,9 +109,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _employeeService = employeeService;
-        //LoadEmployeesAsync();
         _ = LoadEmployeesFromDatabaseAsync(); ;
         _ = UpdateCounts();
+
+
 
     }
 
@@ -122,16 +125,46 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _employeeService = null!;
         _ = LoadEmployeesFromDatabaseAsync();
+
+
     }
 
 
     [AvaloniaHotReload]
-    public void Initialize() // new
+    public void Initialize()
     {
-        if (IsInitialized) return;
-        _ = LoadEmployeesFromDatabaseAsync();
-        _ = UpdateCounts();
+        if (IsInitialized)
+            return;
+
+        // ✅ Load cached data first (instant UI)
+        if (_cachedEmployees is not null && _cachedEmployees.Count > 0)
+        {
+            EmployeeItems = new ObservableCollection<ManageEmployeesItem>(_cachedEmployees);
+            _ = UpdateCounts();
+        }
+        else
+        {
+            // ✅ Otherwise, fetch from DB
+            _ = LoadEmployeesFromDatabaseAsync();
+        }
+
+        // ✅ Subscribe to global refresh events
+        if (!_isSubscribedToEvents)
+        {
+            DashboardEventService.Instance.MemberAdded += OnEmployeeChanged;
+            DashboardEventService.Instance.MemberUpdated += OnEmployeeChanged;
+            DashboardEventService.Instance.MemberDeleted += OnEmployeeChanged;
+            _isSubscribedToEvents = true;
+        }
+
         IsInitialized = true;
+    }
+
+    private async void OnEmployeeChanged(object? sender, EventArgs e)
+    {
+        Debug.WriteLine("🔁 Detected employee data change — refreshing...");
+        await LoadEmployeesFromDatabaseAsync();
+        await UpdateCounts();
     }
 
     private void LoadSampleData()
@@ -253,6 +286,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 DateJoined = emp.DateJoined
             }).ToList();
 
+            _cachedEmployees = employeeItems;
             OriginalEmployeeData = employeeItems;
             CurrentFilteredData = [.. employeeItems];
 
@@ -938,6 +972,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
         // ✅ Instead of removing from UI, reload from database
         await LoadEmployeesFromDatabaseAsync();
+        DashboardEventService.Instance.NotifyEmployeeDeleted();
 
         _toastManager.CreateToast($"Delete Selected Accounts")
             .WithContent($"Multiple accounts deleted successfully!")
@@ -952,6 +987,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         // using var connection = new SqlConnection(connectionString);
         // await connection.ExecuteAsync("DELETE FROM Employees WHERE ID = @ID", new { IDI = employee.ID });
         await _employeeService.DeleteEmployeeAsync(employee.ID);
+        DashboardEventService.Instance.NotifyEmployeeDeleted();
 
         await Task.Delay(100); // Just an animation/simulation of async operation
     }

@@ -938,6 +938,9 @@ namespace AHON_TRACK.Services
 
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
+                DashboardEventService.Instance.NotifyEmployeeUpdated();
+                DashboardEventService.Instance.NotifyEmployeeAdded();
+                DashboardEventService.Instance.NotifyEmployeeDeleted();
             }
             catch (Exception ex)
             {

@@ -21,13 +21,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.Components.ViewModels;
 
 public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+    private string[] _middleInitialItems = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
     [ObservableProperty]
     private string[] _employeePositionItems = ["Gym Staff", "Gym Admin"];
@@ -504,6 +505,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                 if (success)
                 {
                     _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+                    DashboardEventService.Instance.NotifyEmployeeUpdated();
                 }
                 else
                 {
@@ -522,6 +524,8 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                 {
                     Debug.WriteLine($"✅ New employee added with ID: {employeeId}");
                     _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+                    DashboardEventService.Instance.NotifyEmployeeAdded();
+
                 }
                 else
                 {

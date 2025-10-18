@@ -1,3 +1,14 @@
+using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
+using AHON_TRACK.Services.Interface;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -6,16 +17,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Converters;
-using AHON_TRACK.Models;
-using AHON_TRACK.Services.Interface;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using HotAvalonia;
-using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -90,6 +91,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     private readonly IMemberService? _memberService;
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
+    private static List<ManageMembersItem>? _cachedMembers;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -116,6 +119,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
         _ = LoadMemberDataAsync();
         UpdateCounts();
+        DashboardEventService.Instance.MemberAdded += OnMemberChanged;
+        DashboardEventService.Instance.MemberUpdated += OnMemberChanged;
+        DashboardEventService.Instance.MemberDeleted += OnMemberChanged;
     }
 
     // Default constructor (for design-time/testing)
@@ -128,6 +134,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         _addNewMemberViewModel = new AddNewMemberViewModel();
 
         _ = LoadMemberDataAsync();
+        DashboardEventService.Instance.MemberAdded += OnMemberChanged;
+        DashboardEventService.Instance.MemberUpdated += OnMemberChanged;
+        DashboardEventService.Instance.MemberDeleted += OnMemberChanged;
     }
 
     partial void OnSelectedMemberChanged(ManageMembersItem? value)
@@ -138,23 +147,24 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
     }
 
+
     [AvaloniaHotReload]
-    public async void Initialize()
+    public async Task Initialize()
     {
-        if (IsInitialized) return;
-
-        // Try to load from database first, fallback to sample data
-        if (_memberService != null)
+        if (_cachedMembers is not null && _cachedMembers.Count > 0)
         {
-            await LoadMemberDataAsync();
-        }
-        else
-        {
-            LoadSampleData();
+            OriginalMemberData = _cachedMembers;
+            RefreshMemberItems(_cachedMembers);
+            return;
         }
 
-        UpdateCounts();
-        IsInitialized = true;
+        await LoadMemberDataAsync();
+        _cachedMembers = OriginalMemberData;
+    }
+
+    private async void OnMemberChanged(object? sender, EventArgs e)
+    {
+        await LoadMemberDataAsync();
     }
 
     public async Task LoadMemberDataAsync()
@@ -811,6 +821,15 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 // Service already showed error toast, just log it
                 Debug.WriteLine($"Failed to delete member: {result.Message}");
             }
+            else
+            {
+                DashboardEventService.Instance.NotifyMemberDeleted();
+
+                _toastManager?.CreateToast("Member Deleted")
+                    .WithContent($"{member.Name} has been deleted successfully.")
+                    .DismissOnClick()
+                    .ShowSuccess();
+            }
         }
         else
         {
@@ -850,6 +869,16 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             {
                 // Service already showed error toast, just log it
                 Debug.WriteLine($"Failed to delete members: {result.Message}");
+            }
+            else
+            {
+                // ✅ Notify other ViewModels
+                DashboardEventService.Instance.NotifyMemberDeleted();
+
+                _toastManager?.CreateToast("Members Deleted")
+                    .WithContent($"{memberIds.Count} members were deleted successfully.")
+                    .DismissOnClick()
+                    .ShowSuccess();
             }
         }
         else
