@@ -72,7 +72,7 @@ namespace AHON_TRACK.Services
                                 trainings.Add(new TrainingModel
                                 {
                                     trainingID = reader.GetInt32("trainingID"),
-                                    memberID = reader.GetInt32("memberID"),
+                                    customerID = reader.GetInt32("memberID"),
                                     firstName = reader["firstName"]?.ToString() ?? "",
                                     lastName = reader["lastName"]?.ToString() ?? "",
                                     contactNumber = reader["contactNumber"]?.ToString() ?? "",
@@ -129,7 +129,7 @@ namespace AHON_TRACK.Services
                                 trainings.Add(new TrainingModel
                                 {
                                     trainingID = reader.GetInt32("trainingID"),
-                                    memberID = reader.GetInt32("memberID"),
+                                    customerID = reader.GetInt32("memberID"),
                                     firstName = reader["firstName"]?.ToString() ?? "",
                                     lastName = reader["lastName"]?.ToString() ?? "",
                                     contactNumber = reader["contactNumber"]?.ToString() ?? "",
@@ -185,7 +185,7 @@ namespace AHON_TRACK.Services
                                 trainings.Add(new TrainingModel
                                 {
                                     trainingID = reader.GetInt32("trainingID"),
-                                    memberID = reader.GetInt32("memberID"),
+                                    customerID = reader.GetInt32("memberID"),
                                     firstName = reader["firstName"]?.ToString() ?? "",
                                     lastName = reader["lastName"]?.ToString() ?? "",
                                     contactNumber = reader["contactNumber"]?.ToString() ?? "",
@@ -241,7 +241,7 @@ namespace AHON_TRACK.Services
                                 trainings.Add(new TrainingModel
                                 {
                                     trainingID = reader.GetInt32("trainingID"),
-                                    memberID = reader.GetInt32("memberID"),
+                                    customerID = reader.GetInt32("memberID"),
                                     firstName = reader["firstName"]?.ToString() ?? "",
                                     lastName = reader["lastName"]?.ToString() ?? "",
                                     contactNumber = reader["contactNumber"]?.ToString() ?? "",
@@ -272,13 +272,19 @@ namespace AHON_TRACK.Services
         public async Task<bool> AddTrainingScheduleAsync(TrainingModel training)
         {
             const string query = @"
-        INSERT INTO Trainings (memberID, firstName, lastName, contactNumber, picture, 
-                              packageType, assignedCoach, scheduledDate, scheduledTimeStart, 
-                              scheduledTimeEnd, attendance)
-        OUTPUT INSERTED.trainingID
-        VALUES (@memberID, @firstName, @lastName, @contactNumber, @picture, 
-                @packageType, @assignedCoach, @scheduledDate, @scheduledTimeStart, 
-                @scheduledTimeEnd, @attendance)";
+        INSERT INTO Trainings (
+            CustomerID, CustomerType, FirstName, LastName, ContactNumber, 
+            ProfilePicture, PackageID, PackageType, AssignedCoach, 
+            ScheduledDate, ScheduledTimeStart, ScheduledTimeEnd, 
+            Attendance, CreatedByEmployeeID
+        )
+        OUTPUT INSERTED.TrainingID
+        VALUES (
+            @CustomerID, @CustomerType, @FirstName, @LastName, @ContactNumber, 
+            @ProfilePicture, @PackageID, @PackageType, @AssignedCoach, 
+            @ScheduledDate, @ScheduledTimeStart, @ScheduledTimeEnd, 
+            @Attendance, @EmployeeID
+        )";
 
             try
             {
@@ -288,23 +294,46 @@ namespace AHON_TRACK.Services
 
                     using (var command = new SqlCommand(query, connection))
                     {
-                        command.Parameters.AddWithValue("@memberID", training.memberID);
-                        command.Parameters.AddWithValue("@firstName", training.firstName);
-                        command.Parameters.AddWithValue("@lastName", training.lastName);
-                        command.Parameters.AddWithValue("@contactNumber", (object)training.contactNumber ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@picture", (object)training.picture ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@packageType", training.packageType);
-                        command.Parameters.AddWithValue("@assignedCoach", training.assignedCoach);
-                        command.Parameters.AddWithValue("@scheduledDate", training.scheduledDate);
-                        command.Parameters.AddWithValue("@scheduledTimeStart", training.scheduledTimeStart);
-                        command.Parameters.AddWithValue("@scheduledTimeEnd", training.scheduledTimeEnd);
-                        command.Parameters.AddWithValue("@attendance", (object)training.attendance ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@CustomerID", training.customerID);
+                        command.Parameters.AddWithValue("@CustomerType", training.customerType ?? "Member");
+                        command.Parameters.AddWithValue("@FirstName", training.firstName);
+                        command.Parameters.AddWithValue("@LastName", training.lastName);
+                        command.Parameters.AddWithValue("@ContactNumber", (object)training.contactNumber ?? DBNull.Value);
+
+                        // Convert base64 picture string to bytes if needed
+                        byte[]? pictureBytes = null;
+                        if (!string.IsNullOrEmpty(training.picture) &&
+                            !training.picture.StartsWith("avares://"))
+                        {
+                            try
+                            {
+                                pictureBytes = Convert.FromBase64String(training.picture);
+                            }
+                            catch
+                            {
+                                pictureBytes = null;
+                            }
+                        }
+                        command.Parameters.AddWithValue("@ProfilePicture", (object)pictureBytes ?? DBNull.Value);
+
+                        command.Parameters.AddWithValue("@PackageID", training.packageID);
+                        command.Parameters.AddWithValue("@PackageType", training.packageType);
+                        command.Parameters.AddWithValue("@AssignedCoach", training.assignedCoach);
+                        command.Parameters.AddWithValue("@ScheduledDate", training.scheduledDate.Date);
+                        command.Parameters.AddWithValue("@ScheduledTimeStart", training.scheduledTimeStart);
+                        command.Parameters.AddWithValue("@ScheduledTimeEnd", training.scheduledTimeEnd);
+                        command.Parameters.AddWithValue("@Attendance", (object)training.attendance ?? "Pending");
+                        command.Parameters.AddWithValue("@EmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                         var newId = await command.ExecuteScalarAsync();
 
                         if (newId != null && newId != DBNull.Value)
                         {
                             training.trainingID = Convert.ToInt32(newId);
+
+                            // Decrement session count
+                            await DecrementSessionCountAsync(connection, training.customerID,
+                                training.customerType, training.packageID);
 
                             await LogActionAsync(connection, "Add Training Schedule",
                                 $"Added training schedule for {training.firstName} {training.lastName} - {training.packageType} with {training.assignedCoach} on {training.scheduledDate:MMM dd, yyyy}", true);
@@ -371,7 +400,7 @@ namespace AHON_TRACK.Services
                     using (var command = new SqlCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@trainingID", training.trainingID);
-                        command.Parameters.AddWithValue("@memberID", training.memberID);
+                        command.Parameters.AddWithValue("@memberID", training.customerID);
                         command.Parameters.AddWithValue("@firstName", training.firstName);
                         command.Parameters.AddWithValue("@lastName", training.lastName);
                         command.Parameters.AddWithValue("@contactNumber", (object)training.contactNumber ?? DBNull.Value);
@@ -528,7 +557,7 @@ namespace AHON_TRACK.Services
                                 return new TrainingModel
                                 {
                                     trainingID = reader.GetInt32("trainingID"),
-                                    memberID = reader.GetInt32("memberID"),
+                                    customerID = reader.GetInt32("memberID"),
                                     firstName = reader["firstName"]?.ToString() ?? "",
                                     lastName = reader["lastName"]?.ToString() ?? "",
                                     contactNumber = reader["contactNumber"]?.ToString() ?? "",
@@ -576,39 +605,65 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 const string query = @"
+            -- Get Members with sessions
             SELECT 
-                m.MemberID,
-                m.Firstname,
-                m.Lastname,
+                m.MemberID AS CustomerID,
+                'Member' AS CustomerType,
+                m.Firstname AS FirstName,
+                m.Lastname AS LastName,
                 m.ContactNumber,
                 m.ProfilePicture,
-                pkg.packageName AS PackageType,
-                mem.SessionsLeft
+                p.PackageName AS PackageType,
+                p.PackageID,
+                COALESCE(ms.SessionsLeft, 0) AS SessionsLeft
             FROM Members m
-            INNER JOIN Members mem ON m.MemberID = mem.MemberID
-            INNER JOIN Package pkg ON mem.PackageID = pkg.packageID
+            INNER JOIN Packages p ON m.PackageID = p.PackageID
+            LEFT JOIN MemberSessions ms ON m.MemberID = ms.CustomerID AND p.PackageID = ms.PackageID
             WHERE m.Status = 'Active' 
-            AND mem.SessionsLeft > 0
-            ORDER BY m.Firstname, m.Lastname";
+                AND COALESCE(ms.SessionsLeft, 0) > 0
+
+            UNION ALL
+
+            -- Get Walk-In Customers with sessions
+            SELECT 
+                w.CustomerID,
+                'WalkIn' AS CustomerType,
+                w.FirstName,
+                w.LastName,
+                w.ContactNumber,
+                NULL AS ProfilePicture,
+                p.PackageName AS PackageType,
+                p.PackageID,
+                COALESCE(ws.SessionsLeft, 0) AS SessionsLeft
+            FROM WalkInCustomers w
+            INNER JOIN WalkInSessions ws ON w.CustomerID = ws.CustomerID
+            INNER JOIN Packages p ON ws.PackageID = p.PackageID
+            WHERE w.WalkinType = 'Regular'
+                AND COALESCE(ws.SessionsLeft, 0) > 0
+
+            ORDER BY FirstName, LastName";
 
                 await using var command = new SqlCommand(query, connection);
                 await using var reader = await command.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
                 {
-                    byte[]? bytes = null;
+                    byte[]? pictureBytes = null;
                     if (!reader.IsDBNull(reader.GetOrdinal("ProfilePicture")))
-                        bytes = (byte[])reader["ProfilePicture"];
+                        pictureBytes = (byte[])reader["ProfilePicture"];
 
                     trainees.Add(new TraineeModel
                     {
-                        ID = reader.GetInt32(reader.GetOrdinal("MemberID")),
-                        FirstName = reader["Firstname"]?.ToString() ?? "",
-                        LastName = reader["Lastname"]?.ToString() ?? "",
+                        ID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
+                        CustomerType = reader["CustomerType"]?.ToString() ?? "",
+                        FirstName = reader["FirstName"]?.ToString() ?? "",
+                        LastName = reader["LastName"]?.ToString() ?? "",
                         ContactNumber = reader["ContactNumber"]?.ToString() ?? "",
                         PackageType = reader["PackageType"]?.ToString() ?? "",
+                        PackageID = reader.GetInt32(reader.GetOrdinal("PackageID")),
                         SessionLeft = reader.GetInt32(reader.GetOrdinal("SessionsLeft")),
-                        Picture = ImageHelper.BytesToBase64(bytes ?? Array.Empty<byte>()) ?? "avares://AHON_TRACK/Assets/MainWindowView/user.png"
+                        Picture = ImageHelper.BytesToBase64(pictureBytes ?? Array.Empty<byte>())
+                            ?? "avares://AHON_TRACK/Assets/MainWindowView/user.png"
                     });
                 }
             }
@@ -622,5 +677,29 @@ namespace AHON_TRACK.Services
             }
             return trainees;
         }
+
+        private async Task DecrementSessionCountAsync(SqlConnection connection, int customerID, string customerType, int packageID)
+        {
+            try
+            {
+                string table = customerType == "Member" ? "MemberSessions" : "WalkInSessions";
+                string query = $@"
+            UPDATE {table}
+            SET SessionsLeft = SessionsLeft - 1
+            WHERE CustomerID = @CustomerID 
+                AND PackageID = @PackageID 
+                AND SessionsLeft > 0";
+
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@CustomerID", customerID);
+                command.Parameters.AddWithValue("@PackageID", packageID);
+                await command.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DecrementSessionCountAsync] {ex.Message}");
+            }
+        }
+
     }
 }

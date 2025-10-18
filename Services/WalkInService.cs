@@ -803,6 +803,8 @@ namespace AHON_TRACK.Services
 
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
+                DashboardEventService.Instance.NotifyPopulationDataChanged();
+                DashboardEventService.Instance.NotifyWalkInAdded();
             }
             catch (Exception ex)
             {

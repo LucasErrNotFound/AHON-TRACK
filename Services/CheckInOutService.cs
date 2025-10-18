@@ -1,5 +1,6 @@
 ﻿using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using Microsoft.Data.SqlClient;
@@ -40,6 +41,7 @@ public class CheckInOutService : ICheckInOutService
             logCmd.Parameters.AddWithValue("@success", success);
 
             await logCmd.ExecuteNonQueryAsync();
+            DashboardEventService.Instance.NotifyRecentLogsUpdated();
         }
         catch (Exception ex)
         {

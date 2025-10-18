@@ -103,6 +103,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         FilterDataByPackageAndDate();
     }
 
+
     private List<ScheduledPerson> CreateSampleData()
     {
         var today = DateTime.Today;

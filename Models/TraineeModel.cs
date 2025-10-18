@@ -9,10 +9,12 @@ namespace AHON_TRACK.Models
     public class TraineeModel
     {
         public int ID { get; set; }
+        public string CustomerType { get; set; } = string.Empty;  // Added
         public string Picture { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string ContactNumber { get; set; } = string.Empty;
+        public int PackageID { get; set; }  // Added
         public string PackageType { get; set; } = string.Empty;
         public int SessionLeft { get; set; }
         public bool IsSelected { get; set; }

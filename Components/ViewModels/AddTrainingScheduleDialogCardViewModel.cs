@@ -102,7 +102,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         _pageManager = pageManager;
         _trainingService = trainingService;
 
-        LoadTraineeData();
+        _ = LoadTraineesFromDatabaseAsync();
         UpdateSuggestions();
     }
 
@@ -113,7 +113,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         _pageManager = new PageManager(new ServiceProvider());
         _trainingService = null!;
 
-        LoadTraineeData();
+        _ = LoadTraineesFromDatabaseAsync();
         UpdateSuggestions();
     }
 
@@ -125,6 +125,145 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
 
         await LoadTraineesFromDatabaseAsync();
         UpdateSuggestions();
+    }
+
+    private List<Trainees> CreateSampleData()
+    {
+        return
+        [
+            new Trainees
+        {
+            ID = 1001,
+            CustomerType = "Member",  // Added
+            Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
+            FirstName = "Rome",
+            LastName = "Calubayan",
+            ContactNumber = "09182736273",
+            PackageID = 1,  // Added
+            PackageType = "Boxing",
+            SessionLeft = 1
+        },
+        new Trainees
+        {
+            ID = 1002,
+            CustomerType = "Member",  // Added
+            Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
+            FirstName = "Sianrey",
+            LastName = "Flora",
+            ContactNumber = "09198656372",
+            PackageID = 1,  // Added
+            PackageType = "Boxing",
+            SessionLeft = 1
+        },
+        new Trainees
+        {
+            ID = 1003,
+            CustomerType = "Member",  // Added
+            Picture = "",
+            FirstName = "Mardie",
+            LastName = "Dela Cruz",
+            ContactNumber = "09138545322",
+            PackageID = 2,  // Added
+            PackageType = "Muay Thai",
+            SessionLeft = 2
+        },
+        new Trainees
+        {
+            ID = 1004,
+            CustomerType = "Member",  // Added
+            Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
+            FirstName = "JL",
+            LastName = "Taberdo",
+            ContactNumber = "09237645212",
+            PackageID = 3,  // Added
+            PackageType = "Crossfit",
+            SessionLeft = 4
+        },
+        new Trainees
+        {
+            ID = 1005,
+            CustomerType = "WalkIn",  // Added - example walk-in
+            Picture = "",
+            FirstName = "Jav",
+            LastName = "Agustin",
+            ContactNumber = "09686643211",
+            PackageID = 2,  // Added
+            PackageType = "Muay Thai",
+            SessionLeft = 1
+        },
+        new Trainees
+        {
+            ID = 1006,
+            CustomerType = "Member",  // Added
+            Picture = "",
+            FirstName = "Dave",
+            LastName = "Dapitillo",
+            ContactNumber = "09676544212",
+            PackageID = 2,  // Added
+            PackageType = "Muay Thai",
+            SessionLeft = 1
+        },
+        new Trainees
+        {
+            ID = 1007,
+            CustomerType = "Member",  // Added
+            Picture = "",
+            FirstName = "Daniel",
+            LastName = "Empinado",
+            ContactNumber = "09666452211",
+            PackageID = 3,  // Added
+            PackageType = "Crossfit",
+            SessionLeft = 2
+        },
+        new Trainees
+        {
+            ID = 1008,
+            CustomerType = "WalkIn",  // Added - example walk-in
+            Picture = "",
+            FirstName = "Marc",
+            LastName = "Torres",
+            ContactNumber = "098273647382",
+            PackageID = 3,  // Added
+            PackageType = "Crossfit",
+            SessionLeft = 5
+        },
+        new Trainees
+        {
+            ID = 1009,
+            CustomerType = "Member",  // Added
+            Picture = "",
+            FirstName = "Mark",
+            LastName = "Dela Cruz",
+            ContactNumber = "091827362837",
+            PackageID = 3,  // Added
+            PackageType = "Crossfit",
+            SessionLeft = 7
+        },
+        new Trainees
+        {
+            ID = 1010,
+            CustomerType = "Member",  // Added
+            Picture = "",
+            FirstName = "Adriel",
+            LastName = "Del Rosario",
+            ContactNumber = "09182837748",
+            PackageID = 1,  // Added
+            PackageType = "Boxing",
+            SessionLeft = 1
+        },
+        new Trainees
+        {
+            ID = 1011,
+            CustomerType = "Member",  // Added
+            Picture = "",
+            FirstName = "JC",
+            LastName = "Casidor",
+            ContactNumber = "09192818827",
+            PackageID = 1,  // Added
+            PackageType = "Boxing",
+            SessionLeft = 3
+        }
+        ];
     }
 
     private async Task LoadTraineesFromDatabaseAsync()
@@ -148,11 +287,13 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                 var traineeItem = new Trainees
                 {
                     ID = trainee.ID,
+                    CustomerType = trainee.CustomerType,  // Added
                     Picture = trainee.Picture,
                     FirstName = trainee.FirstName,
                     LastName = trainee.LastName,
                     ContactNumber = trainee.ContactNumber,
-                    PackageType = trainee.PackageType,
+                    PackageID = trainee.PackageID,  // Added
+                    PackageType = trainee.PackageType,  // This is the package name
                     SessionLeft = trainee.SessionLeft
                 };
 
@@ -189,68 +330,6 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         }
 
         TraineeList = new DataGridCollectionView(FilteredTrainees);
-    }
-
-    private List<Trainees> CreateSampleData()
-    {
-        return
-        [
-            new Trainees
-            {
-                ID = 1001, Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png", FirstName = "Rome",
-                LastName = "Calubayan", ContactNumber = "09182736273", PackageType = "Boxing", SessionLeft = 1
-            },
-            new Trainees
-            {
-                ID = 1002, Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png", FirstName = "Sianrey",
-                LastName = "Flora", ContactNumber = "09198656372", PackageType = "Boxing", SessionLeft = 1
-            },
-            new Trainees
-            {
-                ID = 1003, Picture = "", FirstName = "Mardie",
-                LastName = "Dela Cruz", ContactNumber = "09138545322", PackageType = "Muay Thai", SessionLeft = 2
-            },
-            new Trainees
-            {
-                ID = 1004, Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png", FirstName = "JL",
-                LastName = "Taberdo", ContactNumber = "09237645212", PackageType = "Crossfit", SessionLeft = 4
-            },
-            new Trainees
-            {
-                ID = 1005, Picture = "", FirstName = "Jav",
-                LastName = "Agustin", ContactNumber = "09686643211", PackageType = "Muay Thai", SessionLeft = 1
-            },
-            new Trainees
-            {
-                ID = 1006, Picture = "", FirstName = "Dave",
-                LastName = "Dapitillo", ContactNumber = "09676544212", PackageType = "Muay Thai", SessionLeft = 1
-            },
-            new Trainees
-            {
-                ID = 1007, Picture = "", FirstName = "Daniel",
-                LastName = "Empinado", ContactNumber = "09666452211", PackageType = "Crossfit", SessionLeft = 2
-            },
-            new Trainees
-            {
-                ID = 1008, Picture = "", FirstName = "Marc",
-                LastName = "Torres", ContactNumber = "098273647382", PackageType = "Crossfit", SessionLeft = 5
-            },
-            new Trainees
-            {
-                ID = 1009, Picture = "", FirstName = "Mark",
-                LastName = "Dela Cruz", ContactNumber = "091827362837", PackageType = "Crossfit", SessionLeft = 7
-            },
-            new Trainees
-            {
-                ID = 1010, Picture = "", FirstName = "Adriel",
-                LastName = "Del Rosario", ContactNumber = "09182837748", PackageType = "Boxing", SessionLeft = 1
-            },
-            new Trainees
-            {
-                ID = 1011, Picture = "", FirstName = "JC",
-                LastName = "Casidor", ContactNumber = "09192818827", PackageType = "Boxing", SessionLeft = 3
-            }
-        ];
     }
 
     [RelayCommand]
@@ -388,17 +467,19 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
             {
                 var training = new TrainingModel
                 {
-                    memberID = trainee.ID,
+                    customerID = trainee.ID,
+                    customerType = trainee.CustomerType,  // "Member" or "WalkIn"
                     firstName = trainee.FirstName,
                     lastName = trainee.LastName,
                     contactNumber = trainee.ContactNumber,
                     picture = trainee.Picture,
-                    packageType = trainee.PackageType,
+                    packageID = trainee.PackageID,
+                    packageType = trainee.PackageType,  // Package name (e.g., "Boxing")
                     assignedCoach = SelectedCoachItem,
                     scheduledDate = scheduledDate,
                     scheduledTimeStart = startDateTime,
                     scheduledTimeEnd = endDateTime,
-                    attendance = null
+                    attendance = "Pending"
                 };
 
                 await _trainingService.AddTrainingScheduleAsync(training);
@@ -447,6 +528,9 @@ public partial class Trainees : ObservableObject
     private int _iD;
 
     [ObservableProperty]
+    private string _customerType = string.Empty;  // Added: "Member" or "WalkIn"
+
+    [ObservableProperty]
     private string? _picture = string.Empty;
 
     [ObservableProperty]
@@ -459,7 +543,10 @@ public partial class Trainees : ObservableObject
     private string _contactNumber = string.Empty;
 
     [ObservableProperty]
-    private string _packageType = string.Empty;
+    private int _packageID;  // Added: Package ID from database
+
+    [ObservableProperty]
+    private string _packageType = string.Empty;  // Package name (e.g., "Boxing", "Muay Thai", "CrossFit")
 
     [ObservableProperty]
     private int _sessionLeft;
