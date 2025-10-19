@@ -33,7 +33,7 @@ public class PackageService : IPackageService
                 Title = "Free Trial",
                 Description = "Try any class or gym session-no charge",
                 Price = 0,
-                PriceUnit = "/one-time only",
+                PriceUnit = "/One-time only",
                 Features = 
                 [
                     "Risk-free first session",
@@ -54,7 +54,7 @@ public class PackageService : IPackageService
                 Title = "Walk-In",
                 Description = "Pay per session with no commitment",
                 Price = 150,
-                PriceUnit = "/session",
+                PriceUnit = "/Session",
                 Features = 
                 [
                     "Unlimited time",
@@ -75,7 +75,7 @@ public class PackageService : IPackageService
                 Title = "Monthly Membership",
                 Description = "Unlimited gym access for 30 days",
                 Price = 500,
-                PriceUnit = "/month",
+                PriceUnit = "/Month",
                 Features = 
                 [
                     "Unlimited gym sessions",
@@ -96,7 +96,7 @@ public class PackageService : IPackageService
                 Title = "Boxing",
                 Description = "High-intensity training focused on boxing",
                 Price = 450,
-                PriceUnit = "/session",
+                PriceUnit = "/Session",
                 Features = 
                 [
                     "Boosts cardio and strength",
@@ -117,7 +117,7 @@ public class PackageService : IPackageService
                 Title = "Muay Thai",
                 Description = "Training for strength and endurance",
                 Price = 500,
-                PriceUnit = "/session",
+                PriceUnit = "/Session",
                 Features = 
                 [
                     "Full body conditioning",
@@ -138,7 +138,7 @@ public class PackageService : IPackageService
                 Title = "CrossFit",
                 Description = "Functional workouts with high-intensity moves",
                 Price = 300,
-                PriceUnit = "/session",
+                PriceUnit = "/Session",
                 Features = 
                 [
                     "Builds functional strength",
@@ -159,7 +159,7 @@ public class PackageService : IPackageService
                 Title = "Personal Training",
                 Description = "One-on-one session to reach your fitness goal",
                 Price = 200,
-                PriceUnit = "/session",
+                PriceUnit = "/Session",
                 Features = 
                 [
                     "Personalized workout plans",
@@ -180,7 +180,7 @@ public class PackageService : IPackageService
                 Title = "Thai Massage",
                 Description = "Massage therapy for relaxation and healing",
                 Price = 350,
-                PriceUnit = "/session",
+                PriceUnit = "/Session",
                 Features = 
                 [
                     "Relieves muscle tension and stiffness",
