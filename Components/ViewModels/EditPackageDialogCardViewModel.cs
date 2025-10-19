@@ -24,11 +24,14 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     private string[] _discountForItems = ["All", "Walk-ins", "Gym Members"];
     private string _selectedDiscountForItem = "All";
 
+    [ObservableProperty]
+    private string[] _durationItems = ["/Month", "/Session", "/One-time only"];
+    private string _selectedDurationItem = string.Empty;
+
     private int _packageId;
     private string _packageName = string.Empty;
     private string _description = string.Empty;
     private decimal? _price;
-    private string _duration = string.Empty;
 
     private string _featureDescription1 = string.Empty;
     private string _featureDescription2 = string.Empty;
@@ -111,7 +114,6 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         set => SetProperty(ref _packageId, value, true);
     }
 
-
     [Required(ErrorMessage = "Package name is required")]
     [MinLength(5, ErrorMessage = "Must be at least 5 characters long")]
     [MaxLength(25, ErrorMessage = "Must not exceed 25 characters")]
@@ -138,13 +140,11 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         set => SetProperty(ref _price, value, true);
     }
 
-    [Required(ErrorMessage = "Duration is required")]
-    [MinLength(5, ErrorMessage = "Must be at least 5 characters long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
-    public string Duration
+    [Required(ErrorMessage = "Select its Duration")]
+    public string SelectedDurationItem
     {
-        get => _duration;
-        set => SetProperty(ref _duration, value, true);
+        get => _selectedDurationItem;
+        set => SetProperty(ref _selectedDurationItem, value, true);
     }
 
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
@@ -154,14 +154,12 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         set => SetProperty(ref _featureDescription1, value, true);
     }
 
-
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription2
     {
         get => _featureDescription2;
         set => SetProperty(ref _featureDescription2, value, true);
     }
-
 
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription3
@@ -274,7 +272,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         PackageName = string.Empty;
         Description = string.Empty;
         Price = null;
-        Duration = string.Empty;
+        SelectedDurationItem = string.Empty;
 
         FeatureDescription1 = string.Empty;
         FeatureDescription2 = string.Empty;
@@ -312,7 +310,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         PackageName = package.Title;
         Description = package.Description;
         Price = package.Price;
-        Duration = package.Duration; // Now string to string
+        SelectedDurationItem = package.Duration; // Now uses SelectedDurationItem from main
 
         // Populate features (up to 5)
         FeatureDescription1 = package.Features.Count > 0 ? package.Features[0] : string.Empty;
@@ -369,7 +367,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             packageName = PackageName?.Trim() ?? string.Empty,
             description = Description?.Trim() ?? string.Empty,
             price = originalPrice,
-            duration = Duration?.Trim() ?? string.Empty, // Now string
+            duration = SelectedDurationItem?.Trim() ?? string.Empty, // Now uses SelectedDurationItem
             features1 = FeatureDescription1?.Trim() ?? string.Empty,
             features2 = FeatureDescription2?.Trim() ?? string.Empty,
             features3 = FeatureDescription3?.Trim() ?? string.Empty,

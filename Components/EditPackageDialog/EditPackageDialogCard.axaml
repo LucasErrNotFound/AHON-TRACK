@@ -108,15 +108,15 @@
                         </NumericUpDown>
                     </StackPanel>
                     <StackPanel Grid.Column="1">
-                        <TextBox
-                            Width="230"
-                            Watermark="e.g., monthly, one-time only"
+                        <ComboBox
+                            Width="270"
                             shadui:ControlAssist.Label="Duration"
-                            shadui:ControlAssist.Height="38"
-                            Margin="0,-4,0,0"
+                            shadui:ControlAssist.Height="36"
+                            Margin="0,-5,0,0"
                             HorizontalAlignment="Right"
-                            Text="{CompiledBinding Duration, Mode=TwoWay}">
-                        </TextBox>
+                            PlaceholderText="e.g., monthly, one-time, session"
+                            ItemsSource="{CompiledBinding DurationItems}"
+                            SelectedItem="{CompiledBinding SelectedDurationItem}" />
                     </StackPanel>
                 </Grid>
                 <Grid RowDefinitions="Auto Auto Auto Auto Auto" Margin="0,30,0,0" RowSpacing="10">

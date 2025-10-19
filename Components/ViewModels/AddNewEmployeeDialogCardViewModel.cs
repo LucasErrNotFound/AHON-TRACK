@@ -76,7 +76,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     // Account Section
     private string _employeeUsername = string.Empty;
     private string _employeePassword = string.Empty;
-    private DateTime? _employeeDateJoined;
     private string _employeeStatus = string.Empty;
 
     [Required(ErrorMessage = "First name is required")]
@@ -244,14 +243,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeePassword, value, true);
     }
 
-    [Required(ErrorMessage = "Date joined is required")]
-    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? EmployeeDateJoined
-    {
-        get => _employeeDateJoined;
-        set => SetProperty(ref _employeeDateJoined, value, true);
-    }
-
     [Required(ErrorMessage = "Status is required")]
     public string EmployeeStatus
     {
@@ -335,7 +326,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                 // Account
                 EmployeeUsername = fullEmployee.Username ?? string.Empty;
                 EmployeePassword = fullEmployee.Password ?? "********";
-                EmployeeDateJoined = fullEmployee.DateJoined;
                 EmployeeStatus = fullEmployee.Status ?? "Active";
 
                 // Profile Picture
@@ -373,7 +363,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeProvince = "Sample Province";
         EmployeeUsername = employee.Username ?? "defaultuser";
         EmployeePassword = "defaultpassword";
-        EmployeeDateJoined = employee.DateJoined != default ? employee.DateJoined : DateTime.Now;
+        EmployeeStatus = !string.IsNullOrEmpty(employee.Status) ? employee.Status : "Active";
         EmployeeStatus = employee.Status ?? "Active";
 
         Debug.WriteLine("⚠️ Using fallback data");
@@ -489,7 +479,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                 Province = EmployeeProvince,
                 Username = EmployeeUsername,
                 Password = EmployeePassword,
-                DateJoined = EmployeeDateJoined ?? DateTime.Now,
                 Status = EmployeeStatus,
                 Position = EmployeePosition,
                 ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
@@ -572,7 +561,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeProvince = string.Empty;
         EmployeeUsername = string.Empty;
         EmployeePassword = string.Empty;
-        EmployeeDateJoined = null;
         EmployeeStatus = string.Empty;
         ProfileImage = null;
         ProfileImageSource = ImageHelper.GetDefaultAvatar();

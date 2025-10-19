@@ -45,6 +45,7 @@ namespace AHON_TRACK.Models
         public string? CityTown { get; set; }
         public string? Province { get; set; }
         public string? Password { get; set; }
+        public DateTime? CreatedAt { get; set; }
 
     }
 }

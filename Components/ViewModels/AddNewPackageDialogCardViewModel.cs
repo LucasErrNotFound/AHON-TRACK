@@ -25,6 +25,10 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     private string[] _discountForItems = ["All", "Walk-ins", "Gym Members"];
     private string _selectedDiscountForItem = "All";
 
+    [ObservableProperty]
+    private string[] _durationItems = ["Month", "Session", "One-time only"];
+    private string _selectedDurationItem = string.Empty;
+
     private string _packageName = string.Empty;
     private string _description = string.Empty;
     private decimal? _price;
@@ -136,13 +140,11 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         set => SetProperty(ref _price, value, true);
     }
 
-    [Required(ErrorMessage = "Duration is required")]
-    [MinLength(5, ErrorMessage = "Must be at least 5 character long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
-    public string Duration
+    [Required(ErrorMessage = "Select its Duration")]
+    public string SelectedDurationItem
     {
-        get => _duration;
-        set => SetProperty(ref _duration, value, true);
+        get => _selectedDurationItem;
+        set => SetProperty(ref _selectedDurationItem, value, true);
     }
 
 
@@ -153,24 +155,28 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         set => SetProperty(ref _featureDescription1, value, true);
     }
 
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription2
     {
         get => _featureDescription2;
         set => SetProperty(ref _featureDescription2, value, true);
     }
 
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription3
     {
         get => _featureDescription3;
         set => SetProperty(ref _featureDescription3, value, true);
     }
 
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription4
     {
         get => _featureDescription4;
         set => SetProperty(ref _featureDescription4, value, true);
     }
 
+    [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription5
     {
         get => _featureDescription5;
@@ -267,7 +273,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         PackageName = string.Empty;
         Description = string.Empty;
         Price = null;
-        Duration = string.Empty;
+        SelectedDurationItem = string.Empty;
 
         FeatureDescription1 = string.Empty;
         FeatureDescription2 = string.Empty;
@@ -341,7 +347,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
             packageName = PackageName.Trim(),
             price = originalPrice,
             description = Description?.Trim() ?? string.Empty,
-            duration = Duration,
+            duration = SelectedDurationItem,
             features1 = FeatureDescription1?.Trim() ?? string.Empty,
             features2 = FeatureDescription2?.Trim() ?? string.Empty,
             features3 = FeatureDescription3?.Trim() ?? string.Empty,

@@ -1005,6 +1005,12 @@ public partial class ManageMembersItem : ObservableObject
     private string _contactNumber = string.Empty;
 
     [ObservableProperty]
+    private string _gender = string.Empty;
+    
+    [ObservableProperty]
+    private int _age;
+    
+    [ObservableProperty]
     private string _availedPackages = string.Empty;
 
     [ObservableProperty]
@@ -1012,6 +1018,9 @@ public partial class ManageMembersItem : ObservableObject
 
     [ObservableProperty]
     private DateTime _validity;
+    
+    [ObservableProperty]
+    private DateTime _birthDate;
 
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {

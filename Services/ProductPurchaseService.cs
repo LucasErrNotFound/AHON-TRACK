@@ -196,8 +196,8 @@ namespace AHON_TRACK.Services
                                 sessionsLeft = durationStr.ToLower() switch
                                 {
                                     "one-time only" => 1,
-                                    "monthly" => 30,
-                                    "weekly" => 7,
+                                    "month" => 30,
+                                    "session" => 1,
                                     _ => 1 // Default to 1 if unknown
                                 };
                             }

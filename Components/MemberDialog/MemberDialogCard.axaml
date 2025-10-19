@@ -149,7 +149,7 @@
 										Height="20"
 										VerticalAlignment="Center"
 										Margin="0,0,7,0"
-										Path="avares://AHON_TRACK/Assets/ManageEmployeesView/upload-icon.svg"/>
+										Path="avares://AHON_TRACK/Assets/ManageMembershipView/upload-icon.svg"/>
 									<TextBlock Text="Choose File" VerticalAlignment="Center"/>
 								</StackPanel>
 							</Button>
@@ -186,6 +186,7 @@
 					<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91">
 						<CalendarDatePicker
 							shadui:ControlAssist.Label="Date of Birth"
+							shadui:ControlAssist.ReadOnly="True"
 							Width="150"
 							HorizontalAlignment="Left"
 							SelectedDate="{CompiledBinding MemberBirthDate}"/>

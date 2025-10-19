@@ -37,7 +37,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private bool _isEditMode = false;
 
     [ObservableProperty]
-    private int _currentMemberId = 0;  // Changed from string to int
+    private int _currentMemberId = 0;
 
     [ObservableProperty]
     private Image? _memberProfileImageControl;
@@ -54,10 +54,10 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private string _memberPackages = string.Empty;
     private int? _memberAge;
     private DateTime? _memberBirthDate;
-    private DateTime? _memberDateJoined;  // Unused, consider removing
+    private DateTime? _memberDateJoined;
 
     // Account Section
-    private DateTime? _memberValidUntil;  // Changed from MemberDateJoined
+    private DateTime? _memberValidUntil;
     private string _memberStatus = string.Empty;
 
     private readonly DialogManager _dialogManager;
@@ -169,7 +169,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
     [Required(ErrorMessage = "Valid until date is required")]
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? MemberValidUntil  // Changed from MemberDateJoined
+    public DateTime? MemberValidUntil
     {
         get => _memberValidUntil;
         set => SetProperty(ref _memberValidUntil, value, true);
@@ -301,7 +301,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             MemberAge = memberData.Age;
             MemberBirthDate = memberData.DateOfBirth;
             MemberStatus = memberData.Status ?? "Active";
-
 
             // Parse ValidUntil date
             if (!string.IsNullOrEmpty(memberData.ValidUntil))
