@@ -23,10 +23,13 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     private string[] _discountForItems = ["All", "Walk-ins", "Gym Members"];
     private string _selectedDiscountForItem = "All";
     
+    [ObservableProperty] 
+    private string[] _durationItems = ["/Month", "/Session", "/One-time only"];
+    private string _selectedDurationItem = string.Empty;
+    
     private string _packageName = string.Empty;
     private string _description = string.Empty;
     private int? _price;
-    private string _duration = string.Empty;
     
     private string _featureDescription1 = string.Empty;
     private string _featureDescription2 = string.Empty;
@@ -130,13 +133,11 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         set => SetProperty(ref _price, value, true);
     }
     
-    [Required(ErrorMessage = "Duration is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(14, ErrorMessage = "Must not exceed 14 characters")]
-    public string Duration
+    [Required(ErrorMessage = "Select its Duration")]
+    public string SelectedDurationItem
     {
-        get => _duration;
-        set => SetProperty(ref _duration, value, true);
+        get => _selectedDurationItem;
+        set => SetProperty(ref _selectedDurationItem, value, true);
     }
 
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
@@ -266,7 +267,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         PackageName = string.Empty;
         Description = string.Empty;
         Price = null;
-        Duration = string.Empty;
+        SelectedDurationItem = string.Empty;
 
         FeatureDescription1 = string.Empty;
         FeatureDescription2 = string.Empty;
@@ -305,7 +306,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
 
         Price = package.Price;
     
-        Duration = package.PriceUnit;
+        SelectedDurationItem = package.PriceUnit;
     
         // Populate features (up to 5)
         FeatureDescription1 = package.Features.Count > 0 ? package.Features[0] : string.Empty;
@@ -340,7 +341,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             Title = PackageName,
             Description = Description,
             Price = Price ?? 0,
-            PriceUnit = Duration,
+            PriceUnit = SelectedDurationItem,
             Features = features,
             IsDiscountChecked = EnableDiscount,
             DiscountValue = DiscountValue,
