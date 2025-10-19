@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using ShadUI;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
@@ -81,31 +82,36 @@ public partial class LoginViewModel : ViewModelBase
                 .ShowError();
             return;
         }
-
-        // Authenticate using the service
-        var (success, message, employeeId, role) = await _employeeService.AuthenticateUserAsync(Username, Password);
-
-        if (!success || employeeId == null || role == null)
+        try
         {
-            _shouldShowSuccessLogInToast = false;
-            ToastManager.CreateToast("Login Failed")
-                .WithContent(message)
-                .WithDelay(5)
-                .DismissOnClick()
-                .ShowError();
-            return;
+            // Authenticate using the service
+            var (success, message, employeeId, role) = await _employeeService.AuthenticateUserAsync(Username, Password);
+
+            if (!success || employeeId == null || role == null)
+            {
+                _shouldShowSuccessLogInToast = false;
+                ToastManager.CreateToast("Login Failed")
+                    .WithContent(message)
+                    .WithDelay(5)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            // Set current user information
+            CurrentUserModel.UserId = employeeId.Value;
+            CurrentUserModel.Username = Username;
+            CurrentUserModel.Role = role;
+            CurrentUserModel.LastLogin = DateTime.Now;
+            System.Diagnostics.Debug.WriteLine($"UserId: {CurrentUserModel.UserId}, Username: {CurrentUserModel.Username}, Role: {CurrentUserModel.Role}, LastLogin: {CurrentUserModel.LastLogin}");
+
+            _shouldShowSuccessLogInToast = true;
+            SwitchToMainWindow();
         }
-
-        // Set current user information
-        CurrentUserModel.UserId = employeeId.Value;
-        CurrentUserModel.Username = Username;
-        CurrentUserModel.Role = role;
-        CurrentUserModel.LastLogin = DateTime.Now;
-        System.Diagnostics.Debug.WriteLine($"UserId: {CurrentUserModel.UserId}, Username: {CurrentUserModel.Username}, Role: {CurrentUserModel.Role}, LastLogin: {CurrentUserModel.LastLogin}");
-
-
-        _shouldShowSuccessLogInToast = true;
-        SwitchToMainWindow();
+        catch (ArgumentOutOfRangeException ex)
+        {
+            Debug.WriteLine($"Toast error: {ex.Message}");
+        }
     }
 
     public void SetInitialLogOutToastState(bool showLogOutSuccess)

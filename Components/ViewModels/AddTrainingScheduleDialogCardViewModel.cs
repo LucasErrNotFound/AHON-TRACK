@@ -1,9 +1,10 @@
+﻿using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
-using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
 using Avalonia.Collections;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -12,6 +13,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -20,7 +23,9 @@ namespace AHON_TRACK.Components.ViewModels;
 public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
-    private string[] _coachItems = ["Coach Jho", "Coach Rey", "Coach Jedd"];
+    private string[] _coachItems = ["None"];
+
+    private string? _selectedCoachItems = "None";
 
     [ObservableProperty]
     private ObservableCollection<Trainees> _allTrainees = [];
@@ -40,16 +45,22 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     [ObservableProperty]
     private bool _isSearchingTrainee;
 
+    [ObservableProperty]
+    private bool _isLoading;
+
+    [ObservableProperty]
+    private bool _isLoadingCoaches;
+
+    private Dictionary<string, int> _coachNameToIdMap = new();
+    private bool _coachesLoaded = false;
+
+
     private TimeOnly? _startTime;
     private TimeOnly? _endTime;
     private DateTime? _selectedTrainingDate;
-    private string _selectedCoachItem = string.Empty;
 
     [ObservableProperty]
     private DataGridCollectionView _traineeList;
-
-    [ObservableProperty]
-    private bool _isLoading;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -57,10 +68,10 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     private readonly ITrainingService _trainingService;
 
     [Required(ErrorMessage = "Select the coach")]
-    public string SelectedCoachItem
+    public string SelectedCoachItems
     {
-        get => _selectedCoachItem;
-        set => SetProperty(ref _selectedCoachItem, value, true);
+        get => _selectedCoachItems;
+        set => SetProperty(ref _selectedCoachItems, value, true);
     }
 
     [TodayValidation]
@@ -95,15 +106,13 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         }
     }
 
-    public AddTrainingScheduleDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ITrainingService trainingService)
+    public AddTrainingScheduleDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager,
+        PageManager pageManager, ITrainingService trainingService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _trainingService = trainingService;
-
-        _ = LoadTraineesFromDatabaseAsync();
-        UpdateSuggestions();
     }
 
     public AddTrainingScheduleDialogCardViewModel()
@@ -113,192 +122,117 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         _pageManager = new PageManager(new ServiceProvider());
         _trainingService = null!;
 
-        _ = LoadTraineesFromDatabaseAsync();
+        LoadTraineeData();
         UpdateSuggestions();
     }
 
     [AvaloniaHotReload]
-    public async void Initialize()
+    public async Task Initialize()
     {
         ClearAllFields();
         ClearSearch();
 
-        await LoadTraineesFromDatabaseAsync();
+        if (AllTrainees.Count == 0) LoadTraineeData();
+        await LoadCoachesAsync();
         UpdateSuggestions();
     }
 
-    private List<Trainees> CreateSampleData()
+    private async void LoadTraineeData()
     {
-        return
-        [
-            new Trainees
+        // If service is available, load from database
+        if (_trainingService != null)
         {
-            ID = 1001,
-            CustomerType = "Member",  // Added
-            Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
-            FirstName = "Rome",
-            LastName = "Calubayan",
-            ContactNumber = "09182736273",
-            PackageID = 1,  // Added
-            PackageType = "Boxing",
-            SessionLeft = 1
-        },
-        new Trainees
-        {
-            ID = 1002,
-            CustomerType = "Member",  // Added
-            Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
-            FirstName = "Sianrey",
-            LastName = "Flora",
-            ContactNumber = "09198656372",
-            PackageID = 1,  // Added
-            PackageType = "Boxing",
-            SessionLeft = 1
-        },
-        new Trainees
-        {
-            ID = 1003,
-            CustomerType = "Member",  // Added
-            Picture = "",
-            FirstName = "Mardie",
-            LastName = "Dela Cruz",
-            ContactNumber = "09138545322",
-            PackageID = 2,  // Added
-            PackageType = "Muay Thai",
-            SessionLeft = 2
-        },
-        new Trainees
-        {
-            ID = 1004,
-            CustomerType = "Member",  // Added
-            Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png",
-            FirstName = "JL",
-            LastName = "Taberdo",
-            ContactNumber = "09237645212",
-            PackageID = 3,  // Added
-            PackageType = "Crossfit",
-            SessionLeft = 4
-        },
-        new Trainees
-        {
-            ID = 1005,
-            CustomerType = "WalkIn",  // Added - example walk-in
-            Picture = "",
-            FirstName = "Jav",
-            LastName = "Agustin",
-            ContactNumber = "09686643211",
-            PackageID = 2,  // Added
-            PackageType = "Muay Thai",
-            SessionLeft = 1
-        },
-        new Trainees
-        {
-            ID = 1006,
-            CustomerType = "Member",  // Added
-            Picture = "",
-            FirstName = "Dave",
-            LastName = "Dapitillo",
-            ContactNumber = "09676544212",
-            PackageID = 2,  // Added
-            PackageType = "Muay Thai",
-            SessionLeft = 1
-        },
-        new Trainees
-        {
-            ID = 1007,
-            CustomerType = "Member",  // Added
-            Picture = "",
-            FirstName = "Daniel",
-            LastName = "Empinado",
-            ContactNumber = "09666452211",
-            PackageID = 3,  // Added
-            PackageType = "Crossfit",
-            SessionLeft = 2
-        },
-        new Trainees
-        {
-            ID = 1008,
-            CustomerType = "WalkIn",  // Added - example walk-in
-            Picture = "",
-            FirstName = "Marc",
-            LastName = "Torres",
-            ContactNumber = "098273647382",
-            PackageID = 3,  // Added
-            PackageType = "Crossfit",
-            SessionLeft = 5
-        },
-        new Trainees
-        {
-            ID = 1009,
-            CustomerType = "Member",  // Added
-            Picture = "",
-            FirstName = "Mark",
-            LastName = "Dela Cruz",
-            ContactNumber = "091827362837",
-            PackageID = 3,  // Added
-            PackageType = "Crossfit",
-            SessionLeft = 7
-        },
-        new Trainees
-        {
-            ID = 1010,
-            CustomerType = "Member",  // Added
-            Picture = "",
-            FirstName = "Adriel",
-            LastName = "Del Rosario",
-            ContactNumber = "09182837748",
-            PackageID = 1,  // Added
-            PackageType = "Boxing",
-            SessionLeft = 1
-        },
-        new Trainees
-        {
-            ID = 1011,
-            CustomerType = "Member",  // Added
-            Picture = "",
-            FirstName = "JC",
-            LastName = "Casidor",
-            ContactNumber = "09192818827",
-            PackageID = 1,  // Added
-            PackageType = "Boxing",
-            SessionLeft = 3
+            await LoadTraineeDataFromDatabaseAsync();
         }
-        ];
+        else
+        {
+            // Fallback to sample data for design-time
+            LoadTraineeDataFromSample();
+        }
     }
 
-    private async Task LoadTraineesFromDatabaseAsync()
+    private async Task LoadCoachesAsync()
     {
-        if (_trainingService == null)
-        {
-            LoadTraineeData();
-            return;
-        }
+        if (_trainingService == null) return;
+
+        IsLoadingCoaches = true;
 
         try
         {
+            // Assuming you have a method in ITrainingService to get coaches
+            // Adjust this based on your actual service method
+            var coaches = await _trainingService.GetCoachNamesAsync();
+
+            _coachNameToIdMap.Clear();
+
+            var coachNames = coaches
+                .Where(c => !string.IsNullOrEmpty(c.FullName))
+                .OrderBy(c => c.FullName)
+                .ToList();
+
+            foreach (var coach in coachNames)
+            {
+                _coachNameToIdMap[coach.FullName] = coach.CoachID;
+            }
+
+            var names = coachNames.Select(c => c.FullName).ToList();
+            names.Insert(0, "None");
+
+            CoachItems = names.ToArray();
+
+            if (string.IsNullOrEmpty(SelectedCoachItems))
+            {
+                SelectedCoachItems = "None";
+            }
+        }
+        catch (Exception ex)
+        {
+            CoachItems = ["None"];
+            SelectedCoachItems = "None";
+
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to load coaches: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsLoadingCoaches = false;
+            _coachesLoaded = true;
+        }
+    }
+
+
+    private async Task LoadTraineeDataFromDatabaseAsync()
+    {
+        try
+        {
             IsLoading = true;
-            var trainees = await _trainingService.GetAvailableTraineesAsync();
+
+            var traineeModels = await _trainingService.GetAvailableTraineesAsync();
 
             AllTrainees.Clear();
             FilteredTrainees.Clear();
 
-            foreach (var trainee in trainees)
+            // Convert TraineeModel to Trainees
+            foreach (var model in traineeModels)
             {
-                var traineeItem = new Trainees
+                var trainee = new Trainees
                 {
-                    ID = trainee.ID,
-                    CustomerType = trainee.CustomerType,  // Added
-                    Picture = trainee.Picture,
-                    FirstName = trainee.FirstName,
-                    LastName = trainee.LastName,
-                    ContactNumber = trainee.ContactNumber,
-                    PackageID = trainee.PackageID,  // Added
-                    PackageType = trainee.PackageType,  // This is the package name
-                    SessionLeft = trainee.SessionLeft
+                    ID = model.ID,
+                    Picture = model.Picture,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    ContactNumber = model.ContactNumber,
+                    PackageType = model.PackageType,
+                    SessionLeft = model.SessionLeft,
+                    // Store additional data for later use
+                    CustomerType = model.CustomerType,
+                    PackageID = model.PackageID
                 };
 
-                AllTrainees.Add(traineeItem);
-                FilteredTrainees.Add(traineeItem);
+                AllTrainees.Add(trainee);
+                FilteredTrainees.Add(trainee);
             }
 
             TraineeList = new DataGridCollectionView(FilteredTrainees);
@@ -307,8 +241,11 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         {
             _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to load trainees: {ex.Message}")
+                .WithDelay(5)
                 .ShowError();
-            LoadTraineeData(); // Fallback to sample data
+
+            // Load sample data as fallback
+            LoadTraineeDataFromSample();
         }
         finally
         {
@@ -316,7 +253,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         }
     }
 
-    private void LoadTraineeData()
+    private void LoadTraineeDataFromSample()
     {
         var trainees = CreateSampleData();
 
@@ -332,12 +269,76 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         TraineeList = new DataGridCollectionView(FilteredTrainees);
     }
 
+    private List<Trainees> CreateSampleData()
+    {
+        return
+        [
+            new Trainees
+            {
+                ID = 1001, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Rome",
+                LastName = "Calubayan", ContactNumber = "09182736273", PackageType = "Boxing", SessionLeft = 1
+            },
+            new Trainees
+            {
+                ID = 1002, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Sianrey",
+                LastName = "Flora", ContactNumber = "09198656372", PackageType = "Boxing", SessionLeft = 1
+            },
+            new Trainees
+            {
+                ID = 1003, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Mardie",
+                LastName = "Dela Cruz", ContactNumber = "09138545322", PackageType = "Muay Thai", SessionLeft = 2
+            },
+            new Trainees
+            {
+                ID = 1004, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "JL",
+                LastName = "Taberdo", ContactNumber = "09237645212", PackageType = "Crossfit", SessionLeft = 4
+            },
+            new Trainees
+            {
+                ID = 1005, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Jav",
+                LastName = "Agustin", ContactNumber = "09686643211", PackageType = "Muay Thai", SessionLeft = 1
+            },
+            new Trainees
+            {
+                ID = 1006, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Dave",
+                LastName = "Dapitillo", ContactNumber = "09676544212", PackageType = "Muay Thai", SessionLeft = 1
+            },
+            new Trainees
+            {
+                ID = 1007, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Daniel",
+                LastName = "Empinado", ContactNumber = "09666452211", PackageType = "Crossfit", SessionLeft = 2
+            },
+            new Trainees
+            {
+                ID = 1008, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Marc",
+                LastName = "Torres", ContactNumber = "098273647382", PackageType = "Crossfit", SessionLeft = 5
+            },
+            new Trainees
+            {
+                ID = 1009, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Mark",
+                LastName = "Dela Cruz", ContactNumber = "091827362837", PackageType = "Crossfit", SessionLeft = 7
+            },
+            new Trainees
+            {
+                ID = 1010, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "Adriel",
+                LastName = "Del Rosario", ContactNumber = "09182837748", PackageType = "Boxing", SessionLeft = 1
+            },
+            new Trainees
+            {
+                ID = 1011, Picture = ImageHelper.GetDefaultAvatarSafe(), FirstName = "JC",
+                LastName = "Casidor", ContactNumber = "09192818827", PackageType = "Boxing", SessionLeft = 3
+            }
+        ];
+    }
+
+
+
     [RelayCommand]
     private async Task SearchTrainees()
     {
         if (string.IsNullOrWhiteSpace(SearchTraineeText))
         {
-            // Reset to show all trainees
+            // Reset to show all trainees 
             FilteredTrainees.Clear();
             foreach (var trainee in AllTrainees)
             {
@@ -405,7 +406,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     partial void OnSelectedTraineeChanged(Trainees? value)
     {
         if (value == null) return;
-        // Update the search text to match the selected trainee
+        // Update the search text to match the selected trainee 
         SearchTraineeText = $"{value.FirstName} {value.LastName}";
 
         // Show only the selected trainee in the grid
@@ -441,59 +442,110 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         ValidateProperty(StartTime, nameof(StartTime));
         ValidateProperty(EndTime, nameof(EndTime));
 
-        if (HasErrors || _trainingService == null) return;
+        if (HasErrors) return;
+        if (SelectedTrainee == null)
+        {
+            _toastManager?.CreateToast("Validation Error")
+                .WithContent("Please select a trainee")
+                .ShowWarning();
+            return;
+        }
+
+        // If no service available (design-time), skip DB call
+        if (_trainingService == null)
+        {
+            LastSelectedTrainee = SelectedTrainee;
+            ClearSearch();
+            _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+            return;
+        }
 
         try
         {
             IsLoading = true;
 
-            var selectedTrainees = FilteredTrainees
-                .Where(t => t.IsSelected)
-                .ToList();
-
-            if (!selectedTrainees.Any())
+            // ✅ Convert Bitmap (Avalonia) to byte[]
+            byte[]? imageBytes = null;
+            if (SelectedTrainee.Picture != null)
             {
-                _toastManager.CreateToast("No Trainees Selected")
-                    .WithContent("Please select at least one trainee")
-                    .ShowWarning();
-                return;
+                using var ms = new MemoryStream();
+                SelectedTrainee.Picture.Save(ms);
+                imageBytes = ms.ToArray();
             }
 
-            var scheduledDate = SelectedTrainingDate!.Value.Date;
-            var startDateTime = scheduledDate.Add(StartTime!.Value.ToTimeSpan());
-            var endDateTime = scheduledDate.Add(EndTime!.Value.ToTimeSpan());
+            // ✅ CRITICAL FIX: Ensure CustomerType is exactly 'Member' or 'WalkIn'
+            string customerType = SelectedTrainee.CustomerType?.Trim();
 
-            foreach (var trainee in selectedTrainees)
+            // Normalize the customer type to match CHECK constraint
+            if (string.IsNullOrWhiteSpace(customerType))
             {
-                var training = new TrainingModel
+                customerType = "Member"; // Default fallback
+            }
+            else if (customerType.Equals("walk-in", StringComparison.OrdinalIgnoreCase))
+            {
+                customerType = "WalkIn"; // Ensure correct casing
+            }
+            else if (!customerType.Equals("Member", StringComparison.Ordinal) &&
+                     !customerType.Equals("Walk-in", StringComparison.Ordinal))
+            {
+                customerType = "Member"; // Fallback for any other value
+            }
+            int? coachId = null;
+            if (!string.IsNullOrEmpty(SelectedCoachItems) && SelectedCoachItems != "None")
+            {
+                if (_coachNameToIdMap.TryGetValue(SelectedCoachItems, out int id))
                 {
-                    customerID = trainee.ID,
-                    customerType = trainee.CustomerType,  // "Member" or "WalkIn"
-                    firstName = trainee.FirstName,
-                    lastName = trainee.LastName,
-                    contactNumber = trainee.ContactNumber,
-                    picture = trainee.Picture,
-                    packageID = trainee.PackageID,
-                    packageType = trainee.PackageType,  // Package name (e.g., "Boxing")
-                    assignedCoach = SelectedCoachItem,
-                    scheduledDate = scheduledDate,
-                    scheduledTimeStart = startDateTime,
-                    scheduledTimeEnd = endDateTime,
-                    attendance = "Pending"
-                };
-
-                await _trainingService.AddTrainingScheduleAsync(training);
+                    coachId = id;
+                }
             }
 
-            LastSelectedTrainee = selectedTrainees.LastOrDefault();
-            ClearSearch();
-            _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+            // ✅ Create the model to send to the DB
+            var training = new TrainingModel
+            {
+                customerID = SelectedTrainee.ID,
+                customerType = customerType, // ✅ Now properly validated
+                firstName = SelectedTrainee.FirstName,
+                lastName = SelectedTrainee.LastName,
+                contactNumber = SelectedTrainee.ContactNumber,
+                picture = imageBytes,
+                packageID = SelectedTrainee.PackageID,
+                packageType = SelectedTrainee.PackageType,
+                assignedCoach = SelectedCoachItems,
+                coachID = coachId ?? 0,
+                scheduledDate = SelectedTrainingDate!.Value.Date,
+                scheduledTimeStart = SelectedTrainingDate.Value.Date.Add(StartTime!.Value.ToTimeSpan()),
+                scheduledTimeEnd = SelectedTrainingDate.Value.Date.Add(EndTime!.Value.ToTimeSpan()),
+                attendance = "Pending"
+            };
+
+            // ✅ Save to DB using your service
+            var success = await _trainingService.AddTrainingScheduleAsync(training);
+
+            if (success)
+            {
+                _toastManager?.CreateToast("Success")
+                    .WithContent("Training schedule added successfully.")
+                    .ShowSuccess();
+
+                LastSelectedTrainee = SelectedTrainee;
+                ClearSearch();
+                _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+            }
+            else
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent("Failed to add training schedule.")
+                    .ShowError();
+            }
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast("Error")
+            _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to add training schedule: {ex.Message}")
+                .WithDelay(5)
                 .ShowError();
+
+            Console.WriteLine($"[Submit] Error: {ex.Message}");
         }
         finally
         {
@@ -505,13 +557,12 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     private void Cancel()
     {
         ClearSearch();
-        ClearAllErrors();
         _dialogManager.Close(this);
     }
 
     private void ClearAllFields()
     {
-        SelectedCoachItem = string.Empty;
+        SelectedCoachItems = string.Empty;
         StartTime = null;
         EndTime = null;
         SelectedTrainingDate = null;
@@ -520,6 +571,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         SelectedTrainee = null;
         ClearAllErrors();
     }
+
 }
 
 public partial class Trainees : ObservableObject
@@ -528,10 +580,7 @@ public partial class Trainees : ObservableObject
     private int _iD;
 
     [ObservableProperty]
-    private string _customerType = string.Empty;  // Added: "Member" or "WalkIn"
-
-    [ObservableProperty]
-    private string? _picture = string.Empty;
+    private Bitmap? _picture;
 
     [ObservableProperty]
     private string _firstName = string.Empty;
@@ -543,18 +592,14 @@ public partial class Trainees : ObservableObject
     private string _contactNumber = string.Empty;
 
     [ObservableProperty]
-    private int _packageID;  // Added: Package ID from database
-
-    [ObservableProperty]
-    private string _packageType = string.Empty;  // Package name (e.g., "Boxing", "Muay Thai", "CrossFit")
+    private string _packageType = string.Empty;
 
     [ObservableProperty]
     private int _sessionLeft;
 
-    [ObservableProperty]
-    private bool _isSelected;
+    // Additional properties for database operations (not displayed in UI)
+    public string? CustomerType { get; set; }
+    public int PackageID { get; set; }
 
-    public string PicturePath => string.IsNullOrEmpty(Picture) || Picture == "null"
-        ? "avares://AHON_TRACK/Assets/MainWindowView/user.png"
-        : Picture;
+    public Bitmap? PicturePath;
 }

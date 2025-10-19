@@ -10,21 +10,23 @@ namespace AHON_TRACK.Models
     public class TrainingModel
     {
         public int trainingID { get; set; }
-        public int customerID { get; set; }  // Changed from memberID
-        public string customerType { get; set; } = string.Empty;  // "Member" or "WalkIn"
+        public int customerID { get; set; }
+        public string customerType { get; set; } = string.Empty;
         public string firstName { get; set; } = string.Empty;
         public string lastName { get; set; } = string.Empty;
         public string contactNumber { get; set; } = string.Empty;
-        public string? picture { get; set; }
-        public int packageID { get; set; }  // Added
-        public string packageType { get; set; } = string.Empty;  // Package name
+        public byte[]? picture { get; set; } // ✅ store raw bytes
+        public int packageID { get; set; }
+        public string packageType { get; set; } = string.Empty;
         public string assignedCoach { get; set; } = string.Empty;
+        public int coachID { get; set; }
         public DateTime scheduledDate { get; set; }
         public DateTime scheduledTimeStart { get; set; }
         public DateTime scheduledTimeEnd { get; set; }
         public string attendance { get; set; } = string.Empty;
         public DateTime createdAt { get; set; }
         public DateTime updatedAt { get; set; }
-        public int AddedByEmployeeID { get; set; }
+        public int addedByEmployeeID { get; set; }
+        public int ScheduleID { get; set; }
     }
 }

@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using AHON_TRACK.Models;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -28,8 +29,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly ProductStockViewModel _productStockViewModel;
     private readonly SupplierManagementViewModel _supplierManagementViewModel;
     private readonly FinancialReportsViewModel _financialReportsViewModel;
-    private readonly GymDemographicsViewModel  _gymDemographicsViewModel;
-    private readonly GymAttendanceViewModel  _gymAttendanceViewModel;
+    private readonly GymDemographicsViewModel _gymDemographicsViewModel;
+    private readonly GymAttendanceViewModel _gymAttendanceViewModel;
     private readonly AuditLogsViewModel _auditLogsViewModel;
 
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
@@ -199,7 +200,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand]
     private void OpenGymAttendanceReports() => SwitchPage(_gymAttendanceViewModel);
-    
+
     [RelayCommand]
     private void OpenAuditLogs() => SwitchPage(_auditLogsViewModel);
 
@@ -212,7 +213,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         };
         _pageManager.Navigate<EmployeeProfileInformationViewModel>(parameters);
     }
-    
+
     [RelayCommand]
     private void OpenSettingsDialog()
     {
@@ -245,11 +246,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         Task.Delay(900).ContinueWith(_ =>
         {
-            ToastManager.CreateToast("You have signed in! Welcome back!")
-            .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
-                .WithDelay(8)
-                .DismissOnClick()
-                .ShowSuccess();
+                ToastManager.CreateToast("You have signed in! Welcome back!")
+                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                    .WithDelay(8)
+                    .DismissOnClick()
+                    .ShowSuccess();
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 

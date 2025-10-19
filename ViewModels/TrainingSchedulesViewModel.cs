@@ -1,17 +1,21 @@
-using System.Data;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
 using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using Microsoft.IdentityModel.Tokens;
 using ShadUI;
-using AHON_TRACK.Models;
-using AHON_TRACK.Services.Interface;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -68,7 +72,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _changeScheduleDialogCardViewModel = changeScheduleDialogCardViewModel;
         _trainingService = trainingService;
 
-        LoadSampleData();
+        //LoadSampleData();
         UpdateScheduledPeopleCounts();
     }
 
@@ -81,7 +85,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _changeScheduleDialogCardViewModel = new ChangeScheduleDialogCardViewModel();
         _trainingService = null!;
 
-        LoadSampleData();
+        //LoadSampleData();
         UpdateScheduledPeopleCounts();
     }
 
@@ -89,11 +93,52 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     public void Initialize()
     {
         if (IsInitialized) return;
-        LoadSampleData();
+        _ = LoadTrainingsAsync();
+        //LoadSampleData();
         UpdateScheduledPeopleCounts();
         IsInitialized = true;
     }
 
+    public async Task LoadTrainingsAsync()
+    {
+        IsLoading = true;
+        var trainings = await _trainingService.GetTrainingSchedulesAsync();
+        var people = new List<ScheduledPerson>();
+
+        foreach (var t in trainings)
+        {
+            Bitmap? bitmap = null;
+            if (t.picture is { Length: > 0 })
+            {
+                using var ms = new MemoryStream(t.picture);
+                bitmap = new Bitmap(ms);
+            }
+
+            people.Add(new ScheduledPerson
+            {
+                TrainingID = t.trainingID,
+                ID = t.customerID,
+                FirstName = t.firstName,
+                LastName = t.lastName,
+                ContactNumber = t.contactNumber,
+                PackageType = t.packageType,
+                AssignedCoach = t.assignedCoach,
+                ScheduledDate = t.scheduledDate.Date,
+                ScheduledTimeStart = TimeOnly.FromDateTime(t.scheduledTimeStart),
+                ScheduledTimeEnd = TimeOnly.FromDateTime(t.scheduledTimeEnd),
+                Attendance = t.attendance,
+                Picture = bitmap != null ? null : string.Empty // Set appropriately based on your needs
+            });
+        }
+
+        // Store all data in OriginalScheduledPeople
+        OriginalScheduledPeople = people;
+
+        // Now filter based on current date and package selection
+        FilterDataByPackageAndDate();
+
+        IsLoading = false;
+    }
 
 
     private void LoadSampleData()
@@ -183,11 +228,16 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     {
         _addTrainingScheduleDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_addTrainingScheduleDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
+            {
+                // Reload the data after successfully adding a schedule
+                await LoadTrainingsAsync();
+
                 _toastManager.CreateToast("Added new training schedule")
                     .WithContent($"You have added a new training schedule!")
                     .DismissOnClick()
-                    .ShowSuccess())
+                    .ShowSuccess();
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new training schedule cancelled")
                     .WithContent("Add a new training schedule to continue")
@@ -197,27 +247,52 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     }
 
     [RelayCommand]
-    private void MarkAsPresent(ScheduledPerson? scheduledPerson)
+    private async Task MarkAsPresentAsync(ScheduledPerson? scheduledPerson)
     {
-        if (scheduledPerson is null) return;
+        if (scheduledPerson is null || scheduledPerson.TrainingID is null) return;
+
         scheduledPerson.Attendance = "Present";
 
-        _toastManager.CreateToast("Marked as present")
-            .WithContent($"Marked {scheduledPerson.FirstName} {scheduledPerson.LastName} as present!")
-            .DismissOnClick()
-            .ShowSuccess();
-    }
+        var success = await _trainingService.UpdateAttendanceAsync(scheduledPerson.TrainingID.Value, "Present");
 
+        if (success)
+        {
+            _toastManager.CreateToast("Marked as present")
+                .WithContent($"Marked {scheduledPerson.FirstName} {scheduledPerson.LastName} as present!")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        else
+        {
+            _toastManager.CreateToast("Database Error")
+                .WithContent("Failed to update attendance in database.")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
     [RelayCommand]
-    private void MarkAsAbsent(ScheduledPerson? scheduledPerson)
+    private async Task MarkAsAbsentAsync(ScheduledPerson? scheduledPerson)
     {
-        if (scheduledPerson is null) return;
+        if (scheduledPerson is null || scheduledPerson.TrainingID is null) return;
+
         scheduledPerson.Attendance = "Absent";
 
-        _toastManager.CreateToast("Marked as absent")
-            .WithContent($"Marked {scheduledPerson.FirstName} {scheduledPerson.LastName} as absent!")
-            .DismissOnClick()
-            .ShowSuccess();
+        var success = await _trainingService.UpdateAttendanceAsync(scheduledPerson.TrainingID.Value, "Absent");
+
+        if (success)
+        {
+            _toastManager.CreateToast("Marked as absent")
+                .WithContent($"Marked {scheduledPerson.FirstName} {scheduledPerson.LastName} as absent!")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        else
+        {
+            _toastManager.CreateToast("Database Error")
+                .WithContent("Failed to update attendance in database.")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
 
     [RelayCommand]

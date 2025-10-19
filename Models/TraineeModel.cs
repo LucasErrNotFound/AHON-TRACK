@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Avalonia.Media.Imaging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,8 +11,8 @@ namespace AHON_TRACK.Models
     public class TraineeModel
     {
         public int ID { get; set; }
-        public string CustomerType { get; set; } = string.Empty;  // Added
-        public string Picture { get; set; } = string.Empty;
+        public string CustomerType { get; set; } = string.Empty; // Added
+        public Bitmap? Picture { get; set; }
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string ContactNumber { get; set; } = string.Empty;

@@ -30,8 +30,8 @@ public class CheckInOutService : ICheckInOutService
         try
         {
             var logCmd = new SqlCommand(
-                @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime) 
-                      VALUES (@username, @role, @actionType, @description, @success, GETDATE())", conn);
+                @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+                      VALUES (@username, @role, @actionType, @description, @success, GETDATE()), @performed", conn);
             await using var cmd = logCmd.ConfigureAwait(false);
 
             logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
@@ -39,6 +39,7 @@ public class CheckInOutService : ICheckInOutService
             logCmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
             logCmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
             logCmd.Parameters.AddWithValue("@success", success);
+            logCmd.Parameters.AddWithValue("@performed", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
             await logCmd.ExecuteNonQueryAsync();
             DashboardEventService.Instance.NotifyRecentLogsUpdated();

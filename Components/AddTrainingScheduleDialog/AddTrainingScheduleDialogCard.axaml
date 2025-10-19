@@ -125,7 +125,7 @@
                                                     VerticalAlignment="Center"
                                                     HorizontalAlignment="Center"
                                                     x:DataType="viewModels:Trainees"
-                                                    Source="{CompiledBinding PicturePath, Converter={StaticResource StringToBitMapConverter}}"
+                                                    Source="{CompiledBinding Picture}"
                                                     Margin="8" />
 											</DataTemplate>
 										</DataGridTemplateColumn.CellTemplate>
@@ -191,7 +191,8 @@
                                         PlaceholderText="Pick a coach"
                                         shadui:ControlAssist.Label="Assign Coach"
                                         ItemsSource="{CompiledBinding CoachItems}"
-                                        SelectedItem="{CompiledBinding SelectedCoachItem, Mode=TwoWay}">
+	
+                                        SelectedItem="{CompiledBinding SelectedCoachItems, Mode=TwoWay}">
 									</ComboBox>
 								</StackPanel>
 								<StackPanel Spacing="10" Margin="0,0,0,0" HorizontalAlignment="Center">

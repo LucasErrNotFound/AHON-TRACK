@@ -7,8 +7,10 @@ using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.Components.ViewModels;
@@ -16,7 +18,7 @@ namespace AHON_TRACK.Components.ViewModels;
 public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private string[] _coachFilterItems = ["Coach Jho", "Coach Rey", "Coach Jedd"];
+    private string[] _coachFilterItems = ["None"];
 
     private TimeOnly? _startTime;
     private TimeOnly? _endTime;
@@ -30,8 +32,14 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
 
     [ObservableProperty]
     private bool _isLoading;
+
+    [ObservableProperty]
+    private bool _isLoadingCoaches;
+
     [ObservableProperty]
     private int? _trainingID;
+
+    private Dictionary<string, int> _coachNameToIdMap = new();
 
     public ChangeScheduleDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ITrainingService trainingService)
     {
@@ -57,6 +65,7 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         set => SetProperty(ref _selectedTrainingDate, value, true);
     }
 
+    [Required(ErrorMessage = "Select the coach")]
     public string? SelectedCoach
     {
         get => _selectedCoach;
@@ -88,22 +97,72 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
         ClearAllFields();
+        await LoadCoachesAsync();
     }
 
-    public void Initialize(ScheduledPerson scheduledPerson)
+    public async Task Initialize(ScheduledPerson scheduledPerson)
     {
         TrainingID = scheduledPerson.TrainingID;
         SelectedTrainingDate = scheduledPerson.ScheduledDate;
+
+        // Load coaches first
+        await LoadCoachesAsync();
+
+        // Then set the selected coach
         SelectedCoach = scheduledPerson.AssignedCoach;
 
-        /* if (scheduledPerson.ScheduledTimeStart.HasValue)
-             StartTime = TimeOnly.FromDateTime(scheduledPerson.ScheduledTimeStart.Value);
+        StartTime = scheduledPerson.ScheduledTimeStart;
+        EndTime = scheduledPerson.ScheduledTimeEnd;
+    }
 
-         if (scheduledPerson.ScheduledTimeEnd.HasValue)
-             EndTime = TimeOnly.FromDateTime(scheduledPerson.ScheduledTimeEnd.Value);*/
+    private async Task LoadCoachesAsync()
+    {
+        if (_trainingService == null) return;
+
+        IsLoadingCoaches = true;
+
+        try
+        {
+            var coaches = await _trainingService.GetCoachNamesAsync();
+
+            _coachNameToIdMap.Clear();
+
+            var coachNames = coaches
+                .Where(c => !string.IsNullOrEmpty(c.FullName))
+                .OrderBy(c => c.FullName)
+                .ToList();
+
+            foreach (var coach in coachNames)
+            {
+                _coachNameToIdMap[coach.FullName] = coach.CoachID;
+            }
+
+            var names = coachNames.Select(c => c.FullName).ToList();
+            names.Insert(0, "None");
+
+            CoachFilterItems = names.ToArray();
+
+            if (string.IsNullOrEmpty(SelectedCoach))
+            {
+                SelectedCoach = "None";
+            }
+        }
+        catch (Exception ex)
+        {
+            CoachFilterItems = ["None"];
+            SelectedCoach = "None";
+
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to load coaches: {ex.Message}")
+                .ShowError();
+        }
+        finally
+        {
+            IsLoadingCoaches = false;
+        }
     }
 
     [RelayCommand]
@@ -133,6 +192,19 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
             training.scheduledTimeStart = SelectedTrainingDate.Value.Date.Add(StartTime!.Value.ToTimeSpan());
             training.scheduledTimeEnd = SelectedTrainingDate.Value.Date.Add(EndTime!.Value.ToTimeSpan());
             training.assignedCoach = SelectedCoach;
+
+            // Get the coach ID if a coach is selected
+            if (!string.IsNullOrEmpty(SelectedCoach) && SelectedCoach != "None")
+            {
+                if (_coachNameToIdMap.TryGetValue(SelectedCoach, out int coachId))
+                {
+                    training.coachID = coachId;
+                }
+            }
+            else
+            {
+                training.coachID = 0; // or null if your model supports it
+            }
 
             var success = await _trainingService.UpdateTrainingScheduleAsync(training);
 

@@ -43,7 +43,8 @@ namespace AHON_TRACK.Services
         private bool CanView()
         {
             return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         #endregion
@@ -70,12 +71,220 @@ namespace AHON_TRACK.Services
 
                 try
                 {
-                    // Check for duplicate username in both Admins and Staffs tables
+                    // 🔄 First, check if this username exists in soft-deleted records
+                    int? deletedEmployeeId = null;
+                    string? oldPosition = null;
+
+                    using var checkDeletedCmd = new SqlCommand(@"
+                SELECT e.EmployeeID, e.Position
+                FROM Employees e
+                LEFT JOIN Admins a ON e.EmployeeID = a.AdminID
+                LEFT JOIN Coach c ON e.EmployeeID = c.CoachID
+                LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID
+                WHERE (a.Username = @username OR c.Username = @username OR s.Username = @username)
+                AND e.IsDeleted = 1", conn, transaction);
+                    checkDeletedCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
+
+                    using var deletedReader = await checkDeletedCmd.ExecuteReaderAsync();
+                    if (await deletedReader.ReadAsync())
+                    {
+                        deletedEmployeeId = deletedReader.GetInt32(0);
+                        oldPosition = deletedReader.IsDBNull(1) ? null : deletedReader.GetString(1);
+                    }
+                    deletedReader.Close();
+
+                    // 🔄 If deleted employee found, RESTORE instead of creating new
+                    if (deletedEmployeeId.HasValue)
+                    {
+                        // 🔐 Hash the password
+                        string hashedPassword = PasswordHelper.HashPassword(employee.Password ?? "DefaultPassword123!");
+
+                        // Update the deleted employee's information
+                        string updateQuery = @"
+                    UPDATE Employees 
+                    SET FirstName = @FirstName, 
+                        MiddleInitial = @MiddleInitial, 
+                        LastName = @LastName, 
+                        Gender = @Gender,
+                        ProfilePicture = @ProfilePicture,
+                        ContactNumber = @ContactNumber, 
+                        Age = @Age,
+                        DateOfBirth = @DateOfBirth,
+                        HouseAddress = @HouseAddress,
+                        HouseNumber = @HouseNumber,
+                        Street = @Street,
+                        Barangay = @Barangay,
+                        CityTown = @CityTown,
+                        Province = @Province,
+                        DateJoined = @DateJoined,
+                        Position = @Position,
+                        Status = @Status,
+                        IsDeleted = 0,
+                        UpdatedAt = GETDATE()
+                    WHERE EmployeeId = @EmployeeId";
+
+                        using var updateCmd = new SqlCommand(updateQuery, conn, transaction);
+                        updateCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                        updateCmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(employee.MiddleInitial) ? (object)DBNull.Value : employee.MiddleInitial);
+                        updateCmd.Parameters.AddWithValue("@LastName", employee.LastName ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@Gender", employee.Gender ?? (object)DBNull.Value);
+                        updateCmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = employee.ProfilePicture ?? (object)DBNull.Value;
+                        updateCmd.Parameters.AddWithValue("@ContactNumber", employee.ContactNumber ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@Age", employee.Age > 0 ? employee.Age : (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@DateOfBirth", employee.DateOfBirth ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@HouseAddress", employee.HouseAddress ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@HouseNumber", employee.HouseNumber ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@Street", employee.Street ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
+                        updateCmd.Parameters.AddWithValue("@DateJoined", employee.DateJoined);
+                        updateCmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
+                        updateCmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
+                        await updateCmd.ExecuteNonQueryAsync();
+
+                        // Handle position change if needed
+                        bool positionChanged = !string.Equals(oldPosition, employee.Position, StringComparison.OrdinalIgnoreCase);
+                        bool isCoach = employee.Username?.IndexOf("coach", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                        if (positionChanged)
+                        {
+                            // Delete from old role table
+                            if (oldPosition?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                using var deleteCmd = new SqlCommand("DELETE FROM Admins WHERE AdminID = @EmployeeId", conn, transaction);
+                                deleteCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                                await deleteCmd.ExecuteNonQueryAsync();
+                            }
+                            else if (oldPosition?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                using var checkCoachCmd = new SqlCommand("SELECT COUNT(*) FROM Coach WHERE CoachID = @EmployeeId", conn, transaction);
+                                checkCoachCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                                int coachCount = (int)await checkCoachCmd.ExecuteScalarAsync();
+
+                                if (coachCount > 0)
+                                {
+                                    using var deleteCmd = new SqlCommand("DELETE FROM Coach WHERE CoachID = @EmployeeId", conn, transaction);
+                                    deleteCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                                    await deleteCmd.ExecuteNonQueryAsync();
+                                }
+                                else
+                                {
+                                    using var deleteCmd = new SqlCommand("DELETE FROM Staffs WHERE StaffID = @EmployeeId", conn, transaction);
+                                    deleteCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                                    await deleteCmd.ExecuteNonQueryAsync();
+                                }
+                            }
+
+                            // Insert into new role table
+                            if (employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                string adminQuery = @"
+                            INSERT INTO Admins (AdminID, Username, Password, CreatedAt)
+                            VALUES (@AdminID, @Username, @Password, GETDATE())";
+
+                                using var adminCmd = new SqlCommand(adminQuery, conn, transaction);
+                                adminCmd.Parameters.AddWithValue("@AdminID", deletedEmployeeId.Value);
+                                adminCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                adminCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                                await adminCmd.ExecuteNonQueryAsync();
+                            }
+                            else if (employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                if (isCoach)
+                                {
+                                    string coachQuery = @"
+                                INSERT INTO Coach (CoachID, Username, Password, CreatedAt)
+                                VALUES (@CoachID, @Username, @Password, GETDATE())";
+
+                                    using var coachCmd = new SqlCommand(coachQuery, conn, transaction);
+                                    coachCmd.Parameters.AddWithValue("@CoachID", deletedEmployeeId.Value);
+                                    coachCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                    coachCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                                    await coachCmd.ExecuteNonQueryAsync();
+                                }
+                                else
+                                {
+                                    string staffQuery = @"
+                                INSERT INTO Staffs (StaffID, Username, Password, CreatedAt)
+                                VALUES (@StaffID, @Username, @Password, GETDATE())";
+
+                                    using var staffCmd = new SqlCommand(staffQuery, conn, transaction);
+                                    staffCmd.Parameters.AddWithValue("@StaffID", deletedEmployeeId.Value);
+                                    staffCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                    staffCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                                    await staffCmd.ExecuteNonQueryAsync();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Just restore and update in the same role table
+                            if (employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                using var restoreCmd = new SqlCommand(@"
+                            UPDATE Admins 
+                            SET Username = @Username, Password = @Password, IsDeleted = 0, UpdatedAt = GETDATE()
+                            WHERE AdminID = @EmployeeId", conn, transaction);
+                                restoreCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                                restoreCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                restoreCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                                await restoreCmd.ExecuteNonQueryAsync();
+                            }
+                            else if (employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                using var checkCoachCmd = new SqlCommand("SELECT COUNT(*) FROM Coach WHERE CoachID = @EmployeeId", conn, transaction);
+                                checkCoachCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                                int coachCount = (int)await checkCoachCmd.ExecuteScalarAsync();
+
+                                if (coachCount > 0)
+                                {
+                                    using var restoreCmd = new SqlCommand(@"
+                                UPDATE Coach 
+                                SET Username = @Username, Password = @Password, IsDeleted = 0, UpdatedAt = GETDATE()
+                                WHERE CoachID = @EmployeeId", conn, transaction);
+                                    restoreCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                                    restoreCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                    restoreCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                                    await restoreCmd.ExecuteNonQueryAsync();
+                                }
+                                else
+                                {
+                                    using var restoreCmd = new SqlCommand(@"
+                                UPDATE Staffs 
+                                SET Username = @Username, Password = @Password, IsDeleted = 0, UpdatedAt = GETDATE()
+                                WHERE StaffID = @EmployeeId", conn, transaction);
+                                    restoreCmd.Parameters.AddWithValue("@EmployeeId", deletedEmployeeId.Value);
+                                    restoreCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                    restoreCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                                    await restoreCmd.ExecuteNonQueryAsync();
+                                }
+                            }
+                        }
+
+                        await LogActionAsync(conn, "RESTORE", $"Restored and updated {employee.Position}: {employee.FirstName} {employee.LastName}", true, transaction);
+
+                        transaction.Commit();
+
+                        _toastManager?.CreateToast("Employee Restored")
+                            .WithContent($"Successfully restored {employee.FirstName} {employee.LastName}.")
+                            .DismissOnClick()
+                            .ShowSuccess();
+
+                        return (true, "Employee restored successfully.", deletedEmployeeId.Value);
+                    }
+
+                    // ✅ No deleted employee found, proceed with normal ADD operation
+
+                    // Check for duplicate username in active employees only
                     using var checkCmd = new SqlCommand(@"
-                        SELECT COUNT(*) FROM 
-                        (SELECT Username FROM Admins WHERE Username = @username
-                         UNION ALL
-                         SELECT Username FROM Staffs WHERE Username = @username) AS AllUsernames",
+                SELECT COUNT(*) FROM 
+                (SELECT Username FROM Admins WHERE Username = @username AND IsDeleted = 0
+                 UNION ALL
+                 SELECT Username FROM Coach WHERE Username = @username AND IsDeleted = 0
+                 UNION ALL
+                 SELECT Username FROM Staffs WHERE Username = @username AND IsDeleted = 0) AS AllUsernames",
                         conn, transaction);
                     checkCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
 
@@ -91,19 +300,19 @@ namespace AHON_TRACK.Services
                     }
 
                     // 🔐 HASH THE PASSWORD BEFORE STORING
-                    string hashedPassword = PasswordHelper.HashPassword(employee.Password ?? "DefaultPassword123!");
+                    string newHashedPassword = PasswordHelper.HashPassword(employee.Password ?? "DefaultPassword123!");
 
                     // Insert into Employees table
                     string employeeQuery = @"
-                        INSERT INTO Employees 
-                        (FirstName, MiddleInitial, LastName, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
-                         HouseAddress, HouseNumber, Street, Barangay, CityTown, Province, 
-                         DateJoined, Status, Position, CreatedAt)
-                        OUTPUT INSERTED.EmployeeId
-                        VALUES 
-                        (@FirstName, @MiddleInitial, @LastName, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
-                         @HouseAddress, @HouseNumber, @Street, @Barangay, @CityTown, @Province, 
-                         @DateJoined, @Status, @Position, GETDATE())";
+                INSERT INTO Employees 
+                (FirstName, MiddleInitial, LastName, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
+                 HouseAddress, HouseNumber, Street, Barangay, CityTown, Province, 
+                 DateJoined, Status, Position, CreatedAt)
+                OUTPUT INSERTED.EmployeeId
+                VALUES 
+                (@FirstName, @MiddleInitial, @LastName, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
+                 @HouseAddress, @HouseNumber, @Street, @Barangay, @CityTown, @Province, 
+                 @DateJoined, @Status, @Position, GETDATE())";
 
                     using var cmd = new SqlCommand(employeeQuery, conn, transaction);
                     cmd.Parameters.AddWithValue("@FirstName", employee.FirstName ?? (object)DBNull.Value);
@@ -126,30 +335,50 @@ namespace AHON_TRACK.Services
 
                     int employeeId = (int)await cmd.ExecuteScalarAsync();
 
-                    // Insert into Admins or Staffs table based on Position with HASHED PASSWORD
+                    // Insert into Admins, Staffs, or Coach table based on Position and Username with HASHED PASSWORD
                     if (employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
                     {
                         string adminQuery = @"
-                            INSERT INTO Admins (AdminID, Username, Password, CreatedAt)
-                            VALUES (@AdminID, @Username, @Password, GETDATE())";
+                    INSERT INTO Admins (AdminID, Username, Password, CreatedAt)
+                    VALUES (@AdminID, @Username, @Password, GETDATE())";
 
                         using var adminCmd = new SqlCommand(adminQuery, conn, transaction);
                         adminCmd.Parameters.AddWithValue("@AdminID", employeeId);
                         adminCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                        adminCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                        adminCmd.Parameters.AddWithValue("@Password", newHashedPassword);
                         await adminCmd.ExecuteNonQueryAsync();
                     }
                     else if (employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
                     {
-                        string staffQuery = @"
-                            INSERT INTO Staffs (StaffID, Username, Password, CreatedAt)
-                            VALUES (@StaffID, @Username, @Password, GETDATE())";
+                        // Check if username contains "coach" (case-insensitive)
+                        bool isCoach = employee.Username?.IndexOf("coach", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                        using var staffCmd = new SqlCommand(staffQuery, conn, transaction);
-                        staffCmd.Parameters.AddWithValue("@StaffID", employeeId);
-                        staffCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                        staffCmd.Parameters.AddWithValue("@Password", hashedPassword);
-                        await staffCmd.ExecuteNonQueryAsync();
+                        if (isCoach)
+                        {
+                            // Insert into Coach table
+                            string coachQuery = @"
+                        INSERT INTO Coach (CoachID, Username, Password, CreatedAt)
+                        VALUES (@CoachID, @Username, @Password, GETDATE())";
+
+                            using var coachCmd = new SqlCommand(coachQuery, conn, transaction);
+                            coachCmd.Parameters.AddWithValue("@CoachID", employeeId);
+                            coachCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                            coachCmd.Parameters.AddWithValue("@Password", newHashedPassword);
+                            await coachCmd.ExecuteNonQueryAsync();
+                        }
+                        else
+                        {
+                            // Insert into Staffs table
+                            string staffQuery = @"
+                        INSERT INTO Staffs (StaffID, Username, Password, CreatedAt)
+                        VALUES (@StaffID, @Username, @Password, GETDATE())";
+
+                            using var staffCmd = new SqlCommand(staffQuery, conn, transaction);
+                            staffCmd.Parameters.AddWithValue("@StaffID", employeeId);
+                            staffCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                            staffCmd.Parameters.AddWithValue("@Password", newHashedPassword);
+                            await staffCmd.ExecuteNonQueryAsync();
+                        }
                     }
 
                     await LogActionAsync(conn, "CREATE", $"Added new {employee.Position}: {employee.FirstName} {employee.LastName}", true, transaction);
@@ -210,24 +439,26 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // ✅ Updated query with JOIN to get Username
+                // ✅ Updated query with Coach table and IsDeleted filter
                 string query = @"
-            SELECT 
-                e.EmployeeId,
-                e.FirstName,
-                e.MiddleInitial,
-                e.LastName,
-                LTRIM(RTRIM(e.FirstName + ISNULL(' ' + e.MiddleInitial + '.', '') + ' ' + e.LastName)) AS Name,
-                e.ContactNumber,
-                e.Position,
-                e.Status,
-                e.DateJoined,
-                e.ProfilePicture,
-                COALESCE(a.Username, s.Username) AS Username
-            FROM Employees e
-            LEFT JOIN Admins a ON e.EmployeeID = a.AdminID
-            LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID
-            ORDER BY Name";
+    SELECT 
+        e.EmployeeId,
+        e.FirstName,
+        e.MiddleInitial,
+        e.LastName,
+        LTRIM(RTRIM(e.FirstName + ISNULL(' ' + e.MiddleInitial + '.', '') + ' ' + e.LastName)) AS Name,
+        e.ContactNumber,
+        e.Position,
+        e.Status,
+        e.DateJoined,
+        e.ProfilePicture,
+        COALESCE(a.Username, c.Username, s.Username) AS Username
+    FROM Employees e
+    LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
+    LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
+    LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
+    WHERE e.IsDeleted = 0
+    ORDER BY Name";
 
                 var employees = new List<ManageEmployeeModel>();
                 using var cmd = new SqlCommand(query, conn);
@@ -251,7 +482,7 @@ namespace AHON_TRACK.Services
                         AvatarSource = reader.IsDBNull(9)
                             ? ImageHelper.GetDefaultAvatar()
                             : ImageHelper.BytesToBitmap((byte[])reader[9]),
-                        Username = reader.IsDBNull(10) ? string.Empty : reader.GetString(10) // ✅ Add Username
+                        Username = reader.IsDBNull(10) ? string.Empty : reader.GetString(10)
                     });
                 }
                 return (true, "Employees retrieved successfully.", employees);
@@ -289,14 +520,15 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 var query = @"
-                    SELECT e.EmployeeId, e.FirstName, e.MiddleInitial, e.LastName, e.ContactNumber, 
-                           e.Position, e.ProfilePicture, e.Status, e.DateJoined, e.Gender, e.Age, e.DateOfBirth,
-                           e.HouseAddress, e.HouseNumber, e.Street, e.Barangay, e.CityTown, e.Province,
-                           COALESCE(a.Username, s.Username) AS Username
-                    FROM Employees e
-                    LEFT JOIN Admins a ON e.EmployeeID = a.AdminID
-                    LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID
-                    WHERE e.EmployeeId = @Id";
+            SELECT e.EmployeeId, e.FirstName, e.MiddleInitial, e.LastName, e.ContactNumber, 
+                   e.Position, e.ProfilePicture, e.Status, e.DateJoined, e.Gender, e.Age, e.DateOfBirth,
+                   e.HouseAddress, e.HouseNumber, e.Street, e.Barangay, e.CityTown, e.Province,
+                   COALESCE(a.Username, c.Username, s.Username) AS Username
+            FROM Employees e
+            LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
+            LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
+            LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
+            WHERE e.EmployeeId = @Id AND e.IsDeleted = 0";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", employeeId);
@@ -361,18 +593,19 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // JOIN query to get data from Employees and either Admins or Staffs
+                // JOIN query to get data from Employees and Admins, Coach, or Staffs
                 string query = @"
-                    SELECT 
-                        e.EmployeeID, e.FirstName, e.MiddleInitial, e.LastName, e.Gender, e.ProfilePicture, 
-                        e.ContactNumber, e.Age, e.DateOfBirth, e.HouseAddress, e.HouseNumber, e.Street, 
-                        e.Barangay, e.CityTown, e.Province, e.Position, e.Status, e.DateJoined,
-                        COALESCE(a.Username, s.Username) AS Username,
-                        COALESCE(a.LastLogin, s.LastLogin) AS LastLogin
-                    FROM Employees e
-                    LEFT JOIN Admins a ON e.EmployeeID = a.AdminID
-                    LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID
-                    WHERE e.EmployeeID = @Id";
+            SELECT 
+                e.EmployeeID, e.FirstName, e.MiddleInitial, e.LastName, e.Gender, e.ProfilePicture, 
+                e.ContactNumber, e.Age, e.DateOfBirth, e.HouseAddress, e.HouseNumber, e.Street, 
+                e.Barangay, e.CityTown, e.Province, e.Position, e.Status, e.DateJoined,
+                COALESCE(a.Username, c.Username, s.Username) AS Username,
+                COALESCE(a.LastLogin, c.LastLogin, s.LastLogin) AS LastLogin
+            FROM Employees e
+            LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
+            LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
+            LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
+            WHERE e.EmployeeID = @Id AND e.IsDeleted = 0";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", employeeId);
@@ -457,7 +690,7 @@ namespace AHON_TRACK.Services
                     // Get the current position to check if it changed
                     string? oldPosition = null;
                     using var getPositionCmd = new SqlCommand(
-                        "SELECT Position FROM Employees WHERE EmployeeId = @employeeId", conn, transaction);
+                        "SELECT Position FROM Employees WHERE EmployeeId = @employeeId AND IsDeleted = 0", conn, transaction);
                     getPositionCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
 
                     var positionResult = await getPositionCmd.ExecuteScalarAsync();
@@ -472,12 +705,14 @@ namespace AHON_TRACK.Services
                     }
                     oldPosition = positionResult.ToString();
 
-                    // Check for duplicate username (excluding current employee)
+                    // Check for duplicate username (excluding current employee) in all tables
                     using var dupCmd = new SqlCommand(@"
-                        SELECT COUNT(*) FROM 
-                        (SELECT Username FROM Admins WHERE Username = @username AND AdminID != @employeeId
-                         UNION ALL
-                         SELECT Username FROM Staffs WHERE Username = @username AND StaffID != @employeeId) AS AllUsernames",
+                SELECT COUNT(*) FROM 
+                (SELECT Username FROM Admins WHERE Username = @username AND AdminID != @employeeId AND IsDeleted = 0
+                 UNION ALL
+                 SELECT Username FROM Coach WHERE Username = @username AND CoachID != @employeeId AND IsDeleted = 0
+                 UNION ALL
+                 SELECT Username FROM Staffs WHERE Username = @username AND StaffID != @employeeId AND IsDeleted = 0) AS AllUsernames",
                         conn, transaction);
                     dupCmd.Parameters.AddWithValue("@username", employee.Username ?? (object)DBNull.Value);
                     dupCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
@@ -504,11 +739,12 @@ namespace AHON_TRACK.Services
                     {
                         // Keep the existing password - retrieve it first
                         using var getPasswordCmd = new SqlCommand(@"
-                            SELECT COALESCE(a.Password, s.Password) AS CurrentPassword
-                            FROM Employees e
-                            LEFT JOIN Admins a ON e.EmployeeID = a.AdminID
-                            LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID
-                            WHERE e.EmployeeId = @employeeId", conn, transaction);
+                    SELECT COALESCE(a.Password, c.Password, s.Password) AS CurrentPassword
+                    FROM Employees e
+                    LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
+                    LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
+                    LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
+                    WHERE e.EmployeeId = @employeeId", conn, transaction);
                         getPasswordCmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
 
                         var existingPassword = await getPasswordCmd.ExecuteScalarAsync();
@@ -517,24 +753,24 @@ namespace AHON_TRACK.Services
 
                     // Update Employees table
                     string query = @"UPDATE Employees 
-                         SET FirstName = @FirstName, 
-                             MiddleInitial = @MiddleInitial, 
-                             LastName = @LastName, 
-                             Gender = @Gender,
-                             ContactNumber = @ContactNumber, 
-                             Age = @Age,
-                             DateOfBirth = @DateOfBirth,
-                             HouseAddress = @HouseAddress,
-                             HouseNumber = @HouseNumber,
-                             Street = @Street,
-                             Barangay = @Barangay,
-                             CityTown = @CityTown,
-                             Province = @Province,
-                             Position = @Position,
-                             Status = @Status,
-                             ProfilePicture = @ProfilePicture,
-                             UpdatedAt = GETDATE()
-                         WHERE EmployeeId = @EmployeeId";
+                 SET FirstName = @FirstName, 
+                     MiddleInitial = @MiddleInitial, 
+                     LastName = @LastName, 
+                     Gender = @Gender,
+                     ContactNumber = @ContactNumber, 
+                     Age = @Age,
+                     DateOfBirth = @DateOfBirth,
+                     HouseAddress = @HouseAddress,
+                     HouseNumber = @HouseNumber,
+                     Street = @Street,
+                     Barangay = @Barangay,
+                     CityTown = @CityTown,
+                     Province = @Province,
+                     Position = @Position,
+                     Status = @Status,
+                     ProfilePicture = @ProfilePicture,
+                     UpdatedAt = GETDATE()
+                 WHERE EmployeeId = @EmployeeId";
 
                     using var cmd = new SqlCommand(query, conn, transaction);
                     cmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
@@ -558,48 +794,75 @@ namespace AHON_TRACK.Services
                     int rows = await cmd.ExecuteNonQueryAsync();
                     if (rows > 0)
                     {
-                        // Handle position change: Admin <-> Staff
+                        // Handle position change
                         bool positionChanged = !string.Equals(oldPosition, employee.Position, StringComparison.OrdinalIgnoreCase);
 
                         if (positionChanged)
                         {
-                            // If changed from Gym Admin to Gym Staff
-                            if (oldPosition?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true &&
-                                employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
-                            {
-                                // Delete from Admins
-                                using var deleteAdminCmd = new SqlCommand(
-                                    "DELETE FROM Admins WHERE AdminID = @EmployeeId", conn, transaction);
-                                deleteAdminCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
-                                await deleteAdminCmd.ExecuteNonQueryAsync();
+                            // Determine if username contains "coach" for staff positions
+                            bool isCoach = employee.Username?.IndexOf("coach", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                                // Insert into Staffs with hashed password
-                                using var insertStaffCmd = new SqlCommand(@"
-                                    INSERT INTO Staffs (StaffID, Username, Password, CreatedAt)
-                                    VALUES (@StaffID, @Username, @Password, GETDATE())", conn, transaction);
-                                insertStaffCmd.Parameters.AddWithValue("@StaffID", employee.EmployeeId);
-                                insertStaffCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                                insertStaffCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
-                                await insertStaffCmd.ExecuteNonQueryAsync();
+                            // Delete from old position table
+                            if (oldPosition?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                using var deleteCmd = new SqlCommand("DELETE FROM Admins WHERE AdminID = @EmployeeId", conn, transaction);
+                                deleteCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                                await deleteCmd.ExecuteNonQueryAsync();
                             }
-                            // If changed from Gym Staff to Gym Admin
-                            else if (oldPosition?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true &&
-                                     employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                            else if (oldPosition?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
                             {
-                                // Delete from Staffs
-                                using var deleteStaffCmd = new SqlCommand(
-                                    "DELETE FROM Staffs WHERE StaffID = @EmployeeId", conn, transaction);
-                                deleteStaffCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
-                                await deleteStaffCmd.ExecuteNonQueryAsync();
+                                // Check if they were in Coach or Staffs table
+                                using var checkCoachCmd = new SqlCommand("SELECT COUNT(*) FROM Coach WHERE CoachID = @EmployeeId", conn, transaction);
+                                checkCoachCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                                int coachCount = (int)await checkCoachCmd.ExecuteScalarAsync();
 
-                                // Insert into Admins with hashed password
-                                using var insertAdminCmd = new SqlCommand(@"
-                                    INSERT INTO Admins (AdminID, Username, Password, CreatedAt)
-                                    VALUES (@AdminID, @Username, @Password, GETDATE())", conn, transaction);
-                                insertAdminCmd.Parameters.AddWithValue("@AdminID", employee.EmployeeId);
-                                insertAdminCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                                insertAdminCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
-                                await insertAdminCmd.ExecuteNonQueryAsync();
+                                if (coachCount > 0)
+                                {
+                                    using var deleteCmd = new SqlCommand("DELETE FROM Coach WHERE CoachID = @EmployeeId", conn, transaction);
+                                    deleteCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                                    await deleteCmd.ExecuteNonQueryAsync();
+                                }
+                                else
+                                {
+                                    using var deleteCmd = new SqlCommand("DELETE FROM Staffs WHERE StaffID = @EmployeeId", conn, transaction);
+                                    deleteCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                                    await deleteCmd.ExecuteNonQueryAsync();
+                                }
+                            }
+
+                            // Insert into new position table
+                            if (employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                using var insertCmd = new SqlCommand(@"
+                            INSERT INTO Admins (AdminID, Username, Password, CreatedAt)
+                            VALUES (@AdminID, @Username, @Password, GETDATE())", conn, transaction);
+                                insertCmd.Parameters.AddWithValue("@AdminID", employee.EmployeeId);
+                                insertCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                insertCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
+                                await insertCmd.ExecuteNonQueryAsync();
+                            }
+                            else if (employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                if (isCoach)
+                                {
+                                    using var insertCmd = new SqlCommand(@"
+                                INSERT INTO Coach (CoachID, Username, Password, CreatedAt)
+                                VALUES (@CoachID, @Username, @Password, GETDATE())", conn, transaction);
+                                    insertCmd.Parameters.AddWithValue("@CoachID", employee.EmployeeId);
+                                    insertCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                    insertCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
+                                    await insertCmd.ExecuteNonQueryAsync();
+                                }
+                                else
+                                {
+                                    using var insertCmd = new SqlCommand(@"
+                                INSERT INTO Staffs (StaffID, Username, Password, CreatedAt)
+                                VALUES (@StaffID, @Username, @Password, GETDATE())", conn, transaction);
+                                    insertCmd.Parameters.AddWithValue("@StaffID", employee.EmployeeId);
+                                    insertCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                    insertCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
+                                    await insertCmd.ExecuteNonQueryAsync();
+                                }
                             }
                         }
                         else
@@ -608,9 +871,9 @@ namespace AHON_TRACK.Services
                             if (employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 using var updateAdminCmd = new SqlCommand(@"
-                                    UPDATE Admins 
-                                    SET Username = @Username, Password = @Password, UpdatedAt = GETDATE()
-                                    WHERE AdminID = @EmployeeId", conn, transaction);
+                            UPDATE Admins 
+                            SET Username = @Username, Password = @Password, UpdatedAt = GETDATE()
+                            WHERE AdminID = @EmployeeId", conn, transaction);
                                 updateAdminCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
                                 updateAdminCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
                                 updateAdminCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
@@ -618,14 +881,33 @@ namespace AHON_TRACK.Services
                             }
                             else if (employee.Position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
                             {
-                                using var updateStaffCmd = new SqlCommand(@"
-                                    UPDATE Staffs 
-                                    SET Username = @Username, Password = @Password, UpdatedAt = GETDATE()
-                                    WHERE StaffID = @EmployeeId", conn, transaction);
-                                updateStaffCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
-                                updateStaffCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
-                                updateStaffCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
-                                await updateStaffCmd.ExecuteNonQueryAsync();
+                                // Check if in Coach or Staffs table
+                                using var checkCoachCmd = new SqlCommand("SELECT COUNT(*) FROM Coach WHERE CoachID = @EmployeeId AND IsDeleted = 0", conn, transaction);
+                                checkCoachCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                                int coachCount = (int)await checkCoachCmd.ExecuteScalarAsync();
+
+                                if (coachCount > 0)
+                                {
+                                    using var updateCmd = new SqlCommand(@"
+                                UPDATE Coach 
+                                SET Username = @Username, Password = @Password, UpdatedAt = GETDATE()
+                                WHERE CoachID = @EmployeeId", conn, transaction);
+                                    updateCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                                    updateCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                    updateCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
+                                    await updateCmd.ExecuteNonQueryAsync();
+                                }
+                                else
+                                {
+                                    using var updateCmd = new SqlCommand(@"
+                                UPDATE Staffs 
+                                SET Username = @Username, Password = @Password, UpdatedAt = GETDATE()
+                                WHERE StaffID = @EmployeeId", conn, transaction);
+                                    updateCmd.Parameters.AddWithValue("@EmployeeId", employee.EmployeeId);
+                                    updateCmd.Parameters.AddWithValue("@Username", employee.Username ?? (object)DBNull.Value);
+                                    updateCmd.Parameters.AddWithValue("@Password", passwordToStore ?? (object)DBNull.Value);
+                                    await updateCmd.ExecuteNonQueryAsync();
+                                }
                             }
                         }
 
@@ -672,6 +954,142 @@ namespace AHON_TRACK.Services
             }
         }
 
+        // ✨ NEW METHOD: Restore a soft-deleted employee
+        public async Task<(bool Success, string Message, int? EmployeeId)> RestoreEmployeeAsync(string username)
+        {
+            if (!CanCreate())
+            {
+                _toastManager?.CreateToast("Access Denied")
+                    .WithContent("Only administrators can restore employees.")
+                    .DismissOnClick()
+                    .ShowError();
+                return (false, "Insufficient permissions to restore employees.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var transaction = conn.BeginTransaction();
+
+                try
+                {
+                    // Check if a soft-deleted employee with this username exists
+                    int? employeeId = null;
+                    string? position = null;
+                    string? employeeName = null;
+
+                    using var checkCmd = new SqlCommand(@"
+                SELECT e.EmployeeID, e.Position, e.FirstName, e.LastName
+                FROM Employees e
+                LEFT JOIN Admins a ON e.EmployeeID = a.AdminID
+                LEFT JOIN Coach c ON e.EmployeeID = c.CoachID
+                LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID
+                WHERE (a.Username = @username OR c.Username = @username OR s.Username = @username)
+                AND e.IsDeleted = 1", conn, transaction);
+                    checkCmd.Parameters.AddWithValue("@username", username);
+
+                    using var reader = await checkCmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        employeeId = reader.GetInt32(0);
+                        position = reader.IsDBNull(1) ? null : reader.GetString(1);
+                        employeeName = $"{reader.GetString(2)} {reader.GetString(3)}";
+                    }
+                    reader.Close();
+
+                    if (!employeeId.HasValue)
+                    {
+                        transaction.Rollback();
+                        _toastManager?.CreateToast("Employee Not Found")
+                            .WithContent($"No deleted employee with username '{username}' found.")
+                            .DismissOnClick()
+                            .ShowWarning();
+                        return (false, "No deleted employee found with this username.", null);
+                    }
+
+                    // Restore employee in Employees table
+                    using var restoreEmpCmd = new SqlCommand(
+                        "UPDATE Employees SET IsDeleted = 0, UpdatedAt = GETDATE() WHERE EmployeeId = @employeeId",
+                        conn, transaction);
+                    restoreEmpCmd.Parameters.AddWithValue("@employeeId", employeeId.Value);
+                    await restoreEmpCmd.ExecuteNonQueryAsync();
+
+                    // Restore in respective role table
+                    if (position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        using var restoreCmd = new SqlCommand(
+                            "UPDATE Admins SET IsDeleted = 0, UpdatedAt = GETDATE() WHERE AdminID = @employeeId",
+                            conn, transaction);
+                        restoreCmd.Parameters.AddWithValue("@employeeId", employeeId.Value);
+                        await restoreCmd.ExecuteNonQueryAsync();
+                    }
+                    else if (position?.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        // Check if in Coach or Staffs table
+                        using var checkCoachCmd = new SqlCommand(
+                            "SELECT COUNT(*) FROM Coach WHERE CoachID = @employeeId", conn, transaction);
+                        checkCoachCmd.Parameters.AddWithValue("@employeeId", employeeId.Value);
+                        int coachCount = (int)await checkCoachCmd.ExecuteScalarAsync();
+
+                        if (coachCount > 0)
+                        {
+                            using var restoreCmd = new SqlCommand(
+                                "UPDATE Coach SET IsDeleted = 0, UpdatedAt = GETDATE() WHERE CoachID = @employeeId",
+                                conn, transaction);
+                            restoreCmd.Parameters.AddWithValue("@employeeId", employeeId.Value);
+                            await restoreCmd.ExecuteNonQueryAsync();
+                        }
+                        else
+                        {
+                            using var restoreCmd = new SqlCommand(
+                                "UPDATE Staffs SET IsDeleted = 0, UpdatedAt = GETDATE() WHERE StaffID = @employeeId",
+                                conn, transaction);
+                            restoreCmd.Parameters.AddWithValue("@employeeId", employeeId.Value);
+                            await restoreCmd.ExecuteNonQueryAsync();
+                        }
+                    }
+
+                    await LogActionAsync(conn, "RESTORE", $"Restored employee: {employeeName} (ID: {employeeId.Value})", true, transaction);
+
+                    transaction.Commit();
+
+                    _toastManager?.CreateToast("Employee Restored")
+                        .WithContent($"Successfully restored {employeeName}.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Employee restored successfully.", employeeId.Value);
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (SqlException ex)
+            {
+                _toastManager?.CreateToast("Database Error")
+                    .WithContent($"Failed to restore employee: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"RestoreEmployeeAsync Error: {ex}");
+                return (false, $"Database error: {ex.Message}", null);
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+
+                System.Diagnostics.Debug.WriteLine($"RestoreEmployeeAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
         #endregion
 
         #region DELETE
@@ -699,9 +1117,11 @@ namespace AHON_TRACK.Services
                     // Get employee name and position for logging
                     string employeeName = string.Empty;
                     string employeePosition = string.Empty;
+                    bool isAlreadyDeleted = false;
 
                     using var getInfoCmd = new SqlCommand(
-                        "SELECT FirstName, LastName, Position FROM Employees WHERE EmployeeId = @employeeId", conn, transaction);
+                        "SELECT FirstName, LastName, Position, IsDeleted FROM Employees WHERE EmployeeId = @employeeId",
+                        conn, transaction);
                     getInfoCmd.Parameters.AddWithValue("@employeeId", employeeId);
 
                     using var infoReader = await getInfoCmd.ExecuteReaderAsync();
@@ -709,6 +1129,7 @@ namespace AHON_TRACK.Services
                     {
                         employeeName = $"{infoReader[0]} {infoReader[1]}";
                         employeePosition = infoReader[2]?.ToString() ?? string.Empty;
+                        isAlreadyDeleted = !infoReader.IsDBNull(3) && infoReader.GetBoolean(3);
                     }
                     infoReader.Close();
 
@@ -722,38 +1143,64 @@ namespace AHON_TRACK.Services
                         return (false, "Employee not found.");
                     }
 
-                    // Delete from Admins or Staffs table based on position
+                    if (isAlreadyDeleted)
+                    {
+                        transaction.Rollback();
+                        _toastManager?.CreateToast("Already Deleted")
+                            .WithContent($"{employeeName} has already been deleted.")
+                            .DismissOnClick()
+                            .ShowWarning();
+                        return (false, "Employee is already deleted.");
+                    }
+
+                    // Soft delete from Admins, Staffs, or Coach table based on position
                     if (employeePosition.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase))
                     {
-                        using var deleteAdminCmd = new SqlCommand(
-                            "DELETE FROM Admins WHERE AdminID = @employeeId", conn, transaction);
-                        deleteAdminCmd.Parameters.AddWithValue("@employeeId", employeeId);
-                        await deleteAdminCmd.ExecuteNonQueryAsync();
+                        using var softDeleteAdminCmd = new SqlCommand(
+                            "UPDATE Admins SET IsDeleted = 1, UpdatedAt = GETDATE() WHERE AdminID = @employeeId",
+                            conn, transaction);
+                        softDeleteAdminCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                        await softDeleteAdminCmd.ExecuteNonQueryAsync();
                     }
                     else if (employeePosition.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase))
                     {
-                        using var deleteStaffCmd = new SqlCommand(
-                            "DELETE FROM Staffs WHERE StaffID = @employeeId", conn, transaction);
-                        deleteStaffCmd.Parameters.AddWithValue("@employeeId", employeeId);
-                        await deleteStaffCmd.ExecuteNonQueryAsync();
+                        // Check if this staff member is in Coach table
+                        using var checkCoachCmd = new SqlCommand(
+                            "SELECT COUNT(*) FROM Coach WHERE CoachID = @employeeId",
+                            conn, transaction);
+                        checkCoachCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                        int coachCount = (int)await checkCoachCmd.ExecuteScalarAsync();
+
+                        if (coachCount > 0)
+                        {
+                            // Soft delete from Coach table
+                            using var softDeleteCoachCmd = new SqlCommand(
+                                "UPDATE Coach SET IsDeleted = 1, UpdatedAt = GETDATE() WHERE CoachID = @employeeId",
+                                conn, transaction);
+                            softDeleteCoachCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                            await softDeleteCoachCmd.ExecuteNonQueryAsync();
+                        }
+                        else
+                        {
+                            // Soft delete from Staffs table
+                            using var softDeleteStaffCmd = new SqlCommand(
+                                "UPDATE Staffs SET IsDeleted = 1, UpdatedAt = GETDATE() WHERE StaffID = @employeeId",
+                                conn, transaction);
+                            softDeleteStaffCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                            await softDeleteStaffCmd.ExecuteNonQueryAsync();
+                        }
                     }
 
-                    // Set PerformedByEmployeeID to NULL in SystemLogs (preserves audit trail)
-                    using var updateLogsCmd = new SqlCommand(
-                        "UPDATE SystemLogs SET PerformedByEmployeeID = NULL WHERE PerformedByEmployeeID = @employeeId",
+                    // Soft delete from Employees table
+                    using var softDeleteEmpCmd = new SqlCommand(
+                        "UPDATE Employees SET IsDeleted = 1, UpdatedAt = GETDATE() WHERE EmployeeId = @employeeId",
                         conn, transaction);
-                    updateLogsCmd.Parameters.AddWithValue("@employeeId", employeeId);
-                    await updateLogsCmd.ExecuteNonQueryAsync();
-
-                    // Delete from Employees table
-                    using var deleteEmpCmd = new SqlCommand(
-                        "DELETE FROM Employees WHERE EmployeeId = @employeeId", conn, transaction);
-                    deleteEmpCmd.Parameters.AddWithValue("@employeeId", employeeId);
-                    int rowsAffected = await deleteEmpCmd.ExecuteNonQueryAsync();
+                    softDeleteEmpCmd.Parameters.AddWithValue("@employeeId", employeeId);
+                    int rowsAffected = await softDeleteEmpCmd.ExecuteNonQueryAsync();
 
                     if (rowsAffected > 0)
                     {
-                        await LogActionAsync(conn, "DELETE", $"Deleted employee: {employeeName} (ID: {employeeId})", true, transaction);
+                        await LogActionAsync(conn, "DELETE", $"Soft deleted employee: {employeeName} (ID: {employeeId})", true, transaction);
                         transaction.Commit();
 
                         _toastManager?.CreateToast("Employee Deleted")
@@ -808,10 +1255,10 @@ namespace AHON_TRACK.Services
 
                 // 🔹 Admin Login
                 string adminQuery = @"
-            SELECT a.AdminID, a.Password, e.FirstName, e.LastName, e.Status
-            FROM Admins a
-            INNER JOIN Employees e ON a.AdminID = e.EmployeeID
-            WHERE a.Username = @Username";
+    SELECT a.AdminID, a.Password, e.FirstName, e.LastName, e.Status
+    FROM Admins a
+    INNER JOIN Employees e ON a.AdminID = e.EmployeeID
+    WHERE a.Username = @Username";
 
                 using var adminCmd = new SqlCommand(adminQuery, conn);
                 adminCmd.Parameters.AddWithValue("@Username", username);
@@ -856,12 +1303,62 @@ namespace AHON_TRACK.Services
                 }
                 adminReader.Close();
 
+                // 🔹 Coach Login
+                string coachQuery = @"
+    SELECT c.CoachID, c.Password, e.FirstName, e.LastName, e.Status
+    FROM Coach c
+    INNER JOIN Employees e ON c.CoachID = e.EmployeeID
+    WHERE c.Username = @Username AND c.IsDeleted = 0";
+
+                using var coachCmd = new SqlCommand(coachQuery, conn);
+                coachCmd.Parameters.AddWithValue("@Username", username);
+
+                using var coachReader = await coachCmd.ExecuteReaderAsync();
+                if (await coachReader.ReadAsync())
+                {
+                    string hashedPassword = coachReader.GetString(1);
+                    string status = coachReader.GetString(4);
+
+                    if (PasswordHelper.VerifyPassword(password, hashedPassword))
+                    {
+                        if (status != "Active")
+                        {
+                            await LogActionAsync(conn, "Login", $"Coach '{username}' attempted to log in (inactive account).", false);
+                            return (false, "Account is not active.", null, null);
+                        }
+
+                        int employeeId = coachReader.GetInt32(0);
+                        coachReader.Close();
+
+                        // Update last login
+                        using var updateLoginCmd = new SqlCommand(
+                            "UPDATE Coach SET LastLogin = GETDATE() WHERE CoachID = @CoachID", conn);
+                        updateLoginCmd.Parameters.AddWithValue("@CoachID", employeeId);
+                        await updateLoginCmd.ExecuteNonQueryAsync();
+
+                        // ✅ Log success
+                        CurrentUserModel.UserId = employeeId;
+                        CurrentUserModel.Username = username;
+                        CurrentUserModel.Role = "Coach";
+                        await LogActionAsync(conn, "Login", $"Coach '{username}' logged in successfully.", true);
+
+                        return (true, "Login successful.", employeeId, "Coach");
+                    }
+                    else
+                    {
+                        coachReader.Close();
+                        await LogActionAsync(conn, "Login", $"Coach '{username}' failed login (wrong password).", false);
+                        return (false, "Invalid username or password.", null, null);
+                    }
+                }
+                coachReader.Close();
+
                 // 🔹 Staff Login
                 string staffQuery = @"
-            SELECT s.StaffID, s.Password, e.FirstName, e.LastName, e.Status
-            FROM Staffs s
-            INNER JOIN Employees e ON s.StaffID = e.EmployeeID
-            WHERE s.Username = @Username";
+    SELECT s.StaffID, s.Password, e.FirstName, e.LastName, e.Status
+    FROM Staffs s
+    INNER JOIN Employees e ON s.StaffID = e.EmployeeID
+    WHERE s.Username = @Username";
 
                 using var staffCmd = new SqlCommand(staffQuery, conn);
                 staffCmd.Parameters.AddWithValue("@Username", username);
@@ -914,7 +1411,6 @@ namespace AHON_TRACK.Services
                 return (false, $"Error: {ex.Message}", null, null);
             }
         }
-
 
         #endregion
 
