@@ -2,13 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using QuestPDF.Companion;
+using QuestPDF.Fluent;
 using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
@@ -46,6 +54,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly IPackageService _packageService;
     private readonly AddNewPackageDialogCardViewModel _addNewPackageDialogCardViewModel;
     private readonly EditPackageDialogCardViewModel _editPackageDialogCardViewModel;
+    private readonly SettingsService _settingsService;
+    private AppSettings? _currentSettings;
     private ObservableCollection<RecentActivity> _recentActivities = [];
     
     [ObservableProperty]
@@ -53,7 +63,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  
         AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel,  EditPackageDialogCardViewModel editPackageDialogCardViewModel, 
-        IPackageService packageService)
+        IPackageService packageService, SettingsService settingsService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
@@ -61,6 +71,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _addNewPackageDialogCardViewModel = addNewPackageDialogCardViewModel;
         _editPackageDialogCardViewModel = editPackageDialogCardViewModel;
         _packageService = packageService;
+        _settingsService = settingsService;
         LoadSampleSalesData();
         LoadInvoiceData();
         LoadPackageOptions();
@@ -75,6 +86,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _addNewPackageDialogCardViewModel = new AddNewPackageDialogCardViewModel();
         _editPackageDialogCardViewModel = new EditPackageDialogCardViewModel();
         _packageService = new PackageService();
+        _settingsService = new SettingsService();
         LoadSampleSalesData();
         LoadInvoiceData();
         LoadPackageOptions();
@@ -82,9 +94,11 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
         if (IsInitialized) return;
+        await LoadSettingsAsync();
+        
         LoadSampleSalesData();
         LoadInvoiceData();
         LoadPackageOptions();
@@ -151,8 +165,104 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             new Invoices { ID = 1008, CustomerName = "Ry Christian", PurchasedItem = "Abalos T-Shirt", Quantity = 1, Amount = 180, DatePurchased = today.AddHours(18) },
             new Invoices { ID = 1009, CustomerName = "John Maverick Lim", PurchasedItem = "Red Bull", Quantity = 7, Amount = 880, DatePurchased = today.AddHours(19) },
             new Invoices { ID = 1010, CustomerName = "Raymart Soneja", PurchasedItem = "Protein Powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddDays(-1).AddHours(17) },
-            new Invoices { ID = 1011, CustomerName = "Vince Abellada", PurchasedItem = "Protein Powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddDays(-1).AddHours(18) }
+            new Invoices { ID = 1011, CustomerName = "Vince Abellada", PurchasedItem = "Protein Powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddDays(-1).AddHours(18) },
+            // Test Test Test
+            new Invoices { ID = 1012, CustomerName = "Mardie Dela Cruz", PurchasedItem = "Red Horse Mucho", Quantity = 2, Amount = 280, DatePurchased = today.AddHours(15) },
+            new Invoices { ID = 1013, CustomerName = "JL Taberdo", PurchasedItem = "Cobra yellow", Quantity = 3, Amount = 80, DatePurchased = today.AddHours(16) },
+            new Invoices { ID = 1014, CustomerName = "Marion James Dela Roca", PurchasedItem = "Protein Shake", Quantity = 1, Amount = 180, DatePurchased = today.AddHours(17) },
+            new Invoices { ID = 1004, CustomerName = "Sianrey Flora", PurchasedItem = "AHON T-Shirt", Quantity = 1, Amount = 580, DatePurchased = today.AddHours(17) },
+            new Invoices { ID = 1015, CustomerName = "Rome Jedd Calubayan", PurchasedItem = "Sting Red", Quantity = 5, Amount = 280, DatePurchased = today.AddHours(17) },
+            new Invoices { ID = 1016, CustomerName = "Marc Torres", PurchasedItem = "Pre-workout powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddHours(17) },
+            new Invoices { ID = 1017, CustomerName = "Nash Floralde", PurchasedItem = "Pre-workout powder", Quantity = 3, Amount = 4480, DatePurchased = today.AddHours(18) },
+            new Invoices { ID = 1018, CustomerName = "Ry Christian", PurchasedItem = "Abalos T-Shirt", Quantity = 1, Amount = 180, DatePurchased = today.AddHours(18) },
+            new Invoices { ID = 1019, CustomerName = "John Maverick Lim", PurchasedItem = "Red Bull", Quantity = 7, Amount = 880, DatePurchased = today.AddHours(19) },
+            // Ends Here
         ];
+    }
+
+    [RelayCommand]
+    private async Task DownloadInvoices()
+    {
+        try
+        {
+            // Check if there are any invoices to export
+            if (InvoiceList.Count == 0)
+            {
+                _toastManager.CreateToast("No invoices to export")
+                    .WithContent("There are no invoices available for the selected date.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+        
+            IStorageFolder? startLocation = null;
+            if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
+            {
+                try
+                {
+                    startLocation = await toplevel.StorageProvider.TryGetFolderFromPathAsync(_currentSettings.DownloadPath);
+                }
+                catch
+                {
+                    // If path is invalid, startLocation will remain null
+                }
+            }
+        
+            var fileName = $"Invoice_{SelectedDate:yyyy-MM-dd}.pdf";
+            var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Download Invoice",
+                SuggestedStartLocation = startLocation,
+                FileTypeChoices = [FilePickerFileTypes.Pdf],
+                SuggestedFileName = fileName,
+                ShowOverwritePrompt = true
+            });
+
+            if (pdfFile == null) return;
+
+            var invoiceModel = new InvoiceDocumentModel
+            {
+                GeneratedDate = DateTime.Now,
+                GymName = "AHON Victory Fitness Gym",
+                GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
+                GymPhone = "+63 123 456 7890",
+                GymEmail = "info@ahonfitness.com",
+                Items = InvoiceList.Select(invoice => new InvoiceItem
+                {
+                    ID = invoice.ID ?? 0,
+                    CustomerName = invoice.CustomerName,
+                    PurchasedItem = invoice.PurchasedItem,
+                    Quantity = invoice.Quantity ?? 0,
+                    Amount = invoice.Amount ?? 0,
+                    DatePurchased = invoice.DatePurchased ?? DateTime.Today
+                }).ToList()
+            };
+
+            var document = new InvoiceDocument(invoiceModel);
+        
+            await using var stream = await pdfFile.OpenWriteAsync();
+            
+            // Both cannot be enabled at the same time. Disable one of them 
+            document.GeneratePdf(stream); // Generate the PDF
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+        
+            _toastManager.CreateToast("Invoice exported successfully")
+                .WithContent($"Invoice has been saved to {pdfFile.Name}")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Export failed")
+                .WithContent($"Failed to export invoice: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
 
     [RelayCommand]
@@ -246,6 +356,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
         SelectAll = InvoiceList.Count > 0 && InvoiceList.All(x => x.IsSelected);
     }
+
+    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
     
     private void OnDatePurchasedChanged(object? sender, PropertyChangedEventArgs e)
     {
