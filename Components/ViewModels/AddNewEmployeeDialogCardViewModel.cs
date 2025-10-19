@@ -64,7 +64,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     // Account Section
     private string _employeeUsername = string.Empty;
     private string _employeePassword = string.Empty;
-    private DateTime? _employeeDateJoined;
     private string _employeeStatus = string.Empty;
 
     [Required(ErrorMessage = "First name is required")]
@@ -233,14 +232,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeePassword, value, true);
     }
 
-    [Required(ErrorMessage = "Date joined is required")]
-    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? EmployeeDateJoined
-    {
-        get => _employeeDateJoined;
-        set => SetProperty(ref _employeeDateJoined, value, true);
-    }
-
     [Required(ErrorMessage = "Status is required")]
     public string EmployeeStatus
     {
@@ -299,7 +290,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
         EmployeeUsername = !string.IsNullOrEmpty(employee.Username) ? employee.Username : "defaultuser";
         EmployeePassword = "defaultpassword";
-        EmployeeDateJoined = employee.DateJoined != default ? employee.DateJoined : DateTime.Now;
         EmployeeStatus = !string.IsNullOrEmpty(employee.Status) ? employee.Status : "Active";
     }
 
@@ -393,7 +383,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         // Account Details Debugging
         Debug.WriteLine($"\nUsername: {EmployeeUsername}");
         Debug.WriteLine($"Password: {EmployeePassword}");
-        Debug.WriteLine($"Date Joined: {EmployeeDateJoined?.ToString("MMMM d, yyyy")}");
         Debug.WriteLine($"Status: {EmployeeStatus}");
 
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
@@ -423,7 +412,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeProvince = string.Empty;
         EmployeeUsername = string.Empty;
         EmployeePassword = string.Empty;
-        EmployeeDateJoined = null;
         EmployeeStatus = string.Empty;
         ClearAllErrors();
     }
