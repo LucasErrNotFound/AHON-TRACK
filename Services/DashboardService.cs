@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -225,8 +226,13 @@ namespace AHON_TRACK.Services
         #endregion
 
 
+        // Add this to your DashboardService.cs file (or wherever IDashboardService is implemented)
+
         #region TRAINING SESSIONS
 
+        /// <summary>
+        /// Gets upcoming training sessions for dashboard
+        /// </summary>
         public async Task<IEnumerable<TrainingSession>> GetTrainingSessionsAsync(int topN = 5)
         {
             var sessions = new List<TrainingSession>();
@@ -237,64 +243,113 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 string query = @"
-                    SELECT TOP (@TopN)
-                        CONCAT(c.FirstName, ' ', c.LastName) AS ClientName,
-                        c.MembershipType,
-                        t.TrainingType,
-                        t.Location,
-                        t.TimeSlot,
-                        t.Date
-                    FROM TrainingSessions t
-                    INNER JOIN Clients c ON t.ClientId = c.ClientId
-                    ORDER BY t.Date DESC;";
+SELECT TOP (@TopN)
+    t.TrainingID,
+    CONCAT(t.FirstName, ' ', t.LastName) AS ClientName,
+    t.CustomerType AS MembershipType,
+    t.PackageType AS TrainingType,
+    t.AssignedCoach,
+    t.ScheduledDate AS Date,
+    CONVERT(VARCHAR(5), t.ScheduledTimeStart, 108) + ' - ' + CONVERT(VARCHAR(5), t.ScheduledTimeEnd, 108) AS TimeSlot,
+    t.Attendance,
+    t.ProfilePicture
+FROM Trainings t
+WHERE t.ScheduledDate >= CAST(GETDATE() AS DATE)
+  AND (t.Attendance = 'Pending' OR t.Attendance IS NULL)
+ORDER BY t.ScheduledDate ASC, t.ScheduledTimeStart ASC;";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@TopN", topN);
 
                 using var reader = await cmd.ExecuteReaderAsync();
+
                 while (await reader.ReadAsync())
                 {
+                    // Default avatar
+                    string avatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+
                     sessions.Add(new TrainingSession
                     {
                         ClientName = reader["ClientName"]?.ToString() ?? string.Empty,
-                        MembershipType = reader["MembershipType"]?.ToString() ?? "Gym Member",
+                        MembershipType = reader["MembershipType"]?.ToString() ?? "Member",
                         TrainingType = reader["TrainingType"]?.ToString() ?? string.Empty,
-                        Location = reader["Location"]?.ToString() ?? string.Empty,
+                        Location = reader["AssignedCoach"]?.ToString() ?? string.Empty,
                         TimeSlot = reader["TimeSlot"]?.ToString() ?? string.Empty,
                         Date = reader["Date"] == DBNull.Value ? DateTime.MinValue : (DateTime)reader["Date"],
-                        AvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png"
+                        AvatarSource = avatarSource
                     });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetTrainingSessionsAsync] Error: {ex.Message}");
+                Debug.WriteLine($"[GetTrainingSessionsAsync] Error: {ex.Message}");
             }
 
             return sessions;
         }
 
+        /// <summary>
+        /// Generates a summary of upcoming training sessions
+        /// </summary>
         public async Task<string> GenerateTrainingSessionsSummaryAsync(int topN = 5)
         {
             try
             {
-                var sessions = await GetTrainingSessionsAsync(topN);
-                int count = sessions.Count();
-                return $"Upcoming Training Sessions: {count}";
+                // Get the actual count of upcoming sessions
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string countQuery = @"
+SELECT COUNT(*) 
+FROM Trainings 
+WHERE ScheduledDate >= CAST(GETDATE() AS DATE)
+  AND (Attendance = 'Pending' OR Attendance IS NULL);";
+
+                using var cmd = new SqlCommand(countQuery, conn);
+                var result = await cmd.ExecuteScalarAsync();
+                int count = Convert.ToInt32(result);
+
+                if (count == 0)
+                {
+                    return "You have 0 upcoming training schedules this week";
+                }
+                else if (count == 1)
+                {
+                    return "You have 1 upcoming training schedule";
+                }
+                else
+                {
+                    return $"You have {count} upcoming training schedules";
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GenerateTrainingSessionsSummaryAsync] Error: {ex.Message}");
+                Debug.WriteLine($"[GenerateTrainingSessionsSummaryAsync] Error: {ex.Message}");
                 return "Training sessions data unavailable";
             }
         }
 
+        /// <summary>
+        /// Generates a summary from existing training sessions collection
+        /// </summary>
         public string GenerateTrainingSessionsSummary(IEnumerable<TrainingSession> sessions)
         {
             try
             {
-                int count = sessions.Count();
-                return $"Upcoming Training Sessions: {count}";
+                int count = sessions?.Count() ?? 0;
+
+                if (count == 0)
+                {
+                    return "You have 0 upcoming training schedules this week";
+                }
+                else if (count == 1)
+                {
+                    return "You have 1 upcoming training schedule";
+                }
+                else
+                {
+                    return $"You have {count} upcoming training schedules";
+                }
             }
             catch
             {

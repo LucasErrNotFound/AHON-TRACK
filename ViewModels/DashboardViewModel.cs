@@ -73,6 +73,7 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         }
     }
 
+
     public ObservableCollection<RecentLog> RecentLogs
     {
         get => _recentLogs;
