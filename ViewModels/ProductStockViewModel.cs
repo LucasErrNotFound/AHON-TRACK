@@ -370,7 +370,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 }
             }
         
-            var fileName = $"Audit_Logs_{DateTime.Today:yyyy-MM-dd}.pdf";
+            var fileName = $"Product_Stock_List_{DateTime.Today:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Download Product Stock List",
@@ -408,8 +408,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             await using var stream = await pdfFile.OpenWriteAsync();
             
             // Both cannot be enabled at the same time. Disable one of them 
-            // document.GeneratePdf(stream); // Generate the PDF
-            await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+            document.GeneratePdf(stream); // Generate the PDF
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
         
             _toastManager.CreateToast("Product stock list exported successfully")
                 .WithContent($"Product stock list has been saved to {pdfFile.Name}")
