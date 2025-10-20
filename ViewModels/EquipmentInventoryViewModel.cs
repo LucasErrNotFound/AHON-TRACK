@@ -136,6 +136,10 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
             ApplyEquipmentFilter();
             UpdateEquipmentCounts();
+            if (_inventoryService != null)
+            {
+                await _inventoryService.ShowEquipmentAlertsAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -237,11 +241,6 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
             if (success)
             {
-                _toastManager.CreateToast("Equipment Added")
-                    .WithContent($"Successfully added '{newEquipmentModel.EquipmentName}' to the database!")
-                    .DismissOnClick()
-                    .ShowSuccess();
-
                 // Reload data to reflect changes
                 await LoadEquipmentDataAsync();
             }

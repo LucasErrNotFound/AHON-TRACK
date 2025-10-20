@@ -21,5 +21,11 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message, int DeletedCount)> DeleteMultipleEquipmentAsync(List<int> equipmentIds);
 
         Task<(bool Success, string Message, List<SupplierDropdownModel>? Suppliers)> GetSuppliersForDropdownAsync();
+
+        // NOTIFICATIONS
+
+        Task ShowEquipmentAlertsAsync();
+        Task<EquipmentAlertSummary> GetEquipmentAlertSummaryAsync();
+
     }
 }

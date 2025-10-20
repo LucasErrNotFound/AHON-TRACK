@@ -28,26 +28,22 @@ namespace AHON_TRACK.Services
 
         private bool CanCreate()
         {
-            // Both Admin and Staff can create
             return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
                    CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private bool CanUpdate()
         {
-            // Only Admin can update
             return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private bool CanDelete()
         {
-            // Only Admin can delete
             return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private bool CanView()
         {
-            // Both Admin and Staff can view
             return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
                    CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
                    CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
@@ -148,7 +144,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region CREATE
+        #region CREATE / RESTORE
 
         public async Task<(bool Success, string Message, int? EquipmentId)> AddEquipmentAsync(EquipmentModel equipment)
         {
@@ -161,27 +157,93 @@ namespace AHON_TRACK.Services
                 return (false, "Insufficient permissions to add equipment.", null);
             }
 
-            const string query = @"
-                INSERT INTO Equipment (EquipmentName, Category, CurrentStock, 
-                                      PurchaseDate, PurchasePrice, SupplierID, WarrantyExpiry, 
-                                      Condition, Status, LastMaintenance, NextMaintenance, AddedByEmployeeID)
-                OUTPUT INSERTED.EquipmentID
-                VALUES (@equipmentName, @category, @currentStock, 
-                        @purchaseDate, @purchasePrice, @supplierId, @warrantyExpiry, 
-                        @condition, @status, @lastMaintenance, @nextMaintenance, @employeeID)";
-
             try
             {
                 using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
 
+                // Check if equipment with same name exists (including deleted ones)
+                using var checkCmd = new SqlCommand(
+                    @"SELECT EquipmentID, IsDeleted FROM Equipment 
+                      WHERE EquipmentName = @equipmentName", connection);
+                checkCmd.Parameters.AddWithValue("@equipmentName", equipment.EquipmentName ?? (object)DBNull.Value);
+
+                int? existingId = null;
+                bool isDeleted = false;
+
+                using var reader = await checkCmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    existingId = reader.GetInt32(0);
+                    isDeleted = reader.GetBoolean(1);
+                }
+                reader.Close();
+
+                // If equipment exists and is deleted, restore it
+                if (existingId.HasValue && isDeleted)
+                {
+                    const string restoreQuery = @"
+                        UPDATE Equipment SET 
+                            IsDeleted = 0,
+                            Category = @category,
+                            CurrentStock = @currentStock,
+                            PurchaseDate = @purchaseDate,
+                            PurchasePrice = @purchasePrice,
+                            SupplierID = @supplierId,
+                            WarrantyExpiry = @warrantyExpiry,
+                            Condition = @condition,
+                            Status = @status,
+                            LastMaintenance = @lastMaintenance,
+                            NextMaintenance = @nextMaintenance,
+                            AddedByEmployeeID = @employeeID
+                        WHERE EquipmentID = @equipmentID";
+
+                    using var restoreCmd = new SqlCommand(restoreQuery, connection);
+                    restoreCmd.Parameters.AddWithValue("@equipmentID", existingId.Value);
+                    restoreCmd.Parameters.AddWithValue("@category", equipment.Category ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@currentStock", equipment.CurrentStock);
+                    restoreCmd.Parameters.AddWithValue("@purchaseDate", (object)equipment.PurchaseDate ?? DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@purchasePrice", (object)equipment.PurchasePrice ?? DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@supplierId", (object)equipment.SupplierID ?? DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@warrantyExpiry", (object)equipment.WarrantyExpiry ?? DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@condition", (object)equipment.Condition ?? DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@status", (object)equipment.Status ?? DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@lastMaintenance", (object)equipment.LastMaintenance ?? DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@nextMaintenance", (object)equipment.NextMaintenance ?? DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                    await restoreCmd.ExecuteNonQueryAsync();
+
+                    var supplierName = await GetSupplierNameByIdAsync(connection, equipment.SupplierID);
+
+                    await LogActionAsync(connection, "RESTORE",
+                        $"Restored equipment: '{equipment.EquipmentName}' (ID: {existingId.Value}, Supplier: {supplierName})", true);
+
+                    _toastManager?.CreateToast("Equipment Restored")
+                        .WithContent($"Equipment '{equipment.EquipmentName}' has been restored successfully!")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Equipment restored successfully.", existingId.Value);
+                }
+
+                // If equipment exists and is NOT deleted, prevent duplicate
+                if (existingId.HasValue && !isDeleted)
+                {
+                    _toastManager?.CreateToast("Duplicate Equipment")
+                        .WithContent($"Equipment with name '{equipment.EquipmentName}' already exists.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Equipment with this name already exists.", null);
+                }
+
                 // Validate supplier exists if provided
                 if (equipment.SupplierID.HasValue)
                 {
-                    using var checkCmd = new SqlCommand(
+                    using var supplierCheckCmd = new SqlCommand(
                         "SELECT COUNT(*) FROM Suppliers WHERE SupplierID = @supplierId", connection);
-                    checkCmd.Parameters.AddWithValue("@supplierId", equipment.SupplierID.Value);
-                    var supplierExists = (int)await checkCmd.ExecuteScalarAsync() > 0;
+                    supplierCheckCmd.Parameters.AddWithValue("@supplierId", equipment.SupplierID.Value);
+                    var supplierExists = (int)await supplierCheckCmd.ExecuteScalarAsync() > 0;
 
                     if (!supplierExists)
                     {
@@ -193,7 +255,19 @@ namespace AHON_TRACK.Services
                     }
                 }
 
-                using var command = new SqlCommand(query, connection);
+                // Insert new equipment
+                const string insertQuery = @"
+                    INSERT INTO Equipment (EquipmentName, Category, CurrentStock, 
+                                          PurchaseDate, PurchasePrice, SupplierID, WarrantyExpiry, 
+                                          Condition, Status, LastMaintenance, NextMaintenance, 
+                                          AddedByEmployeeID, IsDeleted)
+                    OUTPUT INSERTED.EquipmentID
+                    VALUES (@equipmentName, @category, @currentStock, 
+                            @purchaseDate, @purchasePrice, @supplierId, @warrantyExpiry, 
+                            @condition, @status, @lastMaintenance, @nextMaintenance, 
+                            @employeeID, 0)";
+
+                using var command = new SqlCommand(insertQuery, connection);
                 command.Parameters.AddWithValue("@equipmentName", equipment.EquipmentName ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@category", equipment.Category ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@currentStock", equipment.CurrentStock);
@@ -291,6 +365,7 @@ namespace AHON_TRACK.Services
                            e.LastMaintenance, e.NextMaintenance
                     FROM Equipment e
                     LEFT JOIN Suppliers s ON e.SupplierID = s.SupplierID
+                    WHERE e.IsDeleted = 0
                     ORDER BY e.EquipmentName";
 
                 using var command = new SqlCommand(query, connection);
@@ -347,7 +422,7 @@ namespace AHON_TRACK.Services
                            e.LastMaintenance, e.NextMaintenance
                     FROM Equipment e
                     LEFT JOIN Suppliers s ON e.SupplierID = s.SupplierID
-                    WHERE e.EquipmentID = @equipmentId";
+                    WHERE e.EquipmentID = @equipmentId AND e.IsDeleted = 0";
 
                 using var command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@equipmentId", equipmentId);
@@ -403,7 +478,7 @@ namespace AHON_TRACK.Services
                            e.LastMaintenance, e.NextMaintenance
                     FROM Equipment e
                     LEFT JOIN Suppliers s ON e.SupplierID = s.SupplierID
-                    WHERE e.Status = @status
+                    WHERE e.Status = @status AND e.IsDeleted = 0
                     ORDER BY e.EquipmentName";
 
                 using var command = new SqlCommand(query, connection);
@@ -465,6 +540,7 @@ namespace AHON_TRACK.Services
                     WHERE e.NextMaintenance <= DATEADD(day, 7, GETDATE()) 
                        AND e.NextMaintenance IS NOT NULL
                        AND e.Status = 'Active'
+                       AND e.IsDeleted = 0
                     ORDER BY e.NextMaintenance";
 
                 using var command = new SqlCommand(query, connection);
@@ -522,7 +598,7 @@ namespace AHON_TRACK.Services
                            e.LastMaintenance, e.NextMaintenance
                     FROM Equipment e
                     LEFT JOIN Suppliers s ON e.SupplierID = s.SupplierID
-                    WHERE e.SupplierID = @supplierId
+                    WHERE e.SupplierID = @supplierId AND e.IsDeleted = 0
                     ORDER BY e.EquipmentName";
 
                 using var command = new SqlCommand(query, connection);
@@ -585,16 +661,16 @@ namespace AHON_TRACK.Services
                     Status = @status,
                     LastMaintenance = @lastMaintenance,
                     NextMaintenance = @nextMaintenance
-                WHERE EquipmentID = @equipmentID";
+                WHERE EquipmentID = @equipmentID AND IsDeleted = 0";
 
             try
             {
                 using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
 
-                // Check if equipment exists
+                // Check if equipment exists and is not deleted
                 using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Equipment WHERE EquipmentID = @equipmentID", connection);
+                    "SELECT COUNT(*) FROM Equipment WHERE EquipmentID = @equipmentID AND IsDeleted = 0", connection);
                 checkCmd.Parameters.AddWithValue("@equipmentID", equipment.EquipmentID);
 
                 var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
@@ -713,7 +789,7 @@ namespace AHON_TRACK.Services
                 var equipmentName = await GetEquipmentNameByIdAsync(connection, equipmentId);
 
                 using var command = new SqlCommand(
-                    "UPDATE Equipment SET Status = @status WHERE EquipmentID = @equipmentID", connection);
+                    "UPDATE Equipment SET Status = @status WHERE EquipmentID = @equipmentID AND IsDeleted = 0", connection);
 
                 command.Parameters.AddWithValue("@equipmentID", equipmentId);
                 command.Parameters.AddWithValue("@status", newStatus ?? (object)DBNull.Value);
@@ -747,7 +823,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region DELETE
+        #region DELETE (Soft Delete)
 
         public async Task<(bool Success, string Message)> DeleteEquipmentAsync(int equipmentID)
         {
@@ -760,7 +836,7 @@ namespace AHON_TRACK.Services
                 return (false, "Insufficient permissions to delete equipment.");
             }
 
-            const string query = "DELETE FROM Equipment WHERE EquipmentID = @equipmentID";
+            const string query = "UPDATE Equipment SET IsDeleted = 1 WHERE EquipmentID = @equipmentID AND IsDeleted = 0";
 
             try
             {
@@ -869,9 +945,9 @@ namespace AHON_TRACK.Services
                             equipmentNames.Add(name);
                         }
 
-                        // Delete equipment
+                        // Soft delete equipment
                         using var deleteCmd = new SqlCommand(
-                            "DELETE FROM Equipment WHERE EquipmentID = @equipmentID", conn, transaction);
+                            "UPDATE Equipment SET IsDeleted = 1 WHERE EquipmentID = @equipmentID AND IsDeleted = 0", conn, transaction);
                         deleteCmd.Parameters.AddWithValue("@equipmentID", equipmentId);
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }
@@ -914,11 +990,269 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region NITIFICATIONS
+
+        public async Task ShowEquipmentAlertsAsync()
+        {
+            try
+            {
+                // Get all alerts
+                var lowStockCount = await GetLowStockCountAsync();
+                var maintenanceDueCount = await GetMaintenanceDueCountAsync();
+                var warrantyExpiringCount = await GetWarrantyExpiringCountAsync();
+
+                // Show notifications based on priority
+                if (maintenanceDueCount > 0)
+                {
+                    _toastManager?.CreateToast("Maintenance Alert")
+                        .WithContent($"{maintenanceDueCount} equipment item(s) require maintenance within 7 days!")
+                        .DismissOnClick()
+                        .ShowWarning();
+                }
+
+                if (warrantyExpiringCount > 0)
+                {
+                    _toastManager?.CreateToast("Warranty Expiring")
+                        .WithContent($"{warrantyExpiringCount} equipment warranty(ies) expiring within 30 days!")
+                        .DismissOnClick()
+                        .ShowInfo();
+                }
+
+                if (lowStockCount > 0)
+                {
+                    _toastManager?.CreateToast("Low Stock Alert")
+                        .WithContent($"{lowStockCount} equipment item(s) have low stock (≤5 units)!")
+                        .DismissOnClick()
+                        .ShowWarning();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ShowEquipmentAlertsAsync] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Get detailed equipment alerts
+        /// </summary>
+        public async Task<EquipmentAlertSummary> GetEquipmentAlertSummaryAsync()
+        {
+            var summary = new EquipmentAlertSummary();
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Get low stock items
+                summary.LowStockItems = await GetLowStockItemsAsync(conn);
+                summary.LowStockCount = summary.LowStockItems.Count;
+
+                // Get maintenance due items
+                summary.MaintenanceDueItems = await GetMaintenanceDueItemsAsync(conn);
+                summary.MaintenanceDueCount = summary.MaintenanceDueItems.Count;
+
+                // Get warranty expiring items
+                summary.WarrantyExpiringItems = await GetWarrantyExpiringItemsAsync(conn);
+                summary.WarrantyExpiringCount = summary.WarrantyExpiringItems.Count;
+
+                summary.TotalAlerts = summary.LowStockCount + summary.MaintenanceDueCount + summary.WarrantyExpiringCount;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetEquipmentAlertSummaryAsync] Error: {ex.Message}");
+            }
+
+            return summary;
+        }
+
+        #endregion
+
+        #region Private Helper Methods
+
+        private async Task<int> GetLowStockCountAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Equipment 
+                      WHERE CurrentStock <= 5 
+                      AND Status = 'Active'
+                      AND IsDeleted = 0", conn);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private async Task<int> GetMaintenanceDueCountAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Equipment 
+                      WHERE NextMaintenance <= DATEADD(day, 7, GETDATE())
+                      AND NextMaintenance IS NOT NULL
+                      AND Status = 'Active'
+                      AND IsDeleted = 0", conn);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private async Task<int> GetWarrantyExpiringCountAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Equipment 
+                      WHERE WarrantyExpiry <= DATEADD(day, 30, GETDATE())
+                      AND WarrantyExpiry >= GETDATE()
+                      AND Status = 'Active'
+                      AND IsDeleted = 0", conn);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private async Task<List<EquipmentAlertItem>> GetLowStockItemsAsync(SqlConnection conn)
+        {
+            var items = new List<EquipmentAlertItem>();
+
+            try
+            {
+                using var cmd = new SqlCommand(
+                    @"SELECT EquipmentID, EquipmentName, CurrentStock 
+                      FROM Equipment 
+                      WHERE CurrentStock <= 5 
+                      AND Status = 'Active'
+                      AND IsDeleted = 0
+                      ORDER BY CurrentStock ASC", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    items.Add(new EquipmentAlertItem
+                    {
+                        EquipmentID = reader.GetInt32(0),
+                        EquipmentName = reader.GetString(1),
+                        AlertType = "Low Stock",
+                        Details = $"Current stock: {reader.GetInt32(2)} units"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetLowStockItemsAsync] Error: {ex.Message}");
+            }
+
+            return items;
+        }
+
+        private async Task<List<EquipmentAlertItem>> GetMaintenanceDueItemsAsync(SqlConnection conn)
+        {
+            var items = new List<EquipmentAlertItem>();
+
+            try
+            {
+                using var cmd = new SqlCommand(
+                    @"SELECT EquipmentID, EquipmentName, NextMaintenance 
+                      FROM Equipment 
+                      WHERE NextMaintenance <= DATEADD(day, 7, GETDATE())
+                      AND NextMaintenance IS NOT NULL
+                      AND Status = 'Active'
+                      AND IsDeleted = 0
+                      ORDER BY NextMaintenance ASC", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var nextMaintenance = reader.GetDateTime(2);
+                    var daysUntil = (nextMaintenance - DateTime.Now).Days;
+                    var status = daysUntil < 0 ? "Overdue" : $"Due in {daysUntil} day(s)";
+
+                    items.Add(new EquipmentAlertItem
+                    {
+                        EquipmentID = reader.GetInt32(0),
+                        EquipmentName = reader.GetString(1),
+                        AlertType = "Maintenance Due",
+                        Details = $"{status} - {nextMaintenance:MMM dd, yyyy}"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetMaintenanceDueItemsAsync] Error: {ex.Message}");
+            }
+
+            return items;
+        }
+
+        private async Task<List<EquipmentAlertItem>> GetWarrantyExpiringItemsAsync(SqlConnection conn)
+        {
+            var items = new List<EquipmentAlertItem>();
+
+            try
+            {
+                using var cmd = new SqlCommand(
+                    @"SELECT EquipmentID, EquipmentName, WarrantyExpiry 
+                      FROM Equipment 
+                      WHERE WarrantyExpiry <= DATEADD(day, 30, GETDATE())
+                      AND WarrantyExpiry >= GETDATE()
+                      AND Status = 'Active'
+                      AND IsDeleted = 0
+                      ORDER BY WarrantyExpiry ASC", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var warrantyExpiry = reader.GetDateTime(2);
+                    var daysUntil = (warrantyExpiry - DateTime.Now).Days;
+
+                    items.Add(new EquipmentAlertItem
+                    {
+                        EquipmentID = reader.GetInt32(0),
+                        EquipmentName = reader.GetString(1),
+                        AlertType = "Warranty Expiring",
+                        Details = $"Expires in {daysUntil} day(s) - {warrantyExpiry:MMM dd, yyyy}"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetWarrantyExpiringItemsAsync] Error: {ex.Message}");
+            }
+
+            return items;
+        }
+
+        #endregion
+
         #region STATISTICS & UTILITY
 
         private async Task<string> GetEquipmentNameByIdAsync(SqlConnection connection, int equipmentID)
         {
-            const string query = "SELECT EquipmentName FROM Equipment WHERE EquipmentID = @equipmentID";
+            const string query = "SELECT EquipmentName FROM Equipment WHERE EquipmentID = @equipmentID AND IsDeleted = 0";
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@equipmentID", equipmentID);
             var result = await command.ExecuteScalarAsync();
@@ -944,7 +1278,8 @@ namespace AHON_TRACK.Services
                         SUM(CASE WHEN Status = 'Inactive' THEN 1 ELSE 0 END) as InactiveCount,
                         SUM(CASE WHEN Status = 'Under Maintenance' THEN 1 ELSE 0 END) as MaintenanceCount,
                         SUM(CASE WHEN Status = 'Retired' THEN 1 ELSE 0 END) as RetiredCount
-                      FROM Equipment", conn);
+                      FROM Equipment
+                      WHERE IsDeleted = 0", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -981,7 +1316,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT ISNULL(SUM(PurchasePrice * CurrentStock), 0) as TotalValue
                       FROM Equipment
-                      WHERE PurchasePrice IS NOT NULL", conn);
+                      WHERE PurchasePrice IS NOT NULL AND IsDeleted = 0", conn);
 
                 var result = await cmd.ExecuteScalarAsync();
                 var totalValue = result != DBNull.Value ? Convert.ToDecimal(result) : 0;
@@ -1009,7 +1344,8 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT COUNT(*) FROM Equipment 
                       WHERE CurrentStock <= @threshold 
-                      AND Status = 'Active'", conn);
+                      AND Status = 'Active'
+                      AND IsDeleted = 0", conn);
 
                 cmd.Parameters.AddWithValue("@threshold", threshold);
 
@@ -1022,9 +1358,8 @@ namespace AHON_TRACK.Services
                 return (false, $"Error: {ex.Message}", 0);
             }
         }
-
-        #endregion
     }
+    #endregion
 
     #region Supporting Models
 
@@ -1032,6 +1367,25 @@ namespace AHON_TRACK.Services
     {
         public int SupplierID { get; set; }
         public string SupplierName { get; set; } = string.Empty;
+    }
+
+    public class EquipmentAlertSummary
+    {
+        public int TotalAlerts { get; set; }
+        public int LowStockCount { get; set; }
+        public int MaintenanceDueCount { get; set; }
+        public int WarrantyExpiringCount { get; set; }
+        public List<EquipmentAlertItem> LowStockItems { get; set; } = new List<EquipmentAlertItem>();
+        public List<EquipmentAlertItem> MaintenanceDueItems { get; set; } = new List<EquipmentAlertItem>();
+        public List<EquipmentAlertItem> WarrantyExpiringItems { get; set; } = new List<EquipmentAlertItem>();
+    }
+
+    public class EquipmentAlertItem
+    {
+        public int EquipmentID { get; set; }
+        public string EquipmentName { get; set; } = string.Empty;
+        public string AlertType { get; set; } = string.Empty;
+        public string Details { get; set; } = string.Empty;
     }
 
     #endregion
