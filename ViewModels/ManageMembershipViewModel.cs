@@ -103,8 +103,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		}
 	}
 	
-	public bool IsRefundButtonVisible =>
-		!new[] { "Active" }
+	public bool IsDeleteButtonEnabled =>
+		!new[] { "Expired" }
 			.Any(status => SelectedMember is not null && SelectedMember.Status.
 				Equals(status, StringComparison.OrdinalIgnoreCase));
 
@@ -156,7 +156,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		OnPropertyChanged(nameof(IsActiveVisible));
 		OnPropertyChanged(nameof(IsExpiredVisible));
 		OnPropertyChanged(nameof(HasSelectedMember));
-		OnPropertyChanged(nameof(IsRefundButtonVisible));
+		OnPropertyChanged(nameof(IsDeleteButtonEnabled));
 		OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
 		OnPropertyChanged(nameof(IsRenewButtonEnabled));
 		OnPropertyChanged(nameof(CanDeleteSelectedMembers));
@@ -628,31 +628,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 	}
 	
 	[RelayCommand]
-	private void ShowRefundMemberDialog()
-	{
-		if (SelectedMember is null)
-		{
-			_toastManager.CreateToast("No Member Selected")
-				.WithContent("Please select a member to refund")
-				.DismissOnClick()
-				.ShowError();
-			return;
-		}
-		
-		_dialogManager
-			.CreateDialog(
-				"Confirm Refund",
-				"Are you sure you want to process a refund for this member? Once confirmed, the transaction will be reversed and recorded in the system.")
-			.WithPrimaryButton("Confirm Refund",
-				() => OnSubmitRefundMember(SelectedMember),
-				DialogButtonStyle.Destructive)
-			.WithCancelButton("Cancel")
-			.WithMaxWidth(512)
-			.Dismissible()
-			.Show();
-	}
-	
-	[RelayCommand]
 	private void ShowModifyMemberDialog(ManageMembersItem? member)
 	{
 		if (member is null)
@@ -827,23 +802,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 		    .ShowSuccess();
     }
     
-    private async Task OnSubmitRefundMember(ManageMembersItem member)
-    {
-	    // Process refund - revert payment transaction
-	    // Will ONLY refund gym membership, not including packages, etc.
-	    await ProcessRefundTransaction(member);
-    
-	    // Show success toast for refund
-	    _toastManager.CreateToast("Refund Processed")
-		    .WithContent($"Refund for {member.Name} has been successfully processed and recorded.")
-		    .DismissOnClick()
-		    .WithDelay(6)
-		    .ShowSuccess();
-    
-	    // After refund is processed, delete the member from the system
-	    await OnSubmitDeleteSingleItem(member); // Execute this after all of those stuff above
-    }
-    
     // Helper method to delete from database
     private async Task DeleteMemberFromDatabase(ManageMembersItem member)
     {
@@ -851,12 +809,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         // await connection.ExecuteAsync("DELETE FROM Members WHERE ID = @ID", new { IDI = member.ID });
 
         await Task.Delay(100); // Just an animation/simulation of async operation
-    }
-    
-    private async Task ProcessRefundTransaction(ManageMembersItem member)
-    {
-	    await Task.Delay(100); // Simulation of async database operation
-	    // Will ONLY refund gym membership, not including packages, etc.
     }
     
     partial void OnSearchStringResultChanged(string value)
