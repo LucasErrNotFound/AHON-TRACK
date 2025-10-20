@@ -76,36 +76,131 @@ namespace AHON_TRACK.Services
 
                 try
                 {
-                    // Check if customer already had a free trial (if current registration is Free Trial)
-                    if (walkIn.WalkInType?.Equals("Free Trial", StringComparison.OrdinalIgnoreCase) == true)
+                    // Check if customer already exists (not deleted)
+                    using var checkExistingCmd = new SqlCommand(
+                        @"SELECT CustomerID, WalkinType FROM WalkInCustomers 
+                          WHERE FirstName = @firstName 
+                          AND LastName = @lastName 
+                          AND ContactNumber = @contactNumber
+                          AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn, transaction);
+
+                    checkExistingCmd.Parameters.AddWithValue("@firstName", walkIn.FirstName ?? (object)DBNull.Value);
+                    checkExistingCmd.Parameters.AddWithValue("@lastName", walkIn.LastName ?? (object)DBNull.Value);
+                    checkExistingCmd.Parameters.AddWithValue("@contactNumber", walkIn.ContactNumber ?? (object)DBNull.Value);
+
+                    int? existingCustomerId = null;
+                    string? existingWalkInType = null;
+
+                    using (var reader = await checkExistingCmd.ExecuteReaderAsync())
                     {
-                        using var checkFreeTrialCmd = new SqlCommand(
-                            @"SELECT COUNT(*) FROM WalkInCustomers 
-                      WHERE FirstName = @firstName 
-                      AND LastName = @lastName 
-                      AND ContactNumber = @contactNumber
-                      AND WalkinType = 'Free Trial'", conn, transaction);
-
-                        checkFreeTrialCmd.Parameters.AddWithValue("@firstName", walkIn.FirstName ?? (object)DBNull.Value);
-                        checkFreeTrialCmd.Parameters.AddWithValue("@lastName", walkIn.LastName ?? (object)DBNull.Value);
-                        checkFreeTrialCmd.Parameters.AddWithValue("@contactNumber", walkIn.ContactNumber ?? (object)DBNull.Value);
-
-                        var freeTrialCount = (int)await checkFreeTrialCmd.ExecuteScalarAsync();
-                        if (freeTrialCount > 0)
+                        if (await reader.ReadAsync())
                         {
-                            _toastManager.CreateToast("Free Trial Already Used")
-                                .WithContent($"{walkIn.FirstName} {walkIn.LastName} has already availed a free trial. Please register as 'Regular' customer.")
-                                .DismissOnClick()
-                                .ShowWarning();
-                            return (false, "This customer has already used their free trial.", null);
+                            existingCustomerId = reader.GetInt32(0);
+                            existingWalkInType = reader.IsDBNull(1) ? null : reader.GetString(1);
                         }
                     }
 
-                    // Insert new walk-in customer
+                    // If customer exists
+                    if (existingCustomerId.HasValue)
+                    {
+                        // If they already availed Free Trial
+                        if (existingWalkInType?.Equals("Free Trial", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            // If trying to register as Free Trial again, reject
+                            if (walkIn.WalkInType?.Equals("Free Trial", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                _toastManager.CreateToast("Free Trial Already Used")
+                                    .WithContent($"{walkIn.FirstName} {walkIn.LastName} has already availed a free trial. Cannot register for another free trial.")
+                                    .DismissOnClick()
+                                    .ShowWarning();
+                                return (false, "This customer has already used their free trial.", null);
+                            }
+
+                            // If they now want Regular, update to Regular and check in
+                            if (walkIn.WalkInType?.Equals("Regular", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                // Update the existing customer record to Regular
+                                using var updateCmd = new SqlCommand(
+                                    @"UPDATE WalkInCustomers 
+                                      SET WalkinType = @walkInType,
+                                          WalkinPackage = @walkInPackage,
+                                          PaymentMethod = @paymentMethod,
+                                          Quantity = @quantity,
+                                          Age = @age,
+                                          Gender = @gender,
+                                          MiddleInitial = @middleInitial
+                                      WHERE CustomerID = @customerId", conn, transaction);
+
+                                updateCmd.Parameters.AddWithValue("@customerId", existingCustomerId.Value);
+                                updateCmd.Parameters.AddWithValue("@walkInType", walkIn.WalkInType ?? (object)DBNull.Value);
+                                updateCmd.Parameters.AddWithValue("@walkInPackage", walkIn.WalkInPackage ?? (object)DBNull.Value);
+                                updateCmd.Parameters.AddWithValue("@paymentMethod", walkIn.PaymentMethod ?? (object)DBNull.Value);
+                                updateCmd.Parameters.AddWithValue("@quantity", walkIn.Quantity ?? (object)DBNull.Value);
+                                updateCmd.Parameters.AddWithValue("@age", walkIn.Age);
+                                updateCmd.Parameters.AddWithValue("@gender", walkIn.Gender ?? (object)DBNull.Value);
+                                updateCmd.Parameters.AddWithValue("@middleInitial", walkIn.MiddleInitial ?? (object)DBNull.Value);
+
+                                await updateCmd.ExecuteNonQueryAsync();
+
+                                // Create check-in record for the existing customer
+                                var currentDateTime = DateTime.Now;
+                                using var checkInCmd = new SqlCommand(
+                                    @"INSERT INTO WalkInRecords (CustomerID, CheckIn, CheckOut, RegisteredByEmployeeID)
+                                      VALUES (@customerID, @checkIn, NULL, @employeeID)", conn, transaction);
+
+                                checkInCmd.Parameters.AddWithValue("@customerID", existingCustomerId.Value);
+                                checkInCmd.Parameters.Add("@checkIn", SqlDbType.DateTime).Value = currentDateTime;
+                                checkInCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                                await checkInCmd.ExecuteNonQueryAsync();
+
+                                await LogActionAsync(conn, transaction, "UPDATE",
+                                    $"Updated walk-in customer from Free Trial to Regular: {walkIn.FirstName} {walkIn.LastName} and checked in", true);
+
+                                transaction.Commit();
+
+                                _toastManager.CreateToast("Customer Updated & Checked In")
+                                    .WithContent($"Successfully updated {walkIn.FirstName} {walkIn.LastName} to Regular and checked in.")
+                                    .DismissOnClick()
+                                    .ShowSuccess();
+
+                                return (true, "Walk-in customer updated to Regular and checked in successfully.", existingCustomerId.Value);
+                            }
+                        }
+
+                        // If they already have Regular, just create a new check-in record
+                        if (existingWalkInType?.Equals("Regular", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            var currentDateTime = DateTime.Now;
+                            using var checkInCmd = new SqlCommand(
+                                @"INSERT INTO WalkInRecords (CustomerID, CheckIn, CheckOut, RegisteredByEmployeeID)
+                                  VALUES (@customerID, @checkIn, NULL, @employeeID)", conn, transaction);
+
+                            checkInCmd.Parameters.AddWithValue("@customerID", existingCustomerId.Value);
+                            checkInCmd.Parameters.Add("@checkIn", SqlDbType.DateTime).Value = currentDateTime;
+                            checkInCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                            await checkInCmd.ExecuteNonQueryAsync();
+
+                            await LogActionAsync(conn, transaction, "CREATE",
+                                $"Checked in existing walk-in customer: {walkIn.FirstName} {walkIn.LastName}", true);
+
+                            transaction.Commit();
+
+                            _toastManager.CreateToast("Customer Checked In")
+                                .WithContent($"Successfully checked in {walkIn.FirstName} {walkIn.LastName}.")
+                                .DismissOnClick()
+                                .ShowSuccess();
+
+                            return (true, "Existing walk-in customer checked in successfully.", existingCustomerId.Value);
+                        }
+                    }
+
+                    // Customer doesn't exist, create new customer
                     using var cmd = new SqlCommand(
-                        @"INSERT INTO WalkInCustomers (FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, WalkinType, WalkinPackage, PaymentMethod, Quantity, RegisteredByEmployeeID) 
-                  OUTPUT INSERTED.CustomerID
-                  VALUES (@firstName, @middleInitial, @lastName, @contactNumber, @age, @gender, @walkInType, @walkInPackage, @paymentMethod, @quantity, @employeeID)", conn, transaction);
+                        @"INSERT INTO WalkInCustomers (FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, WalkinType, WalkinPackage, PaymentMethod, Quantity, RegisteredByEmployeeID, IsDeleted) 
+                          OUTPUT INSERTED.CustomerID
+                          VALUES (@firstName, @middleInitial, @lastName, @contactNumber, @age, @gender, @walkInType, @walkInPackage, @paymentMethod, @quantity, @employeeID, 0)", conn, transaction);
 
                     cmd.Parameters.AddWithValue("@firstName", walkIn.FirstName ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@middleInitial", walkIn.MiddleInitial ?? (object)DBNull.Value);
@@ -122,22 +217,22 @@ namespace AHON_TRACK.Services
                     var customerId = (int)await cmd.ExecuteScalarAsync();
 
                     // Get current datetime for check-in
-                    var currentDateTime = DateTime.Now;
+                    var currentDateTime2 = DateTime.Now;
 
                     // Automatically create check-in record in WalkInRecords
-                    using var checkInCmd = new SqlCommand(
+                    using var checkInCmd2 = new SqlCommand(
                         @"INSERT INTO WalkInRecords (CustomerID, CheckIn, CheckOut, RegisteredByEmployeeID)
-                  VALUES (@customerID, @checkIn, NULL, @employeeID)", conn, transaction);
+                          VALUES (@customerID, @checkIn, NULL, @employeeID)", conn, transaction);
 
-                    checkInCmd.Parameters.AddWithValue("@customerID", customerId);
-                    checkInCmd.Parameters.Add("@checkIn", SqlDbType.DateTime).Value = currentDateTime;
-                    checkInCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+                    checkInCmd2.Parameters.AddWithValue("@customerID", customerId);
+                    checkInCmd2.Parameters.Add("@checkIn", SqlDbType.DateTime).Value = currentDateTime2;
+                    checkInCmd2.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
-                    await checkInCmd.ExecuteNonQueryAsync();
+                    await checkInCmd2.ExecuteNonQueryAsync();
 
                     // Log the action
                     await LogActionAsync(conn, transaction, "CREATE",
-                        $"Registered walk-in customer: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) and checked in", true);
+                        $"Registered walk-in customer: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) and checked in with a {walkIn.WalkInPackage}", true);
 
                     // Commit the transaction - both customer and check-in record are saved
                     transaction.Commit();
@@ -176,6 +271,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+
         #region READ
 
         public async Task<(bool Success, string Message, List<ManageWalkInModel>? WalkIns)> GetAllWalkInCustomersAsync()
@@ -197,6 +293,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, WalkinType, WalkinPackage, PaymentMethod, RegisteredByEmployeeID 
                       FROM WalkInCustomers 
+                      WHERE IsDeleted = 0 OR IsDeleted IS NULL
                       ORDER BY CustomerID DESC", conn);
 
                 var walkIns = new List<ManageWalkInModel>();
@@ -260,7 +357,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, WalkinType, WalkinPackage, PaymentMethod, RegisteredByEmployeeID 
                       FROM WalkInCustomers 
-                      WHERE CustomerID = @customerId", conn);
+                      WHERE CustomerID = @customerId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
 
                 cmd.Parameters.AddWithValue("@customerId", customerId);
 
@@ -313,7 +410,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, WalkinType, WalkinPackage, PaymentMethod, RegisteredByEmployeeID 
                       FROM WalkInCustomers 
-                      WHERE WalkinType = @walkInType
+                      WHERE WalkinType = @walkInType AND (IsDeleted = 0 OR IsDeleted IS NULL)
                       ORDER BY CustomerID DESC", conn);
 
                 cmd.Parameters.AddWithValue("@walkInType", walkInType ?? (object)DBNull.Value);
@@ -367,7 +464,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, WalkinType, WalkinPackage, PaymentMethod, RegisteredByEmployeeID 
                       FROM WalkInCustomers 
-                      WHERE WalkinPackage = @package
+                      WHERE WalkinPackage = @package AND (IsDeleted = 0 OR IsDeleted IS NULL)
                       ORDER BY CustomerID DESC", conn);
 
                 cmd.Parameters.AddWithValue("@package", package ?? (object)DBNull.Value);
@@ -406,6 +503,7 @@ namespace AHON_TRACK.Services
             }
         }
 
+
         #endregion
 
         #region UPDATE
@@ -426,9 +524,9 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Check if customer exists
+                // Check if customer exists and is not deleted
                 using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM WalkInCustomers WHERE CustomerID = @customerId", conn);
+                    "SELECT COUNT(*) FROM WalkInCustomers WHERE CustomerID = @customerId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
                 checkCmd.Parameters.AddWithValue("@customerId", walkIn.WalkInID);
 
                 var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
@@ -495,6 +593,7 @@ namespace AHON_TRACK.Services
             }
         }
 
+
         #endregion
 
         #region DELETE
@@ -517,7 +616,7 @@ namespace AHON_TRACK.Services
 
                 // Get customer name for logging
                 using var getNameCmd = new SqlCommand(
-                    "SELECT FirstName, LastName FROM WalkInCustomers WHERE CustomerID = @customerId", conn);
+                    "SELECT FirstName, LastName FROM WalkInCustomers WHERE CustomerID = @customerId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
                 getNameCmd.Parameters.AddWithValue("@customerId", customerId);
 
                 using var reader = await getNameCmd.ExecuteReaderAsync();
@@ -539,7 +638,7 @@ namespace AHON_TRACK.Services
 
                 // Delete customer
                 using var cmd = new SqlCommand(
-                    "DELETE FROM WalkInCustomers WHERE CustomerID = @customerId", conn);
+                    "UPDATE WalkInCustomers SET IsDeleted = 1 WHERE CustomerID = @customerId", conn);
                 cmd.Parameters.AddWithValue("@customerId", customerId);
 
                 var rowsAffected = await cmd.ExecuteNonQueryAsync();
@@ -607,7 +706,7 @@ namespace AHON_TRACK.Services
                     {
                         // Get customer name
                         using var getNameCmd = new SqlCommand(
-                            "SELECT FirstName, LastName FROM WalkInCustomers WHERE CustomerID = @customerId", conn, transaction);
+                            "SELECT FirstName, LastName FROM WalkInCustomers WHERE CustomerID = @customerId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn, transaction);
                         getNameCmd.Parameters.AddWithValue("@customerId", customerId);
 
                         using var reader = await getNameCmd.ExecuteReaderAsync();
@@ -619,7 +718,7 @@ namespace AHON_TRACK.Services
 
                         // Delete customer
                         using var deleteCmd = new SqlCommand(
-                            "DELETE FROM WalkInCustomers WHERE CustomerID = @customerId", conn, transaction);
+                            "UPDATE WalkInCustomers SET IsDeleted = 1 WHERE CustomerID = @customerId", conn, transaction);
                         deleteCmd.Parameters.AddWithValue("@customerId", customerId);
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }

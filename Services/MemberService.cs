@@ -176,7 +176,7 @@ namespace AHON_TRACK.Services
                 await LogActionAsync(conn, "CREATE", $"Added new member: {member.FirstName} {member.LastName}", true);
 
                 _toastManager?.CreateToast("Member Added")
-                    .WithContent($"Successfully added {member.FirstName} {member.LastName}.")
+                    .WithContent($"Successfully added {member.FirstName} {member.LastName}. with valid until {member.ValidUntil}.")
                     .DismissOnClick()
                     .ShowSuccess();
 
