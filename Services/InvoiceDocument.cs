@@ -24,7 +24,7 @@ public class InvoiceDocument : IDocument
         container
             .Page(page =>
             {
-                page.Margin(50);
+                page.Margin(15);
                 page.Header().Element(ComposeHeader);
                 page.Content().Element(ComposeContent);
                 page.Footer().AlignCenter().Text(x =>

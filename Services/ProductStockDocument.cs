@@ -24,7 +24,7 @@ public class ProductStockDocument : IDocument
         container
             .Page(page =>
             {
-                page.Margin(30);
+                page.Margin(15);
                 page.Header().Element(ComposeHeader);
                 page.Content().Element(ComposeContent);
                 page.Footer().AlignCenter().Text(x =>

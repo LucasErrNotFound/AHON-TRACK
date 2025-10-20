@@ -24,7 +24,7 @@ public class AuditLogDocument : IDocument
         container
             .Page(page =>
             {
-                page.Margin(50);
+                page.Margin(15);
                 page.Header().Element(ComposeHeader);
                 page.Content().Element(ComposeContent);
                 page.Footer().AlignCenter().Text(x =>
@@ -111,7 +111,7 @@ public class AuditLogDocument : IDocument
             table.ColumnsDefinition(columns =>
             {
                 columns.ConstantColumn(50);
-                columns.RelativeColumn(35);
+                columns.RelativeColumn(23);
                 columns.RelativeColumn(20);
                 columns.RelativeColumn(40);
                 columns.ConstantColumn(140);
