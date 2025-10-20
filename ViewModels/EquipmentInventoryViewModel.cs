@@ -273,7 +273,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     }
     
     [RelayCommand]
-    private async Task ExportEquipmentStock()
+    private async Task ExportEquipmentList()
     {
         try
         {

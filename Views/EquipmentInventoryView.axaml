@@ -87,7 +87,7 @@
                                 Margin="20,0,0,0"
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
-                                Command="{CompiledBinding ExportEquipmentStockCommand}">
+                                Command="{CompiledBinding ExportEquipmentListCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Svg
                                         Width="20"
