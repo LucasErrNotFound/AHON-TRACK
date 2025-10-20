@@ -95,6 +95,48 @@ namespace AHON_TRACK.Services
                 foreach (var item in cartItems)
                 {
                     decimal itemTotal = item.Price * item.Quantity;
+                    if (item.Category == CategoryConstants.GymPackage)
+                    {
+                        string getDiscountQuery = @"
+        SELECT Discount, DiscountType, DiscountFor, ValidFrom, ValidTo
+        FROM Packages
+        WHERE PackageID = @PackageID";
+
+                        using var discountCmd = new SqlCommand(getDiscountQuery, conn, transaction);
+                        discountCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+
+                        using var reader = await discountCmd.ExecuteReaderAsync();
+                        if (await reader.ReadAsync())
+                        {
+                            decimal discountValue = reader["Discount"] != DBNull.Value ? Convert.ToDecimal(reader["Discount"]) : 0;
+                            string discountType = reader["DiscountType"]?.ToString()?.Trim() ?? "none";
+                            string discountFor = reader["DiscountFor"]?.ToString()?.Trim() ?? "All";
+                            DateTime? validFrom = reader["ValidFrom"] != DBNull.Value ? Convert.ToDateTime(reader["ValidFrom"]) : null;
+                            DateTime? validTo = reader["ValidTo"] != DBNull.Value ? Convert.ToDateTime(reader["ValidTo"]) : null;
+
+                            bool isValidDate = (!validFrom.HasValue || DateTime.Now >= validFrom) &&
+                                               (!validTo.HasValue || DateTime.Now <= validTo);
+
+                            bool isEligibleCustomer =
+                                discountFor.Equals("All", StringComparison.OrdinalIgnoreCase) ||
+                                (customer.CustomerType.Equals("Member", StringComparison.OrdinalIgnoreCase) &&
+                                 discountFor.Equals("Gym Members", StringComparison.OrdinalIgnoreCase));
+
+                            if (isValidDate && isEligibleCustomer && discountValue > 0 && discountType != "none")
+                            {
+                                decimal discountAmount = 0;
+                                if (discountType.Equals("percentage", StringComparison.OrdinalIgnoreCase))
+                                    discountAmount = item.Price * (discountValue / 100m);
+                                else if (discountType.Equals("fixed", StringComparison.OrdinalIgnoreCase))
+                                    discountAmount = discountValue;
+
+                                // Apply discount
+                                itemTotal = (item.Price - discountAmount) * item.Quantity;
+                            }
+                        }
+                        await reader.CloseAsync();
+                    }
+
                     totalAmount += itemTotal;
                     totalTransactions++;
 
@@ -340,6 +382,12 @@ namespace AHON_TRACK.Services
                 _toastManager.CreateToast("Payment Successful")
                     .WithContent($"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}")
                     .ShowSuccess();
+                if (cartItems.Any(i => i.Category == CategoryConstants.GymPackage))
+                {
+                    _toastManager.CreateToast("Discount Applied")
+                        .WithContent("Package discounts applied successfully.")
+                        .ShowSuccess();
+                }
                 return true;
             }
             catch (Exception ex)
@@ -745,6 +793,51 @@ ORDER BY s.SaleDate DESC;";
                 Console.WriteLine($"[LogActionAsync] {ex.Message}");
             }
         }
+
+        private async Task<decimal> GetDiscountedPackagePriceAsync(SqlConnection conn, SqlTransaction transaction, int packageId, string customerType, decimal basePrice)
+        {
+            string query = @"
+        SELECT Discount, DiscountType, DiscountFor
+        FROM Packages
+        WHERE PackageID = @PackageID;";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@PackageID", packageId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                decimal discountValue = reader["Discount"] != DBNull.Value ? Convert.ToDecimal(reader["Discount"]) : 0;
+                string discountType = reader["DiscountType"]?.ToString() ?? string.Empty;
+                string discountFor = reader["DiscountFor"]?.ToString() ?? string.Empty;
+
+                // Check if discount applies
+                bool appliesToCustomer =
+                    discountFor.Equals("All", StringComparison.OrdinalIgnoreCase) ||
+                    (customerType.Equals("Member", StringComparison.OrdinalIgnoreCase) &&
+                     discountFor.Equals("Gym Members", StringComparison.OrdinalIgnoreCase)) ||
+                    (customerType.Equals("WalkIn", StringComparison.OrdinalIgnoreCase) &&
+                     discountFor.Equals("WalkIn", StringComparison.OrdinalIgnoreCase));
+
+                if (appliesToCustomer)
+                {
+                    if (discountType.Equals("Percentage", StringComparison.OrdinalIgnoreCase))
+                    {
+                        basePrice -= basePrice * (discountValue / 100);
+                    }
+                    else if (discountType.Equals("Fixed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        basePrice -= discountValue;
+                    }
+
+                    if (basePrice < 0)
+                        basePrice = 0;
+                }
+            }
+
+            return basePrice;
+        }
+
 
         #endregion
     }
