@@ -4,9 +4,14 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using QuestPDF.Companion;
 using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
@@ -67,12 +72,16 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly SettingsService _settingsService;
+    private AppSettings? _currentSettings;
 
-    public AuditLogsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public AuditLogsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+	    SettingsService settingsService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _settingsService = settingsService;
         
         LoadSampleData();
         UpdateCounts();
@@ -83,12 +92,15 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _settingsService = new SettingsService();
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
         if (IsInitialized) return;
+        await LoadSettingsAsync();
+        
         LoadSampleData();
         UpdateCounts();
         IsInitialized = true;
@@ -109,7 +121,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         [
             new AuditLogItems
             {
-                ID = "1001",
+                ID = 1001,
                 AvatarSource = DefaultAvatarSource,
                 Name = "Joel Abalos",
                 Username = "Admin1",
@@ -119,7 +131,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             },
             new AuditLogItems
             {
-	            ID = "1002",
+	            ID = 1002,
 	            AvatarSource = DefaultAvatarSource,
 	            Name = "Sianrey Flora",
 	            Username = "Reylifts",
@@ -129,7 +141,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             },
             new AuditLogItems
             {
-	            ID = "1003",
+	            ID = 1003,
 	            AvatarSource = DefaultAvatarSource,
 	            Name = "Mardie Dela Cruz",
 	            Username = "Figora",
@@ -139,7 +151,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             },
             new AuditLogItems
             {
-	            ID = "1004",
+	            ID = 1004,
 	            AvatarSource = DefaultAvatarSource,
 	            Name = "Robert Lucas",
 	            Username = "Musashi",
@@ -149,7 +161,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             },
             new AuditLogItems
             {
-	            ID = "1005",
+	            ID = 1005,
 	            AvatarSource = DefaultAvatarSource,
 	            Name = "JL Taberdo",
 	            Username = "JeyEL",
@@ -159,7 +171,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             },
             new AuditLogItems
             {
-	            ID = "1006",
+	            ID = 1006,
 	            AvatarSource = DefaultAvatarSource,
 	            Name = "Dave Dapitillo",
 	            Username = "Dabai",
@@ -169,7 +181,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             },
             new AuditLogItems
             {
-	            ID = "1007",
+	            ID = 1007,
 	            AvatarSource = DefaultAvatarSource,
 	            Name = "JC Casidor",
 	            Username = "Yhuitrick",
@@ -205,7 +217,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 			// Search within the current filtered data instead of original data
 			var filteredAuditLogs = CurrentFilteredAuditLogData.Where(log =>
 				log is { ID: not null, Name: not null, Username: not null, Position: not null, Action: not null } && 
-				(log.ID.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) || 
+				(// log.ID.HasValue(SearchStringResult, StringComparison.OrdinalIgnoreCase) || 
 				 log.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
 				 log.Username.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
 				 log.Position.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
@@ -228,6 +240,93 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 			IsSearchingAuditLogs = false;
 		}
 	}
+	
+    [RelayCommand]
+    private async Task DownloadAuditLogs()
+    {
+        try
+        {
+            // Check if there are any audit logs to export
+            if (AuditLogs.Count == 0)
+            {
+                _toastManager.CreateToast("No audit logs to export")
+                    .WithContent("There are no audit logs available for the selected date.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+        
+            IStorageFolder? startLocation = null;
+            if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
+            {
+                try
+                {
+                    startLocation = await toplevel.StorageProvider.TryGetFolderFromPathAsync(_currentSettings.DownloadPath);
+                }
+                catch
+                {
+                    // If path is invalid, startLocation will remain null
+                }
+            }
+        
+            var fileName = $"Audit_Logs_{SelectedDate:yyyy-MM-dd}.pdf";
+            var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Download Audit Logs",
+                SuggestedStartLocation = startLocation,
+                FileTypeChoices = [FilePickerFileTypes.Pdf],
+                SuggestedFileName = fileName,
+                ShowOverwritePrompt = true
+            });
+
+            if (pdfFile == null) return;
+
+            var auditLogModel = new AuditLogDocumentModel
+            {
+                GeneratedDate = DateTime.Today,
+                GymName = "AHON Victory Fitness Gym",
+                GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
+                GymPhone = "+63 123 456 7890",
+                GymEmail = "info@ahonfitness.com",
+                Items = AuditLogs.Select(auditLog => new AuditLogItem
+                {
+                    ID = auditLog.ID ?? 0,
+                    Name = auditLog.Name,
+                    Position = auditLog.Position,
+                    LogCount = auditLog.LogCount ?? 0,
+                    DateAndTime = auditLog.DateAndTime,
+                    Action = auditLog.Action
+                }).ToList()
+            };
+
+            var document = new AuditLogDocument(auditLogModel);
+        
+            await using var stream = await pdfFile.OpenWriteAsync();
+            
+            // Both cannot be enabled at the same time. Disable one of them 
+            //document.GeneratePdf(stream); // Generate the PDF
+            await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+        
+            _toastManager.CreateToast("Invoice exported successfully")
+                .WithContent($"Invoice has been saved to {pdfFile.Name}")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Export failed")
+                .WithContent($"Failed to export invoice: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+    
+    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
 
 	[RelayCommand]
 	private void SortReset()
@@ -398,7 +497,7 @@ public partial class AuditLogItems : ObservableObject
     private bool _isSelected;
     
     [ObservableProperty] 
-    private string? _iD;
+    private int? _iD;
     
     [ObservableProperty]
     private string? _avatarSource;
@@ -417,6 +516,9 @@ public partial class AuditLogItems : ObservableObject
     
     [ObservableProperty]
     private string? _action;
+    
+    [ObservableProperty]
+    private decimal? _logCount;
 
     public string FormattedDateTime => DateAndTime.ToString("MMMM dd, yyyy h:mm:ss tt");
 }
