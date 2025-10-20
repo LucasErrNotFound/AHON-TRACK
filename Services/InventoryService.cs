@@ -990,7 +990,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region NITIFICATIONS
+        #region NOTIFICATIONS
 
         public async Task ShowEquipmentAlertsAsync()
         {
@@ -1000,8 +1000,18 @@ namespace AHON_TRACK.Services
                 var lowStockCount = await GetLowStockCountAsync();
                 var maintenanceDueCount = await GetMaintenanceDueCountAsync();
                 var warrantyExpiringCount = await GetWarrantyExpiringCountAsync();
+                var conditionAlertCount = await GetConditionAlertCountAsync();
 
                 // Show notifications based on priority
+                // HIGHEST PRIORITY: Equipment condition issues
+                if (conditionAlertCount > 0)
+                {
+                    _toastManager?.CreateToast("Equipment Condition Alert")
+                        .WithContent($"{conditionAlertCount} equipment item(s) need attention (Repairing/Broken)!")
+                        .DismissOnClick()
+                        .ShowError();
+                }
+
                 if (maintenanceDueCount > 0)
                 {
                     _toastManager?.CreateToast("Maintenance Alert")
@@ -1033,7 +1043,7 @@ namespace AHON_TRACK.Services
         }
 
         /// <summary>
-        /// Get detailed equipment alerts
+        /// Get detailed equipment alerts including condition alerts
         /// </summary>
         public async Task<EquipmentAlertSummary> GetEquipmentAlertSummaryAsync()
         {
@@ -1043,6 +1053,10 @@ namespace AHON_TRACK.Services
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
+
+                // Get condition alert items (NEW)
+                summary.ConditionAlertItems = await GetConditionAlertItemsAsync(conn);
+                summary.ConditionAlertCount = summary.ConditionAlertItems.Count;
 
                 // Get low stock items
                 summary.LowStockItems = await GetLowStockItemsAsync(conn);
@@ -1056,7 +1070,8 @@ namespace AHON_TRACK.Services
                 summary.WarrantyExpiringItems = await GetWarrantyExpiringItemsAsync(conn);
                 summary.WarrantyExpiringCount = summary.WarrantyExpiringItems.Count;
 
-                summary.TotalAlerts = summary.LowStockCount + summary.MaintenanceDueCount + summary.WarrantyExpiringCount;
+                summary.TotalAlerts = summary.ConditionAlertCount + summary.LowStockCount +
+                                      summary.MaintenanceDueCount + summary.WarrantyExpiringCount;
             }
             catch (Exception ex)
             {
@@ -1079,9 +1094,9 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT COUNT(*) FROM Equipment 
-                      WHERE CurrentStock <= 5 
-                      AND Status = 'Active'
-                      AND IsDeleted = 0", conn);
+              WHERE CurrentStock <= 5 
+              AND Status = 'Active'
+              AND IsDeleted = 0", conn);
 
                 return (int)await cmd.ExecuteScalarAsync();
             }
@@ -1100,10 +1115,10 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT COUNT(*) FROM Equipment 
-                      WHERE NextMaintenance <= DATEADD(day, 7, GETDATE())
-                      AND NextMaintenance IS NOT NULL
-                      AND Status = 'Active'
-                      AND IsDeleted = 0", conn);
+              WHERE NextMaintenance <= DATEADD(day, 7, GETDATE())
+              AND NextMaintenance IS NOT NULL
+              AND Status = 'Active'
+              AND IsDeleted = 0", conn);
 
                 return (int)await cmd.ExecuteScalarAsync();
             }
@@ -1122,10 +1137,32 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT COUNT(*) FROM Equipment 
-                      WHERE WarrantyExpiry <= DATEADD(day, 30, GETDATE())
-                      AND WarrantyExpiry >= GETDATE()
-                      AND Status = 'Active'
-                      AND IsDeleted = 0", conn);
+              WHERE WarrantyExpiry <= DATEADD(day, 30, GETDATE())
+              AND WarrantyExpiry >= GETDATE()
+              AND Status = 'Active'
+              AND IsDeleted = 0", conn);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        // NEW: Get count of equipment with poor condition
+        private async Task<int> GetConditionAlertCountAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Equipment 
+              WHERE (Condition = 'Repairing' OR Condition = 'Broken')
+              AND Status = 'Active'
+              AND IsDeleted = 0", conn);
 
                 return (int)await cmd.ExecuteScalarAsync();
             }
@@ -1143,11 +1180,11 @@ namespace AHON_TRACK.Services
             {
                 using var cmd = new SqlCommand(
                     @"SELECT EquipmentID, EquipmentName, CurrentStock 
-                      FROM Equipment 
-                      WHERE CurrentStock <= 5 
-                      AND Status = 'Active'
-                      AND IsDeleted = 0
-                      ORDER BY CurrentStock ASC", conn);
+              FROM Equipment 
+              WHERE CurrentStock <= 5 
+              AND Status = 'Active'
+              AND IsDeleted = 0
+              ORDER BY CurrentStock ASC", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -1157,6 +1194,7 @@ namespace AHON_TRACK.Services
                         EquipmentID = reader.GetInt32(0),
                         EquipmentName = reader.GetString(1),
                         AlertType = "Low Stock",
+                        AlertSeverity = "Warning",
                         Details = $"Current stock: {reader.GetInt32(2)} units"
                     });
                 }
@@ -1177,12 +1215,12 @@ namespace AHON_TRACK.Services
             {
                 using var cmd = new SqlCommand(
                     @"SELECT EquipmentID, EquipmentName, NextMaintenance 
-                      FROM Equipment 
-                      WHERE NextMaintenance <= DATEADD(day, 7, GETDATE())
-                      AND NextMaintenance IS NOT NULL
-                      AND Status = 'Active'
-                      AND IsDeleted = 0
-                      ORDER BY NextMaintenance ASC", conn);
+              FROM Equipment 
+              WHERE NextMaintenance <= DATEADD(day, 7, GETDATE())
+              AND NextMaintenance IS NOT NULL
+              AND Status = 'Active'
+              AND IsDeleted = 0
+              ORDER BY NextMaintenance ASC", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -1190,12 +1228,14 @@ namespace AHON_TRACK.Services
                     var nextMaintenance = reader.GetDateTime(2);
                     var daysUntil = (nextMaintenance - DateTime.Now).Days;
                     var status = daysUntil < 0 ? "Overdue" : $"Due in {daysUntil} day(s)";
+                    var severity = daysUntil < 0 ? "Error" : "Warning";
 
                     items.Add(new EquipmentAlertItem
                     {
                         EquipmentID = reader.GetInt32(0),
                         EquipmentName = reader.GetString(1),
                         AlertType = "Maintenance Due",
+                        AlertSeverity = severity,
                         Details = $"{status} - {nextMaintenance:MMM dd, yyyy}"
                     });
                 }
@@ -1216,12 +1256,12 @@ namespace AHON_TRACK.Services
             {
                 using var cmd = new SqlCommand(
                     @"SELECT EquipmentID, EquipmentName, WarrantyExpiry 
-                      FROM Equipment 
-                      WHERE WarrantyExpiry <= DATEADD(day, 30, GETDATE())
-                      AND WarrantyExpiry >= GETDATE()
-                      AND Status = 'Active'
-                      AND IsDeleted = 0
-                      ORDER BY WarrantyExpiry ASC", conn);
+              FROM Equipment 
+              WHERE WarrantyExpiry <= DATEADD(day, 30, GETDATE())
+              AND WarrantyExpiry >= GETDATE()
+              AND Status = 'Active'
+              AND IsDeleted = 0
+              ORDER BY WarrantyExpiry ASC", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -1234,6 +1274,7 @@ namespace AHON_TRACK.Services
                         EquipmentID = reader.GetInt32(0),
                         EquipmentName = reader.GetString(1),
                         AlertType = "Warranty Expiring",
+                        AlertSeverity = "Info",
                         Details = $"Expires in {daysUntil} day(s) - {warrantyExpiry:MMM dd, yyyy}"
                     });
                 }
@@ -1241,6 +1282,53 @@ namespace AHON_TRACK.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"[GetWarrantyExpiringItemsAsync] Error: {ex.Message}");
+            }
+
+            return items;
+        }
+
+        // NEW: Get equipment with poor condition (Repairing/Broken)
+        private async Task<List<EquipmentAlertItem>> GetConditionAlertItemsAsync(SqlConnection conn)
+        {
+            var items = new List<EquipmentAlertItem>();
+
+            try
+            {
+                using var cmd = new SqlCommand(
+                    @"SELECT EquipmentID, EquipmentName, Condition, CurrentStock 
+              FROM Equipment 
+              WHERE (Condition = 'Repairing' OR Condition = 'Broken')
+              AND Status = 'Active'
+              AND IsDeleted = 0
+              ORDER BY 
+                CASE Condition 
+                    WHEN 'Broken' THEN 1 
+                    WHEN 'Repairing' THEN 2 
+                    ELSE 3 
+                END,
+                EquipmentName ASC", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var condition = reader.GetString(2);
+                    var currentStock = reader.GetInt32(3);
+                    var severity = condition.Equals("Broken", StringComparison.OrdinalIgnoreCase) ? "Error" : "Warning";
+                    var icon = condition.Equals("Broken", StringComparison.OrdinalIgnoreCase) ? "🔴" : "🟠";
+
+                    items.Add(new EquipmentAlertItem
+                    {
+                        EquipmentID = reader.GetInt32(0),
+                        EquipmentName = reader.GetString(1),
+                        AlertType = "Condition Alert",
+                        AlertSeverity = severity,
+                        Details = $"{icon} {condition} - {currentStock} unit(s) affected"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetConditionAlertItemsAsync] Error: {ex.Message}");
             }
 
             return items;
@@ -1372,9 +1460,11 @@ namespace AHON_TRACK.Services
     public class EquipmentAlertSummary
     {
         public int TotalAlerts { get; set; }
+        public int ConditionAlertCount { get; set; }  // NEW
         public int LowStockCount { get; set; }
         public int MaintenanceDueCount { get; set; }
         public int WarrantyExpiringCount { get; set; }
+        public List<EquipmentAlertItem> ConditionAlertItems { get; set; } = new List<EquipmentAlertItem>();  // NEW
         public List<EquipmentAlertItem> LowStockItems { get; set; } = new List<EquipmentAlertItem>();
         public List<EquipmentAlertItem> MaintenanceDueItems { get; set; } = new List<EquipmentAlertItem>();
         public List<EquipmentAlertItem> WarrantyExpiringItems { get; set; } = new List<EquipmentAlertItem>();
@@ -1385,6 +1475,7 @@ namespace AHON_TRACK.Services
         public int EquipmentID { get; set; }
         public string EquipmentName { get; set; } = string.Empty;
         public string AlertType { get; set; } = string.Empty;
+        public string AlertSeverity { get; set; } = "Info";  // "Error", "Warning", "Info"
         public string Details { get; set; } = string.Empty;
     }
 
