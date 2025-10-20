@@ -159,26 +159,6 @@
                                         x:DataType="viewModels:ScheduledPerson"
                                         Binding="{CompiledBinding ID}" />
 
-									<!--  Picture Column -->
-									<DataGridTemplateColumn
-                                        CanUserSort="False"
-                                        Header="Picture"
-                                        x:DataType="viewModels:ScheduledPerson"
-                                        Width="100">
-										<DataGridTemplateColumn.CellTemplate>
-											<DataTemplate x:DataType="viewModels:ScheduledPerson"
-                                                          DataType="viewModels:TrainingSchedulesViewModel">
-												<shadui:Avatar
-                                                    Width="36"
-                                                    Height="36"
-                                                    VerticalAlignment="Center"
-                                                    HorizontalAlignment="Center"
-                                                    Source="{CompiledBinding PicturePath, Converter={StaticResource StringToBitMapConverter}}"
-                                                    Margin="8" />
-											</DataTemplate>
-										</DataGridTemplateColumn.CellTemplate>
-									</DataGridTemplateColumn>
-
 									<!--  First Name Column -->
 									<DataGridTextColumn
                                         Width="Auto"

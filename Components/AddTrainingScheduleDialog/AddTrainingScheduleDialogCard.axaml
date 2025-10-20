@@ -111,26 +111,6 @@
                                         x:DataType="viewModels:Trainees"
                                         Binding="{CompiledBinding ID}" />
 
-									<!--  Picture Column -->
-									<DataGridTemplateColumn
-                                        CanUserSort="False"
-                                        Header="Picture"
-                                        x:DataType="viewModels:Trainees"
-                                        Width="100">
-										<DataGridTemplateColumn.CellTemplate>
-											<DataTemplate DataType="viewModels:AddTrainingScheduleDialogCardViewModel">
-												<shadui:Avatar
-                                                    Width="36"
-                                                    Height="36"
-                                                    VerticalAlignment="Center"
-                                                    HorizontalAlignment="Center"
-                                                    x:DataType="viewModels:Trainees"
-                                                    Source="{CompiledBinding Picture}"
-                                                    Margin="8" />
-											</DataTemplate>
-										</DataGridTemplateColumn.CellTemplate>
-									</DataGridTemplateColumn>
-
 									<!--  First Name Column -->
 									<DataGridTextColumn
                                         Width="Auto"
