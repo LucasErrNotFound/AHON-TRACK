@@ -227,7 +227,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
             var invoiceModel = new InvoiceDocumentModel
             {
-                GeneratedDate = DateTime.Now,
+                GeneratedDate = DateTime.Today,
                 GymName = "AHON Victory Fitness Gym",
                 GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
                 GymPhone = "+63 123 456 7890",
