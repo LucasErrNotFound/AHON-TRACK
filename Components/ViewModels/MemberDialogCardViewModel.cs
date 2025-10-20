@@ -214,29 +214,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     {
         IsEditMode = false;
         DialogTitle = "Edit Gym Member Details";
-
-        await LoadPackagesAsync();
-    }
-
-    public async Task LoadPackagesAsync()
-    {
-        if (_memberService == null) return;
-
-        try
-        {
-            var result = await _memberService.GetAllPackagesAsync();
-            if (result.Success && result.Packages != null && result.Packages.Any())
-            {
-                _memberPackageModels = result.Packages;
-
-                // Update the string array for UI binding
-                // MemberPackageItems = result.Packages.Select(p => p.packageName).ToArray();
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Failed to load packages: {ex.Message}");
-        }
     }
 
     // Overload to accept string (for backward compatibility)
@@ -269,12 +246,6 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
         try
         {
-            // Load packages first if not loaded
-            if (_memberPackageModels.Count == 0)
-            {
-                await LoadPackagesAsync();
-            }
-
             var result = await _memberService.GetMemberByIdAsync(memberId);
 
             if (!result.Success || result.Member == null)

@@ -69,15 +69,92 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Insert into Members table
+                // Check if member already exists (including soft deleted)
+                string checkQuery = @"
+                    SELECT MemberID, IsDeleted 
+                    FROM Members 
+                    WHERE Firstname = @Firstname 
+                    AND Lastname = @Lastname 
+                    AND DateOfBirth = @DateOfBirth";
+
+                using var checkCmd = new SqlCommand(checkQuery, conn);
+                checkCmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
+                checkCmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
+                checkCmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
+
+                int? existingMemberId = null;
+                bool isDeleted = false;
+
+                using var reader = await checkCmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    existingMemberId = reader.GetInt32(0);
+                    isDeleted = !reader.IsDBNull(1) && reader.GetBoolean(1);
+                }
+                reader.Close();
+
+                // If member exists and is soft deleted, restore them
+                if (existingMemberId.HasValue && isDeleted)
+                {
+                    string restoreQuery = @"
+                        UPDATE Members 
+                        SET IsDeleted = 0,
+                            MiddleInitial = @MiddleInitial,
+                            Gender = @Gender,
+                            ProfilePicture = @ProfilePicture,
+                            ContactNumber = @ContactNumber,
+                            Age = @Age,
+                            ValidUntil = @ValidUntil,
+                            PackageID = @PackageID,
+                            Status = @Status,
+                            PaymentMethod = @PaymentMethod,
+                            RegisteredByEmployeeID = @RegisteredByEmployeeID
+                        WHERE MemberID = @MemberID";
+
+                    using var restoreCmd = new SqlCommand(restoreQuery, conn);
+                    restoreCmd.Parameters.AddWithValue("@MemberID", existingMemberId.Value);
+                    restoreCmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(member.MiddleInitial) ? (object)DBNull.Value : member.MiddleInitial.Substring(0, 1).ToUpper());
+                    restoreCmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;
+                    restoreCmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@Age", member.Age > 0 ? member.Age : (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
+                    restoreCmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                    await restoreCmd.ExecuteNonQueryAsync();
+
+                    await LogActionAsync(conn, "RESTORE", $"Restored member: {member.FirstName} {member.LastName}", true);
+
+                    _toastManager?.CreateToast("Member Restored")
+                        .WithContent($"Successfully restored {member.FirstName} {member.LastName}.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Member restored successfully.", existingMemberId.Value);
+                }
+
+                // If member exists but is not deleted, return error
+                if (existingMemberId.HasValue && !isDeleted)
+                {
+                    _toastManager?.CreateToast("Member Already Exists")
+                        .WithContent($"{member.FirstName} {member.LastName} already exists in the system.")
+                        .DismissOnClick()
+                        .ShowWarning();
+                    return (false, "Member already exists.", null);
+                }
+
+                // Insert new member with IsDeleted = 0
                 string memberQuery = @"
                     INSERT INTO Members 
                     (Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
-                     ValidUntil, PackageID, Status, PaymentMethod, RegisteredByEmployeeID)
+                     ValidUntil, PackageID, Status, PaymentMethod, RegisteredByEmployeeID, IsDeleted)
                     OUTPUT INSERTED.MemberID
                     VALUES 
                     (@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
-                     @ValidUntil, @PackageID, @Status, @PaymentMethod, @RegisteredByEmployeeID)";
+                     @ValidUntil, @PackageID, @Status, @PaymentMethod, @RegisteredByEmployeeID, 0)";
 
                 using var cmd = new SqlCommand(memberQuery, conn);
                 cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
@@ -131,63 +208,6 @@ namespace AHON_TRACK.Services
 
         #region READ
 
-        public async Task<(bool Success, List<PackageModel>? Packages)> GetAllPackagesAsync()
-        {
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                string query = "SELECT PackageID, PackageName FROM Packages ORDER BY PackageName";
-                using var cmd = new SqlCommand(query, conn);
-                using var reader = await cmd.ExecuteReaderAsync();
-
-                var packages = new List<PackageModel>();
-                while (await reader.ReadAsync())
-                {
-                    packages.Add(new PackageModel
-                    {
-                        packageID = reader.GetInt32(0),
-                        packageName = reader.GetString(1)
-                    });
-                }
-
-                return (true, packages);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"GetAllPackagesAsync Error: {ex}");
-                return (false, null);
-            }
-        }
-
-        public async Task<(bool Success, int? PackageID)> GetPackageIdByNameAsync(string packageName)
-        {
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                string query = "SELECT PackageID FROM Packages WHERE PackageName = @PackageName";
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@PackageName", packageName);
-
-                var result = await cmd.ExecuteScalarAsync();
-
-                if (result != null && result != DBNull.Value)
-                {
-                    return (true, Convert.ToInt32(result));
-                }
-
-                return (false, null);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"GetPackageIdByNameAsync Error: {ex}");
-                return (false, null);
-            }
-        }
-
         public async Task<(bool Success, string Message, List<ManageMemberModel>? Members)> GetMembersAsync()
         {
             if (!CanView())
@@ -204,27 +224,27 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // FIXED: Added JOIN with Packages table to get package name
                 string query = @"
-            SELECT 
-                m.MemberID,
-                m.Firstname,
-                m.MiddleInitial,
-                m.Lastname,
-                LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
-                m.Gender,
-                m.ContactNumber,
-                m.Age,
-                m.DateOfBirth,
-                m.ValidUntil,
-                m.PackageID,
-                p.PackageName,  -- Get the actual package name
-                m.Status,
-                m.PaymentMethod,
-                m.ProfilePicture
-            FROM Members m
-            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-            ORDER BY Name;";
+                    SELECT 
+                        m.MemberID,
+                        m.Firstname,
+                        m.MiddleInitial,
+                        m.Lastname,
+                        LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
+                        m.Gender,
+                        m.ContactNumber,
+                        m.Age,
+                        m.DateOfBirth,
+                        m.ValidUntil,
+                        m.PackageID,
+                        p.PackageName,
+                        m.Status,
+                        m.PaymentMethod,
+                        m.ProfilePicture
+                    FROM Members m
+                    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+                    WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
+                    ORDER BY Name";
 
                 var members = new List<ManageMemberModel>();
 
@@ -246,7 +266,7 @@ namespace AHON_TRACK.Services
                         DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
                         ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
                         PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
-                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),  // Now reads PackageName
+                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),
                         Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
                         PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
                         AvatarBytes = reader.IsDBNull(14) ? null : (byte[])reader[14],
@@ -280,7 +300,6 @@ namespace AHON_TRACK.Services
             }
         }
 
-        // Also fix GetMemberByIdAsync method
         public async Task<(bool Success, string Message, ManageMemberModel? Member)> GetMemberByIdAsync(int memberId)
         {
             if (!CanView())
@@ -293,28 +312,28 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // FIXED: Reordered columns to match the reader indices
                 var query = @"
-            SELECT 
-                m.MemberID,                 -- 0
-                m.Firstname,                -- 1
-                m.MiddleInitial,            -- 2
-                m.Lastname,                 -- 3
-                m.Gender,                   -- 4
-                m.ProfilePicture,           -- 5
-                m.ContactNumber,            -- 6
-                m.Age,                      -- 7
-                m.DateOfBirth,              -- 8
-                m.ValidUntil,               -- 9
-                m.PackageID,                -- 10
-                p.PackageName,              -- 11
-                m.Status,                   -- 12
-                m.PaymentMethod,            -- 13
-                m.RegisteredByEmployeeID,   -- 14
-                m.DateJoined                -- 15
-            FROM Members m
-            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-            WHERE m.MemberID = @Id;";
+                    SELECT 
+                        m.MemberID,
+                        m.Firstname,
+                        m.MiddleInitial,
+                        m.Lastname,
+                        m.Gender,
+                        m.ProfilePicture,
+                        m.ContactNumber,
+                        m.Age,
+                        m.DateOfBirth,
+                        m.ValidUntil,
+                        m.PackageID,
+                        p.PackageName,
+                        m.Status,
+                        m.PaymentMethod,
+                        m.RegisteredByEmployeeID,
+                        m.DateJoined
+                    FROM Members m
+                    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+                    WHERE m.MemberID = @Id 
+                    AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", memberId);
@@ -339,8 +358,8 @@ namespace AHON_TRACK.Services
                         MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),
                         Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
                         PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                        RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),  // Now correct!
-                        DateJoined = reader.IsDBNull(15) ? DateTime.MinValue : reader.GetDateTime(15)  // Now correct!
+                        RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),
+                        DateJoined = reader.IsDBNull(15) ? DateTime.MinValue : reader.GetDateTime(15)
                     };
 
                     member.Name = $"{member.FirstName} {(string.IsNullOrWhiteSpace(member.MiddleInitial) ? "" : member.MiddleInitial + ". ")}{member.LastName}";
@@ -382,9 +401,8 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Check if member exists
                 using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Members WHERE MemberID = @memberId", conn);
+                    "SELECT COUNT(*) FROM Members WHERE MemberID = @memberId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
                 checkCmd.Parameters.AddWithValue("@memberId", member.MemberID);
 
                 var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
@@ -397,7 +415,6 @@ namespace AHON_TRACK.Services
                     return (false, "Member not found.");
                 }
 
-                // ✅ GET EXISTING IMAGE - This is the fix!
                 byte[]? existingImage = null;
                 using var getImageCmd = new SqlCommand(
                     "SELECT ProfilePicture FROM Members WHERE MemberID = @memberId", conn);
@@ -409,34 +426,31 @@ namespace AHON_TRACK.Services
                     existingImage = (byte[])imageResult;
                 }
 
-                // ✅ USE NEW IMAGE IF PROVIDED, OTHERWISE KEEP EXISTING
-                byte[]? imageToSave = existingImage; // Start with existing image
+                byte[]? imageToSave = existingImage;
 
-                // Only update if new image is provided
                 if (member.ProfilePicture != null && member.ProfilePicture.Length > 0)
                 {
                     imageToSave = member.ProfilePicture;
                 }
-                // If member.AvatarBytes is provided (from file picker), use that
                 else if (member.AvatarBytes != null && member.AvatarBytes.Length > 0)
                 {
                     imageToSave = member.AvatarBytes;
                 }
 
                 string query = @"UPDATE Members 
-             SET Firstname = @Firstname, 
-                 MiddleInitial = @MiddleInitial, 
-                 Lastname = @Lastname, 
-                 Gender = @Gender,
-                 ContactNumber = @ContactNumber, 
-                 Age = @Age,
-                 DateOfBirth = @DateOfBirth,
-                 ValidUntil = @ValidUntil,
-                 PackageID = @PackageID,
-                 Status = @Status,
-                 PaymentMethod = @PaymentMethod,
-                 ProfilePicture = @ProfilePicture
-             WHERE MemberID = @MemberID";
+                    SET Firstname = @Firstname, 
+                        MiddleInitial = @MiddleInitial, 
+                        Lastname = @Lastname, 
+                        Gender = @Gender,
+                        ContactNumber = @ContactNumber, 
+                        Age = @Age,
+                        DateOfBirth = @DateOfBirth,
+                        ValidUntil = @ValidUntil,
+                        PackageID = @PackageID,
+                        Status = @Status,
+                        PaymentMethod = @PaymentMethod,
+                        ProfilePicture = @ProfilePicture
+                    WHERE MemberID = @MemberID";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@MemberID", member.MemberID);
@@ -452,7 +466,6 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
                 cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
 
-                // ✅ USE THE PRESERVED OR NEW IMAGE
                 if (imageToSave != null && imageToSave.Length > 0)
                 {
                     cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = imageToSave;
@@ -501,7 +514,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region DELETE
+        #region DELETE (SOFT DELETE)
 
         public async Task<(bool Success, string Message)> DeleteMemberAsync(int memberId)
         {
@@ -519,10 +532,9 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Get member name for logging
                 string memberName = string.Empty;
                 using var getNameCmd = new SqlCommand(
-                    "SELECT Firstname, Lastname FROM Members WHERE MemberID = @memberId", conn);
+                    "SELECT Firstname, Lastname FROM Members WHERE MemberID = @memberId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
                 getNameCmd.Parameters.AddWithValue("@memberId", memberId);
 
                 using var nameReader = await getNameCmd.ExecuteReaderAsync();
@@ -541,15 +553,14 @@ namespace AHON_TRACK.Services
                     return (false, "Member not found.");
                 }
 
-                // Delete from Members table
                 using var deleteMemberCmd = new SqlCommand(
-                    "DELETE FROM Members WHERE MemberID = @memberId", conn);
+                    "UPDATE Members SET IsDeleted = 1 WHERE MemberID = @memberId", conn);
                 deleteMemberCmd.Parameters.AddWithValue("@memberId", memberId);
                 int rowsAffected = await deleteMemberCmd.ExecuteNonQueryAsync();
 
                 if (rowsAffected > 0)
                 {
-                    await LogActionAsync(conn, "DELETE", $"Deleted member: {memberName} (ID: {memberId})", true);
+                    await LogActionAsync(conn, "DELETE", $"Soft deleted member: {memberName} (ID: {memberId})", true);
 
                     _toastManager?.CreateToast("Member Deleted")
                         .WithContent($"Successfully deleted {memberName}.")
@@ -600,14 +611,14 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 var idsParam = string.Join(",", memberIds);
-                var deleteQuery = $"DELETE FROM Members WHERE MemberID IN ({idsParam})";
+                var deleteQuery = $"UPDATE Members SET IsDeleted = 1 WHERE MemberID IN ({idsParam})";
 
                 using var command = new SqlCommand(deleteQuery, conn);
                 var rowsAffected = await command.ExecuteNonQueryAsync();
 
                 if (rowsAffected > 0)
                 {
-                    await LogActionAsync(conn, "DELETE", $"Deleted {rowsAffected} members", true);
+                    await LogActionAsync(conn, "DELETE", $"Soft deleted {rowsAffected} members", true);
 
                     _toastManager?.CreateToast("Members Deleted")
                         .WithContent($"Successfully deleted {rowsAffected} members.")
@@ -680,7 +691,7 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = "SELECT COUNT(*) FROM Members";
+                string query = "SELECT COUNT(*) FROM Members WHERE (IsDeleted = 0 OR IsDeleted IS NULL)";
                 using var cmd = new SqlCommand(query, conn);
 
                 var result = await cmd.ExecuteScalarAsync();
@@ -700,7 +711,7 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = "SELECT COUNT(*) FROM Members WHERE Status = @Status";
+                string query = "SELECT COUNT(*) FROM Members WHERE Status = @Status AND (IsDeleted = 0 OR IsDeleted IS NULL)";
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Status", status);
 
@@ -731,7 +742,8 @@ namespace AHON_TRACK.Services
                         SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) as ActiveCount,
                         SUM(CASE WHEN Status = 'Inactive' THEN 1 ELSE 0 END) as InactiveCount,
                         SUM(CASE WHEN Status = 'Terminated' THEN 1 ELSE 0 END) as TerminatedCount
-                      FROM Members", conn);
+                      FROM Members
+                      WHERE (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
