@@ -86,6 +86,40 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
+                // Check if a soft-deleted package with same name exists; if so restore & update it
+                const string checkDeletedQuery = "SELECT PackageID FROM Packages WHERE PackageName = @packageName AND IsDeleted = 1";
+                using (var checkCmd = new SqlCommand(checkDeletedQuery, conn))
+                {
+                    checkCmd.Parameters.AddWithValue("@packageName", package.packageName ?? (object)DBNull.Value);
+                    var existingIdObj = await checkCmd.ExecuteScalarAsync();
+                    if (existingIdObj != null && existingIdObj != DBNull.Value)
+                    {
+                        int existingId = Convert.ToInt32(existingIdObj);
+
+                        var restored = await RestoreAndUpdatePackageAsync(conn, existingId, package, discountedPrice, featuresString);
+                        if (restored)
+                        {
+                            string logDescriptionRestored = $"Restored package: '{package.packageName}' - Price: ₱{package.price:N2}, Duration: {package.duration}";
+                            if (package.discount > 0)
+                            {
+                                logDescriptionRestored += $", Discount: {package.discount}{(package.discountType?.ToLower() == "percentage" ? "%" : " fixed")} for {package.discountFor ?? "All"}, Final Price: ₱{discountedPrice:N2}";
+                            }
+
+                            PackagesChanged?.Invoke(this, EventArgs.Empty);
+                            PackageEventService.Instance.NotifyPackagesChanged();
+
+                            await LogActionAsync(conn, "Restored package", logDescriptionRestored, true);
+
+                            _toastManager.CreateToast("Package Restored")
+                                .WithContent($"Successfully restored package '{package.packageName}'.")
+                                .DismissOnClick()
+                                .ShowSuccess();
+
+                            return (true, "Package restored successfully.", existingId);
+                        }
+                    }
+                }
+
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@packageName", package.packageName ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@price", package.price);
@@ -175,6 +209,7 @@ namespace AHON_TRACK.Services
                            Features, Discount, DiscountType, DiscountFor, DiscountedPrice, 
                            ValidFrom, ValidTo, AddedByEmployeeID
                     FROM Packages 
+                    WHERE IsDeleted = 0
                     ORDER BY PackageName";
 
                 using var cmd = new SqlCommand(query, conn);
@@ -242,7 +277,7 @@ namespace AHON_TRACK.Services
                            Features, Discount, DiscountType, DiscountFor, DiscountedPrice, 
                            ValidFrom, ValidTo, AddedByEmployeeID
                     FROM Packages
-                    WHERE PackageID = @packageId";
+                    WHERE PackageID = @packageId AND IsDeleted = 0";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@packageId", packageId);
@@ -281,7 +316,7 @@ namespace AHON_TRACK.Services
                            Features, Discount, DiscountType, DiscountFor, DiscountedPrice, 
                            ValidFrom, ValidTo, AddedByEmployeeID
                     FROM Packages 
-                    WHERE Duration = @duration
+                    WHERE Duration = @duration AND IsDeleted = 0
                     ORDER BY PackageName";
 
                 using var cmd = new SqlCommand(query, conn);
@@ -348,7 +383,7 @@ namespace AHON_TRACK.Services
                     DiscountedPrice = @discountedPrice,
                     ValidFrom = @validFrom,
                     ValidTo = @validTo
-                WHERE PackageID = @packageID";
+                WHERE PackageID = @packageID AND IsDeleted = 0";
 
             try
             {
@@ -368,7 +403,7 @@ namespace AHON_TRACK.Services
 
                 // Check if package exists
                 using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Packages WHERE PackageID = @packageID", conn);
+                    "SELECT COUNT(*) FROM Packages WHERE PackageID = @packageID AND IsDeleted = 0", conn);
                 checkCmd.Parameters.AddWithValue("@packageID", package.packageID);
                 var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
 
@@ -456,7 +491,7 @@ namespace AHON_TRACK.Services
                 return false;
             }
 
-            const string query = "DELETE FROM Packages WHERE PackageID = @packageID";
+            const string query = "UPDATE Packages SET IsDeleted = 1 WHERE PackageID = @packageID";
 
             try
             {
@@ -478,7 +513,7 @@ namespace AHON_TRACK.Services
                     return false;
                 }
 
-                // Delete package
+                // Soft delete package
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@packageID", packageId);
 
@@ -568,9 +603,9 @@ namespace AHON_TRACK.Services
                             packageNames.Add(name);
                         }
 
-                        // Delete package
+                        // Soft delete package
                         using var deleteCmd = new SqlCommand(
-                            "DELETE FROM Packages WHERE PackageID = @packageID", conn, transaction);
+                            "UPDATE Packages SET IsDeleted = 1 WHERE PackageID = @packageID", conn, transaction);
                         deleteCmd.Parameters.AddWithValue("@packageID", packageId);
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }
@@ -704,6 +739,52 @@ namespace AHON_TRACK.Services
             };
         }
 
+        private async Task<bool> RestoreAndUpdatePackageAsync(SqlConnection conn, int packageId, PackageModel package, decimal discountedPrice, string featuresString)
+        {
+            try
+            {
+                const string updateQuery = @"
+                    UPDATE Packages SET
+                        PackageName = @packageName,
+                        Price = @price,
+                        Description = @description,
+                        Duration = @duration,
+                        Features = @features,
+                        Discount = @discount,
+                        DiscountType = @discountType,
+                        DiscountFor = @discountFor,
+                        DiscountedPrice = @discountedPrice,
+                        ValidFrom = @validFrom,
+                        ValidTo = @validTo,
+                        AddedByEmployeeID = @addedByEmployeeID,
+                        IsDeleted = 0
+                    WHERE PackageID = @packageID";
+
+                using var cmd = new SqlCommand(updateQuery, conn);
+                cmd.Parameters.AddWithValue("@packageID", packageId);
+                cmd.Parameters.AddWithValue("@packageName", package.packageName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@price", package.price);
+                cmd.Parameters.AddWithValue("@description", (object)package.description ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@duration", package.duration ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@features", (object)featuresString ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@discount", package.discount);
+                cmd.Parameters.AddWithValue("@discountType", (object)package.discountType ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@discountFor", (object)package.discountFor ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@discountedPrice", discountedPrice);
+                cmd.Parameters.AddWithValue("@validFrom", package.validFrom);
+                cmd.Parameters.AddWithValue("@validTo", package.validTo);
+                cmd.Parameters.AddWithValue("@addedByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RestoreAndUpdatePackageAsync] {ex.Message}");
+                return false;
+            }
+        }
+
         public async Task<(bool Success, int TotalPackages, int WithDiscount, int Active)> GetPackageStatisticsAsync()
         {
             if (!CanView())
@@ -721,7 +802,8 @@ namespace AHON_TRACK.Services
                         COUNT(*) as TotalPackages,
                         SUM(CASE WHEN Discount > 0 THEN 1 ELSE 0 END) as WithDiscount,
                         SUM(CASE WHEN ValidTo >= GETDATE() THEN 1 ELSE 0 END) as Active
-                      FROM Package", conn);
+                      FROM Packages
+                      WHERE IsDeleted = 0", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
