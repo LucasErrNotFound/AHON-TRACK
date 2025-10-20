@@ -98,7 +98,7 @@ public class EquipmentDocument : IDocument
             column.Item().Element(ComposeTable);
             column.Item().PaddingTop(10).AlignRight().Text(text =>
             {
-                text.Span("Total Equipment in List: ").FontSize(14).SemiBold();
+                text.Span("Total Equipments in List: ").FontSize(14).SemiBold();
                 text.Span($"{Model.TotalEquipments:N0}").FontSize(14).SemiBold().FontColor(Colors.Green.Darken2);
             });
         });

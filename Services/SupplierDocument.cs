@@ -98,7 +98,7 @@ public class SupplierDocument : IDocument
             column.Item().Element(ComposeTable);
             column.Item().PaddingTop(10).AlignRight().Text(text =>
             {
-                text.Span("Total Supplier in List: ").FontSize(14).SemiBold();
+                text.Span("Total Suppliers in List: ").FontSize(14).SemiBold();
                 text.Span($"{Model.TotalSuppliers:N0}").FontSize(14).SemiBold().FontColor(Colors.Green.Darken2);
             });
         });
