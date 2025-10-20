@@ -44,7 +44,7 @@ namespace AHON_TRACK.Services
                                 ELSE 'Unknown'
                             END AS AgeGroup
                         FROM Members
-                        WHERE Age IS NOT NULL
+                        WHERE Age IS NOT NULL AND IsDeleted = 0
                         UNION ALL
                         SELECT 
                             CASE 
@@ -55,7 +55,7 @@ namespace AHON_TRACK.Services
                                 ELSE 'Unknown'
                             END AS AgeGroup
                         FROM WalkInCustomers
-                        WHERE Age IS NOT NULL
+                        WHERE Age IS NOT NULL AND IsDeleted = 0
                     ) AS Combined
                     GROUP BY AgeGroup;";
 
@@ -74,9 +74,9 @@ namespace AHON_TRACK.Services
                 string genderQuery = @"
                     SELECT Gender, COUNT(*) AS Count
                     FROM (
-                        SELECT Gender FROM Members WHERE Gender IN ('Male', 'Female')
+                        SELECT Gender FROM Members WHERE Gender IN ('Male', 'Female') AND IsDeleted = 0
                         UNION ALL
-                        SELECT Gender FROM WalkInCustomers WHERE Gender IN ('Male', 'Female')
+                        SELECT Gender FROM WalkInCustomers WHERE Gender IN ('Male', 'Female') AND IsDeleted = 0
                     ) AS Combined
                     GROUP BY Gender;";
 
@@ -95,9 +95,9 @@ namespace AHON_TRACK.Services
                 string populationQuery = @"
                     SELECT CAST(DateJoined AS DATE) AS [Date], COUNT(*) AS Count
                     FROM (
-                        SELECT DateJoined FROM Members WHERE DateJoined BETWEEN @From AND @To
+                        SELECT DateJoined FROM Members WHERE DateJoined BETWEEN @From AND @To AND IsDeleted = 0
                         UNION ALL
-                        SELECT DateJoined FROM WalkInCustomers WHERE DateJoined BETWEEN @From AND @To
+                        SELECT DateJoined FROM WalkInCustomers WHERE DateJoined BETWEEN @From AND @To AND IsDeleted = 0
                     ) AS Combined
                     GROUP BY CAST(DateJoined AS DATE)
                     ORDER BY [Date];";
