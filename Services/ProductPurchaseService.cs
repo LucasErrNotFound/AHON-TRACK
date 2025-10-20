@@ -136,6 +136,46 @@ namespace AHON_TRACK.Services
                         }
                         await reader.CloseAsync();
                     }
+                    else if (item.Category == CategoryConstants.Product)
+                    {
+                        // --- ✅ Product Discount Logic (new) ---
+                        string getProductDiscountQuery = @"
+            SELECT Price, DiscountedPrice, IsPercentageDiscount
+            FROM Products
+            WHERE ProductID = @ProductID";
+
+                        using var prodCmd = new SqlCommand(getProductDiscountQuery, conn, transaction);
+                        prodCmd.Parameters.AddWithValue("@ProductID", item.SellingID);
+
+                        using var prodReader = await prodCmd.ExecuteReaderAsync();
+                        if (await prodReader.ReadAsync())
+                        {
+                            decimal price = prodReader["Price"] != DBNull.Value ? Convert.ToDecimal(prodReader["Price"]) : 0;
+                            decimal discountValue = prodReader["DiscountedPrice"] != DBNull.Value ? Convert.ToDecimal(prodReader["DiscountedPrice"]) : 0;
+                            bool isPercentage = prodReader["IsPercentageDiscount"] != DBNull.Value && Convert.ToBoolean(prodReader["IsPercentageDiscount"]);
+
+                            if (discountValue > 0)
+                            {
+                                decimal finalPrice = price;
+
+                                if (isPercentage)
+                                {
+                                    finalPrice = price - (price * (discountValue / 100m));
+                                }
+                                else
+                                {
+                                    // if IsPercentageDiscount = false, then discount is inactive
+                                    finalPrice = price;
+                                }
+
+                                // Make sure price doesn’t go below zero
+                                if (finalPrice < 0) finalPrice = 0;
+
+                                itemTotal = finalPrice * item.Quantity;
+                            }
+                        }
+                        await prodReader.CloseAsync();
+                    }
 
                     totalAmount += itemTotal;
                     totalTransactions++;
@@ -382,10 +422,19 @@ namespace AHON_TRACK.Services
                 _toastManager.CreateToast("Payment Successful")
                     .WithContent($"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}")
                     .ShowSuccess();
-                if (cartItems.Any(i => i.Category == CategoryConstants.GymPackage))
+                bool anyPackageDiscount = cartItems.Any(i => i.Category == CategoryConstants.GymPackage);
+                bool anyProductDiscount = cartItems.Any(i => i.Category == CategoryConstants.Product);
+
+                if (anyPackageDiscount || anyProductDiscount)
                 {
+                    var message = anyPackageDiscount && anyProductDiscount
+                        ? "Package and product discounts applied successfully."
+                        : anyPackageDiscount
+                            ? "Package discounts applied successfully."
+                            : "Product discounts applied successfully.";
+
                     _toastManager.CreateToast("Discount Applied")
-                        .WithContent("Package discounts applied successfully.")
+                        .WithContent(message)
                         .ShowSuccess();
                 }
                 return true;
@@ -493,17 +542,7 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = @"
-                    SELECT 
-                        ProductID,
-                        ProductName,
-                        Description,
-                        Category,
-                        Price,
-                        CurrentStock,
-                        ProductImagePath
-                    FROM Products
-                    WHERE Status = 'In Stock' AND CurrentStock > 0;";
+                string query = @" SELECT ProductID, ProductName, Description, Category, Price, CurrentStock, DiscountedPrice, IsPercentageDiscount, ProductImagePath FROM Products WHERE Status = 'In Stock' AND CurrentStock > 0 AND IsDeleted = 0;";
 
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
