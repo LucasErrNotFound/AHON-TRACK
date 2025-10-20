@@ -86,7 +86,8 @@
                                 Classes="Outline"
                                 Margin="20,0,0,0"
                                 HorizontalAlignment="Left"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                Command="{CompiledBinding ExportSupplierListCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Svg
                                         Width="20"
@@ -94,7 +95,7 @@
                                         VerticalAlignment="Center"
                                         Margin="0,0,8,0"
                                         Path="avares://AHON_TRACK/Assets/SupplierManagementView/export-icon.svg" />
-                                    <TextBlock Text="Export" VerticalAlignment="Center" />
+                                    <TextBlock Text="Export to PDF" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
                             <Button
