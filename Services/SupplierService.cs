@@ -54,7 +54,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region CREATE
+        #region CREATE (with restore logic)
 
         public async Task<(bool Success, string Message, int? SupplierId)> AddSupplierAsync(SupplierManagementModel supplier)
         {
@@ -72,13 +72,13 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Check for duplicate supplier name
+                // Check for existing active supplier
                 using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Suppliers WHERE SupplierName = @supplierName", conn);
+                    "SELECT COUNT(*) FROM Suppliers WHERE SupplierName = @supplierName AND IsDeleted = 0", conn);
                 checkCmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
 
-                var count = (int)await checkCmd.ExecuteScalarAsync();
-                if (count > 0)
+                var existingCount = (int)await checkCmd.ExecuteScalarAsync();
+                if (existingCount > 0)
                 {
                     _toastManager.CreateToast("Duplicate Supplier")
                         .WithContent($"Supplier '{supplier.SupplierName}' already exists.")
@@ -87,11 +87,50 @@ namespace AHON_TRACK.Services
                     return (false, "Supplier already exists.", null);
                 }
 
+                // Check if soft deleted supplier exists (restore)
+                using var restoreCheckCmd = new SqlCommand(
+                    "SELECT SupplierID FROM Suppliers WHERE SupplierName = @supplierName AND IsDeleted = 1", conn);
+                restoreCheckCmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
+
+                var restoreResult = await restoreCheckCmd.ExecuteScalarAsync();
+                if (restoreResult != null)
+                {
+                    int supplierId = Convert.ToInt32(restoreResult);
+
+                    using var restoreCmd = new SqlCommand(
+                        @"UPDATE Suppliers 
+                          SET IsDeleted = 0,
+                              Status = 'Active',
+                              ContactPerson = @contactPerson,
+                              Email = @email,
+                              PhoneNumber = @phoneNumber,
+                              Products = @products,
+                              UpdatedAt = GETDATE()
+                          WHERE SupplierID = @supplierId", conn);
+
+                    restoreCmd.Parameters.AddWithValue("@supplierId", supplierId);
+                    restoreCmd.Parameters.AddWithValue("@contactPerson", supplier.ContactPerson ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@email", supplier.Email ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@phoneNumber", supplier.PhoneNumber ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@products", supplier.Products ?? (object)DBNull.Value);
+
+                    await restoreCmd.ExecuteNonQueryAsync();
+
+                    await LogActionAsync(conn, "Restored supplier.", $"Restored supplier: {supplier.SupplierName}", true);
+
+                    _toastManager.CreateToast("Supplier Restored")
+                        .WithContent($"Supplier '{supplier.SupplierName}' was restored successfully.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Supplier restored successfully.", supplierId);
+                }
+
                 // Insert new supplier
                 using var cmd = new SqlCommand(
-                    @"INSERT INTO Suppliers (SupplierName, ContactPerson, Email, PhoneNumber, Products, Status, AddedByEmployeeID) 
+                    @"INSERT INTO Suppliers (SupplierName, ContactPerson, Email, PhoneNumber, Products, Status, AddedByEmployeeID, IsDeleted) 
                       OUTPUT INSERTED.SupplierID
-                      VALUES (@supplierName, @contactPerson, @email, @phoneNumber, @products, @status, @employeeID)", conn);
+                      VALUES (@supplierName, @contactPerson, @email, @phoneNumber, @products, @status, @employeeID, 0)", conn);
 
                 cmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@contactPerson", supplier.ContactPerson ?? (object)DBNull.Value);
@@ -101,7 +140,7 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@status", supplier.Status ?? "Active");
                 cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
-                var supplierId = (int)await cmd.ExecuteScalarAsync();
+                var supplierIdInserted = (int)await cmd.ExecuteScalarAsync();
 
                 await LogActionAsync(conn, "Added new supplier.", $"Added new supplier: {supplier.SupplierName}", true);
 
@@ -110,7 +149,7 @@ namespace AHON_TRACK.Services
                     .DismissOnClick()
                     .ShowSuccess();
 
-                return (true, "Supplier added successfully.", supplierId);
+                return (true, "Supplier added successfully.", supplierIdInserted);
             }
             catch (SqlException ex)
             {
@@ -153,6 +192,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Products, Status 
                       FROM Suppliers 
+                      WHERE IsDeleted = 0
                       ORDER BY SupplierName", conn);
 
                 var suppliers = new List<SupplierManagementModel>();
@@ -196,9 +236,7 @@ namespace AHON_TRACK.Services
         public async Task<(bool Success, string Message, SupplierManagementModel? Supplier)> GetSupplierByIdAsync(int supplierId)
         {
             if (!CanView())
-            {
                 return (false, "Insufficient permissions to view suppliers.", null);
-            }
 
             try
             {
@@ -208,7 +246,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Products, Status 
                       FROM Suppliers 
-                      WHERE SupplierID = @supplierId", conn);
+                      WHERE SupplierID = @supplierId AND IsDeleted = 0", conn);
 
                 cmd.Parameters.AddWithValue("@supplierId", supplierId);
 
@@ -241,9 +279,7 @@ namespace AHON_TRACK.Services
         public async Task<(bool Success, string Message, List<SupplierManagementModel>? Suppliers)> GetSuppliersByProductTypeAsync(string productType)
         {
             if (!CanView())
-            {
                 return (false, "Insufficient permissions to view suppliers.", null);
-            }
 
             try
             {
@@ -253,7 +289,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Products, Status 
                       FROM Suppliers 
-                      WHERE Products = @productType
+                      WHERE Products = @productType AND IsDeleted = 0
                       ORDER BY SupplierName", conn);
 
                 cmd.Parameters.AddWithValue("@productType", productType ?? (object)DBNull.Value);
@@ -436,7 +472,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region DELETE
+        #region DELETE (Soft Delete)
 
         public async Task<(bool Success, string Message)> DeleteSupplierAsync(int supplierId)
         {
@@ -454,54 +490,30 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Get supplier name for logging
-                using var getNameCmd = new SqlCommand(
-                    "SELECT SupplierName FROM Suppliers WHERE SupplierID = @supplierId", conn);
-                getNameCmd.Parameters.AddWithValue("@supplierId", supplierId);
-                var supplierName = await getNameCmd.ExecuteScalarAsync() as string;
-
-                if (string.IsNullOrEmpty(supplierName))
-                {
-                    _toastManager.CreateToast("Supplier Not Found")
-                        .WithContent("The supplier you're trying to delete doesn't exist.")
-                        .DismissOnClick()
-                        .ShowWarning();
-                    return (false, "Supplier not found.");
-                }
-
-                // Delete supplier
                 using var cmd = new SqlCommand(
-                    "DELETE FROM Suppliers WHERE SupplierID = @supplierId", conn);
+                    @"UPDATE Suppliers 
+                      SET IsDeleted = 1, UpdatedAt = GETDATE() 
+                      WHERE SupplierID = @supplierId AND IsDeleted = 0", conn);
+
                 cmd.Parameters.AddWithValue("@supplierId", supplierId);
 
-                var rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
+                var rows = await cmd.ExecuteNonQueryAsync();
+                if (rows > 0)
                 {
-                    await LogActionAsync(conn, "Deleted a supplier.", $"Deleted supplier: {supplierName}", true);
-
+                    await LogActionAsync(conn, "Soft deleted supplier.", $"Soft deleted supplier ID: {supplierId}", true);
                     _toastManager.CreateToast("Supplier Deleted")
-                        .WithContent($"Successfully deleted supplier '{supplierName}'.")
+                        .WithContent("Supplier has been moved to archive.")
                         .DismissOnClick()
                         .ShowSuccess();
-
-                    return (true, "Supplier deleted successfully.");
+                    return (true, "Supplier deleted (soft delete).");
                 }
 
-                return (false, "Failed to delete supplier.");
-            }
-            catch (SqlException ex)
-            {
-                _toastManager.CreateToast("Database Error")
-                    .WithContent($"Failed to delete supplier: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-                return (false, $"Database error: {ex.Message}");
+                return (false, "Supplier not found or already deleted.");
             }
             catch (Exception ex)
             {
                 _toastManager.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
+                    .WithContent($"Failed to delete supplier: {ex.Message}")
                     .DismissOnClick()
                     .ShowError();
                 return (false, $"Error: {ex.Message}");
@@ -548,23 +560,25 @@ namespace AHON_TRACK.Services
                             supplierNames.Add(name);
                         }
 
-                        // Delete supplier
+                        // 🔹 Soft delete supplier instead of removing it
                         using var deleteCmd = new SqlCommand(
-                            "DELETE FROM Suppliers WHERE SupplierID = @supplierId", conn, transaction);
+                            @"UPDATE Suppliers 
+                      SET IsDeleted = 1, UpdatedAt = GETDATE() 
+                      WHERE SupplierID = @supplierId AND IsDeleted = 0", conn, transaction);
                         deleteCmd.Parameters.AddWithValue("@supplierId", supplierId);
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }
 
-                    await LogActionAsync(conn, "Deleted multiple suppliers.", $"Deleted {deletedCount} suppliers: {string.Join(", ", supplierNames)}", true);
+                    await LogActionAsync(conn, "Soft deleted multiple suppliers.", $"Soft deleted {deletedCount} supplier(s): {string.Join(", ", supplierNames)}", true);
 
                     transaction.Commit();
 
                     _toastManager.CreateToast("Suppliers Deleted")
-                        .WithContent($"Successfully deleted {deletedCount} supplier(s).")
+                        .WithContent($"Successfully deleted (soft) {deletedCount} supplier(s).")
                         .DismissOnClick()
                         .ShowSuccess();
 
-                    return (true, $"Successfully deleted {deletedCount} supplier(s).", deletedCount);
+                    return (true, $"Successfully deleted (soft) {deletedCount} supplier(s).", deletedCount);
                 }
                 catch
                 {
@@ -621,9 +635,7 @@ namespace AHON_TRACK.Services
         public async Task<(bool Success, int ActiveCount, int InactiveCount, int SuspendedCount)> GetSupplierStatisticsAsync()
         {
             if (!CanView())
-            {
                 return (false, 0, 0, 0);
-            }
 
             try
             {
@@ -635,7 +647,8 @@ namespace AHON_TRACK.Services
                         SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) as ActiveCount,
                         SUM(CASE WHEN Status = 'Inactive' THEN 1 ELSE 0 END) as InactiveCount,
                         SUM(CASE WHEN Status = 'Suspended' THEN 1 ELSE 0 END) as SuspendedCount
-                      FROM Suppliers", conn);
+                      FROM Suppliers
+                      WHERE IsDeleted = 0", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
