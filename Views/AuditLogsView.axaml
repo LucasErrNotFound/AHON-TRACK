@@ -100,7 +100,7 @@
                                                 Path="avares://AHON_TRACK/Assets/AuditLogsView/download-icon.svg"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,8,0"/>
-                                            <TextBlock Text="Download PDF" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Download Logs (PDF)" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </Grid>
