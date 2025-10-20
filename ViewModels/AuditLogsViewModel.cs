@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using QuestPDF.Companion;
+using QuestPDF.Fluent;
 using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
@@ -309,18 +310,18 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             await using var stream = await pdfFile.OpenWriteAsync();
             
             // Both cannot be enabled at the same time. Disable one of them 
-            //document.GeneratePdf(stream); // Generate the PDF
-            await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+            document.GeneratePdf(stream); // Generate the PDF
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
         
-            _toastManager.CreateToast("Invoice exported successfully")
-                .WithContent($"Invoice has been saved to {pdfFile.Name}")
+            _toastManager.CreateToast("Audit Logs exported successfully")
+                .WithContent($"Audit Logs has been saved to {pdfFile.Name}")
                 .DismissOnClick()
                 .ShowSuccess();
         }
         catch (Exception ex)
         {
             _toastManager.CreateToast("Export failed")
-                .WithContent($"Failed to export invoice: {ex.Message}")
+                .WithContent($"Failed to export audit logs: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
         }
