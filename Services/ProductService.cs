@@ -46,7 +46,7 @@ namespace AHON_TRACK.Services
 
         private bool CanView()
         {
-            // Both Admin and Staff can view
+            // Both Admin and Staff and Coach can view
             return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
                    CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
                    CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
@@ -54,7 +54,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region CREATE
+        #region CREATE (Add + Restore)
 
         public async Task<(bool Success, string Message, int? ProductId)> AddProductAsync(ProductModel product)
         {
@@ -74,13 +74,105 @@ namespace AHON_TRACK.Services
 
                 product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
 
-                // Check for duplicate SKU
+                // Check for duplicate SKU (including deleted ones)
                 using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Products WHERE SKU = @sku", conn);
+                    @"SELECT ProductID, IsDeleted 
+                      FROM Products 
+                      WHERE SKU = @sku", conn);
                 checkCmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
 
-                var count = (int)await checkCmd.ExecuteScalarAsync();
-                if (count > 0)
+                int? existingProductId = null;
+                bool existingIsDeleted = false;
+                using (var reader = await checkCmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        existingProductId = reader["ProductID"] != DBNull.Value ? Convert.ToInt32(reader["ProductID"]) : (int?)null;
+                        existingIsDeleted = reader["IsDeleted"] != DBNull.Value ? Convert.ToBoolean(reader["IsDeleted"]) : false;
+                    }
+                }
+
+                // If exists and deleted -> restore and update fields
+                if (existingProductId.HasValue && existingIsDeleted)
+                {
+                    // Read image bytes if provided
+                    byte[]? imageBytes = null;
+                    if (!string.IsNullOrEmpty(product.ProductImageFilePath))
+                    {
+                        try
+                        {
+                            if (System.IO.File.Exists(product.ProductImageFilePath))
+                            {
+                                imageBytes = await System.IO.File.ReadAllBytesAsync(product.ProductImageFilePath);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to read image: {ex.Message}");
+                        }
+                    }
+
+                    const string restoreQuery = @"
+                        UPDATE Products SET
+                            ProductName = @productName,
+                            SKU = @sku,
+                            SupplierID = @supplierID,
+                            Description = @description,
+                            Price = @price,
+                            DiscountedPrice = @discountedPrice,
+                            IsPercentageDiscount = @isPercentageDiscount,
+                            ProductImagePath = @imagePath,
+                            ExpiryDate = @expiryDate,
+                            Status = @status,
+                            Category = @category,
+                            CurrentStock = @currentStock,
+                            AddedByEmployeeID = @employeeID,
+                            IsDeleted = 0
+                        WHERE ProductID = @productId";
+
+                    using var restoreCmd = new SqlCommand(restoreQuery, conn);
+                    restoreCmd.Parameters.AddWithValue("@productId", existingProductId.Value);
+                    restoreCmd.Parameters.AddWithValue("@productName", product.ProductName ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@supplierID", product.SupplierID ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@description", product.Description ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@price", product.Price);
+                    restoreCmd.Parameters.AddWithValue("@discountedPrice", product.DiscountedPrice ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@isPercentageDiscount", product.IsPercentageDiscount);
+
+                    if (imageBytes != null && imageBytes.Length > 0)
+                        restoreCmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = imageBytes;
+                    else
+                        restoreCmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = DBNull.Value;
+
+                    restoreCmd.Parameters.AddWithValue("@expiryDate", product.ExpiryDate ?? (object)DBNull.Value);
+                    restoreCmd.Parameters.AddWithValue("@status", product.Status);
+                    restoreCmd.Parameters.AddWithValue("@category", product.Category ?? "None");
+                    restoreCmd.Parameters.AddWithValue("@currentStock", product.CurrentStock);
+                    restoreCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                    await restoreCmd.ExecuteNonQueryAsync();
+
+                    string logDescription = $"Restored product: '{product.ProductName}' (SKU: {product.SKU}, ID: {existingProductId.Value}) - Price: ₱{product.Price:N2}, Stock: {product.CurrentStock}";
+                    if (product.HasDiscount)
+                    {
+                        logDescription += $", Discount: {product.DiscountedPrice}{(product.IsPercentageDiscount ? "%" : " fixed")}, Final Price: ₱{product.FinalPrice:N2}";
+                    }
+
+                    await LogActionAsync(conn, "RESTORE", logDescription, true);
+
+                    // Show restore toast with details
+                    var expiryText = product.ExpiryDate.HasValue ? product.ExpiryDate.Value.ToString("yyyy-MM-dd") : "N/A";
+                    _toastManager.CreateToast("Product Restored")
+                        .WithContent($"Product: {product.ProductName}\nStock: {product.CurrentStock}\nExpiry: {expiryText}\nStatus: {product.Status}")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return (true, "Product restored successfully.", existingProductId.Value);
+                }
+
+                // If exists and NOT deleted -> duplicate SKU warning
+                if (existingProductId.HasValue && !existingIsDeleted)
                 {
                     _toastManager.CreateToast("Duplicate SKU")
                         .WithContent($"Product with SKU '{product.SKU}' already exists.")
@@ -89,16 +181,17 @@ namespace AHON_TRACK.Services
                     return (false, "Product SKU already exists.", null);
                 }
 
-                // ✅ Handle image properly
-                byte[]? imageBytes = null;
+                // Insert new product
+                // Handle image properly
+                byte[]? newImageBytes = null;
                 if (!string.IsNullOrEmpty(product.ProductImageFilePath))
                 {
                     try
                     {
                         if (System.IO.File.Exists(product.ProductImageFilePath))
                         {
-                            imageBytes = await System.IO.File.ReadAllBytesAsync(product.ProductImageFilePath);
-                            Console.WriteLine($"Successfully read image: {imageBytes.Length} bytes");
+                            newImageBytes = await System.IO.File.ReadAllBytesAsync(product.ProductImageFilePath);
+                            Console.WriteLine($"Successfully read image: {newImageBytes.Length} bytes");
                         }
                     }
                     catch (Exception ex)
@@ -107,15 +200,14 @@ namespace AHON_TRACK.Services
                     }
                 }
 
-                // ✅ UPDATED: Use SupplierID instead of ProductSupplier
                 using var cmd = new SqlCommand(
                     @"INSERT INTO Products (ProductName, SKU, SupplierID, Description, 
                      Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                     ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID)
+                     ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID, IsDeleted)
               OUTPUT INSERTED.ProductID
               VALUES (@productName, @sku, @supplierID, @description,
                       @price, @discountedPrice, @isPercentageDiscount, @imagePath,
-                      @expiryDate, @status, @category, @currentStock, @employeeID)", conn);
+                      @expiryDate, @status, @category, @currentStock, @employeeID, 0)", conn);
 
                 cmd.Parameters.AddWithValue("@productName", product.ProductName ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@sku", product.SKU ?? (object)DBNull.Value);
@@ -125,10 +217,9 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@discountedPrice", product.DiscountedPrice ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@isPercentageDiscount", product.IsPercentageDiscount);
 
-                // ✅ Handle image parameter
-                if (imageBytes != null && imageBytes.Length > 0)
+                if (newImageBytes != null && newImageBytes.Length > 0)
                 {
-                    cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = imageBytes;
+                    cmd.Parameters.Add("@imagePath", SqlDbType.VarBinary).Value = newImageBytes;
                 }
                 else
                 {
@@ -143,16 +234,18 @@ namespace AHON_TRACK.Services
 
                 var productId = (int)await cmd.ExecuteScalarAsync();
 
-                string logDescription = $"Added product: '{product.ProductName}' (SKU: {product.SKU}) - Price: ₱{product.Price:N2}, Stock: {product.CurrentStock}";
+                string addedLogDescription = $"Added product: '{product.ProductName}' (SKU: {product.SKU}) - Price: ₱{product.Price:N2}, Stock: {product.CurrentStock}";
                 if (product.HasDiscount)
                 {
-                    logDescription += $", Discount: {product.DiscountedPrice}{(product.IsPercentageDiscount ? "%" : " fixed")}, Final Price: ₱{product.FinalPrice:N2}";
+                    addedLogDescription += $", Discount: {product.DiscountedPrice}{(product.IsPercentageDiscount ? "%" : " fixed")}, Final Price: ₱{product.FinalPrice:N2}";
                 }
 
-                await LogActionAsync(conn, "Added new product.", logDescription, true);
+                await LogActionAsync(conn, "CREATE", addedLogDescription, true);
 
+                // Show add toast with details
+                var addedExpiryText = product.ExpiryDate.HasValue ? product.ExpiryDate.Value.ToString("yyyy-MM-dd") : "N/A";
                 _toastManager.CreateToast("Product Added")
-                    .WithContent($"Successfully added product '{product.ProductName}'.")
+                    .WithContent($"Product: {product.ProductName}\nStock: {product.CurrentStock}\nExpiry: {addedExpiryText}\nStatus: {product.Status}")
                     .DismissOnClick()
                     .ShowSuccess();
 
@@ -198,13 +291,14 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // ✅ UPDATED: JOIN with Suppliers table to get supplier name
+                // JOIN with Suppliers table to get supplier name and exclude deleted
                 using var cmd = new SqlCommand(
                     @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
                              p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
                              p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
                       FROM Products p
                       LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
+                      WHERE p.IsDeleted = 0
                       ORDER BY p.ProductName", conn);
 
                 var products = new List<ProductModel>();
@@ -247,14 +341,13 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // ✅ UPDATED: JOIN with Suppliers
                 using var cmd = new SqlCommand(
                     @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
                              p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
                              p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
                       FROM Products p
                       LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
-                      WHERE p.ProductID = @productId", conn);
+                      WHERE p.ProductID = @productId AND p.IsDeleted = 0", conn);
 
                 cmd.Parameters.AddWithValue("@productId", productId);
 
@@ -286,11 +379,12 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
-                      FROM Products 
-                      WHERE SKU = @sku", conn);
+                    @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
+                             p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
+                             p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
+                      FROM Products p
+                      LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
+                      WHERE p.SKU = @sku AND p.IsDeleted = 0", conn);
 
                 cmd.Parameters.AddWithValue("@sku", sku ?? (object)DBNull.Value);
 
@@ -322,12 +416,13 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
-                      FROM Products 
-                      WHERE Category = @category
-                      ORDER BY ProductName", conn);
+                    @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
+                             p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
+                             p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
+                      FROM Products p
+                      LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
+                      WHERE p.Category = @category AND p.IsDeleted = 0
+                      ORDER BY p.ProductName", conn);
 
                 cmd.Parameters.AddWithValue("@category", category ?? (object)DBNull.Value);
 
@@ -360,12 +455,13 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
-                      FROM Products 
-                      WHERE Status = @status
-                      ORDER BY ProductName", conn);
+                    @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
+                             p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
+                             p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
+                      FROM Products p
+                      LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
+                      WHERE p.Status = @status AND p.IsDeleted = 0
+                      ORDER BY p.ProductName", conn);
 
                 cmd.Parameters.AddWithValue("@status", status ?? (object)DBNull.Value);
 
@@ -398,13 +494,15 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
-                      FROM Products 
-                      WHERE ExpiryDate IS NOT NULL 
-                        AND ExpiryDate < CAST(GETDATE() AS DATE)
-                      ORDER BY ExpiryDate DESC", conn);
+                    @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
+                             p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
+                             p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
+                      FROM Products p
+                      LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
+                      WHERE p.ExpiryDate IS NOT NULL 
+                        AND p.ExpiryDate < CAST(GETDATE() AS DATE)
+                        AND p.IsDeleted = 0
+                      ORDER BY p.ExpiryDate DESC", conn);
 
                 var products = new List<ProductModel>();
 
@@ -435,14 +533,16 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT ProductID, ProductName, SKU, ProductSupplier, Description,
-                             Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
-                             ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID
-                      FROM Products 
-                      WHERE ExpiryDate IS NOT NULL 
-                        AND ExpiryDate >= CAST(GETDATE() AS DATE)
-                        AND ExpiryDate <= DATEADD(day, @daysThreshold, CAST(GETDATE() AS DATE))
-                      ORDER BY ExpiryDate", conn);
+                    @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
+                             p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
+                             p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
+                      FROM Products p
+                      LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID
+                      WHERE p.ExpiryDate IS NOT NULL 
+                        AND p.ExpiryDate >= CAST(GETDATE() AS DATE)
+                        AND p.ExpiryDate <= DATEADD(day, @daysThreshold, CAST(GETDATE() AS DATE))
+                        AND p.IsDeleted = 0
+                      ORDER BY p.ExpiryDate", conn);
 
                 cmd.Parameters.AddWithValue("@daysThreshold", daysThreshold);
 
@@ -484,10 +584,10 @@ namespace AHON_TRACK.Services
 
                 product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
 
-                // Check if product exists and get existing image
+                // Check if product exists and is not deleted and get existing image
                 byte[]? existingImage = null;
                 using var checkCmd = new SqlCommand(
-                    "SELECT ProductImagePath FROM Products WHERE ProductID = @productId", conn);
+                    "SELECT ProductImagePath FROM Products WHERE ProductID = @productId AND IsDeleted = 0", conn);
                 checkCmd.Parameters.AddWithValue("@productId", product.ProductID);
 
                 var result = await checkCmd.ExecuteScalarAsync();
@@ -523,7 +623,6 @@ namespace AHON_TRACK.Services
                     }
                 }
 
-                // ✅ UPDATED: Use SupplierID
                 using var cmd = new SqlCommand(
                     @"UPDATE Products 
               SET ProductName = @productName,
@@ -538,7 +637,7 @@ namespace AHON_TRACK.Services
                   Status = @status,
                   Category = @category,
                   CurrentStock = @currentStock
-              WHERE ProductID = @productId", conn);
+              WHERE ProductID = @productId AND IsDeleted = 0", conn);
 
                 cmd.Parameters.AddWithValue("@productId", product.ProductID);
                 cmd.Parameters.AddWithValue("@productName", product.ProductName ?? (object)DBNull.Value);
@@ -563,12 +662,17 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@category", product.Category ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@currentStock", product.CurrentStock);
 
-                await cmd.ExecuteNonQueryAsync();
+                var rows = await cmd.ExecuteNonQueryAsync();
 
-                await LogActionAsync(conn, "Updated a product.", $"Updated product: {product.ProductName} (ID: {product.ProductID})", true);
+                if (rows <= 0)
+                {
+                    return (false, "Failed to update product (maybe it was deleted).");
+                }
+
+                await LogActionAsync(conn, "UPDATE", $"Updated product: {product.ProductName} (ID: {product.ProductID})", true);
 
                 _toastManager.CreateToast("Product Updated")
-                    .WithContent($"Successfully updated product '{product.ProductName}'.")
+                    .WithContent($"Successfully updated product '{product.ProductName}'.\nStock: {product.CurrentStock}\nExpiry: {(product.ExpiryDate.HasValue ? product.ExpiryDate.Value.ToString("yyyy-MM-dd") : "N/A")}\nStatus: {product.Status}")
                     .DismissOnClick()
                     .ShowSuccess();
 
@@ -614,7 +718,7 @@ namespace AHON_TRACK.Services
                     @"UPDATE Products 
                       SET CurrentStock = @newStock,
                           Status = @status
-                      WHERE ProductID = @productId", conn);
+                      WHERE ProductID = @productId AND IsDeleted = 0", conn);
 
                 cmd.Parameters.AddWithValue("@productId", productId);
                 cmd.Parameters.AddWithValue("@newStock", newStock);
@@ -648,7 +752,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region DELETE
+        #region DELETE (Soft Delete)
 
         public async Task<(bool Success, string Message)> DeleteProductAsync(int productId)
         {
@@ -666,9 +770,9 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Get product name for logging
+                // Get product name for logging (only if not already deleted)
                 using var getNameCmd = new SqlCommand(
-                    "SELECT ProductName FROM Products WHERE ProductID = @productId", conn);
+                    "SELECT ProductName FROM Products WHERE ProductID = @productId AND IsDeleted = 0", conn);
                 getNameCmd.Parameters.AddWithValue("@productId", productId);
                 var productName = await getNameCmd.ExecuteScalarAsync() as string;
 
@@ -681,16 +785,16 @@ namespace AHON_TRACK.Services
                     return (false, "Product not found.");
                 }
 
-                // Delete product
+                // Soft delete product
                 using var cmd = new SqlCommand(
-                    "DELETE FROM Products WHERE ProductID = @productId", conn);
+                    "UPDATE Products SET IsDeleted = 1 WHERE ProductID = @productId AND IsDeleted = 0", conn);
                 cmd.Parameters.AddWithValue("@productId", productId);
 
                 var rowsAffected = await cmd.ExecuteNonQueryAsync();
 
                 if (rowsAffected > 0)
                 {
-                    await LogActionAsync(conn, "Deleted a product.", $"Deleted product: {productName} (ID: {productId})", true);
+                    await LogActionAsync(conn, "DELETE", $"Deleted product: {productName} (ID: {productId})", true);
 
                     _toastManager.CreateToast("Product Deleted")
                         .WithContent($"Successfully deleted product '{productName}'.")
@@ -751,7 +855,7 @@ namespace AHON_TRACK.Services
                     {
                         // Get product name
                         using var getNameCmd = new SqlCommand(
-                            "SELECT ProductName FROM Products WHERE ProductID = @productId", conn, transaction);
+                            "SELECT ProductName FROM Products WHERE ProductID = @productId AND IsDeleted = 0", conn, transaction);
                         getNameCmd.Parameters.AddWithValue("@productId", productId);
                         var name = await getNameCmd.ExecuteScalarAsync() as string;
 
@@ -760,14 +864,14 @@ namespace AHON_TRACK.Services
                             productNames.Add(name);
                         }
 
-                        // Delete product
+                        // Soft delete product
                         using var deleteCmd = new SqlCommand(
-                            "DELETE FROM Products WHERE ProductID = @productId", conn, transaction);
+                            "UPDATE Products SET IsDeleted = 1 WHERE ProductID = @productId AND IsDeleted = 0", conn, transaction);
                         deleteCmd.Parameters.AddWithValue("@productId", productId);
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }
 
-                    await LogActionAsync(conn, "Deleted multiple product.", $"Deleted {deletedCount} products: {string.Join(", ", productNames)}", true);
+                    await LogActionAsync(conn, "DELETE", $"Deleted {deletedCount} products: {string.Join(", ", productNames)}", true);
 
                     transaction.Commit();
 
@@ -804,6 +908,305 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region NOTIFICATIONS
+
+        public async Task ShowProductAlertsAsync()
+        {
+            try
+            {
+                var lowStockCount = await GetLowStockCountAsync();
+                var expiringSoonCount = await GetExpiringSoonCountAsync();
+                var expiredCount = await GetExpiredCountAsync();
+                var outOfStockCount = await GetOutOfStockCountAsync();
+
+                // Highest priority: expired items
+                if (expiredCount > 0)
+                {
+                    _toastManager?.CreateToast("Expired Products")
+                        .WithContent($"{expiredCount} product(s) have expired!")
+                        .DismissOnClick()
+                        .ShowError();
+                }
+
+                if (expiringSoonCount > 0)
+                {
+                    _toastManager?.CreateToast("Expiring Soon")
+                        .WithContent($"{expiringSoonCount} product(s) will expire within 30 days!")
+                        .DismissOnClick()
+                        .ShowWarning();
+                }
+
+                if (outOfStockCount > 0)
+                {
+                    _toastManager?.CreateToast("Out of Stock")
+                        .WithContent($"{outOfStockCount} product(s) are currently out of stock!")
+                        .DismissOnClick()
+                        .ShowWarning();
+                }
+
+                if (lowStockCount > 0)
+                {
+                    _toastManager?.CreateToast("Low Stock Alert")
+                        .WithContent($"{lowStockCount} product(s) have low stock (≤5 units)!")
+                        .DismissOnClick()
+                        .ShowInfo();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ShowProductAlertsAsync] Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Get summary of product alerts for dashboards or status widgets.
+        /// </summary>
+        public async Task<ProductAlertSummary> GetProductAlertSummaryAsync()
+        {
+            var summary = new ProductAlertSummary();
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                summary.LowStockItems = await GetLowStockItemsAsync(conn);
+                summary.LowStockCount = summary.LowStockItems.Count;
+
+                summary.ExpiringSoonItems = await GetExpiringSoonItemsAsync(conn);
+                summary.ExpiringSoonCount = summary.ExpiringSoonItems.Count;
+
+                summary.ExpiredItems = await GetExpiredItemsAsync(conn);
+                summary.ExpiredCount = summary.ExpiredItems.Count;
+
+                summary.OutOfStockItems = await GetOutOfStockItemsAsync(conn);
+                summary.OutOfStockCount = summary.OutOfStockItems.Count;
+
+                summary.TotalAlerts = summary.LowStockCount + summary.ExpiringSoonCount +
+                                      summary.ExpiredCount + summary.OutOfStockCount;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetProductAlertSummaryAsync] Error: {ex.Message}");
+            }
+
+            return summary;
+        }
+
+        #endregion
+
+        #region Private Helper Methods (Notifications)
+
+        private async Task<int> GetLowStockCountAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Products
+              WHERE CurrentStock <= 5
+              AND Status = 'In Stock'
+              AND IsDeleted = 0", conn);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
+            catch { return 0; }
+        }
+
+        private async Task<int> GetOutOfStockCountAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Products
+              WHERE CurrentStock = 0
+              AND IsDeleted = 0", conn);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
+            catch { return 0; }
+        }
+
+        private async Task<int> GetExpiringSoonCountAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Products
+              WHERE ExpiryDate IS NOT NULL
+              AND ExpiryDate > GETDATE()
+              AND ExpiryDate <= DATEADD(day, 30, GETDATE())
+              AND IsDeleted = 0", conn);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
+            catch { return 0; }
+        }
+
+        private async Task<int> GetExpiredCountAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Products
+              WHERE ExpiryDate IS NOT NULL
+              AND ExpiryDate < GETDATE()
+              AND IsDeleted = 0", conn);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
+            catch { return 0; }
+        }
+
+        private async Task<List<ProductAlertItem>> GetLowStockItemsAsync(SqlConnection conn)
+        {
+            var items = new List<ProductAlertItem>();
+            try
+            {
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, CurrentStock
+              FROM Products
+              WHERE CurrentStock <= 5
+              AND Status = 'In Stock'
+              AND IsDeleted = 0
+              ORDER BY CurrentStock ASC", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    items.Add(new ProductAlertItem
+                    {
+                        ProductID = reader.GetInt32(0),
+                        ProductName = reader.GetString(1),
+                        AlertType = "Low Stock",
+                        AlertSeverity = "Warning",
+                        Details = $"Only {reader.GetInt32(2)} unit(s) left"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetLowStockItemsAsync] Error: {ex.Message}");
+            }
+            return items;
+        }
+
+        private async Task<List<ProductAlertItem>> GetOutOfStockItemsAsync(SqlConnection conn)
+        {
+            var items = new List<ProductAlertItem>();
+            try
+            {
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName
+              FROM Products
+              WHERE CurrentStock = 0
+              AND IsDeleted = 0
+              ORDER BY ProductName ASC", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    items.Add(new ProductAlertItem
+                    {
+                        ProductID = reader.GetInt32(0),
+                        ProductName = reader.GetString(1),
+                        AlertType = "Out of Stock",
+                        AlertSeverity = "Error",
+                        Details = "No stock available"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetOutOfStockItemsAsync] Error: {ex.Message}");
+            }
+            return items;
+        }
+
+        private async Task<List<ProductAlertItem>> GetExpiringSoonItemsAsync(SqlConnection conn)
+        {
+            var items = new List<ProductAlertItem>();
+            try
+            {
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, ExpiryDate
+              FROM Products
+              WHERE ExpiryDate IS NOT NULL
+              AND ExpiryDate > GETDATE()
+              AND ExpiryDate <= DATEADD(day, 30, GETDATE())
+              AND IsDeleted = 0
+              ORDER BY ExpiryDate ASC", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var expiryDate = reader.GetDateTime(2);
+                    var daysLeft = (expiryDate - DateTime.Now).Days;
+                    items.Add(new ProductAlertItem
+                    {
+                        ProductID = reader.GetInt32(0),
+                        ProductName = reader.GetString(1),
+                        AlertType = "Expiring Soon",
+                        AlertSeverity = "Warning",
+                        Details = $"Expires in {daysLeft} day(s) ({expiryDate:MMM dd, yyyy})"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetExpiringSoonItemsAsync] Error: {ex.Message}");
+            }
+            return items;
+        }
+
+        private async Task<List<ProductAlertItem>> GetExpiredItemsAsync(SqlConnection conn)
+        {
+            var items = new List<ProductAlertItem>();
+            try
+            {
+                using var cmd = new SqlCommand(
+                    @"SELECT ProductID, ProductName, ExpiryDate
+              FROM Products
+              WHERE ExpiryDate IS NOT NULL
+              AND ExpiryDate < GETDATE()
+              AND IsDeleted = 0
+              ORDER BY ExpiryDate DESC", conn);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var expiryDate = reader.GetDateTime(2);
+                    items.Add(new ProductAlertItem
+                    {
+                        ProductID = reader.GetInt32(0),
+                        ProductName = reader.GetString(1),
+                        AlertType = "Expired",
+                        AlertSeverity = "Error",
+                        Details = $"Expired on {expiryDate:MMM dd, yyyy}"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetExpiredItemsAsync] Error: {ex.Message}");
+            }
+            return items;
+        }
+
+        #endregion
+
+
         #region UTILITY METHODS
 
         private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success)
@@ -830,7 +1233,7 @@ namespace AHON_TRACK.Services
             }
         }
 
-        // ✅ UPDATED: MapProductFromReader to handle SupplierID and SupplierName
+        // MapProductFromReader handles SupplierID and SupplierName
         private ProductModel MapProductFromReader(SqlDataReader reader)
         {
             string? imageBase64 = null;
@@ -856,7 +1259,9 @@ namespace AHON_TRACK.Services
                 DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value
                     ? reader.GetDecimal(reader.GetOrdinal("DiscountedPrice"))
                     : null,
-                IsPercentageDiscount = reader.GetBoolean(reader.GetOrdinal("IsPercentageDiscount")),
+                IsPercentageDiscount = reader["IsPercentageDiscount"] != DBNull.Value
+                    ? reader.GetBoolean(reader.GetOrdinal("IsPercentageDiscount"))
+                    : false,
                 ProductImageBase64 = imageBase64,
                 ProductImageBytes = imageBytes,
                 ExpiryDate = reader["ExpiryDate"] != DBNull.Value
@@ -864,13 +1269,12 @@ namespace AHON_TRACK.Services
                     : null,
                 Status = reader["Status"]?.ToString() ?? "",
                 Category = reader["Category"]?.ToString() ?? "",
-                CurrentStock = reader.GetInt32(reader.GetOrdinal("CurrentStock")),
+                CurrentStock = reader["CurrentStock"] != DBNull.Value ? reader.GetInt32(reader.GetOrdinal("CurrentStock")) : 0,
                 AddedByEmployeeID = reader["AddedByEmployeeID"] != DBNull.Value
                     ? reader.GetInt32(reader.GetOrdinal("AddedByEmployeeID"))
                     : 0
             };
         }
-
 
         public async Task<(bool Success, int TotalProducts, int InStock, int OutOfStock, int Expired)> GetProductStatisticsAsync()
         {
@@ -890,7 +1294,8 @@ namespace AHON_TRACK.Services
                         SUM(CASE WHEN Status = 'In Stock' THEN 1 ELSE 0 END) as InStock,
                         SUM(CASE WHEN Status = 'Out Of Stock' THEN 1 ELSE 0 END) as OutOfStock,
                         SUM(CASE WHEN ExpiryDate IS NOT NULL AND ExpiryDate < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) as Expired
-                      FROM Products", conn);
+                      FROM Products
+                      WHERE IsDeleted = 0", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -924,7 +1329,7 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    "SELECT ProductImagePath FROM Products WHERE ProductID = @productId", conn);
+                    "SELECT ProductImagePath FROM Products WHERE ProductID = @productId AND IsDeleted = 0", conn);
                 cmd.Parameters.AddWithValue("@productId", productId);
 
                 var result = await cmd.ExecuteScalarAsync();
@@ -943,6 +1348,31 @@ namespace AHON_TRACK.Services
             }
         }
 
+        #endregion
+
+        #region SUPPORTING CLASS
+        public class ProductAlertSummary
+        {
+            public int LowStockCount { get; set; }
+            public int OutOfStockCount { get; set; }
+            public int ExpiringSoonCount { get; set; }
+            public int ExpiredCount { get; set; }
+            public int TotalAlerts { get; set; }
+
+            public List<ProductAlertItem> LowStockItems { get; set; } = new();
+            public List<ProductAlertItem> OutOfStockItems { get; set; } = new();
+            public List<ProductAlertItem> ExpiringSoonItems { get; set; } = new();
+            public List<ProductAlertItem> ExpiredItems { get; set; } = new();
+        }
+
+        public class ProductAlertItem
+        {
+            public int ProductID { get; set; }
+            public string ProductName { get; set; } = string.Empty;
+            public string AlertType { get; set; } = string.Empty;
+            public string AlertSeverity { get; set; } = string.Empty;
+            public string Details { get; set; } = string.Empty;
+        }
         #endregion
     }
 }

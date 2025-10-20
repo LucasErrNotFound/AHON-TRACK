@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static AHON_TRACK.Services.ProductService;
 
 namespace AHON_TRACK.Services.Interface
 {
@@ -21,5 +22,9 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message)> UpdateProductStockAsync(int productId, int newStock);
         Task<(bool Success, string Message)> DeleteProductAsync(int productId);
         Task<(bool Success, string Message, int DeletedCount)> DeleteMultipleProductsAsync(List<int> productIds);
+
+        // NOTIFICATIONS
+        Task ShowProductAlertsAsync();
+        Task<ProductAlertSummary> GetProductAlertSummaryAsync();
     }
 }
