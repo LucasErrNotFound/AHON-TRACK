@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
+using Dapper;
 
 namespace AHON_TRACK.Services
 {
@@ -124,5 +125,121 @@ namespace AHON_TRACK.Services
                 return (ageGroups, genderCounts, populationCounts);
             }
         }
+
+        #region ATTENDANCE
+        public async Task<IEnumerable<AttendanceDataDto>> GetAttendanceDataAsync(DateTime fromDate, DateTime toDate)
+        {
+            const string query = @"
+            SELECT 
+                AttendanceDate,
+                ISNULL(SUM(CASE WHEN AttendanceType = 'Walk-In' THEN CheckInCount ELSE 0 END), 0) AS WalkIns,
+                ISNULL(SUM(CASE WHEN AttendanceType = 'Member' THEN CheckInCount ELSE 0 END), 0) AS Members,
+                ISNULL(SUM(CheckInCount), 0) AS TotalAttendance
+            FROM (
+                SELECT 
+                    CAST(DateAttendance AS DATE) AS AttendanceDate,
+                    'Member' AS AttendanceType,
+                    COUNT(DISTINCT MemberID) AS CheckInCount
+                FROM MemberCheckIns
+                WHERE IsDeleted = 0
+                    AND CAST(DateAttendance AS DATE) BETWEEN @FromDate AND @ToDate
+                GROUP BY CAST(DateAttendance AS DATE)
+                
+                UNION ALL
+                
+                SELECT 
+                    CAST(Attendance AS DATE) AS AttendanceDate,
+                    'Walk-In' AS AttendanceType,
+                    COUNT(DISTINCT CustomerID) AS CheckInCount
+                FROM WalkInRecords
+                WHERE IsDeleted = 0
+                    AND CAST(Attendance AS DATE) BETWEEN @FromDate AND @ToDate
+                GROUP BY CAST(Attendance AS DATE)
+            ) AS CombinedData
+            GROUP BY AttendanceDate
+            ORDER BY AttendanceDate;";
+
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryAsync<AttendanceDataDto>(
+                query,
+                new { FromDate = fromDate, ToDate = toDate }
+            );
+        }
+
+        public async Task<CustomerTypePercentageDto> GetCustomerTypePercentagesAsync(DateTime fromDate, DateTime toDate)
+        {
+            const string query = @"
+            SELECT 
+                ISNULL(SUM(WalkIns), 0) AS TotalWalkIns,
+                ISNULL(SUM(Members), 0) AS TotalMembers
+            FROM (
+                SELECT 
+                    AttendanceDate,
+                    ISNULL(SUM(CASE WHEN AttendanceType = 'Walk-In' THEN CheckInCount ELSE 0 END), 0) AS WalkIns,
+                    ISNULL(SUM(CASE WHEN AttendanceType = 'Member' THEN CheckInCount ELSE 0 END), 0) AS Members
+                FROM (
+                    SELECT 
+                        CAST(DateAttendance AS DATE) AS AttendanceDate,
+                        'Member' AS AttendanceType,
+                        COUNT(DISTINCT MemberID) AS CheckInCount
+                    FROM MemberCheckIns
+                    WHERE IsDeleted = 0
+                        AND CAST(DateAttendance AS DATE) BETWEEN @FromDate AND @ToDate
+                    GROUP BY CAST(DateAttendance AS DATE)
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        CAST(Attendance AS DATE) AS AttendanceDate,
+                        'Walk-In' AS AttendanceType,
+                        COUNT(DISTINCT CustomerID) AS CheckInCount
+                    FROM WalkInRecords
+                    WHERE IsDeleted = 0
+                        AND CAST(Attendance AS DATE) BETWEEN @FromDate AND @ToDate
+                    GROUP BY CAST(Attendance AS DATE)
+                ) AS CombinedData
+                GROUP BY AttendanceDate
+            ) AS DailyTotals;";
+
+            using var connection = new SqlConnection(_connectionString);
+            var result = await connection.QueryFirstOrDefaultAsync<dynamic>(
+                query,
+                new { FromDate = fromDate, ToDate = toDate }
+            );
+
+            var totalWalkIns = (int)(result?.TotalWalkIns ?? 0);
+            var totalMembers = (int)(result?.TotalMembers ?? 0);
+            var total = totalWalkIns + totalMembers;
+
+            return new CustomerTypePercentageDto
+            {
+                TotalWalkIns = totalWalkIns,
+                TotalMembers = totalMembers,
+                WalkInsPercentage = total > 0 ? (double)totalWalkIns / total * 100 : 0,
+                MembersPercentage = total > 0 ? (double)totalMembers / total * 100 : 0
+            };
+        }
+
+        #endregion
+
+        #region SUPPORTING CLASS
+        // DTOs
+        public class AttendanceDataDto
+        {
+            public DateTime AttendanceDate { get; set; }
+            public int WalkIns { get; set; }
+            public int Members { get; set; }
+            public int TotalAttendance { get; set; }
+        }
+
+        public class CustomerTypePercentageDto
+        {
+            public int TotalWalkIns { get; set; }
+            public int TotalMembers { get; set; }
+            public double WalkInsPercentage { get; set; }
+            public double MembersPercentage { get; set; }
+        }
+        #endregion
+
     }
 }

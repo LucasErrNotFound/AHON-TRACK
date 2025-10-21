@@ -146,10 +146,10 @@ namespace AHON_TRACK.Services
 
                 await LogActionAsync(conn, "Added new package", logDescription, true);
 
-                _toastManager.CreateToast("Package Added")
-                    .WithContent($"Successfully added package '{package.packageName}'.")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                /* _toastManager.CreateToast("Package Added")
+                     .WithContent($"Successfully added package '{package.packageName}'.")
+                     .DismissOnClick()
+                     .ShowSuccess(); */
 
                 return (true, "Package added successfully.", packageId);
             }
@@ -438,10 +438,10 @@ namespace AHON_TRACK.Services
                     PackageEventService.Instance.NotifyPackagesChanged();
                     await LogActionAsync(conn, "Updated a package", $"Updated package: '{package.packageName}' (ID: {package.packageID})", true);
 
-                    _toastManager.CreateToast("Package Updated")
-                        .WithContent($"Successfully updated package '{package.packageName}'.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager.CreateToast("Package Updated")
+                          .WithContent($"Successfully updated package '{package.packageName}'.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return true;
                 }
@@ -525,10 +525,10 @@ namespace AHON_TRACK.Services
                     PackageEventService.Instance.NotifyPackagesChanged();
                     await LogActionAsync(conn, "Deleted a package", $"Deleted package: '{packageName}' (ID: {packageId})", true);
 
-                    _toastManager.CreateToast("Package Deleted")
-                        .WithContent($"Successfully deleted package '{packageName}'.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager.CreateToast("Package Deleted")
+                          .WithContent($"Successfully deleted package '{packageName}'.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return true;
                 }
@@ -615,10 +615,10 @@ namespace AHON_TRACK.Services
 
                     transaction.Commit();
 
-                    _toastManager.CreateToast("Packages Deleted")
-                        .WithContent($"Successfully deleted {deletedCount} package(s).")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /* _toastManager.CreateToast("Packages Deleted")
+                         .WithContent($"Successfully deleted {deletedCount} package(s).")
+                         .DismissOnClick()
+                         .ShowSuccess(); */
 
                     return (true, $"Successfully deleted {deletedCount} package(s).", deletedCount);
                 }

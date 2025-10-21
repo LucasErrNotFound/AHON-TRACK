@@ -241,7 +241,7 @@ namespace AHON_TRACK.Services
                 if (equipment.SupplierID.HasValue)
                 {
                     using var supplierCheckCmd = new SqlCommand(
-                        "SELECT COUNT(*) FROM Suppliers WHERE SupplierID = @supplierId", connection);
+                        "SELECT COUNT(*) FROM Suppliers WHERE SupplierID = @supplierId AND IsDeleted = 0", connection);
                     supplierCheckCmd.Parameters.AddWithValue("@supplierId", equipment.SupplierID.Value);
                     var supplierExists = (int)await supplierCheckCmd.ExecuteScalarAsync() > 0;
 
@@ -292,10 +292,10 @@ namespace AHON_TRACK.Services
                     await LogActionAsync(connection, "CREATE",
                         $"Added equipment: '{equipment.EquipmentName}' (ID: {equipment.EquipmentID}, Supplier: {supplierName})", true);
 
-                    _toastManager?.CreateToast("Equipment Added")
-                        .WithContent($"Equipment '{equipment.EquipmentName}' added successfully!")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /* _toastManager?.CreateToast("Equipment Added")
+                         .WithContent($"Equipment '{equipment.EquipmentName}' added successfully!")
+                         .DismissOnClick()
+                         .ShowSuccess(); */
                     return (true, "Equipment added successfully.", equipment.EquipmentID);
                 }
 
@@ -724,10 +724,10 @@ namespace AHON_TRACK.Services
                     await LogActionAsync(connection, "UPDATE",
                         $"Updated equipment: '{equipment.EquipmentName}' (ID: {equipment.EquipmentID}, Supplier: {supplierName})", true);
 
-                    _toastManager?.CreateToast("Equipment Updated")
-                        .WithContent($"Equipment '{equipment.EquipmentName}' updated successfully!")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager?.CreateToast("Equipment Updated")
+                          .WithContent($"Equipment '{equipment.EquipmentName}' updated successfully!")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
                     return (true, "Equipment updated successfully.");
                 }
 
@@ -801,10 +801,10 @@ namespace AHON_TRACK.Services
                     await LogActionAsync(connection, "UPDATE",
                         $"Updated equipment '{equipmentName}' status to: {newStatus}", true);
 
-                    _toastManager?.CreateToast("Status Updated")
-                        .WithContent($"Equipment status updated to '{newStatus}'.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager?.CreateToast("Status Updated")
+                          .WithContent($"Equipment status updated to '{newStatus}'.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, "Status updated successfully.");
                 }
@@ -864,10 +864,10 @@ namespace AHON_TRACK.Services
                     await LogActionAsync(connection, "DELETE",
                         $"Deleted equipment: '{equipmentName}' (ID: {equipmentID})", true);
 
-                    _toastManager?.CreateToast("Equipment Deleted")
-                        .WithContent($"Equipment '{equipmentName}' deleted successfully!")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*   _toastManager?.CreateToast("Equipment Deleted")
+                           .WithContent($"Equipment '{equipmentName}' deleted successfully!")
+                           .DismissOnClick()
+                           .ShowSuccess(); */
                     return (true, "Equipment deleted successfully.");
                 }
 
@@ -957,10 +957,10 @@ namespace AHON_TRACK.Services
 
                     transaction.Commit();
 
-                    _toastManager?.CreateToast("Equipment Deleted")
-                        .WithContent($"Successfully deleted {deletedCount} equipment item(s).")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*   _toastManager?.CreateToast("Equipment Deleted")
+                           .WithContent($"Successfully deleted {deletedCount} equipment item(s).")
+                           .DismissOnClick()
+                           .ShowSuccess(); */
 
                     return (true, $"Successfully deleted {deletedCount} equipment item(s).", deletedCount);
                 }

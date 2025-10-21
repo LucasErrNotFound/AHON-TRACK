@@ -144,10 +144,10 @@ namespace AHON_TRACK.Services
 
                 await LogActionAsync(conn, "Added new supplier.", $"Added new supplier: {supplier.SupplierName}", true);
 
-                _toastManager.CreateToast("Supplier Added")
-                    .WithContent($"Successfully added supplier '{supplier.SupplierName}'.")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                /* _toastManager.CreateToast("Supplier Added")
+                     .WithContent($"Successfully added supplier '{supplier.SupplierName}'.")
+                     .DismissOnClick()
+                     .ShowSuccess(); */
 
                 return (true, "Supplier added successfully.", supplierIdInserted);
             }
@@ -395,10 +395,10 @@ namespace AHON_TRACK.Services
 
                 await LogActionAsync(conn, "Updated supplier data.", $"Updated supplier: {supplier.SupplierName}", true);
 
-                _toastManager.CreateToast("Supplier Updated")
-                    .WithContent($"Successfully updated supplier '{supplier.SupplierName}'.")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                /*  _toastManager.CreateToast("Supplier Updated")
+                      .WithContent($"Successfully updated supplier '{supplier.SupplierName}'.")
+                      .DismissOnClick()
+                      .ShowSuccess(); */
 
                 return (true, "Supplier updated successfully.");
             }
@@ -450,10 +450,10 @@ namespace AHON_TRACK.Services
                 {
                     await LogActionAsync(conn, "Updated supplier status.", $"Updated supplier status to: {newStatus}", true);
 
-                    _toastManager.CreateToast("Status Updated")
-                        .WithContent($"Supplier status updated to '{newStatus}'.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager.CreateToast("Status Updated")
+                          .WithContent($"Supplier status updated to '{newStatus}'.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, "Status updated successfully.");
                 }
@@ -501,10 +501,12 @@ namespace AHON_TRACK.Services
                 if (rows > 0)
                 {
                     await LogActionAsync(conn, "Soft deleted supplier.", $"Soft deleted supplier ID: {supplierId}", true);
-                    _toastManager.CreateToast("Supplier Deleted")
-                        .WithContent("Supplier has been moved to archive.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+
+                    /*  _toastManager.CreateToast("Supplier Deleted")
+                          .WithContent("Supplier has been moved to archive.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
+
                     return (true, "Supplier deleted (soft delete).");
                 }
 
@@ -573,10 +575,10 @@ namespace AHON_TRACK.Services
 
                     transaction.Commit();
 
-                    _toastManager.CreateToast("Suppliers Deleted")
-                        .WithContent($"Successfully deleted (soft) {deletedCount} supplier(s).")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager.CreateToast("Suppliers Deleted")
+                          .WithContent($"Successfully deleted (soft) {deletedCount} supplier(s).")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, $"Successfully deleted (soft) {deletedCount} supplier(s).", deletedCount);
                 }

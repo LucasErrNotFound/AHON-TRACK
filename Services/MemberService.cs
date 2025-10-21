@@ -175,10 +175,10 @@ namespace AHON_TRACK.Services
 
                 await LogActionAsync(conn, "CREATE", $"Added new member: {member.FirstName} {member.LastName}", true);
 
-                _toastManager?.CreateToast("Member Added")
-                    .WithContent($"Successfully added {member.FirstName} {member.LastName}. with valid until {member.ValidUntil}.")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                /*  _toastManager?.CreateToast("Member Added")
+                      .WithContent($"Successfully added {member.FirstName} {member.LastName}. with valid until {member.ValidUntil}.")
+                      .DismissOnClick()
+                      .ShowSuccess(); */
 
                 return (true, "Member added successfully.", memberId);
             }
@@ -480,10 +480,10 @@ namespace AHON_TRACK.Services
                 {
                     await LogActionAsync(conn, "UPDATE", $"Updated member: {member.FirstName} {member.LastName}", true);
 
-                    _toastManager?.CreateToast("Member Updated")
-                        .WithContent($"Successfully updated {member.FirstName} {member.LastName}.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager?.CreateToast("Member Updated")
+                          .WithContent($"Successfully updated {member.FirstName} {member.LastName}.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, "Member updated successfully.");
                 }
@@ -562,10 +562,11 @@ namespace AHON_TRACK.Services
                 {
                     await LogActionAsync(conn, "DELETE", $"Soft deleted member: {memberName} (ID: {memberId})", true);
 
-                    _toastManager?.CreateToast("Member Deleted")
-                        .WithContent($"Successfully deleted {memberName}.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+
+                    /*  _toastManager?.CreateToast("Member Deleted")
+                          .WithContent($"Successfully deleted {memberName}.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, "Member deleted successfully.");
                 }
@@ -620,10 +621,10 @@ namespace AHON_TRACK.Services
                 {
                     await LogActionAsync(conn, "DELETE", $"Soft deleted {rowsAffected} members", true);
 
-                    _toastManager?.CreateToast("Members Deleted")
-                        .WithContent($"Successfully deleted {rowsAffected} members.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*   _toastManager?.CreateToast("Members Deleted")
+                           .WithContent($"Successfully deleted {rowsAffected} members.")
+                           .DismissOnClick()
+                           .ShowSuccess(); */
 
                     return (true, "Members deleted successfully.");
                 }

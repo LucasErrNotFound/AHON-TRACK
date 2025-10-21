@@ -385,10 +385,10 @@ namespace AHON_TRACK.Services
 
                     transaction.Commit();
 
-                    _toastManager?.CreateToast("Employee Added")
-                        .WithContent($"Successfully added {employee.FirstName} {employee.LastName}.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager?.CreateToast("Employee Added")
+                          .WithContent($"Successfully added {employee.FirstName} {employee.LastName}.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, "Employee added successfully.", employeeId);
                 }
@@ -915,10 +915,10 @@ namespace AHON_TRACK.Services
 
                         transaction.Commit();
 
-                        _toastManager?.CreateToast("Employee Updated")
-                            .WithContent($"Successfully updated {employee.FirstName} {employee.LastName}.")
-                            .DismissOnClick()
-                            .ShowSuccess();
+                        /* _toastManager?.CreateToast("Employee Updated")
+                             .WithContent($"Successfully updated {employee.FirstName} {employee.LastName}.")
+                             .DismissOnClick()
+                             .ShowSuccess(); */
 
                         return (true, "Employee updated successfully.");
                     }

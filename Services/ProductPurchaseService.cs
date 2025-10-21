@@ -419,9 +419,9 @@ namespace AHON_TRACK.Services
                     $"Payment processed for {customer.FirstName} {customer.LastName} ({customer.CustomerType}). Total: ₱{totalAmount:N2} via {paymentMethod}. Items: {itemsList}",
                     true);
 
-                _toastManager.CreateToast("Payment Successful")
-                    .WithContent($"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}")
-                    .ShowSuccess();
+                /* _toastManager.CreateToast("Payment Successful")
+                     .WithContent($"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}")
+                     .ShowSuccess();*/
                 bool anyPackageDiscount = cartItems.Any(i => i.Category == CategoryConstants.GymPackage);
                 bool anyProductDiscount = cartItems.Any(i => i.Category == CategoryConstants.Product);
 
@@ -495,7 +495,7 @@ namespace AHON_TRACK.Services
                         ValidFrom,
                         ValidTo
                     FROM Packages
-                    WHERE GETDATE() BETWEEN ValidFrom AND ValidTo;";
+                    WHERE GETDATE() BETWEEN ValidFrom AND ValidTo AND IsDeleted = 0;";
 
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();

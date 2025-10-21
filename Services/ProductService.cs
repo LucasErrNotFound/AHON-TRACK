@@ -244,10 +244,10 @@ namespace AHON_TRACK.Services
 
                 // Show add toast with details
                 var addedExpiryText = product.ExpiryDate.HasValue ? product.ExpiryDate.Value.ToString("yyyy-MM-dd") : "N/A";
-                _toastManager.CreateToast("Product Added")
-                    .WithContent($"Product: {product.ProductName}\nStock: {product.CurrentStock}\nExpiry: {addedExpiryText}\nStatus: {product.Status}")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                /* _toastManager.CreateToast("Product Added")
+                     .WithContent($"Product: {product.ProductName}\nStock: {product.CurrentStock}\nExpiry: {addedExpiryText}\nStatus: {product.Status}")
+                     .DismissOnClick()
+                     .ShowSuccess(); */
 
                 return (true, "Product added successfully.", productId);
             }
@@ -671,10 +671,10 @@ namespace AHON_TRACK.Services
 
                 await LogActionAsync(conn, "UPDATE", $"Updated product: {product.ProductName} (ID: {product.ProductID})", true);
 
-                _toastManager.CreateToast("Product Updated")
-                    .WithContent($"Successfully updated product '{product.ProductName}'.\nStock: {product.CurrentStock}\nExpiry: {(product.ExpiryDate.HasValue ? product.ExpiryDate.Value.ToString("yyyy-MM-dd") : "N/A")}\nStatus: {product.Status}")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                /*  _toastManager.CreateToast("Product Updated")
+                      .WithContent($"Successfully updated product '{product.ProductName}'.\nStock: {product.CurrentStock}\nExpiry: {(product.ExpiryDate.HasValue ? product.ExpiryDate.Value.ToString("yyyy-MM-dd") : "N/A")}\nStatus: {product.Status}")
+                      .DismissOnClick()
+                      .ShowSuccess(); */
 
                 return (true, "Product updated successfully.");
             }
@@ -730,10 +730,10 @@ namespace AHON_TRACK.Services
                 {
                     await LogActionAsync(conn, "Stock updated.", $"Updated product stock to: {newStock}", true);
 
-                    _toastManager.CreateToast("Stock Updated")
-                        .WithContent($"Product stock updated to {newStock}.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager.CreateToast("Stock Updated")
+                          .WithContent($"Product stock updated to {newStock}.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, "Stock updated successfully.");
                 }
@@ -796,10 +796,10 @@ namespace AHON_TRACK.Services
                 {
                     await LogActionAsync(conn, "DELETE", $"Deleted product: {productName} (ID: {productId})", true);
 
-                    _toastManager.CreateToast("Product Deleted")
-                        .WithContent($"Successfully deleted product '{productName}'.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager.CreateToast("Product Deleted")
+                          .WithContent($"Successfully deleted product '{productName}'.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, "Product deleted successfully.");
                 }
@@ -875,10 +875,10 @@ namespace AHON_TRACK.Services
 
                     transaction.Commit();
 
-                    _toastManager.CreateToast("Products Deleted")
-                        .WithContent($"Successfully deleted {deletedCount} product(s).")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /* _toastManager.CreateToast("Products Deleted")
+                         .WithContent($"Successfully deleted {deletedCount} product(s).")
+                         .DismissOnClick()
+                         .ShowSuccess(); */
 
                     return (true, $"Successfully deleted {deletedCount} product(s).", deletedCount);
                 }

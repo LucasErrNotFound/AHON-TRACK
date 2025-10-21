@@ -85,9 +85,9 @@ namespace AHON_TRACK.Services
 
                 if (existingCount > 0)
                 {
-                    _toastManager.CreateToast("Already Checked In")
-                        .WithContent("Member is already checked in today")
-                        .ShowWarning();
+                    /*    _toastManager.CreateToast("Already Checked In")
+                            .WithContent("Member is already checked in today")
+                            .ShowWarning();*/
                     return false;
                 }
 
@@ -144,9 +144,9 @@ namespace AHON_TRACK.Services
 
                 if (alreadyCheckedIn)
                 {
-                    _toastManager.CreateToast("Already Checked In")
-                        .WithContent("This walk-in customer is already checked in today")
-                        .ShowWarning();
+                    /*   _toastManager.CreateToast("Already Checked In")
+                           .WithContent("This walk-in customer is already checked in today")
+                           .ShowWarning(); */
                     return false;
                 }
 
@@ -327,7 +327,7 @@ namespace AHON_TRACK.Services
                         m.ValidUntil,
                         m.ProfilePicture
                     FROM Members m
-                    WHERE m.Status = 'Active'
+                    WHERE m.Status = 'Active' AND IsDeleted = 0
                     ORDER BY MemberID;";
 
                 await using var command = new SqlCommand(query, connection);

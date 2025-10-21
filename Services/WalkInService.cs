@@ -239,10 +239,10 @@ namespace AHON_TRACK.Services
                     // Commit the transaction - both customer and check-in record are saved
                     transaction.Commit();
 
-                    _toastManager.CreateToast("Customer Registered & Checked In")
-                        .WithContent($"Successfully registered and checked in {walkIn.FirstName} {walkIn.LastName}.")
-                        .DismissOnClick()
-                        .ShowSuccess();
+                    /*  _toastManager.CreateToast("Customer Registered & Checked In")
+                          .WithContent($"Successfully registered and checked in {walkIn.FirstName} {walkIn.LastName}.")
+                          .DismissOnClick()
+                          .ShowSuccess(); */
 
                     return (true, "Walk-in customer registered and checked in successfully.", customerId);
                 }

@@ -23,6 +23,7 @@
 
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.3" />
+		<PackageReference Include="Dapper" Version="2.1.66" />
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.2" />
 		<PackageReference Include="ShadUI" Version="0.1.5" />
 		<PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />

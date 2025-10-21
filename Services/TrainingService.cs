@@ -183,9 +183,9 @@ VALUES (
                 await LogActionAsync(connection, "CREATE",
                     $"Added training schedule for {training.firstName} {training.lastName} with {training.assignedCoach} on {training.scheduledDate:MMM dd, yyyy}.", true);
 
-                _toastManager?.CreateToast("Training Added")
-                    .WithContent($"Training scheduled for {training.firstName} {training.lastName} successfully!")
-                    .ShowSuccess();
+                /*   _toastManager?.CreateToast("Training Added")
+                       .WithContent($"Training scheduled for {training.firstName} {training.lastName} successfully!")
+                       .ShowSuccess(); */
 
                 return true;
             }
@@ -555,9 +555,10 @@ WHERE TrainingID = @TrainingID";
                     await LogActionAsync(connection, "UPDATE",
                         $"Updated training schedule for {training.firstName} {training.lastName} (ID: {training.trainingID})", true);
 
-                    _toastManager?.CreateToast("Training Schedule Updated")
-                        .WithContent($"Training schedule for {training.firstName} {training.lastName} updated successfully!")
-                        .ShowSuccess();
+                    /*  _toastManager?.CreateToast("Training Schedule Updated")
+                          .WithContent($"Training schedule for {training.firstName} {training.lastName} updated successfully!")
+                          .ShowSuccess(); */
+
                     return true;
                 }
 
@@ -671,9 +672,10 @@ WHERE TrainingID = @TrainingID";
                     await LogActionAsync(connection, "DELETE",
                         $"Deleted training schedule: {trainingInfo} (ID: {trainingID})", true);
 
-                    _toastManager?.CreateToast("Training Schedule Deleted")
+                    /*   _toastManager?.CreateToast("Training Schedule Deleted")
                         .WithContent("Training schedule deleted successfully!")
-                        .ShowSuccess();
+                        .ShowSuccess();*/
+
                     return true;
                 }
 
