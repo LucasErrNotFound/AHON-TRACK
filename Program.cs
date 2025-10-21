@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Serilog;
 using System;
+using QuestPDF.Infrastructure;
 
 namespace AHON_TRACK
 {
@@ -41,6 +42,7 @@ namespace AHON_TRACK
 
             try
             {
+                QuestPDF.Settings.License = LicenseType.Community;
                 BuildAvaloniaApp()
                     .StartWithClassicDesktopLifetime(args);
             }

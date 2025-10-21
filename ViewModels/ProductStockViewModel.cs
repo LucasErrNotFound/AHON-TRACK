@@ -5,10 +5,16 @@ using System.ComponentModel;
 using AHON_TRACK.Components.ViewModels;
 using System.Linq;
 using System.Threading.Tasks;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using QuestPDF.Companion;
+using QuestPDF.Fluent;
 using ShadUI;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Models;
@@ -62,12 +68,16 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly IProductService _productService;
+    private readonly SettingsService _settingsService;
+    private AppSettings? _currentSettings;
 
-    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IProductService productService)
+    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+        SettingsService settingsService, IProductService productService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _settingsService = settingsService;
         _productService = productService;
 
         _ = LoadProductDataAsync();
@@ -79,7 +89,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _productService = null!; // No service available in default constructor
+        _settingsService = new SettingsService();
+        _productService = null!;
 
         _ = LoadProductDataAsync();
         UpdateProductCounts();
@@ -89,7 +100,9 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     public async Task Initialize()
     {
         if (IsInitialized) return;
+        await LoadSettingsAsync();
         await LoadProductDataAsync();
+        
         UpdateProductCounts();
         IsInitialized = true;
     }
@@ -374,7 +387,97 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             IsSearchingProduct = false;
         }
     }
+    
+    [RelayCommand]
+    private async Task ExportProductStock()
+    {
+        try
+        {
+            // Check if there are any product list to export
+            if (ProductItems.Count == 0)
+            {
+                _toastManager.CreateToast("No product stock list to export")
+                    .WithContent("There are no product stock list available for the selected filter.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
 
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+        
+            IStorageFolder? startLocation = null;
+            if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
+            {
+                try
+                {
+                    startLocation = await toplevel.StorageProvider.TryGetFolderFromPathAsync(_currentSettings.DownloadPath);
+                }
+                catch
+                {
+                    // If path is invalid, startLocation will remain null
+                }
+            }
+        
+            var fileName = $"Product_Stock_List_{DateTime.Today:yyyy-MM-dd}.pdf";
+            var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Download Product Stock List",
+                SuggestedStartLocation = startLocation,
+                FileTypeChoices = [FilePickerFileTypes.Pdf],
+                SuggestedFileName = fileName,
+                ShowOverwritePrompt = true
+            });
+
+            if (pdfFile == null) return;
+
+            var productStockModel = new ProductStockDocumentModel 
+            {
+                GeneratedDate = DateTime.Today,
+                GymName = "AHON Victory Fitness Gym",
+                GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
+                GymPhone = "+63 123 456 7890",
+                GymEmail = "info@ahonfitness.com",
+                Items = ProductItems.Select(product => new ProductItem 
+                {
+                    ID = product.ID,
+                    ProductName = product.Name,
+                    Sku = product.Sku,
+                    Category = product.Category,
+                    CurrentStock = product.CurrentStock ?? 0,
+                    Price = product.Price,
+                    Supplier = product.Supplier,
+                    Expiry = product.Expiry,
+                    Status = product.Status,
+                }).ToList()
+            };
+
+            var document = new ProductStockDocument(productStockModel);
+        
+            await using var stream = await pdfFile.OpenWriteAsync();
+            
+            // Both cannot be enabled at the same time. Disable one of them 
+            document.GeneratePdf(stream); // Generate the PDF
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+        
+            _toastManager.CreateToast("Product stock list exported successfully")
+                .WithContent($"Product stock list has been saved to {pdfFile.Name}")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Export failed")
+                .WithContent($"Failed to export product stock list: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+    
+    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
+    
     private void ApplyProductFilter()
     {
         if (OriginalProductData.Count == 0) return;

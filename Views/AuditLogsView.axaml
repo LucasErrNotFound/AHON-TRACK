@@ -91,19 +91,20 @@
 									<Button
                                         HorizontalAlignment="Right"
                                         Grid.Column="3"
-                                        Classes="Primary">
-										<StackPanel Orientation="Horizontal">
-											<Svg
+                                        Classes="Primary"
+                                        Command="{CompiledBinding DownloadAuditLogsCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
                                                 Width="20"
                                                 Height="20"
                                                 Path="avares://AHON_TRACK/Assets/AuditLogsView/download-icon.svg"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,8,0"/>
-											<TextBlock Text="Download" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Download Logs (PDF)" VerticalAlignment="Center"/>
 										</StackPanel>
 									</Button>
 								</Grid>
-								<DataGrid
+                                <DataGrid
                                     MaxHeight="740"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"

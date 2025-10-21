@@ -13,6 +13,11 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using AHON_TRACK.Services;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
+using QuestPDF.Companion;
+using QuestPDF.Fluent;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -63,14 +68,18 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     private readonly PageManager _pageManager;
     private readonly SupplierDialogCardViewModel _supplierDialogCardViewModel;
     private readonly ISupplierService _supplierService;
+    private readonly SettingsService _settingsService;
+    private AppSettings? _currentSettings;
 
-    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, SupplierDialogCardViewModel supplierDialogCardViewModel, ISupplierService supplierService)
+    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+        SupplierDialogCardViewModel supplierDialogCardViewModel, SettingsService settingsService, ISupplierService supplierService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _supplierDialogCardViewModel = supplierDialogCardViewModel;
         _supplierService = supplierService;
+        _settingsService = settingsService;
 
         _ = LoadSupplierDataFromDatabaseAsync();
         UpdateSupplierCounts();
@@ -82,6 +91,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
+        _settingsService = new SettingsService();
         _supplierService = null!; // This should be injected in real scenario
 
         _ = LoadSupplierDataFromDatabaseAsync();
@@ -92,6 +102,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     public async Task Initialize()
     {
         if (IsInitialized) return;
+        await LoadSettingsAsync();
+        
         if (_supplierService != null)
         {
             await LoadSupplierDataFromDatabaseAsync();
@@ -196,7 +208,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 ID = 1001,
                 Name = "San Miguel",
                 ContactPerson = "Rodolfo Morales",
-                Email = "rodolfo.morales21@gmai.com",
+                Email = "rodolfo.morales21@gmail.com",
                 PhoneNumber = "09182938475",
                 Products = "Drinks",
                 Status = "Active"
@@ -206,7 +218,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 ID = 1002,
                 Name = "AHON Factory",
                 ContactPerson = "Joel Abalos",
-                Email = "joel.abalos@gmai.com",
+                Email = "joel.abalos@gmail.com",
                 PhoneNumber = "09382293009",
                 Products = "Products",
                 Status = "Inactive"
@@ -216,7 +228,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 ID = 1003,
                 Name = "Optimum",
                 ContactPerson = "Mr. Lopez",
-                Email = "ignacio.lopez@gmai.com",
+                Email = "ignacio.lopez@gmail.com",
                 PhoneNumber = "09339948293",
                 Products = "Supplements",
                 Status = "Suspended"
@@ -418,7 +430,95 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             IsSearchingSupplier = false;
         }
     }
+    
+    [RelayCommand]
+    private async Task ExportSupplierList()
+    {
+        try
+        {
+            // Check if there are any supplier list to export
+            if (SupplierItems.Count == 0)
+            {
+                _toastManager.CreateToast("No supplier list to export")
+                    .WithContent("There are no supplier list available for the selected filter.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
 
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+        
+            IStorageFolder? startLocation = null;
+            if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
+            {
+                try
+                {
+                    startLocation = await toplevel.StorageProvider.TryGetFolderFromPathAsync(_currentSettings.DownloadPath);
+                }
+                catch
+                {
+                    // If path is invalid, startLocation will remain null
+                }
+            }
+        
+            var fileName = $"Supplier_List_{DateTime.Today:yyyy-MM-dd}.pdf";
+            var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Download Supplier List",
+                SuggestedStartLocation = startLocation,
+                FileTypeChoices = [FilePickerFileTypes.Pdf],
+                SuggestedFileName = fileName,
+                ShowOverwritePrompt = true
+            });
+
+            if (pdfFile == null) return;
+
+            var supplierModel = new SupplierDocumentModel 
+            {
+                GeneratedDate = DateTime.Today,
+                GymName = "AHON Victory Fitness Gym",
+                GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
+                GymPhone = "+63 123 456 7890",
+                GymEmail = "info@ahonfitness.com",
+                Items = SupplierItems.Select(supplier => new SupplierItem 
+                {
+                    ID = supplier.ID ?? 0,
+                    Name = supplier.Name,
+                    ContactPerson = supplier.ContactPerson,
+                    Email = supplier.Email,
+                    PhoneNumber = supplier.PhoneNumber,
+                    Products = supplier.Products,
+                    Status = supplier.Status
+                }).ToList()
+            };
+
+            var document = new SupplierDocument(supplierModel);
+        
+            await using var stream = await pdfFile.OpenWriteAsync();
+            
+            // Both cannot be enabled at the same time. Disable one of them 
+            document.GeneratePdf(stream); // Generate the PDF
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+        
+            _toastManager.CreateToast("Supplier list exported successfully")
+                .WithContent($"Supplier list has been saved to {pdfFile.Name}")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Export failed")
+                .WithContent($"Failed to export supplier list: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+    
+    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
+    
     private void ApplySupplierFilter()
     {
         if (OriginalSupplierData.Count == 0) return;

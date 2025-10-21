@@ -33,6 +33,8 @@
 		<converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter"/>
 		<converters:DateToStringConverter x:Key="DateToStringConverter"/>
 		<converters:StringToBitmapConverter x:Key="StringToBitmapConverter"/>
+		<converters:StatusAndCanDeleteSelectedConverter x:Key="StatusAndCanDeleteSelectedConverter"/>
+		<converters:StatusAndSelectedToDeleteEnabledConverter x:Key="StatusAndSelectedToDeleteEnabledConverter"/>
 	</UserControl.Resources>
 
 	<DockPanel LastChildFill="True">
@@ -320,13 +322,31 @@
 															Foreground="{DynamicResource DestructiveColor}"
 															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
 															CommandParameter="{CompiledBinding}"
-															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"/>
+															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+															<MenuItem.IsEnabled>
+																<MultiBinding Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+																	<!-- 1) status of the row where the menu is opened -->
+																	<Binding Path="Status" />
+																	<!-- 2) currently selected member's status from the viewmodel (may be null) -->
+																	<Binding Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedMember.Status" FallbackValue="{x:Null}" />
+																</MultiBinding>
+															</MenuItem.IsEnabled>
+														</MenuItem>
 														<MenuItem
 															Header="Delete Selected"
 															Foreground="{DynamicResource DestructiveColor}"
 															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
 															CommandParameter="{CompiledBinding}"
-															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"/>
+															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+															<MenuItem.IsEnabled>
+																<MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+																	<!-- current row's Status -->
+																	<Binding Path="Status" />
+																	<!-- view-model global flag -->
+																	<Binding Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).CanDeleteSelectedMembers" FallbackValue="{x:Null}"/>
+																</MultiBinding>
+															</MenuItem.IsEnabled>
+														</MenuItem>
 													</MenuItem>
 												</Menu>
 											</DataTemplate>
@@ -525,7 +545,8 @@
 									<Button
 										Classes="Destructive"
 										Padding="20,0,20,0"
-										Command="{CompiledBinding ShowDeleteMemberCommand}">
+										IsEnabled="{CompiledBinding !IsDeleteButtonEnabled}"
+										Command="{CompiledBinding ShowDeleteMemberDialogCommand}">
 										<StackPanel Orientation="Horizontal">
 											<Svg
 												Width="18"
@@ -555,6 +576,7 @@
 									<Button
 										Classes="Primary"
 										Padding="20,0,20,0"
+										IsEnabled="{CompiledBinding IsRenewButtonEnabled}"
 										Command="{CompiledBinding OpenRenewMemberViewCommand}">
 										<StackPanel Orientation="Horizontal">
 											<Svg

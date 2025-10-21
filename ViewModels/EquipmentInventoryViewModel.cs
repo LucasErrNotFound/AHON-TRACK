@@ -7,10 +7,15 @@ using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Services;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using QuestPDF.Companion;
+using QuestPDF.Fluent;
 using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
@@ -62,21 +67,21 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     private readonly PageManager _pageManager;
     private readonly EquipmentDialogCardViewModel _equipmentDialogCardViewModel;
     private readonly IInventoryService _inventoryService;
-
-    public EquipmentInventoryViewModel(
-        DialogManager dialogManager,
-        ToastManager toastManager,
-        PageManager pageManager,
-        EquipmentDialogCardViewModel equipmentDialogCardViewModel,
-        IInventoryService inventoryService)
+    private readonly SettingsService _settingsService;
+    private AppSettings? _currentSettings;
+    
+    public EquipmentInventoryViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+        EquipmentDialogCardViewModel equipmentDialogCardViewModel, SettingsService settingsService, IInventoryService inventoryService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _equipmentDialogCardViewModel = equipmentDialogCardViewModel;
         _inventoryService = inventoryService;
+        _settingsService = settingsService;
 
         _ = LoadEquipmentDataAsync();
+        UpdateEquipmentCounts();
     }
 
     public EquipmentInventoryViewModel()
@@ -85,15 +90,18 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _equipmentDialogCardViewModel = new EquipmentDialogCardViewModel();
+        _settingsService = new SettingsService();
         _inventoryService = null!;
 
         _ = LoadEquipmentDataAsync();
+        UpdateEquipmentCounts();
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
         if (IsInitialized) return;
+        await LoadSettingsAsync();
         _ = LoadEquipmentDataAsync();
         IsInitialized = true;
     }
@@ -341,6 +349,96 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             IsSearchingEquipment = false;
         }
     }
+    
+    [RelayCommand]
+    private async Task ExportEquipmentList()
+    {
+        try
+        {
+            // Check if there are any equipment list to export
+            if (EquipmentItems.Count == 0)
+            {
+                _toastManager.CreateToast("No equipment list to export")
+                    .WithContent("There are no equipment list available for the selected filter.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+        
+            IStorageFolder? startLocation = null;
+            if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
+            {
+                try
+                {
+                    startLocation = await toplevel.StorageProvider.TryGetFolderFromPathAsync(_currentSettings.DownloadPath);
+                }
+                catch
+                {
+                    // If path is invalid, startLocation will remain null
+                }
+            }
+        
+            var fileName = $"Equipment_List_{DateTime.Today:yyyy-MM-dd}.pdf";
+            var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Download Equipment List",
+                SuggestedStartLocation = startLocation,
+                FileTypeChoices = [FilePickerFileTypes.Pdf],
+                SuggestedFileName = fileName,
+                ShowOverwritePrompt = true
+            });
+
+            if (pdfFile == null) return;
+
+            var equipmentModel = new EquipmentDocumentModel 
+            {
+                GeneratedDate = DateTime.Today,
+                GymName = "AHON Victory Fitness Gym",
+                GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
+                GymPhone = "+63 123 456 7890",
+                GymEmail = "info@ahonfitness.com",
+                Items = EquipmentItems.Select(equipment => new EquipmentItem
+                {
+                    ID = equipment.ID,
+                    BrandName = equipment.BrandName,
+                    Category = equipment.Category,
+                    Supplier = equipment.SupplierName,
+                    CurrentStock = equipment.CurrentStock ?? 0,
+                    PurchasedPrice = (int?)equipment.PurchasedPrice ?? 0,
+                    PurchasedDate = equipment.PurchasedDate,
+                    Warranty = equipment.Warranty,
+                    Condition = equipment.Condition,
+                    LastMaintenance = equipment.LastMaintenance,
+                    NextMaintenance = equipment.NextMaintenance
+                }).ToList()
+            };
+
+            var document = new EquipmentDocument(equipmentModel);
+        
+            await using var stream = await pdfFile.OpenWriteAsync();
+            
+            // Both cannot be enabled at the same time. Disable one of them 
+            document.GeneratePdf(stream); // Generate the PDF
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+        
+            _toastManager.CreateToast("Equipment list exported successfully")
+                .WithContent($"Equipment list has been saved to {pdfFile.Name}")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Export failed")
+                .WithContent($"Failed to export equipment list: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
 
     [RelayCommand]
     private void ShowEditEquipmentDialog(Equipment? equipment)
@@ -466,7 +564,9 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             .Dismissible()
             .Show();
     }
-
+    
+    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
+    
     private async Task OnSubmitDeleteSingleItem(Equipment equipment)
     {
         try

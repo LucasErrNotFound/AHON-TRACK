@@ -13,6 +13,16 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using QuestPDF.Companion;
+using QuestPDF.Fluent;
+using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -76,26 +86,29 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly IDashboardService _dashboardService;
+    private readonly SettingsService _settingsService;
+    private AppSettings? _currentSettings;
 
-    public AuditLogsViewModel(
-        DialogManager dialogManager,
-        ToastManager toastManager,
-        PageManager pageManager,
-        IDashboardService dashboardService)
+    public AuditLogsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+	    SettingsService settingsService, IDashboardService dashboardService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _dashboardService = dashboardService;
+        _settingsService = settingsService;
+        
+        LoadSampleData();
+        UpdateCounts();
     }
 
-    // Parameterless constructor for design-time support
     public AuditLogsViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _dashboardService = null!; // Will use sample data when service is null
+        _settingsService = new SettingsService();
+        _dashboardService = null!;
 
         LoadSampleData();
         UpdateCounts();
@@ -249,7 +262,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             }
         ];
     }
-
+    
     [RelayCommand]
     private async Task SearchAuditLogs()
     {
@@ -299,6 +312,93 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             IsSearchingAuditLogs = false;
         }
     }
+	
+    [RelayCommand]
+    private async Task DownloadAuditLogs()
+    {
+        try
+        {
+            // Check if there are any audit logs to export
+            if (AuditLogs.Count == 0)
+            {
+                _toastManager.CreateToast("No audit logs to export")
+                    .WithContent("There are no audit logs available for the selected date.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+        
+            IStorageFolder? startLocation = null;
+            if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
+            {
+                try
+                {
+                    startLocation = await toplevel.StorageProvider.TryGetFolderFromPathAsync(_currentSettings.DownloadPath);
+                }
+                catch
+                {
+                    // If path is invalid, startLocation will remain null
+                }
+            }
+        
+            var fileName = $"Audit_Logs_{SelectedDate:yyyy-MM-dd}.pdf";
+            var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Download Audit Logs",
+                SuggestedStartLocation = startLocation,
+                FileTypeChoices = [FilePickerFileTypes.Pdf],
+                SuggestedFileName = fileName,
+                ShowOverwritePrompt = true
+            });
+
+            if (pdfFile == null) return;
+
+            var auditLogModel = new AuditLogDocumentModel
+            {
+                GeneratedDate = DateTime.Today,
+                GymName = "AHON Victory Fitness Gym",
+                GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
+                GymPhone = "+63 123 456 7890",
+                GymEmail = "info@ahonfitness.com",
+                Items = AuditLogs.Select(auditLog => new AuditLogItem
+                {
+                    ID = Convert.ToInt32(auditLog.ID),
+                    Name = auditLog.Name,
+                    Position = auditLog.Position,
+                    LogCount = auditLog.LogCount ?? 0,
+                    DateAndTime = auditLog.DateAndTime,
+                    Action = auditLog.Action
+                }).ToList()
+            };
+
+            var document = new AuditLogDocument(auditLogModel);
+        
+            await using var stream = await pdfFile.OpenWriteAsync();
+            
+            // Both cannot be enabled at the same time. Disable one of them 
+            document.GeneratePdf(stream); // Generate the PDF
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+        
+            _toastManager.CreateToast("Audit Logs exported successfully")
+                .WithContent($"Audit Logs has been saved to {pdfFile.Name}")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Export failed")
+                .WithContent($"Failed to export audit logs: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+    
+    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
 
     [RelayCommand]
     private void SortReset()
@@ -466,8 +566,8 @@ public partial class AuditLogItems : ObservableObject
 {
     [ObservableProperty]
     private bool _isSelected;
-
-    [ObservableProperty]
+    
+    [ObservableProperty] 
     private string? _iD;
 
     [ObservableProperty]
@@ -487,6 +587,9 @@ public partial class AuditLogItems : ObservableObject
 
     [ObservableProperty]
     private string? _action;
+    
+    [ObservableProperty]
+    private decimal? _logCount;
 
     public string FormattedDateTime => DateAndTime.ToString("MMMM dd, yyyy h:mm:ss tt");
 }
