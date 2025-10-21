@@ -223,6 +223,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         {
             ["Context"] = ProductViewContext.AddProduct
         });
+        _ = LoadProductDataAsync();
     }
 
     [RelayCommand]
@@ -234,6 +235,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             ["Context"] = ProductViewContext.EditProduct,
             ["SelectedProduct"] = SelectedProduct
         });
+        _ = LoadProductDataAsync();
     }
 
     [RelayCommand]
@@ -451,14 +453,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             DiscountInPercentage = model.IsPercentageDiscount,
             Poster = posterPath
         };
-    }
-
-    public void SetNavigationParameters(Dictionary<string, object> parameters)
-    {
-        if (parameters.TryGetValue("ShouldRefresh", out var shouldRefresh) && (bool)shouldRefresh)
-        {
-            _ = LoadProductDataAsync();
-        }
     }
 }
 
