@@ -60,7 +60,9 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     [AvaloniaHotReload]
     public void Initialize()
     {
+        _ = LoadDataAsync();
     }
+
     private async Task LoadDataAsync()
     {
         try

@@ -346,73 +346,6 @@
 								<Separator Background="{StaticResource ForegroundColor}"/>
 
 								<!-- Walk in Plan -->
-								<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPlanVisible}">
-									<!-- Left Column -->
-									<StackPanel Grid.Column="0">
-										<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
-											<Svg
-												Path="avares://AHON_TRACK/Assets/CheckInOutView/shopping-cart-icon.svg"
-												Width="24"
-												Height="24"
-												HorizontalAlignment="Left"
-												VerticalAlignment="Center"/>
-											<TextBlock
-												Classes="Muted"
-												Text="Walk in Plan"
-												VerticalAlignment="Center"/>
-										</StackPanel>
-										<StackPanel Orientation="Vertical" Margin="40,-25,0,20">
-											<TextBlock
-												Text="{CompiledBinding SelectedWalkInType}"
-												Classes="h4"/>
-											<TextBlock
-												Text="1 Day × ₱150.00"
-												FontSize="16"
-												Classes="Muted"/>
-											<StackPanel Spacing="5" Margin="0,20,0,0">
-												<TextBlock
-													Text="Subtotal:"
-													Classes="h5"/>
-												<TextBlock
-													Text="Discount (0%):"
-													Classes="h5SuccessColor"/>
-												<TextBlock
-													Text="Walk in Total:"
-													Classes="h5"/>
-											</StackPanel>
-										</StackPanel>
-									</StackPanel>
-									<!-- Right Column -->
-									<StackPanel Grid.Column="1">
-										<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
-											<Border
-												CornerRadius="5"
-												Padding="20,5,20,5"
-												Background="LightGray">
-												<TextBlock
-													Text="1 Day"
-													FontSize="14"
-													FontWeight="Bold"
-													HorizontalAlignment="Center"
-													Foreground="{StaticResource FontForeground}"/>
-											</Border>
-											<StackPanel Spacing="5" Margin="0,20,0,0">
-												<TextBlock
-													Text="₱150.00"
-													Classes="h5"/>
-												<TextBlock
-													Text="-₱0"
-													Classes="h5SuccessColor"/>
-												<TextBlock
-													Text="₱150.00"
-													Classes="h5"/>
-											</StackPanel>
-										</StackPanel>
-									</StackPanel>
-								</Grid>
-								<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPlanVisible}"/>
-
-								<!-- Walk in Plan -->
 								<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPackageDetailsVisible}">
 									<!-- Left Column -->
 									<StackPanel Grid.Column="0">
@@ -430,7 +363,7 @@
 										</StackPanel>
 										<StackPanel Orientation="Vertical" Margin="40,-25,0,20">
 											<TextBlock
-												Text="Muay Thai Session"
+												Text="{CompiledBinding PackageName}"
 												Classes="h4"/>
 											<TextBlock
 												Text="{CompiledBinding SessionQuantity}"
@@ -466,13 +399,13 @@
 											</Border>
 											<StackPanel Spacing="5" Margin="0,20,0,0">
 												<TextBlock
-													Text="₱1,500.00"
+													Text="{CompiledBinding PackageSubtotal}"
 													Classes="h5"/>
 												<TextBlock
-													Text="-₱0"
+													Text="{CompiledBinding PackageDiscount}"
 													Classes="h5SuccessColor"/>
 												<TextBlock
-													Text="₱1,500.00"
+													Text="{CompiledBinding PackageTotal}"
 													Classes="h5"/>
 											</StackPanel>
 										</StackPanel>
@@ -575,15 +508,15 @@
 										<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 											<StackPanel Spacing="5" Margin="0,4,0,0">
 												<TextBlock
-													Text="TX-2025-0109"
+													Text="{CompiledBinding TransactionID}"
 													TextWrapping="NoWrap"
 													FontWeight="SemiBold"
 													Classes="h5"/>
 												<TextBlock
-													Text="July 28, 2025"
+													Text="{CompiledBinding CurrentDate}"
 													Classes="h5"/>
 												<TextBlock
-													Text="6:45 PM"
+													Text="{CompiledBinding CurrentTime}"
 													Classes="h5"/>
 											</StackPanel>
 										</StackPanel>
@@ -603,9 +536,6 @@
 										<StackPanel Orientation="Vertical" Margin="0,-25,0,20" Spacing="10">
 											<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 												<TextBlock
-													Text="Walk in (1 Day):"
-													Classes="h5"/>
-												<TextBlock
 													Text="Specialized Package:"
 													Classes="h5"/>
 												<TextBlock
@@ -620,13 +550,10 @@
 										<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 											<StackPanel Spacing="5" Margin="0,4,0,0">
 												<TextBlock
-													Text="₱150.00"
+													Text="{CompiledBinding PurchaseSummaryPackage}"
 													Classes="h5"/>
 												<TextBlock
-													Text="₱1,500.00"
-													Classes="h5"/>
-												<TextBlock
-													Text="₱1,650.00"
+													Text="{CompiledBinding PurchaseSummarySubtotal}"
 													Classes="h5"/>
 											</StackPanel>
 										</StackPanel>
@@ -648,7 +575,7 @@
 										<StackPanel Orientation="Vertical" Margin="0,15,0,0" Spacing="15" HorizontalAlignment="Right">
 											<StackPanel Spacing="5" Margin="0,4,0,0">
 												<TextBlock
-													Text="₱1,650.00"
+													Text="{CompiledBinding TotalAmount}"
 													Foreground="{DynamicResource SuccessColor}"
 													Classes="h2"/>
 											</StackPanel>
@@ -678,13 +605,13 @@
 												</StackPanel>
 												<StackPanel>
 													<TextBlock
-														Text="Valid from: July 28, 2025"
+														Text="{CompiledBinding ValidFromDate, StringFormat='Valid from: {0}'}"
 														Foreground="{DynamicResource InfoColor}"
 														FontSize="18"
 														FontWeight="Medium"
 														Margin="0,20"/>
 													<TextBlock
-														Text="Valid until: July 28, 2025"
+														Text="{CompiledBinding TransactionID}"
 														Foreground="{DynamicResource InfoColor}"
 														FontSize="18"
 														FontWeight="Medium"/>
@@ -720,7 +647,7 @@
 								</Grid>
 							</StackPanel>
 							<Button
-								Content="Pay ₱1,650.00"
+								Content="{CompiledBinding GrandTotal}"
 								Classes="Primary"
 								FontSize="20"
 								Height="50"

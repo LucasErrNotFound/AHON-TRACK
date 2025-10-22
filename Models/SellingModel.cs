@@ -18,5 +18,6 @@ namespace AHON_TRACK.Models
         public int Quantity { get; set; } = 1;
         public byte[]? ImagePath { get; set; }
         public decimal TotalPrice => Price * Quantity;
+        public string? Features { get; set; }
     }
 }

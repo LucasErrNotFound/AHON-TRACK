@@ -419,9 +419,10 @@ namespace AHON_TRACK.Services
                     $"Payment processed for {customer.FirstName} {customer.LastName} ({customer.CustomerType}). Total: ₱{totalAmount:N2} via {paymentMethod}. Items: {itemsList}",
                     true);
 
-                /* _toastManager.CreateToast("Payment Successful")
-                     .WithContent($"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}")
-                     .ShowSuccess();*/
+                _toastManager.CreateToast("Payment Successful")
+                    .WithContent($"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}")
+                    .ShowSuccess();
+
                 bool anyPackageDiscount = cartItems.Any(i => i.Category == CategoryConstants.GymPackage);
                 bool anyProductDiscount = cartItems.Any(i => i.Category == CategoryConstants.Product);
 
@@ -460,13 +461,11 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-
         #region READ
 
         public async Task<List<SellingModel>> GetAllGymPackagesAsync()
         {
             var packages = new List<SellingModel>();
-
             try
             {
                 if (!CanView())
@@ -476,30 +475,26 @@ namespace AHON_TRACK.Services
                         .ShowError();
                     return packages;
                 }
-
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
-
                 string query = @"
-                    SELECT 
-                        PackageID,
-                        PackageName,
-                        Description,
-                        Price,
-                        Duration,
-                        Features,
-                        Discount,
-                        DiscountType,
-                        DiscountFor,
-                        DiscountedPrice,
-                        ValidFrom,
-                        ValidTo
-                    FROM Packages
-                    WHERE GETDATE() BETWEEN ValidFrom AND ValidTo AND IsDeleted = 0;";
-
+            SELECT 
+                PackageID,
+                PackageName,
+                Description,
+                Price,
+                Duration,
+                Features,
+                Discount,
+                DiscountType,
+                DiscountFor,
+                DiscountedPrice,
+                ValidFrom,
+                ValidTo
+            FROM Packages
+            WHERE GETDATE() BETWEEN ValidFrom AND ValidTo AND IsDeleted = 0;";
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
-
                 while (await reader.ReadAsync())
                 {
                     packages.Add(new SellingModel
@@ -510,10 +505,10 @@ namespace AHON_TRACK.Services
                         Category = CategoryConstants.GymPackage,
                         Price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0,
                         Stock = 999, // Packages don't have physical stock
-                        ImagePath = null
+                        ImagePath = null,
+                        Features = reader["Features"]?.ToString() ?? string.Empty
                     });
                 }
-
                 return packages;
             }
             catch (Exception ex)
@@ -592,21 +587,33 @@ namespace AHON_TRACK.Services
 
                 string query = @"
                     SELECT 
-                        MemberID AS ID,
-                        FirstName,
-                        LastName,
-                        @MemberType AS CustomerType
-                    FROM Members
-                    WHERE Status = 'Active'
-
-                    UNION ALL
-
-                    SELECT 
-                        CustomerID AS ID,
-                        FirstName,
-                        LastName,
-                        @WalkInType AS CustomerType
-                    FROM WalkInCustomers;";
+                m.MemberID AS ID,
+                m.FirstName,
+                m.LastName,
+                @MemberType AS CustomerType,
+                mc.CheckIn
+            FROM Members m
+            INNER JOIN MemberCheckIns mc ON m.MemberID = mc.MemberID
+            WHERE CAST(mc.DateAttendance AS DATE) = CAST(GETDATE() AS DATE)
+                AND mc.CheckOut IS NULL
+                AND mc.IsDeleted = 0
+                AND m.Status = 'Active'
+            
+            UNION ALL
+            
+            SELECT 
+                wc.CustomerID AS ID,
+                wc.FirstName,
+                wc.LastName,
+                @WalkInType AS CustomerType,
+                wr.CheckIn
+            FROM WalkInCustomers wc
+            INNER JOIN WalkInRecords wr ON wc.CustomerID = wr.CustomerID
+            WHERE CAST(wr.Attendance AS DATE) = CAST(GETDATE() AS DATE)
+                AND wr.CheckOut IS NULL
+                AND wr.IsDeleted = 0
+            
+            ORDER BY CheckIn DESC;";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@MemberType", CategoryConstants.Member);
@@ -633,7 +640,7 @@ namespace AHON_TRACK.Services
             }
 
             return customers;
-        }
+        } // Done
 
         public async Task<List<RecentPurchaseModel>> GetRecentPurchasesAsync(int limit = 50)
         {
@@ -790,13 +797,11 @@ ORDER BY s.SaleDate DESC;";
 
         #endregion
 
-
         #region UPDATE
 
 
 
         #endregion
-
 
         #region DELETE
 

@@ -89,16 +89,16 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
-    public AuditLogsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
-	    SettingsService settingsService, IDashboardService dashboardService)
+    public AuditLogsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
+        SettingsService settingsService, IDashboardService dashboardService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _dashboardService = dashboardService;
         _settingsService = settingsService;
-        
-        LoadSampleData();
+
+        _ = LoadDataFromDatabaseAsync();
         UpdateCounts();
     }
 
@@ -110,8 +110,6 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         _settingsService = new SettingsService();
         _dashboardService = null!;
 
-        LoadSampleData();
-        UpdateCounts();
     }
 
     [AvaloniaHotReload]
@@ -262,7 +260,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             }
         ];
     }
-    
+
     [RelayCommand]
     private async Task SearchAuditLogs()
     {
@@ -312,7 +310,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             IsSearchingAuditLogs = false;
         }
     }
-	
+
     [RelayCommand]
     private async Task DownloadAuditLogs()
     {
@@ -332,7 +330,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
                 ? desktop.MainWindow
                 : null;
             if (toplevel == null) return;
-        
+
             IStorageFolder? startLocation = null;
             if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
             {
@@ -345,7 +343,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
                     // If path is invalid, startLocation will remain null
                 }
             }
-        
+
             var fileName = $"Audit_Logs_{SelectedDate:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -377,13 +375,13 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             };
 
             var document = new AuditLogDocument(auditLogModel);
-        
+
             await using var stream = await pdfFile.OpenWriteAsync();
-            
+
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
-            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
-        
+                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+
             _toastManager.CreateToast("Audit Logs exported successfully")
                 .WithContent($"Audit Logs has been saved to {pdfFile.Name}")
                 .DismissOnClick()
@@ -397,7 +395,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
                 .ShowError();
         }
     }
-    
+
     private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
 
     [RelayCommand]
@@ -566,8 +564,8 @@ public partial class AuditLogItems : ObservableObject
 {
     [ObservableProperty]
     private bool _isSelected;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _iD;
 
     [ObservableProperty]
@@ -587,7 +585,7 @@ public partial class AuditLogItems : ObservableObject
 
     [ObservableProperty]
     private string? _action;
-    
+
     [ObservableProperty]
     private decimal? _logCount;
 

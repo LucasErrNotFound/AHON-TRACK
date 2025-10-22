@@ -71,7 +71,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
-    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
         SettingsService settingsService, IProductService productService)
     {
         _dialogManager = dialogManager;
@@ -92,7 +92,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _settingsService = new SettingsService();
         _productService = null!;
 
-        _ = LoadProductDataAsync();
         UpdateProductCounts();
     }
 
@@ -102,7 +101,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         if (IsInitialized) return;
         await LoadSettingsAsync();
         await LoadProductDataAsync();
-        
+
         UpdateProductCounts();
         IsInitialized = true;
     }
@@ -387,7 +386,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             IsSearchingProduct = false;
         }
     }
-    
+
     [RelayCommand]
     private async Task ExportProductStock()
     {
@@ -407,7 +406,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 ? desktop.MainWindow
                 : null;
             if (toplevel == null) return;
-        
+
             IStorageFolder? startLocation = null;
             if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
             {
@@ -420,7 +419,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                     // If path is invalid, startLocation will remain null
                 }
             }
-        
+
             var fileName = $"Product_Stock_List_{DateTime.Today:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -433,14 +432,14 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
             if (pdfFile == null) return;
 
-            var productStockModel = new ProductStockDocumentModel 
+            var productStockModel = new ProductStockDocumentModel
             {
                 GeneratedDate = DateTime.Today,
                 GymName = "AHON Victory Fitness Gym",
                 GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
                 GymPhone = "+63 123 456 7890",
                 GymEmail = "info@ahonfitness.com",
-                Items = ProductItems.Select(product => new ProductItem 
+                Items = ProductItems.Select(product => new ProductItem
                 {
                     ID = product.ID,
                     ProductName = product.Name,
@@ -455,13 +454,13 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             };
 
             var document = new ProductStockDocument(productStockModel);
-        
+
             await using var stream = await pdfFile.OpenWriteAsync();
-            
+
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
-            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
-        
+                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+
             _toastManager.CreateToast("Product stock list exported successfully")
                 .WithContent($"Product stock list has been saved to {pdfFile.Name}")
                 .DismissOnClick()
@@ -475,9 +474,9 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 .ShowError();
         }
     }
-    
+
     private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
-    
+
     private void ApplyProductFilter()
     {
         if (OriginalProductData.Count == 0) return;

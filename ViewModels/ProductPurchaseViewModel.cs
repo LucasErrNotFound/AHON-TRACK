@@ -244,7 +244,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             Title = selling.Title ?? string.Empty,
             Description = selling.Description ?? string.Empty,
             Price = (int)selling.Price,
-            IsAddedToCart = false
+            IsAddedToCart = false,
+            Features = selling.Features?.Split('|').ToList() ?? new List<string>()
         };
     }
 
@@ -278,13 +279,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             var packages = await _productPurchaseService.GetAllGymPackagesAsync();
             var packageModels = packages.Select(ConvertToPackage).ToList();
-
             OriginalPackageList = packageModels;
-
             PackageList.Clear();
             foreach (var package in packageModels)
                 PackageList.Add(package);
-
             ApplyProductFilter();
         }
         catch (Exception ex)
@@ -737,9 +735,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
             if (success)
             {
-                _toastManager.CreateToast("Purchase Complete")
-                    .WithContent($"Purchase successful for {SelectedCustomer.FirstName} {SelectedCustomer.LastName}!\nTotal: {FormattedTotalPrice}\nPayment: {paymentMethod}")
-                    .ShowSuccess();
+                // I remove this toast for complexity of discount from the packages if available to lessen confussion.
+
+                /* _toastManager.CreateToast("Purchase Complete")
+                     .WithContent($"Purchase successful for {SelectedCustomer.FirstName} {SelectedCustomer.LastName}!\nPayment: {paymentMethod}")
+                     .ShowSuccess(); */
 
                 ClearCart();
                 CurrentTransactionId = GenerateNewTransactionId();

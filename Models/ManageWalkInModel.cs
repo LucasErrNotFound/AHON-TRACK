@@ -31,5 +31,7 @@ namespace AHON_TRACK.Models
 
         //Foreign key
         public int? RegisteredByEmployeeID { get; set; }
+
+        public decimal Amount { get; set; }
     }
 }

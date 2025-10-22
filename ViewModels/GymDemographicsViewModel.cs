@@ -108,9 +108,6 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         _ = LoadDemographicsAsync();
     }
 
-
-
-
     private async Task LoadDemographicsAsync()
     {
         try

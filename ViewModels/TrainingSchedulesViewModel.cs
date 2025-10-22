@@ -72,7 +72,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _changeScheduleDialogCardViewModel = changeScheduleDialogCardViewModel;
         _trainingService = trainingService;
 
-        //LoadSampleData();
+        _ = LoadTrainingsAsync();
         UpdateScheduledPeopleCounts();
     }
 

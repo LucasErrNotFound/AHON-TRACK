@@ -49,7 +49,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private int _totalCount;
-    
+
     [ObservableProperty]
     private ObservableCollection<Invoices> _invoiceList = [];
 
@@ -72,8 +72,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
-    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  
-        AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel,  EditPackageDialogCardViewModel editPackageDialogCardViewModel, 
+    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
+        AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel, EditPackageDialogCardViewModel editPackageDialogCardViewModel,
         SettingsService settingsService, IPackageService packageService, IProductPurchaseService productPurchaseService)
     {
         _dialogManager = dialogManager;
@@ -84,10 +84,9 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _packageService = packageService;
         _productPurchaseService = productPurchaseService;
         _settingsService = settingsService;
-        
-        LoadSampleSalesData();
-        LoadInvoiceData();
-        LoadPackageOptionsAsync();
+
+        _ = LoadRecentPurchasesFromDatabaseAsync();
+        _ = LoadInvoicesFromDatabaseAsync();
         UpdateInvoiceDataCounts();
     }
 
@@ -101,11 +100,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _settingsService = new SettingsService();
         _packageService = null!;
         _productPurchaseService = null!;
-        
-        LoadSampleSalesData();
-        LoadInvoiceData();
-        LoadPackageOptionsAsync();
-        UpdateInvoiceDataCounts();
+
     }
 
     [AvaloniaHotReload]
@@ -113,7 +108,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         if (IsInitialized) return;
         await LoadSettingsAsync();
-        
+
         if (_productPurchaseService != null)
         {
             _ = LoadRecentPurchasesFromDatabaseAsync();
@@ -337,7 +332,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 ? desktop.MainWindow
                 : null;
             if (toplevel == null) return;
-        
+
             IStorageFolder? startLocation = null;
             if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
             {
@@ -350,7 +345,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                     // If path is invalid, startLocation will remain null
                 }
             }
-        
+
             var fileName = $"Invoice_{SelectedDate:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -382,13 +377,13 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             };
 
             var document = new InvoiceDocument(invoiceModel);
-        
+
             await using var stream = await pdfFile.OpenWriteAsync();
-            
+
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
-            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
-        
+                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+
             _toastManager.CreateToast("Invoice exported successfully")
                 .WithContent($"Invoice has been saved to {pdfFile.Name}")
                 .DismissOnClick()
@@ -627,7 +622,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     }
 
     private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
-    
+
     private void OnDatePurchasedChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Invoices.IsSelected))

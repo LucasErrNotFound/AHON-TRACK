@@ -12,6 +12,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -25,7 +26,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     private string[] _walkInTypeItems = ["Regular", "Free Trial"];
 
     [ObservableProperty]
-    private string[] _specializedPackageItems = ["None", "Boxing", "Muay Thai", "CrossFit"];
+    private string[] _specializedPackageItems = ["None"];
 
     private string _walkInFirstName = string.Empty;
     private string _selectedMiddleInitialItem = string.Empty;
@@ -49,6 +50,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     [ObservableProperty]
     private string _quantityHelperMessage = string.Empty;
 
+    [ObservableProperty]
+    private List<SellingModel> _availablePackages = new();
+
     public int? LastRegisteredCustomerID { get; private set; }
 
     private readonly DialogManager _dialogManager;
@@ -71,6 +75,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         _toastManager = toastManager;
         _pageManager = pageManager;
         _walkInService = walkInService;
+        _ = LoadAvailablePackagesAsync();
     }
 
     public LogWalkInPurchaseViewModel()
@@ -82,8 +87,59 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async void Initialize()
     {
+        await LoadAvailablePackagesAsync();
+    }
+
+    private async Task LoadAvailablePackagesAsync()
+    {
+        System.Diagnostics.Debug.WriteLine("🔄 LoadAvailablePackagesAsync started");
+
+        if (_walkInService == null)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ WalkInService is null");
+            return;
+        }
+
+        System.Diagnostics.Debug.WriteLine("✅ WalkInService is not null");
+
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("📡 Calling GetAvailablePackagesForWalkInAsync...");
+            var packages = await _walkInService.GetAvailablePackagesForWalkInAsync();
+            System.Diagnostics.Debug.WriteLine($"📦 Received {packages?.Count ?? 0} packages");
+
+            if (packages == null || packages.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("⚠️ No packages returned from database");
+                SpecializedPackageItems = new[] { "None" };
+                return;
+            }
+
+            AvailablePackages = packages;
+            System.Diagnostics.Debug.WriteLine($"✅ AvailablePackages set with {packages.Count} items");
+
+            // Update SpecializedPackageItems to show package names
+            var packageNames = new List<string> { "None" };
+            packageNames.AddRange(packages.Select(p => p.Title ?? "Unknown"));
+
+            System.Diagnostics.Debug.WriteLine($"📋 Package names: {string.Join(", ", packageNames)}");
+
+            SpecializedPackageItems = packageNames.ToArray();
+            System.Diagnostics.Debug.WriteLine($"✅ SpecializedPackageItems updated with {SpecializedPackageItems.Length} items");
+
+            // Force UI update
+            OnPropertyChanged(nameof(SpecializedPackageItems));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"❌ Error loading packages: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            _toastManager?.CreateToast("Load Error")
+                .WithContent($"Failed to load packages: {ex.Message}")
+                .ShowError();
+        }
     }
 
     [Required(ErrorMessage = "First name is required")]
@@ -181,6 +237,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
             OnPropertyChanged(nameof(IsPlanVisible));
             OnPropertyChanged(nameof(IsPaymentPossible));
 
+            OnPropertyChanged(nameof(PurchaseSummarySubtotal));
+            OnPropertyChanged(nameof(TotalAmount));
+            OnPropertyChanged(nameof(GrandTotal));
+
             // Force quantity to 1 for Free Trial
             if (value == "Free Trial" && SpecializedPackageQuantity != 1)
             {
@@ -201,6 +261,17 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
             OnPropertyChanged(nameof(IsQuantityVisible));
             OnPropertyChanged(nameof(IsPackageDetailsVisible));
             OnPropertyChanged(nameof(IsPaymentPossible));
+
+            OnPropertyChanged(nameof(SelectedPackage));
+            OnPropertyChanged(nameof(PackageName));
+            OnPropertyChanged(nameof(PackageUnitPrice));
+            OnPropertyChanged(nameof(PackageSubtotal));
+            OnPropertyChanged(nameof(PackageDiscount));
+            OnPropertyChanged(nameof(PackageTotal));
+            OnPropertyChanged(nameof(PurchaseSummaryPackage));
+            OnPropertyChanged(nameof(PurchaseSummarySubtotal));
+            OnPropertyChanged(nameof(TotalAmount));
+            OnPropertyChanged(nameof(GrandTotal));
 
             // Force quantity to 1 for Free Trial when package is selected
             if (SelectedWalkInTypeItem == "Free Trial" && value != "None")
@@ -231,6 +302,13 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
 
             OnPropertyChanged(nameof(SessionQuantity));
             OnPropertyChanged(nameof(IsPaymentPossible));
+
+            OnPropertyChanged(nameof(PackageSubtotal));
+            OnPropertyChanged(nameof(PackageTotal));
+            OnPropertyChanged(nameof(PurchaseSummaryPackage));
+            OnPropertyChanged(nameof(PurchaseSummarySubtotal));
+            OnPropertyChanged(nameof(TotalAmount));
+            OnPropertyChanged(nameof(GrandTotal));
         }
     }
 
@@ -296,6 +374,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
+
+                OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
     }
@@ -316,6 +396,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
+
+                OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
     }
@@ -336,6 +418,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
+
+                OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
     }
@@ -452,6 +536,199 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
     }
 
+    #region Getting package details
+    // Add this property to get the selected package object
+    public SellingModel? SelectedPackage
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(SelectedSpecializedPackageItem) ||
+                SelectedSpecializedPackageItem == "None" ||
+                AvailablePackages == null)
+                return null;
+
+            return AvailablePackages.FirstOrDefault(p => p.Title == SelectedSpecializedPackageItem);
+        }
+    }
+
+    // Package name display
+    public string PackageName
+    {
+        get
+        {
+            var package = SelectedPackage;
+            return package?.Title ?? "No Package Selected";
+        }
+    }
+
+    // Single package price
+    public string PackageUnitPrice
+    {
+        get
+        {
+            var package = SelectedPackage;
+            if (package == null) return "₱0.00";
+
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return "₱0.00";
+
+            return $"₱{package.Price:N2}";
+        }
+    }
+
+    // Package subtotal (price × quantity)
+    public string PackageSubtotal
+    {
+        get
+        {
+            var package = SelectedPackage;
+            if (package == null || !SpecializedPackageQuantity.HasValue)
+                return "₱0.00";
+
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return "₱0.00";
+            decimal subtotal = package.Price * SpecializedPackageQuantity.Value;
+            return $"₱{subtotal:N2}";
+        }
+    }
+
+    // Package discount (currently 0%)
+    public string PackageDiscount
+    {
+        get
+        {
+            return "-₱0";
+        }
+    }
+
+    // Package total after discount
+    public string PackageTotal
+    {
+        get
+        {
+            var package = SelectedPackage;
+            if (package == null || !SpecializedPackageQuantity.HasValue)
+                return "₱0.00";
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return "₱0.00";
+            decimal total = package.Price * SpecializedPackageQuantity.Value;
+            return $"₱{total:N2}";
+        }
+    }
+
+
+    // Purchase Summary - Package amount
+    public string PurchaseSummaryPackage
+    {
+        get
+        {
+            var package = SelectedPackage;
+            if (package == null || !SpecializedPackageQuantity.HasValue)
+                return "₱0.00";
+
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return "₱0.00";
+            decimal amount = package.Price * SpecializedPackageQuantity.Value;
+            return $"₱{amount:N2}";
+        }
+    }
+
+    // Purchase Summary - Subtotal
+    public string PurchaseSummarySubtotal
+    {
+        get
+        {
+            decimal packageAmount = 0;
+
+            var package = SelectedPackage;
+            if (package != null && SpecializedPackageQuantity.HasValue)
+            {
+                packageAmount = package.Price * SpecializedPackageQuantity.Value;
+            }
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return "₱0.00";
+
+            decimal subtotal = packageAmount;
+            return $"₱{subtotal:N2}";
+        }
+    }
+
+    // Total Amount (same as subtotal for now)
+    public string TotalAmount
+    {
+        get
+        {
+            decimal packageAmount = 0;
+
+            var package = SelectedPackage;
+            if (package != null && SpecializedPackageQuantity.HasValue)
+            {
+                packageAmount = package.Price * SpecializedPackageQuantity.Value;
+            }
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return "₱0.00";
+
+            decimal total = packageAmount;
+            return $"₱{total:N2}";
+        }
+    }
+
+    // Grand total for Pay button
+    public string GrandTotal
+    {
+        get
+        {
+            decimal packageAmount = 0;
+
+            var package = SelectedPackage;
+            if (package != null && SpecializedPackageQuantity.HasValue)
+            {
+                packageAmount = package.Price * SpecializedPackageQuantity.Value;
+            }
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return "₱0.00";
+
+            decimal total = packageAmount;
+            return $"Pay ₱{total:N2}";
+        }
+    }
+
+    // Selected payment method display
+    public string SelectedPaymentMethod
+    {
+        get
+        {
+            if (IsCashSelected) return "Cash";
+            if (IsGCashSelected) return "GCash";
+            if (IsMayaSelected) return "Maya";
+            return "None";
+        }
+    }
+
+    // Current Date
+    public string CurrentDate => DateTime.Now.ToString("MMMM dd, yyyy");
+
+    // Current Time
+    public string CurrentTime => DateTime.Now.ToString("h:mm tt");
+
+    // Transaction ID (you can generate this based on your requirements)
+    public string TransactionID => $"TX-{DateTime.Now:yyyy-MMdd}-{new Random().Next(1000, 9999)}";
+
+    // Walk-in validity dates
+    public string ValidFromDate => DateTime.Now.ToString("MMMM dd, yyyy");
+
+    public string ValidUntilDate
+    {
+        get
+        {
+            // For 1-day pass, valid until end of the same day
+            // You can adjust this based on your business logic
+            return DateTime.Now.ToString("MMMM dd, yyyy");
+        }
+    }
+
+    #endregion  
+
     [RelayCommand]
     private async Task PaymentAsync()
     {
@@ -488,6 +765,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
                 WalkInPackage = SelectedSpecializedPackageItem,
                 PaymentMethod = paymentMethod,
                 Quantity = SelectedSpecializedPackageItem != "None" ? SpecializedPackageQuantity : null
+
             };
 
             // Register walk-in customer
@@ -543,6 +821,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         IsMayaSelected = false;
         HasFreeTrialWarning = false;
         FreeTrialWarningMessage = string.Empty;
+
+        // Reset transaction ID for new transaction
+        OnPropertyChanged(nameof(TransactionID));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
