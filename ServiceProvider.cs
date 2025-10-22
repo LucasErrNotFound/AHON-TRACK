@@ -49,6 +49,7 @@ namespace AHON_TRACK;
 [Transient<SettingsDialogCardViewModel>]
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
+[Singleton<SettingsService>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
