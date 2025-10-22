@@ -14,22 +14,28 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Input;
+using ShadUI;
+using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("dashboard")]
-public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, INavigable
+public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, INavigable
 {
     #region Private Fields
 
     private readonly PageManager _pageManager;
     private readonly IDashboardService _dashboardService;
+    private readonly ToastManager _toastManager;
+    private readonly DashboardModel _dashboardModel;
     private int _selectedYearIndex;
     private ISeries[] _series = [];
     private ObservableCollection<int> _availableYears = [];
     private ObservableCollection<SalesItem> _recentSales = [];
     private ObservableCollection<TrainingSession> _upcomingTrainingSessions = [];
     private ObservableCollection<RecentLog> _recentLogs = [];
+    private ObservableCollection<Notification> _notifications = [];
     private string _salesSummary = "You made 0 sales this month.";
     private string _trainingSessionsSummary = "You have 0 upcoming training schedules this week";
     private string _recentLogsSummary = "You have 0 recent action logs today";
@@ -138,6 +144,16 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
             OnPropertyChanged();
         }
     }
+    
+    public ObservableCollection<Notification> Notifications
+    {
+        get => _notifications;
+        set
+        {
+            _notifications = value;
+            OnPropertyChanged();
+        }
+    }
 
     public Axis[] XAxes { get; set; } = [];
     public Axis[] YAxes { get; set; } = [];
@@ -146,11 +162,14 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     #region Constructor
 
-    public DashboardViewModel(PageManager pageManager, IDashboardService dashboardService)
+    public DashboardViewModel(ToastManager toastManager, PageManager pageManager, DashboardModel dashboardModel, IDashboardService dashboardService)
     {
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
         _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
+        _dashboardModel = dashboardModel ?? throw new ArgumentNullException(nameof(dashboardModel));
         _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
-        _ = InitializeViewModel();
+        
+        InitializeViewModel();
     }
 
     #endregion
@@ -159,8 +178,10 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
 
     private async Task InitializeViewModel()
     {
-        await InitializeAvailableYears();
         InitializeAxes();
+        InitializeNotificationsData();
+        
+        await InitializeAvailableYears();
         await InitializeChart();
         await InitializeSalesData();
         await InitializeTrainingSessionsData();
@@ -455,6 +476,59 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     }
 
     #endregion
+    
+    #region CRUD Operations for Notifications
+
+    public void AddNotification(Notification newNotification)
+    {
+        Notifications.Insert(0, newNotification); // Add to the beginning for "recent" notifications
+    }
+
+    public void RemoveNotification(Notification notification)
+    {
+        Notifications.Remove(notification);
+    }
+
+    #endregion
+
+    #region Data Loading Methods (add this method)
+
+    public async Task LoadNotificationsFromDatabaseAsync()
+    {
+        try
+        {
+            var notificationsFromDb = await _dashboardModel.GetNotificationsFromDatabaseAsync();
+
+            Notifications.Clear();
+            foreach (var notification in notificationsFromDb)
+            {
+                Notifications.Add(notification);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading notifications data: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region Delete Notification
+    
+    private void DeleteNotification(Notification? notification)
+    {
+        if (notification != null)
+        {
+            RemoveNotification(notification);
+        }
+    }
+    
+    private void ClearAllNotifications()
+    {
+        Notifications.Clear();
+    }
+    
+    #endregion
 
     #region HotAvalonia and PropertyChanged
 
@@ -462,6 +536,20 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
     public void Initialize()
     {
     }
+    
+    private void InitializeNotificationsData()
+    {
+        var notificationsData = _dashboardModel.GetSampleNotificationsData();
+        Notifications = new ObservableCollection<Notification>(notificationsData);
+    }
+    
+    private RelayCommand<Notification>? _deleteNotificationCommand;
+    public RelayCommand<Notification> DeleteNotificationCommand =>
+        _deleteNotificationCommand ??= new RelayCommand<Notification>(DeleteNotification);
+    
+    private RelayCommand? _clearAllNotificationsCommand;
+    public RelayCommand ClearAllNotificationsCommand =>
+        _clearAllNotificationsCommand ??= new RelayCommand(ClearAllNotifications);
 
     public new event PropertyChangedEventHandler? PropertyChanged;
 
@@ -469,4 +557,52 @@ public sealed class DashboardViewModel : ViewModelBase, INotifyPropertyChanged, 
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     #endregion
+    
+    /*
+    private void ShowToastAndNotify(string title, string message, NotificationType type, string userName, string userRole)
+    {
+        // Create the toast
+        var toast = _toastManager.CreateToast(title)
+            .WithContent(message)
+            .DismissOnClick();
+    
+        // Show based on type
+        switch (type)
+        {
+            case NotificationType.Success:
+                toast.ShowSuccess();
+                break;
+            case NotificationType.Info:
+                toast.ShowInfo();
+                break;
+            case NotificationType.Warning:
+                toast.ShowWarning();
+                break;
+            case NotificationType.Error:
+                toast.ShowError();
+                break;
+        }
+    
+        // Add to notifications list
+        AddNotification(new Notification
+        {
+            Type = type,
+            Title = title,
+            Message = message,
+            DateAndTime = DateTime.Now
+        });
+    }
+
+    [RelayCommand]
+    private void TestToast()
+    {
+        ShowToastAndNotify(
+            title: "This test is a success",
+            message: "Hello, this test was a success!",
+            type: NotificationType.Warning,
+            userName: "Test User",
+            userRole: "Gym Admin"
+        );
+    }
+    */
 }
