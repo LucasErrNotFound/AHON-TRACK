@@ -11,7 +11,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using Avalonia.Media.Imaging;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -120,6 +122,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _currentRoute = "dashboard";
+
+    [ObservableProperty] 
+    private Bitmap? _avatarSource;
+
+    [ObservableProperty] 
+    private string? _role = CurrentUserModel.Role;
+    
+    [ObservableProperty] 
+    private string? _username = CurrentUserModel.Username;
 
     private bool _shouldShowSuccessLogOutToast = false;
 
@@ -237,6 +248,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public void Initialize()
     {
         _shouldShowSuccessLogOutToast = false;
+        AvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
         SwitchPage(_dashboardViewModel);
     }
 

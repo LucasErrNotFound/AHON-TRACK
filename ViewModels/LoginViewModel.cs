@@ -103,6 +103,7 @@ public partial class LoginViewModel : ViewModelBase
             CurrentUserModel.Username = Username;
             CurrentUserModel.Role = role;
             CurrentUserModel.LastLogin = DateTime.Now;
+            CurrentUserModel.AvatarBytes = await _employeeService.GetEmployeeProfilePictureAsync(employeeId.Value);
             System.Diagnostics.Debug.WriteLine($"UserId: {CurrentUserModel.UserId}, Username: {CurrentUserModel.Username}, Role: {CurrentUserModel.Role}, LastLogin: {CurrentUserModel.LastLogin}");
 
             _shouldShowSuccessLogInToast = true;
