@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 using AHON_TRACK.Services.Events;
+using Dapper;
 
 namespace AHON_TRACK.Services
 {
@@ -663,6 +664,16 @@ namespace AHON_TRACK.Services
             }
         }
 
+        public async Task<byte[]?> GetEmployeeProfilePictureAsync(int employeeId)
+        {
+            const string query = @"SELECT ProfilePicture FROM Employees WHERE EmployeeID = @EmployeeID AND IsDeleted = 0";
+
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+    
+            return await connection.QueryFirstOrDefaultAsync<byte[]?>(query, new { EmployeeID = employeeId });
+        }
+        
         #endregion
 
         #region UPDATE

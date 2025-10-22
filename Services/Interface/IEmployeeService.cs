@@ -16,6 +16,7 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message, List<ManageEmployeeModel>? Employees)> GetEmployeesAsync();
         Task<(bool Success, string Message, ManageEmployeeModel? Employee)> GetEmployeeByIdAsync(int employeeId);
         Task<(bool Success, string Message, ManageEmployeeModel? Employee)> ViewEmployeeProfileAsync(int employeeId);
+        Task<byte[]?> GetEmployeeProfilePictureAsync(int employeeId);
 
         // UPDATE
         Task<(bool Success, string Message)> UpdateEmployeeAsync(ManageEmployeeModel employee);
