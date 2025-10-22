@@ -169,7 +169,14 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         _dashboardModel = dashboardModel ?? throw new ArgumentNullException(nameof(dashboardModel));
         _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
         
-        InitializeViewModel();
+        _ = InitializeViewModel();
+    }
+    
+    public DashboardViewModel(PageManager pageManager, IDashboardService dashboardService)
+    {
+        _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
+        _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
+        _ = InitializeViewModel();
     }
 
     #endregion
