@@ -19,6 +19,7 @@ namespace AHON_TRACK;
 [Transient<LoginViewModel>]
 [Transient<MainWindowViewModel>]
 [Transient<DashboardViewModel>]
+[Transient<DashboardModel>]
 [Transient<ManageEmployeesViewModel>]
 [Transient<CheckInOutViewModel>]
 [Transient<ManageMembershipViewModel>]
