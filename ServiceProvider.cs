@@ -97,6 +97,4 @@ public partial class ServiceProvider
     {
         return "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
     }
-
-
 }
