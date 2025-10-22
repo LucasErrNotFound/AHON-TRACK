@@ -261,7 +261,8 @@
 															<Button
                                                                 Classes="Primary"
                                                                 Background="{DynamicResource InfoColor}"
-                                                                HorizontalAlignment="Left">
+                                                                HorizontalAlignment="Left"
+                                                                Command="{CompiledBinding DownloadInvoicesCommand}">
 																<StackPanel Orientation="Horizontal">
 																	<Svg
                                                                         Width="20"
@@ -270,7 +271,7 @@
                                                                         VerticalAlignment="Center"
                                                                         Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
 																	<TextBlock
-                                                                        Text="Download Invoice"
+                                                                        Text="Download Invoice (PDF)"
                                                                         Foreground="White"
                                                                         VerticalAlignment="Center" />
 																</StackPanel>
