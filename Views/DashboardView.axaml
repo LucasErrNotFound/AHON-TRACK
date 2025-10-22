@@ -41,8 +41,8 @@
 			<Interaction.Behaviors>
 				<scroll:VerticalScrollViewerAnimatedBehavior/>
 			</Interaction.Behaviors>
-			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
-				<TabControl Margin="45,50">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,0" Spacing="16">
+				<TabControl Margin="45,10">
 					<TabControl.Items>
 						<TabItem Header="Overview">
 							<StackPanel>
@@ -859,9 +859,129 @@
 								</shadui:BreakpointViewPort>
 							</StackPanel>
 						</TabItem>
-						<TabItem Header="Analytics"/>
-						<TabItem Header="Reports"/>
-						<TabItem Header="Notifications"/>
+						<TabItem Header="Analytics" />
+						<TabItem Header="Reports" />
+						<TabItem Header="Notifications">
+							<shadui:Card MaxWidth="900" MaxHeight="820" Margin="0,15,0,0">
+								<DockPanel Dock="Top" MaxHeight="720">
+									<Button
+										DockPanel.Dock="Top"
+										Classes="Primary"
+										HorizontalAlignment="Right"
+										Margin="10,10,10,15"
+										Content="Clear All Notifications"
+										IsEnabled="{CompiledBinding Notifications.Count}"
+										Command="{CompiledBinding ClearAllNotificationsCommand}" />
+									<ScrollViewer>
+										<Interaction.Behaviors>
+											<scroll:VerticalScrollViewerAnimatedBehavior />
+										</Interaction.Behaviors>
+										<StackPanel>
+											<StackPanel
+												HorizontalAlignment="Center"
+												VerticalAlignment="Center"
+												Spacing="10"
+												Margin="0,50,0,0"
+												IsVisible="{Binding !Notifications.Count}">
+												<TextBlock
+													Text="No notifications yet"
+													FontSize="20"
+													FontWeight="SemiBold"
+													HorizontalAlignment="Center"
+													Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+												<TextBlock
+													Text="You're all caught up! Check back later for updates."
+													FontSize="14"
+													HorizontalAlignment="Center"
+													Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+											</StackPanel>
+
+											<ItemsControl ItemsSource="{CompiledBinding Notifications}">
+												<ItemsControl.ItemsPanel>
+													<ItemsPanelTemplate>
+														<StackPanel Orientation="Vertical" Spacing="25" />
+													</ItemsPanelTemplate>
+												</ItemsControl.ItemsPanel>
+												<ItemsControl.ItemTemplate>
+													<DataTemplate>
+														<shadui:Card MaxWidth="900" Margin="0,0,10,0">
+															<StackPanel>
+																<Grid ColumnDefinitions="* * Auto Auto">
+																	<shadui:Badge
+																		Grid.Column="0"
+																		HorizontalAlignment="Left"
+																		Background="{CompiledBinding BadgeColor}"
+																		Foreground="White"
+																		Content="{CompiledBinding BadgeText}"
+																		FontSize="14"
+																		Padding="15,5" />
+																	<Svg
+																		Grid.Column="1"
+																		HorizontalAlignment="Right"
+																		Margin="0,0,7,0"
+																		Width="20"
+																		Height="20"
+																		Path="avares://AHON_TRACK/Assets/DashboardView/clock.svg"
+																		VerticalAlignment="Center" />
+																	<TextBlock
+																		Grid.Column="2"
+																		HorizontalAlignment="Right"
+																		Margin="0,0,7,0"
+																		Classes="Caption Muted"
+																		Text="{CompiledBinding FormattedDateTime}"
+																		FontSize="14"
+																		VerticalAlignment="Center" />
+																	<Button
+																		Grid.Column="3"
+																		Classes="Icon"
+																		Command="{CompiledBinding $parent[ItemsControl].((vm:DashboardViewModel)DataContext).DeleteNotificationCommand}"
+																		CommandParameter="{CompiledBinding}">
+																		<StackPanel>
+																			<Svg
+																				Width="20"
+																				Height="20"
+																				Path="avares://AHON_TRACK/Assets/DashboardView/trash-notif-icon.svg"
+																				VerticalAlignment="Center" />
+																		</StackPanel>
+																	</Button>
+																</Grid>
+																<StackPanel Orientation="Vertical" Margin="0,15,0,0" Spacing="5">
+																	<TextBlock
+																		Text="{CompiledBinding Title}"
+																		TextWrapping="WrapWithOverflow"
+																		FontSize="15"
+																		FontWeight="Bold" />
+																	<TextBlock
+																		Text="{CompiledBinding Message}"
+																		TextWrapping="WrapWithOverflow"
+																		FontSize="15"
+																		FontWeight="Medium" />
+																	<StackPanel Orientation="Horizontal" Spacing="40" Margin="0,20,0,0">
+																		<TextBlock
+																			Text="System Generated"
+																			TextWrapping="WrapWithOverflow"
+																			Foreground="{DynamicResource DestructiveColor}"
+																			FontSize="15"
+																			FontWeight="Bold" />
+																		<TextBlock
+																			Text="Notification"
+																			TextWrapping="WrapWithOverflow"
+																			Foreground="{DynamicResource InfoColor}"
+																			FontSize="15"
+																			FontWeight="Bold" />
+																	</StackPanel>
+																</StackPanel>
+															</StackPanel>
+														</shadui:Card>
+													</DataTemplate>
+												</ItemsControl.ItemTemplate>
+											</ItemsControl>
+										</StackPanel>
+
+									</ScrollViewer>
+								</DockPanel>
+							</shadui:Card>
+						</TabItem>
 					</TabControl.Items>
 				</TabControl>
 			</StackPanel>

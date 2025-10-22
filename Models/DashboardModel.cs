@@ -43,6 +43,38 @@ public class RecentLog
     public DateTime LogDateTime { get; set; }
 }
 
+public class Notification
+{
+    public NotificationType Type { get; set; } = NotificationType.Info;
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public DateTime DateAndTime { get; set; } = DateTime.Now;
+    
+    // Formatted date for display
+    public string FormattedDateTime => DateAndTime.ToString("dd MMM yyyy 'at' h:mm tt");
+    
+    // Badge text based on type
+    public string BadgeText => Type.ToString();
+    
+    // Badge color resource key based on type
+    public string BadgeColor => Type switch
+    {
+        NotificationType.Success => "#FF2E7D32",
+        NotificationType.Info => "#FF0288D1",
+        NotificationType.Warning => "#FFED6C02",
+        NotificationType.Error => "#FFE7000B",
+        _ => "#FF2979FF"
+    };
+}
+
+public enum NotificationType
+{
+    Success,
+    Info,
+    Warning,
+    Error
+}
+
 // Main Dashboard Model - handles all data operations
 public class DashboardModel
 {
@@ -57,6 +89,59 @@ public class DashboardModel
     {
         InitializeYearlyData();
     }
+    
+    #region Notifications Data Operations
+
+    public List<Notification> GetSampleNotificationsData()
+    {
+        return
+        [
+            new Notification
+            {
+                Type = NotificationType.Warning,
+                Title = "New Registration: This is just a test. This is just a test. This is just a test",
+                Message = "This is just a test. This is just a test. This is just a test. This is just a test. This is just a test. This is just a test. This is just a test",
+                DateAndTime = DateTime.Today.AddHours(-2)
+            },
+            new Notification
+            {
+                Type = NotificationType.Success,
+                Title = "Payment Received",
+                Message = "Member payment has been successfully processed.",
+                DateAndTime = DateTime.Today.AddDays(-1)
+            },
+            new Notification
+            {
+                Type = NotificationType.Error,
+                Title = "Equipment Malfunction",
+                Message = "Treadmill #3 requires immediate maintenance.",
+                DateAndTime = DateTime.Today.AddHours(-5)
+            },
+            new Notification
+            {
+                Type = NotificationType.Info,
+                Title = "System Update",
+                Message = "System will undergo maintenance tonight at 11 PM.",
+                DateAndTime = DateTime.Today.AddMinutes(-30)
+            },
+            new Notification
+            {
+                Type = NotificationType.Warning,
+                Title = "Low Stock Alert",
+                Message = "Red Horse Mucho's stock level is near zero. Re-stock now!",
+                DateAndTime = DateTime.Today.AddMinutes(-50)
+            }
+        ];
+    }
+
+    public async Task<List<Notification>> GetNotificationsFromDatabaseAsync()
+    {
+        // Replace this with your actual SQL database call
+        await Task.Delay(100); // Simulate async operation
+        return [];
+    }
+
+    #endregion
 
     #region Sales Data Operations
 
