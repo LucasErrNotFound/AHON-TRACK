@@ -83,7 +83,6 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _editPackageDialogCardViewModel = editPackageDialogCardViewModel;
         _packageService = packageService;
         _productPurchaseService = productPurchaseService;
-        _packageService = packageService;
         _settingsService = settingsService;
         
         LoadSampleSalesData();
