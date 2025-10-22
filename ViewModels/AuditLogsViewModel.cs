@@ -23,6 +23,7 @@ using HotAvalonia;
 using QuestPDF.Companion;
 using QuestPDF.Fluent;
 using ShadUI;
+using NotificationType = Avalonia.Controls.Notifications.NotificationType;
 
 namespace AHON_TRACK.ViewModels;
 
