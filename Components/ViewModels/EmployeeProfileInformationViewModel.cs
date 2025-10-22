@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -75,7 +76,11 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     [ObservableProperty]
     private string _employeeZipCode = string.Empty;
+    
+    [ObservableProperty]
+    private Bitmap? _employeeAvatarSource;
 
+    [ObservableProperty]
     private ManageEmployeesItem? _selectedEmployeeData;
 
     public EmployeeProfileInformationViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, IEmployeeService employeeService)
@@ -164,6 +169,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             EmployeeBarangay = fullEmployee.Barangay;
             EmployeeCityProvince = fullEmployee.CityProvince;
             EmployeeZipCode = fullEmployee.ZipCode;
+            EmployeeAvatarSource = fullEmployee.AvatarSource;
 
             // Profile Picture
             if (fullEmployee.AvatarSource != null)
