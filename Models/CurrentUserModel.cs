@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AHON_TRACK.Models
 {
-    public static class CurrentUserModel
+    public class CurrentUserModel : ManageEmployeeModel
     {
         public static int? UserId { get; set; }
         public static string? Username { get; set; }
@@ -14,5 +14,7 @@ namespace AHON_TRACK.Models
         public static int LoginCount { get; set; }
         public static DateTime? LastLogin { get; set; }
         public static int? employeeID { get; set; }
+        
+        public new static byte[]? AvatarBytes { get; set; }
     }
 }
