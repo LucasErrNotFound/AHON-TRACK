@@ -87,85 +87,83 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     [ObservableProperty]
     private ManageMembersItem? _selectedMember;
-    
-	public bool CanDeleteSelectedMembers
-	{
-		get
-		{
-			// If there is no checked items, can't delete
-			var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
-			if (selectedMembers.Count == 0) return false;
 
-			// If the currently selected row is present and its status is not expired,
-			// then "Delete Selected" should be disabled when opening the menu for that row.
-			if (SelectedMember is not null && 
-			    !SelectedMember.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase))
-			{
-				return false;
-			}
+    public bool CanDeleteSelectedMembers
+    {
+        get
+        {
+            // If there is no checked items, can't delete
+            var selectedMembers = MemberItems.Where(item => item.IsSelected).ToList();
+            if (selectedMembers.Count == 0) return false;
 
-			// Only allow deletion if ALL selected members are Expired
-			return selectedMembers.All(member => member.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase));
-		}
-	}
-	
-	public bool IsDeleteButtonEnabled =>
-		!new[] { "Expired" }
-			.Any(status => SelectedMember is not null && SelectedMember.Status.
-				Equals(status, StringComparison.OrdinalIgnoreCase));
+            // If the currently selected row is present and its status is not expired,
+            // then "Delete Selected" should be disabled when opening the menu for that row.
+            if (SelectedMember is not null &&
+                !SelectedMember.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
 
-	public bool IsUpgradeButtonEnabled =>
-		!new[] { "Expired" }
-			.Any(status => SelectedMember is not null && SelectedMember.Status.
-				Equals(status, StringComparison.OrdinalIgnoreCase));
-	
-	public bool IsRenewButtonEnabled =>
-		!new[] { "Active" }
-			.Any(status => SelectedMember is not null && SelectedMember.Status
-				.Equals(status, StringComparison.OrdinalIgnoreCase));
-	
-	public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
-	public bool IsExpiredVisible => SelectedMember?.Status.Equals("expired", StringComparison.OrdinalIgnoreCase) ?? false;
-	public bool HasSelectedMember => SelectedMember is not null;
-	
-	private readonly DialogManager _dialogManager;
-	private readonly ToastManager _toastManager;
-	private readonly PageManager _pageManager;
-	private readonly MemberDialogCardViewModel  _memberDialogCardViewModel;
-	private readonly AddNewMemberViewModel _addNewMemberViewModel;
-	private readonly IMemberService? _memberService;
-	
-	private static List<ManageMembersItem>? _cachedMembers;
-	private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+            // Only allow deletion if ALL selected members are Expired
+            return selectedMembers.All(member => member.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase));
+        }
+    }
 
-	public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,  
-		MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel, 
-		IMemberService memberService)
-	{
-		_dialogManager = dialogManager;
-		_toastManager = toastManager;
-		_pageManager = pageManager;
-		_memberDialogCardViewModel = memberDialogCardViewModel;
-		_addNewMemberViewModel = addNewMemberViewModel;
-		_memberService = memberService;
-		
-		_ = LoadMemberDataAsync();
-		UpdateCounts();
-		DashboardEventService.Instance.MemberAdded += OnMemberChanged;
-		DashboardEventService.Instance.MemberUpdated += OnMemberChanged;
-		DashboardEventService.Instance.MemberDeleted += OnMemberChanged;
-	}
+    public bool IsDeleteButtonEnabled =>
+        !new[] { "Expired" }
+            .Any(status => SelectedMember is not null && SelectedMember.Status.
+                Equals(status, StringComparison.OrdinalIgnoreCase));
 
-	partial void OnSelectedMemberChanged(ManageMembersItem? value)
-	{
-		OnPropertyChanged(nameof(IsActiveVisible));
-		OnPropertyChanged(nameof(IsExpiredVisible));
-		OnPropertyChanged(nameof(HasSelectedMember));
-		OnPropertyChanged(nameof(IsDeleteButtonEnabled));
-		OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
-		OnPropertyChanged(nameof(IsRenewButtonEnabled));
-		OnPropertyChanged(nameof(CanDeleteSelectedMembers));
-	}
+    public bool IsUpgradeButtonEnabled =>
+        !new[] { "Expired" }
+            .Any(status => SelectedMember is not null && SelectedMember.Status.
+                Equals(status, StringComparison.OrdinalIgnoreCase));
+
+    public bool IsRenewButtonEnabled =>
+        !new[] { "Active" }
+            .Any(status => SelectedMember is not null && SelectedMember.Status
+                .Equals(status, StringComparison.OrdinalIgnoreCase));
+
+    public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
+    public bool IsExpiredVisible => SelectedMember?.Status.Equals("expired", StringComparison.OrdinalIgnoreCase) ?? false;
+    public bool HasSelectedMember => SelectedMember is not null;
+
+    private readonly DialogManager _dialogManager;
+    private readonly ToastManager _toastManager;
+    private readonly PageManager _pageManager;
+    private readonly MemberDialogCardViewModel _memberDialogCardViewModel;
+    private readonly AddNewMemberViewModel _addNewMemberViewModel;
+    private readonly IMemberService? _memberService;
+
+    private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+
+    public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
+        MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel,
+        IMemberService memberService)
+    {
+        _dialogManager = dialogManager;
+        _toastManager = toastManager;
+        _pageManager = pageManager;
+        _memberDialogCardViewModel = memberDialogCardViewModel;
+        _addNewMemberViewModel = addNewMemberViewModel;
+        _memberService = memberService;
+
+        SubscribeToEvents();
+        _ = LoadMemberDataAsync();
+        UpdateCounts();
+
+    }
+
+    partial void OnSelectedMemberChanged(ManageMembersItem? value)
+    {
+        OnPropertyChanged(nameof(IsActiveVisible));
+        OnPropertyChanged(nameof(IsExpiredVisible));
+        OnPropertyChanged(nameof(HasSelectedMember));
+        OnPropertyChanged(nameof(IsDeleteButtonEnabled));
+        OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
+        OnPropertyChanged(nameof(IsRenewButtonEnabled));
+        OnPropertyChanged(nameof(CanDeleteSelectedMembers));
+    }
 
     // Default constructor (for design-time/testing)
     public ManageMembershipViewModel()
@@ -176,24 +174,29 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         _memberDialogCardViewModel = new MemberDialogCardViewModel();
         _addNewMemberViewModel = new AddNewMemberViewModel();
 
+        SubscribeToEvents();
         _ = LoadMemberDataAsync();
-        DashboardEventService.Instance.MemberAdded += OnMemberChanged;
-        DashboardEventService.Instance.MemberUpdated += OnMemberChanged;
-        DashboardEventService.Instance.MemberDeleted += OnMemberChanged;
+
     }
 
     [AvaloniaHotReload]
     public async Task Initialize()
     {
-        if (_cachedMembers is not null && _cachedMembers.Count > 0)
-        {
-            OriginalMemberData = _cachedMembers;
-            RefreshMemberItems(_cachedMembers);
-            return;
-        }
+        if (IsInitialized) return;
 
+        SubscribeToEvents();
         await LoadMemberDataAsync();
-        _cachedMembers = OriginalMemberData;
+
+        IsInitialized = true;
+    }
+
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.MemberAdded += OnMemberChanged;
+        eventService.MemberUpdated += OnMemberChanged;
+        eventService.MemberUpdated += OnMemberChanged;
     }
 
     private async void OnMemberChanged(object? sender, EventArgs e)
@@ -511,7 +514,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         }
         UpdateCounts();
     }
-	
+
     [RelayCommand]
     private void SortReset()
     {
@@ -738,9 +741,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [RelayCommand]
     private void ShowSingleItemDeletionDialog(ManageMembersItem? member)
     {
-	    if (member == null) return;
-    
-	    ShowDeleteConfirmationDialog(member);
+        if (member == null) return;
+
+        ShowDeleteConfirmationDialog(member);
     }
 
     [RelayCommand]
@@ -978,59 +981,59 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [RelayCommand]
     private async Task ShowModifyMemberDialog(ManageMembersItem member)
     {
-	    _memberDialogCardViewModel.Initialize();
+        _memberDialogCardViewModel.Initialize();
 
-	    // Populate the dialog with member data from database
-	    await _memberDialogCardViewModel.PopulateWithMemberDataAsync(member.ID);
+        // Populate the dialog with member data from database
+        await _memberDialogCardViewModel.PopulateWithMemberDataAsync(member.ID);
 
-	    _dialogManager.CreateDialog(_memberDialogCardViewModel)
-		    .WithSuccessCallback(async _ =>
-		    {
-			    // Reload data after successful modification
-			    await LoadMemberDataAsync();
+        _dialogManager.CreateDialog(_memberDialogCardViewModel)
+            .WithSuccessCallback(async _ =>
+            {
+                // Reload data after successful modification
+                await LoadMemberDataAsync();
 
-			    _toastManager.CreateToast("Modified an existing gym member information")
-				    .WithContent($"You just modified {member.Name} information!")
-				    .DismissOnClick()
-				    .ShowSuccess();
-		    })
-		    .WithCancelCallback(() =>
-			    _toastManager.CreateToast("Cancellation of modification")
-				    .WithContent($"You just cancelled modifying {member.Name} information!")
-				    .DismissOnClick()
-				    .ShowWarning())
-		    .WithMaxWidth(950)
-		    .Dismissible()
-		    .Show();
+                _toastManager.CreateToast("Modified an existing gym member information")
+                    .WithContent($"You just modified {member.Name} information!")
+                    .DismissOnClick()
+                    .ShowSuccess();
+            })
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Cancellation of modification")
+                    .WithContent($"You just cancelled modifying {member.Name} information!")
+                    .DismissOnClick()
+                    .ShowWarning())
+            .WithMaxWidth(950)
+            .Dismissible()
+            .Show();
     }
 
-	[RelayCommand]
-	private void ShowDeleteMemberDialog()
-	{
-		if (SelectedMember is null)
-		{
-			_toastManager.CreateToast("No Member Selected")
-				.WithContent("Please select a member to delete")
-				.DismissOnClick()
-				.ShowError();
-			return;
-		}
-    
-		ShowDeleteConfirmationDialog(SelectedMember);
-	}
-    
+    [RelayCommand]
+    private void ShowDeleteMemberDialog()
+    {
+        if (SelectedMember is null)
+        {
+            _toastManager.CreateToast("No Member Selected")
+                .WithContent("Please select a member to delete")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
+        ShowDeleteConfirmationDialog(SelectedMember);
+    }
+
     private void ShowDeleteConfirmationDialog(ManageMembersItem member)
     {
-	    _dialogManager
-		    .CreateDialog(
-			    "Are you absolutely sure?",
-			    "Deleting this member will permanently remove all of their data, records, and related information from the system. This action cannot be undone.")
-		    .WithPrimaryButton("Delete Member", () => OnSubmitDeleteSingleItem(member),
-			    DialogButtonStyle.Destructive)
-		    .WithCancelButton("Cancel")
-		    .WithMaxWidth(512)
-		    .Dismissible()
-		    .Show();
+        _dialogManager
+            .CreateDialog(
+                "Are you absolutely sure?",
+                "Deleting this member will permanently remove all of their data, records, and related information from the system. This action cannot be undone.")
+            .WithPrimaryButton("Delete Member", () => OnSubmitDeleteSingleItem(member),
+                DialogButtonStyle.Destructive)
+            .WithCancelButton("Cancel")
+            .WithMaxWidth(512)
+            .Dismissible()
+            .Show();
     }
 }
 
@@ -1053,10 +1056,10 @@ public partial class ManageMembersItem : ObservableObject
 
     [ObservableProperty]
     private string _gender = string.Empty;
-    
+
     [ObservableProperty]
     private int _age;
-    
+
     [ObservableProperty]
     private string _availedPackages = string.Empty;
 
@@ -1065,7 +1068,7 @@ public partial class ManageMembersItem : ObservableObject
 
     [ObservableProperty]
     private DateTime _validity;
-    
+
     [ObservableProperty]
     private DateTime _birthDate;
 

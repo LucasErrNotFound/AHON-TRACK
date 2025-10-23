@@ -86,6 +86,7 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
                 }
             }
         ];
+
         _ = LoadDemographicsAsync();
         DashboardEventService.Instance.OnPopulationDataChanged += async () =>
         {

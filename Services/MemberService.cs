@@ -179,7 +179,7 @@ namespace AHON_TRACK.Services
                       .WithContent($"Successfully added {member.FirstName} {member.LastName}. with valid until {member.ValidUntil}.")
                       .DismissOnClick()
                       .ShowSuccess(); */
-
+                DashboardEventService.Instance.NotifyMemberAdded();
                 return (true, "Member added successfully.", memberId);
             }
             catch (SqlException ex)
@@ -484,7 +484,7 @@ namespace AHON_TRACK.Services
                           .WithContent($"Successfully updated {member.FirstName} {member.LastName}.")
                           .DismissOnClick()
                           .ShowSuccess(); */
-
+                    DashboardEventService.Instance.NotifyMemberUpdated();
                     return (true, "Member updated successfully.");
                 }
 
@@ -567,6 +567,8 @@ namespace AHON_TRACK.Services
                           .WithContent($"Successfully deleted {memberName}.")
                           .DismissOnClick()
                           .ShowSuccess(); */
+                    DashboardEventService.Instance.NotifyMemberDeleted();
+                    DashboardEventService.Instance.NotifyPopulationDataChanged();
 
                     return (true, "Member deleted successfully.");
                 }
@@ -626,6 +628,7 @@ namespace AHON_TRACK.Services
                            .DismissOnClick()
                            .ShowSuccess(); */
 
+                    DashboardEventService.Instance.NotifyMemberDeleted();
                     return (true, "Members deleted successfully.");
                 }
 
@@ -675,9 +678,6 @@ namespace AHON_TRACK.Services
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
                 DashboardEventService.Instance.NotifyPopulationDataChanged();
-                DashboardEventService.Instance.NotifyMemberDeleted();
-                DashboardEventService.Instance.NotifyMemberUpdated();
-                DashboardEventService.Instance.NotifyMemberAdded();
             }
             catch (Exception ex)
             {

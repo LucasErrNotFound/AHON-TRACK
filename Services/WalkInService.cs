@@ -344,6 +344,7 @@ namespace AHON_TRACK.Services
 
                     transaction.Commit();
                     DashboardEventService.Instance.NotifyCheckinAdded();
+                    DashboardEventService.Instance.NotifyPopulationDataChanged();
                     return (true, "Walk-in customer registered and checked in successfully.", customerId);
                 }
                 catch
@@ -1071,6 +1072,10 @@ namespace AHON_TRACK.Services
                 logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                 await logCmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyChartDataUpdated();
+                DashboardEventService.Instance.NotifyPopulationDataChanged();
+                DashboardEventService.Instance.NotifySalesUpdated();
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
             }
             catch (Exception ex)
             {
@@ -1096,7 +1101,8 @@ namespace AHON_TRACK.Services
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
                 DashboardEventService.Instance.NotifyPopulationDataChanged();
-                DashboardEventService.Instance.NotifyWalkInAdded();
+                DashboardEventService.Instance.NotifySalesUpdated();
+                DashboardEventService.Instance.NotifyChartDataUpdated();
             }
             catch (Exception ex)
             {

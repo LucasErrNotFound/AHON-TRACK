@@ -79,6 +79,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         UpdateMemberCounts();*/
         Debug.WriteLine($"SystemService is null: {checkInOutService == null}");
 
+        SubscribeToEvents();
         // Load actual data from service
         _ = LoadDataAsync();
 
@@ -93,20 +94,37 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         _logWalkInPurchaseViewModel = new LogWalkInPurchaseViewModel();
         _checkInOutService = null!;
 
-        /*LoadSampleData();
+        SubscribeToEvents();
+        _ = LoadDataAsync();
         UpdateWalkInCounts();
-        UpdateMemberCounts();*/
+        UpdateMemberCounts();
     }
 
     [AvaloniaHotReload]
     public void Initialize()
     {
         if (IsInitialized) return;
+
+        SubscribeToEvents();
         _ = LoadDataAsync();
         /*LoadSampleData();
         UpdateWalkInCounts();
         UpdateMemberCounts();*/
         IsInitialized = true;
+    }
+
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.CheckinAdded += OnCheckInOutDataChanged;
+        eventService.CheckoutAdded += OnCheckInOutDataChanged;
+        eventService.CheckInOutDeleted += OnCheckInOutDataChanged;
+    }
+
+    private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
+    {
+        await LoadDataAsync();
     }
 
     private async Task LoadDataAsync()
