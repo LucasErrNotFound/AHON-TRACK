@@ -51,7 +51,7 @@ public class RecentLog
 
 public class Notification
 {
-    public NotificationType Type { get; set; } = NotificationType.Info;
+    public NotificationType Type { get; set; } = NotificationType.Reminder;
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public DateTime DateAndTime { get; set; } = DateTime.Now;
@@ -62,9 +62,9 @@ public class Notification
     public string BadgeColor => Type switch
     {
         NotificationType.Success => "#FF2E7D32",
-        NotificationType.Info => "#FF0288D1",
+        NotificationType.Reminder => "#FF0288D1",
         NotificationType.Warning => "#FFED6C02",
-        NotificationType.Error => "#FFE7000B",
+        NotificationType.Alert => "#FFE7000B",
         _ => "#FF2979FF"
     };
 }
@@ -72,9 +72,9 @@ public class Notification
 public enum NotificationType
 {
     Success,
-    Info,
+    Reminder,
     Warning,
-    Error
+    Alert
 }
 
 // Main Dashboard Model - handles all data operations

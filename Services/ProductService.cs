@@ -943,7 +943,7 @@ namespace AHON_TRACK.Services
                 
                     notifyCallback?.Invoke(new Notification
                     {
-                        Type = NotificationType.Error,
+                        Type = NotificationType.Alert,
                         Title = title,
                         Message = message,
                         DateAndTime = DateTime.Now
@@ -1000,7 +1000,7 @@ namespace AHON_TRACK.Services
                 
                     notifyCallback?.Invoke(new Notification
                     {
-                        Type = NotificationType.Info,
+                        Type = NotificationType.Reminder,
                         Title = title,
                         Message = message,
                         DateAndTime = DateTime.Now
