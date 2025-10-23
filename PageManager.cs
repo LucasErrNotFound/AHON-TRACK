@@ -6,6 +6,8 @@ namespace AHON_TRACK;
 
 public sealed class PageManager(ServiceProvider serviceProvider)
 {
+    private INavigable? _currentPage;
+
     public void Navigate<T>() where T : INavigable
     {
         Navigate<T>(null);
@@ -16,6 +18,12 @@ public sealed class PageManager(ServiceProvider serviceProvider)
         var attr = typeof(T).GetCustomAttribute<PageAttribute>();
         if (attr is null) throw new InvalidOperationException("Not a valid page type, missing PageAttribute");
 
+        // ✅ Dispose old page if it implements IDisposable
+        if (_currentPage is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+
         var page = serviceProvider.GetService<T>();
         if (page is null) throw new InvalidOperationException("Page not found");
 
@@ -25,6 +33,7 @@ public sealed class PageManager(ServiceProvider serviceProvider)
             navigableWithParams.SetNavigationParameters(parameters);
         }
 
+        _currentPage = page;
         OnNavigate?.Invoke(page, attr.Route);
     }
 
