@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("add-new-product")]
-public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters
+public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters, IDisposable
 {
     [ObservableProperty]
     private ProductViewContext _viewContext = ProductViewContext.AddProduct;
@@ -79,6 +79,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private readonly PageManager _pageManager;
     private readonly IProductService _productService;
     private readonly ISupplierService _supplierService;
+    private bool _disposed = false;
 
     public string DiscountSymbol => IsPercentageModeOn ? "%" : "₱";
     public string DiscountFormat => IsPercentageModeOn ? "N2" : "N0";
@@ -110,6 +111,16 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         {
             await LoadSuppliersAsync();
         }
+    }
+    
+    public void Dispose()
+    {
+        if (_disposed) return;
+
+        // No event subscriptions to clean up in this ViewModel currently,
+        // but good practice to implement IDisposable
+        
+        _disposed = true;
     }
 
     private async Task LoadSuppliersAsync()

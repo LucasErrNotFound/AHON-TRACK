@@ -24,7 +24,7 @@ using AHON_TRACK.Services.Events;
 namespace AHON_TRACK.ViewModels;
 
 [Page("item-stock")]
-public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged, IDisposable
 {
     [ObservableProperty]
     private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements", "Apparel"];
@@ -71,6 +71,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     private readonly IProductService _productService;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
+    private bool _disposed = false;
 
     public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
         SettingsService settingsService, IProductService productService)
@@ -117,6 +118,30 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         eventService.ProductUpdated += OnProductDataChanged;
         eventService.ProductDeleted += OnProductDataChanged;
         eventService.ProductPurchased += OnProductDataChanged;
+    }
+    
+    private void UnsubscribeFromEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.ProductAdded -= OnProductDataChanged;
+        eventService.ProductUpdated -= OnProductDataChanged;
+        eventService.ProductDeleted -= OnProductDataChanged;
+        eventService.ProductPurchased -= OnProductDataChanged;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+
+        UnsubscribeFromEvents();
+        
+        foreach (var product in ProductItems)
+        {
+            product.PropertyChanged -= OnProductPropertyChanged;
+        }
+
+        _disposed = true;
     }
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
