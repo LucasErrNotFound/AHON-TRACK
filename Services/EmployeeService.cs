@@ -140,7 +140,7 @@ namespace AHON_TRACK.Services
                         updateCmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
                         updateCmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
                         updateCmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
-                        updateCmd.Parameters.AddWithValue("@DateJoined", employee.DateJoined);
+                        updateCmd.Parameters.AddWithValue("@DateJoined", employee.DateJoined == default ? DateTime.Now : employee.DateJoined);
                         updateCmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
                         updateCmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
                         await updateCmd.ExecuteNonQueryAsync();
@@ -330,7 +330,7 @@ namespace AHON_TRACK.Services
                     cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@DateJoined", employee.DateJoined);
+                    cmd.Parameters.AddWithValue("@DateJoined",employee.DateJoined == default ? DateTime.Now : employee.DateJoined);
                     cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
                     cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
 
