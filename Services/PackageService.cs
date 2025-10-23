@@ -106,7 +106,6 @@ namespace AHON_TRACK.Services
                             }
 
                             PackagesChanged?.Invoke(this, EventArgs.Empty);
-                            PackageEventService.Instance.NotifyPackagesChanged();
 
                             await LogActionAsync(conn, "Restored package", logDescriptionRestored, true);
 
@@ -142,10 +141,9 @@ namespace AHON_TRACK.Services
                     logDescription += $", Discount: {package.discount}{(package.discountType?.ToLower() == "percentage" ? "%" : " fixed")} for {package.discountFor ?? "All"}, Final Price: ₱{discountedPrice:N2}";
                 }
                 PackagesChanged?.Invoke(this, EventArgs.Empty);
-                PackageEventService.Instance.NotifyPackagesChanged();
 
                 await LogActionAsync(conn, "Added new package", logDescription, true);
-
+                DashboardEventService.Instance.NotifyPackageAdded();
                 /* _toastManager.CreateToast("Package Added")
                      .WithContent($"Successfully added package '{package.packageName}'.")
                      .DismissOnClick()
@@ -434,10 +432,8 @@ namespace AHON_TRACK.Services
 
                 if (rowsAffected > 0)
                 {
-                    PackagesChanged?.Invoke(this, EventArgs.Empty);
-                    PackageEventService.Instance.NotifyPackagesChanged();
                     await LogActionAsync(conn, "Updated a package", $"Updated package: '{package.packageName}' (ID: {package.packageID})", true);
-
+                    DashboardEventService.Instance.NotifyPackageUpdated();
                     /*  _toastManager.CreateToast("Package Updated")
                           .WithContent($"Successfully updated package '{package.packageName}'.")
                           .DismissOnClick()
@@ -521,10 +517,8 @@ namespace AHON_TRACK.Services
 
                 if (rowsAffected > 0)
                 {
-                    PackagesChanged?.Invoke(this, EventArgs.Empty);
-                    PackageEventService.Instance.NotifyPackagesChanged();
                     await LogActionAsync(conn, "Deleted a package", $"Deleted package: '{packageName}' (ID: {packageId})", true);
-
+                    DashboardEventService.Instance.NotifyPackageDeleted();
                     /*  _toastManager.CreateToast("Package Deleted")
                           .WithContent($"Successfully deleted package '{packageName}'.")
                           .DismissOnClick()
@@ -609,8 +603,7 @@ namespace AHON_TRACK.Services
                         deleteCmd.Parameters.AddWithValue("@packageID", packageId);
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }
-                    PackagesChanged?.Invoke(this, EventArgs.Empty);
-                    PackageEventService.Instance.NotifyPackagesChanged();
+
                     await LogActionAsync(conn, "Deleted multiple packages", $"Deleted {deletedCount} packages: {string.Join(", ", packageNames)}", true);
 
                     transaction.Commit();
@@ -619,7 +612,7 @@ namespace AHON_TRACK.Services
                          .WithContent($"Successfully deleted {deletedCount} package(s).")
                          .DismissOnClick()
                          .ShowSuccess(); */
-
+                    DashboardEventService.Instance.NotifyPackageDeleted();
                     return (true, $"Successfully deleted {deletedCount} package(s).", deletedCount);
                 }
                 catch
@@ -667,7 +660,6 @@ namespace AHON_TRACK.Services
 
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
-                PackageEventService.Instance.NotifyPackagesChanged();
             }
             catch (Exception ex)
             {

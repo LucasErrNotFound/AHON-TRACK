@@ -138,7 +138,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _ = LoadCustomerListFromDatabaseAsync();
         _ = LoadProductsFromDatabaseAsync();
         _ = LoadPackagesFromDatabaseAsync();
-        PackageEventService.Instance.PackagesChanged += (s, e) => OnPackagesChanged();
     }
 
     public ProductPurchaseViewModel()
@@ -179,11 +178,27 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         eventService.CheckinAdded += OnCheckInOutDataChanged;
         eventService.CheckoutAdded += OnCheckInOutDataChanged;
+        eventService.ProductAdded += OnProductDataChanged;
+        eventService.ProductUpdated += OnProductDataChanged;
+        eventService.ProductDeleted += OnProductDataChanged;
+        eventService.PackageAdded += OnPackageDataChanged;
+        eventService.PackageUpdated += OnPackageDataChanged;
+        eventService.PackageDeleted += OnPackageDataChanged;
     }
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
         await LoadCustomerListFromDatabaseAsync();
+    }
+
+    private async void OnProductDataChanged(object? sender, EventArgs e)
+    {
+        await LoadProductsFromDatabaseAsync();
+    }
+
+    private async void OnPackageDataChanged(object? sender, EventArgs e)
+    {
+        await LoadPackagesFromDatabaseAsync();
     }
 
     private void LoadCustomerList()
@@ -878,7 +893,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         foreach (var cartItem in CartItems)
             cartItem.PropertyChanged -= OnCartItemPropertyChanged;
-        PackageEventService.Instance.PackagesChanged -= (s, e) => OnPackagesChanged();
+        DashboardEventService.Instance.PackageAdded -= (s, e) => OnPackagesChanged();
+        DashboardEventService.Instance.PackageUpdated -= (s, e) => OnPackagesChanged();
+        DashboardEventService.Instance.PackageDeleted -= (s, e) => OnPackagesChanged();
     }
 
     private string GenerateNewTransactionId()
