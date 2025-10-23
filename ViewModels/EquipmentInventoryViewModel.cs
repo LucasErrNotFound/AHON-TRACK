@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
-using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Services;
+using AHON_TRACK.Services.Events;
+using AHON_TRACK.Services.Interface;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -17,6 +12,12 @@ using HotAvalonia;
 using QuestPDF.Companion;
 using QuestPDF.Fluent;
 using ShadUI;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -69,8 +70,8 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     private readonly IInventoryService _inventoryService;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
-    
-    public EquipmentInventoryViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+
+    public EquipmentInventoryViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
         EquipmentDialogCardViewModel equipmentDialogCardViewModel, SettingsService settingsService, IInventoryService inventoryService)
     {
         _dialogManager = dialogManager;
@@ -80,6 +81,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _inventoryService = inventoryService;
         _settingsService = settingsService;
 
+        SubscribeToEvents();
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
     }
@@ -93,6 +95,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _settingsService = new SettingsService();
         _inventoryService = null!;
 
+        SubscribeToEvents();
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
     }
@@ -104,6 +107,22 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         await LoadSettingsAsync();
         _ = LoadEquipmentDataAsync();
         IsInitialized = true;
+    }
+
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.EquipmentAdded += OnEquipmentDataChanged;
+        eventService.EquipmentDeleted += OnEquipmentDataChanged;
+        eventService.EquipmentUpdated += OnEquipmentDataChanged;
+    }
+
+    // ✅ NEW: Handle equipment data changes
+    private async void OnEquipmentDataChanged(object? sender, EventArgs e)
+    {
+        // Reload equipment data when any change occurs
+        await LoadEquipmentDataAsync();
     }
 
     private async Task LoadEquipmentDataAsync()
@@ -349,7 +368,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             IsSearchingEquipment = false;
         }
     }
-    
+
     [RelayCommand]
     private async Task ExportEquipmentList()
     {
@@ -369,7 +388,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 ? desktop.MainWindow
                 : null;
             if (toplevel == null) return;
-        
+
             IStorageFolder? startLocation = null;
             if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
             {
@@ -382,7 +401,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                     // If path is invalid, startLocation will remain null
                 }
             }
-        
+
             var fileName = $"Equipment_List_{DateTime.Today:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -395,7 +414,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
             if (pdfFile == null) return;
 
-            var equipmentModel = new EquipmentDocumentModel 
+            var equipmentModel = new EquipmentDocumentModel
             {
                 GeneratedDate = DateTime.Today,
                 GymName = "AHON Victory Fitness Gym",
@@ -419,13 +438,13 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             };
 
             var document = new EquipmentDocument(equipmentModel);
-        
+
             await using var stream = await pdfFile.OpenWriteAsync();
-            
+
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
-            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
-        
+                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+
             _toastManager.CreateToast("Equipment list exported successfully")
                 .WithContent($"Equipment list has been saved to {pdfFile.Name}")
                 .DismissOnClick()
@@ -564,9 +583,9 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             .Dismissible()
             .Show();
     }
-    
+
     private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
-    
+
     private async Task OnSubmitDeleteSingleItem(Equipment equipment)
     {
         try
