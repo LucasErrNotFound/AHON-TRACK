@@ -27,6 +27,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     private readonly PageManager _pageManager;
     private readonly IDashboardService _dashboardService;
+    private readonly IInventoryService _inventoryService;
     private readonly ToastManager _toastManager;
     private readonly DashboardModel _dashboardModel;
     private int _selectedYearIndex;
@@ -162,12 +163,16 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     #region Constructor
 
-    public DashboardViewModel(ToastManager toastManager, PageManager pageManager, DashboardModel dashboardModel, IDashboardService dashboardService)
+    public DashboardViewModel(ToastManager toastManager, PageManager pageManager, DashboardModel dashboardModel, 
+        IDashboardService dashboardService, IInventoryService inventoryService)
     {
         _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
         _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
         _dashboardModel = dashboardModel ?? throw new ArgumentNullException(nameof(dashboardModel));
         _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
+        _inventoryService = inventoryService ?? throw new ArgumentNullException(nameof(inventoryService));
+        
+        _inventoryService.RegisterNotificationCallback(AddNotification);
         
         _ = InitializeViewModel();
     }
@@ -186,13 +191,14 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     private async Task InitializeViewModel()
     {
         InitializeAxes();
-        InitializeNotificationsData();
         
         await InitializeAvailableYears();
         await InitializeChart();
         await InitializeSalesData();
         await InitializeTrainingSessionsData();
         await RefreshRecentLogs();
+        
+        // await _inventoryService.ShowEquipmentAlertsAsync();
 
         DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
         {
@@ -498,28 +504,6 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     #endregion
 
-    #region Data Loading Methods (add this method)
-
-    public async Task LoadNotificationsFromDatabaseAsync()
-    {
-        try
-        {
-            var notificationsFromDb = await _dashboardModel.GetNotificationsFromDatabaseAsync();
-
-            Notifications.Clear();
-            foreach (var notification in notificationsFromDb)
-            {
-                Notifications.Add(notification);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading notifications data: {ex.Message}");
-        }
-    }
-
-    #endregion
-
     #region Delete Notification
     
     private void DeleteNotification(Notification? notification)
@@ -542,12 +526,6 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     [AvaloniaHotReload]
     public void Initialize()
     {
-    }
-    
-    private void InitializeNotificationsData()
-    {
-        var notificationsData = _dashboardModel.GetSampleNotificationsData();
-        Notifications = new ObservableCollection<Notification>(notificationsData);
     }
     
     private RelayCommand<Notification>? _deleteNotificationCommand;

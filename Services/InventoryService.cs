@@ -10,6 +10,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.Services
 {
@@ -17,11 +18,28 @@ namespace AHON_TRACK.Services
     {
         private readonly string _connectionString;
         private readonly ToastManager _toastManager;
+        private Action<Notification>? _notificationCallback;
 
         public InventoryService(string connectionString, ToastManager toastManager)
         {
             _connectionString = connectionString;
             _toastManager = toastManager;
+        }
+        
+        public void RegisterNotificationCallback(Action<Notification> callback)
+        {
+            _notificationCallback = callback;
+        }
+
+        private void AddNotification(string title, string message, NotificationType type)
+        {
+            _notificationCallback?.Invoke(new Notification
+            {
+                Type = type,
+                Title = title,
+                Message = message,
+                DateAndTime = DateTime.Today
+            });
         }
 
         #region Role-Based Access Control
@@ -995,48 +1013,93 @@ namespace AHON_TRACK.Services
 
         #region NOTIFICATIONS
 
-        public async Task ShowEquipmentAlertsAsync()
+        public async Task ShowEquipmentAlertsAsync(Action<Notification>? addNotificationCallback = null)
         {
             try
             {
-                // Get all alerts
                 var lowStockCount = await GetLowStockCountAsync();
                 var maintenanceDueCount = await GetMaintenanceDueCountAsync();
                 var warrantyExpiringCount = await GetWarrantyExpiringCountAsync();
                 var conditionAlertCount = await GetConditionAlertCountAsync();
 
-                // Show notifications based on priority
+                // Use provided callback OR internal callback
+                var notifyCallback = addNotificationCallback ?? _notificationCallback;
+
                 // HIGHEST PRIORITY: Equipment condition issues
                 if (conditionAlertCount > 0)
                 {
-                    _toastManager?.CreateToast("Equipment Condition Alert")
-                        .WithContent($"{conditionAlertCount} equipment item(s) need attention (Repairing/Broken)!")
+                    var title = "Equipment Condition Alert";
+                    var message = $"{conditionAlertCount} equipment item(s) need attention (Repairing/Broken)!";
+            
+                    _toastManager?.CreateToast(title)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowError();
+                
+                    notifyCallback?.Invoke(new Notification
+                    {
+                        Type = NotificationType.Error,
+                        Title = title,
+                        Message = message,
+                        DateAndTime = DateTime.Now
+                    });
                 }
 
                 if (maintenanceDueCount > 0)
                 {
-                    _toastManager?.CreateToast("Maintenance Alert")
-                        .WithContent($"{maintenanceDueCount} equipment item(s) require maintenance within 7 days!")
+                    var title = "Maintenance Alert";
+                    var message = $"{maintenanceDueCount} equipment item(s) require maintenance within 7 days!";
+            
+                    _toastManager?.CreateToast(title)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowWarning();
+                
+                    notifyCallback?.Invoke(new Notification
+                    {
+                        Type = NotificationType.Warning,
+                        Title = title,
+                        Message = message,
+                        DateAndTime = DateTime.Now
+                    });
                 }
 
                 if (warrantyExpiringCount > 0)
                 {
-                    _toastManager?.CreateToast("Warranty Expiring")
-                        .WithContent($"{warrantyExpiringCount} equipment warranty(ies) expiring within 30 days!")
+                    var title = "Warranty Expiring";
+                    var message = $"{warrantyExpiringCount} equipment warranty(ies) expiring within 30 days!";
+            
+                    _toastManager?.CreateToast(title)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowInfo();
+                
+                    notifyCallback?.Invoke(new Notification
+                    {
+                        Type = NotificationType.Info,
+                        Title = title,
+                        Message = message,
+                        DateAndTime = DateTime.Now
+                    });
                 }
 
                 if (lowStockCount > 0)
                 {
-                    _toastManager?.CreateToast("Low Stock Alert")
-                        .WithContent($"{lowStockCount} equipment item(s) have low stock (≤5 units)!")
+                    var title = "Low Stock Alert";
+                    var message = $"{lowStockCount} equipment item(s) have low stock (≤5 units)!";
+            
+                    _toastManager?.CreateToast(title)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowWarning();
+                
+                    notifyCallback?.Invoke(new Notification
+                    {
+                        Type = NotificationType.Warning,
+                        Title = title,
+                        Message = message,
+                        DateAndTime = DateTime.Now
+                    });
                 }
             }
             catch (Exception ex)
@@ -1045,9 +1108,6 @@ namespace AHON_TRACK.Services
             }
         }
 
-        /// <summary>
-        /// Get detailed equipment alerts including condition alerts
-        /// </summary>
         public async Task<EquipmentAlertSummary> GetEquipmentAlertSummaryAsync()
         {
             var summary = new EquipmentAlertSummary();
@@ -1057,19 +1117,15 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Get condition alert items (NEW)
                 summary.ConditionAlertItems = await GetConditionAlertItemsAsync(conn);
                 summary.ConditionAlertCount = summary.ConditionAlertItems.Count;
 
-                // Get low stock items
                 summary.LowStockItems = await GetLowStockItemsAsync(conn);
                 summary.LowStockCount = summary.LowStockItems.Count;
 
-                // Get maintenance due items
                 summary.MaintenanceDueItems = await GetMaintenanceDueItemsAsync(conn);
                 summary.MaintenanceDueCount = summary.MaintenanceDueItems.Count;
 
-                // Get warranty expiring items
                 summary.WarrantyExpiringItems = await GetWarrantyExpiringItemsAsync(conn);
                 summary.WarrantyExpiringCount = summary.WarrantyExpiringItems.Count;
 

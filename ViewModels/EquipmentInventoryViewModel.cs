@@ -81,7 +81,6 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _inventoryService = inventoryService;
         _settingsService = settingsService;
 
-        SubscribeToEvents();
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
     }
@@ -95,7 +94,6 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _settingsService = new SettingsService();
         _inventoryService = null!;
 
-        SubscribeToEvents();
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
     }
@@ -109,21 +107,6 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         IsInitialized = true;
     }
 
-    private void SubscribeToEvents()
-    {
-        var eventService = DashboardEventService.Instance;
-
-        eventService.EquipmentAdded += OnEquipmentDataChanged;
-        eventService.EquipmentDeleted += OnEquipmentDataChanged;
-        eventService.EquipmentUpdated += OnEquipmentDataChanged;
-    }
-
-    // ✅ NEW: Handle equipment data changes
-    private async void OnEquipmentDataChanged(object? sender, EventArgs e)
-    {
-        // Reload equipment data when any change occurs
-        await LoadEquipmentDataAsync();
-    }
 
     private async Task LoadEquipmentDataAsync()
     {
@@ -163,10 +146,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
             ApplyEquipmentFilter();
             UpdateEquipmentCounts();
-            if (_inventoryService != null)
-            {
-                await _inventoryService.ShowEquipmentAlertsAsync();
-            }
+            await _inventoryService.ShowEquipmentAlertsAsync();
         }
         catch (Exception ex)
         {
