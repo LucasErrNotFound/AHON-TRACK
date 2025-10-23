@@ -16,7 +16,7 @@ namespace AHON_TRACK
             // 🔥 TEMPORARY CODE - Run once to get password hash, then DELETE! 🔥
             try
             {
-                string password = "Codfish101";
+                string password = "Calubayan123";
                 string hash = BCrypt.Net.BCrypt.HashPassword(password);
 
                 Console.WriteLine("================================");
