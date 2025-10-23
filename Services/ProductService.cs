@@ -256,7 +256,7 @@ namespace AHON_TRACK.Services
                      .DismissOnClick()
                      .ShowSuccess(); */
 
-                // DashboardEventService.Instance.NotifyProductAdded();
+                DashboardEventService.Instance.NotifyProductAdded();
                 return (true, "Product added successfully.", productId);
             }
             catch (SqlException ex)
