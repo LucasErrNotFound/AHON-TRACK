@@ -1,5 +1,6 @@
 ﻿using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -179,6 +180,9 @@ VALUES (
 
                 // Step 6: Commit transaction
                 transaction.Commit();
+                DashboardEventService.Instance.NotifyScheduleAdded();
+                DashboardEventService.Instance.NotifyMemberUpdated();
+                DashboardEventService.Instance.NotifyTrainingSessionsUpdated();
 
                 await LogActionAsync(connection, "CREATE",
                     $"Added training schedule for {training.firstName} {training.lastName} with {training.assignedCoach} on {training.scheduledDate:MMM dd, yyyy}.", true);
@@ -360,14 +364,11 @@ WHERE TrainingID = @TrainingID";
                     .ShowError();
                 return new List<TraineeModel>();
             }
-
             var trainees = new List<TraineeModel>();
-
             try
             {
                 await using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
-
                 const string query = @"
 -- Get Members with sessions
 SELECT 
@@ -384,34 +385,12 @@ FROM Members m
 INNER JOIN MemberSessions ms ON m.MemberID = ms.CustomerID
 INNER JOIN Packages p ON ms.PackageID = p.PackageID
 WHERE COALESCE(ms.SessionsLeft, 0) > 0
-
-UNION ALL
-
--- Get Walk-In Customers with sessions
-SELECT 
-    w.CustomerID,
-    w.CustomerType AS CustomerType,
-    w.FirstName,
-    w.LastName,
-    w.ContactNumber,
-    NULL AS ProfilePicture,
-    p.PackageName AS PackageType,
-    p.PackageID,
-    COALESCE(ws.SessionsLeft, 0) AS SessionsLeft
-FROM WalkInCustomers w
-INNER JOIN WalkInSessions ws ON w.CustomerID = ws.CustomerID
-INNER JOIN Packages p ON ws.PackageID = p.PackageID
-WHERE COALESCE(ws.SessionsLeft, 0) > 0
-
 ORDER BY FirstName, LastName;";
-
                 await using var command = new SqlCommand(query, connection);
                 await using var reader = await command.ExecuteReaderAsync();
-
                 while (await reader.ReadAsync())
                 {
                     Bitmap? picture = null;
-
                     if (!reader.IsDBNull(reader.GetOrdinal("ProfilePicture")))
                     {
                         var pictureBytes = (byte[])reader["ProfilePicture"];
@@ -421,7 +400,6 @@ ORDER BY FirstName, LastName;";
                             picture = new Bitmap(ms);
                         }
                     }
-
                     trainees.Add(new TraineeModel
                     {
                         ID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
@@ -442,10 +420,8 @@ ORDER BY FirstName, LastName;";
                     .WithContent($"Failed to load available trainees: {ex.Message}")
                     .WithDelay(5)
                     .ShowError();
-
                 Debug.WriteLine($"GetAvailableTraineesAsync Error: {ex}");
             }
-
             return trainees;
         }
 
@@ -552,6 +528,7 @@ WHERE TrainingID = @TrainingID";
 
                 if (rowsAffected > 0)
                 {
+                    DashboardEventService.Instance.NotifyScheduleUpdated();
                     await LogActionAsync(connection, "UPDATE",
                         $"Updated training schedule for {training.firstName} {training.lastName} (ID: {training.trainingID})", true);
 
@@ -612,6 +589,7 @@ WHERE TrainingID = @TrainingID";
 
                 if (rowsAffected > 0)
                 {
+                    DashboardEventService.Instance.NotifyScheduleUpdated();
                     await LogActionAsync(connection, "UPDATE",
                         $"Updated attendance to '{attendance}' for training ID {trainingID}", true);
                     return true;
@@ -721,6 +699,7 @@ WHERE TrainingID = @TrainingID";
                 logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
                 await logCmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyTrainingSessionsUpdated();
             }
             catch (Exception ex)
             {

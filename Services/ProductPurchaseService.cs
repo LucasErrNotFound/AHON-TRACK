@@ -98,9 +98,9 @@ namespace AHON_TRACK.Services
                     if (item.Category == CategoryConstants.GymPackage)
                     {
                         string getDiscountQuery = @"
-        SELECT Discount, DiscountType, DiscountFor, ValidFrom, ValidTo
-        FROM Packages
-        WHERE PackageID = @PackageID";
+SELECT Discount, DiscountType, DiscountFor, ValidFrom, ValidTo
+FROM Packages
+WHERE PackageID = @PackageID";
 
                         using var discountCmd = new SqlCommand(getDiscountQuery, conn, transaction);
                         discountCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
@@ -140,9 +140,9 @@ namespace AHON_TRACK.Services
                     {
                         // --- ✅ Product Discount Logic (new) ---
                         string getProductDiscountQuery = @"
-            SELECT Price, DiscountedPrice, IsPercentageDiscount
-            FROM Products
-            WHERE ProductID = @ProductID";
+    SELECT Price, DiscountedPrice, IsPercentageDiscount
+    FROM Products
+    WHERE ProductID = @ProductID";
 
                         using var prodCmd = new SqlCommand(getProductDiscountQuery, conn, transaction);
                         prodCmd.Parameters.AddWithValue("@ProductID", item.SellingID);
@@ -168,7 +168,7 @@ namespace AHON_TRACK.Services
                                     finalPrice = price;
                                 }
 
-                                // Make sure price doesn’t go below zero
+                                // Make sure price doesn't go below zero
                                 if (finalPrice < 0) finalPrice = 0;
 
                                 itemTotal = finalPrice * item.Quantity;
@@ -182,9 +182,9 @@ namespace AHON_TRACK.Services
 
                     // Step 1: Record in Sales table
                     string insertSale = @"
-                        INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, RecordedBy)
-                        VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @RecordedBy);
-                        SELECT SCOPE_IDENTITY();";
+                INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, RecordedBy)
+                VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @RecordedBy);
+                SELECT SCOPE_IDENTITY();";
 
                     using var cmd = new SqlCommand(insertSale, conn, transaction);
                     cmd.Parameters.AddWithValue("@SaleDate", DateTime.Now);
@@ -200,9 +200,9 @@ namespace AHON_TRACK.Services
 
                     // Step 2: Record in CustomerPurchases
                     string insertPurchase = @"
-                        INSERT INTO CustomerPurchases (CustomerID, CustomerType, SellingID, Category, Quantity, TotalAmount, PurchaseDate)
-                        VALUES (@CustomerID, @CustomerType, @SellingID, @Category, @Quantity, @TotalAmount, GETDATE());
-                        SELECT SCOPE_IDENTITY();";
+                INSERT INTO CustomerPurchases (CustomerID, CustomerType, SellingID, Category, Quantity, TotalAmount, PurchaseDate)
+                VALUES (@CustomerID, @CustomerType, @SellingID, @Category, @Quantity, @TotalAmount, GETDATE());
+                SELECT SCOPE_IDENTITY();";
 
                     using var purchaseCmd = new SqlCommand(insertPurchase, conn, transaction);
                     purchaseCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
@@ -216,8 +216,8 @@ namespace AHON_TRACK.Services
 
                     // Step 3: Record in PurchaseDetails
                     string insertDetails = @"
-                        INSERT INTO PurchaseDetails (PurchaseID, SellingID, Category, Quantity, UnitPrice)
-                        VALUES (@PurchaseID, @SellingID, @Category, @Quantity, @UnitPrice);";
+                INSERT INTO PurchaseDetails (PurchaseID, SellingID, Category, Quantity, UnitPrice)
+                VALUES (@PurchaseID, @SellingID, @Category, @Quantity, @UnitPrice);";
 
                     using var detailsCmd = new SqlCommand(insertDetails, conn, transaction);
                     detailsCmd.Parameters.AddWithValue("@PurchaseID", purchaseId);
@@ -232,7 +232,7 @@ namespace AHON_TRACK.Services
                     {
                         // Check if sufficient stock exists
                         string checkStock = @"
-                            SELECT CurrentStock FROM Products WHERE ProductID = @ProductID;";
+                    SELECT CurrentStock FROM Products WHERE ProductID = @ProductID;";
 
                         using var checkCmd = new SqlCommand(checkStock, conn, transaction);
                         checkCmd.Parameters.AddWithValue("@ProductID", item.SellingID);
@@ -245,13 +245,13 @@ namespace AHON_TRACK.Services
 
                         // Update stock
                         string updateStock = @"
-                            UPDATE Products 
-                            SET CurrentStock = CurrentStock - @Qty,
-                                Status = CASE 
-                                    WHEN (CurrentStock - @Qty) <= 0 THEN 'Out of Stock'
-                                    ELSE Status
-                                END
-                            WHERE ProductID = @ProductID;";
+                    UPDATE Products 
+                    SET CurrentStock = CurrentStock - @Qty,
+                        Status = CASE 
+                            WHEN (CurrentStock - @Qty) <= 0 THEN 'Out of Stock'
+                            ELSE Status
+                        END
+                    WHERE ProductID = @ProductID;";
 
                         using var stockCmd = new SqlCommand(updateStock, conn, transaction);
                         stockCmd.Parameters.AddWithValue("@Qty", item.Quantity);
@@ -260,152 +260,99 @@ namespace AHON_TRACK.Services
                     }
                     else if (item.Category == CategoryConstants.GymPackage)
                     {
-                        // Get package duration and parse it
-                        string getPackageDuration = @"
-                            SELECT Duration FROM Packages WHERE PackageID = @PackageID;";
-
-                        int sessionsLeft = 1; // Default for one-time packages
-                        using (var pkgCmd = new SqlCommand(getPackageDuration, conn, transaction))
-                        {
-                            pkgCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
-                            var result = await pkgCmd.ExecuteScalarAsync();
-
-                            if (result != null && result != DBNull.Value)
-                            {
-                                string durationStr = result.ToString()?.Trim() ?? "";
-
-                                // Map your exact duration values to session counts
-                                sessionsLeft = durationStr.ToLower() switch
-                                {
-                                    "one-time only" => 1,
-                                    "month" => 30,
-                                    "session" => 1,
-                                    _ => 1 // Default to 1 if unknown
-                                };
-                            }
-                        }
-
-                        // Handle sessions based on customer type
+                        // Only handle Member sessions for per-session packages
                         if (customer.CustomerType == CategoryConstants.Member)
                         {
-                            // Member Sessions Logic
-                            string checkExisting = @"
-                                SELECT SessionID, SessionsLeft 
-                                FROM MemberSessions 
-                                WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
+                            // Get package duration to determine if it's per-session
+                            string getPackageDuration = @"
+                        SELECT Duration FROM Packages WHERE PackageID = @PackageID;";
 
-                            int? existingSessionId = null;
-                            int existingSessionsLeft = 0;
-
-                            using (var checkCmd = new SqlCommand(checkExisting, conn, transaction))
+                            string durationStr = "";
+                            using (var pkgCmd = new SqlCommand(getPackageDuration, conn, transaction))
                             {
-                                checkCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
-                                checkCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+                                pkgCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+                                var result = await pkgCmd.ExecuteScalarAsync();
 
-                                using var reader = await checkCmd.ExecuteReaderAsync();
-                                if (await reader.ReadAsync())
+                                if (result != null && result != DBNull.Value)
                                 {
-                                    existingSessionId = reader.GetInt32(0);
-                                    existingSessionsLeft = reader.GetInt32(1);
+                                    durationStr = result.ToString()?.Trim()?.ToLower() ?? "";
                                 }
                             }
 
-                            if (existingSessionId.HasValue)
+                            // Only track sessions for "session" and "one-time only" packages
+                            // Skip monthly packages - they're just recorded as sales
+                            if (durationStr == "session" || durationStr == "one-time only")
                             {
-                                // Update existing session
-                                string updateSession = @"
-                                    UPDATE MemberSessions 
-                                    SET SessionsLeft = SessionsLeft + @NewSessions
-                                    WHERE SessionID = @SessionID;";
+                                int sessionsLeft = durationStr == "one-time only" ? 1 : 1;
 
-                                using var updateCmd = new SqlCommand(updateSession, conn, transaction);
-                                updateCmd.Parameters.AddWithValue("@SessionID", existingSessionId.Value);
-                                updateCmd.Parameters.AddWithValue("@NewSessions", sessionsLeft * item.Quantity);
-                                await updateCmd.ExecuteNonQueryAsync();
-                            }
-                            else
-                            {
-                                // Insert new session
-                                string insertSession = @"
-                                    INSERT INTO MemberSessions (CustomerID, PackageID, SessionsLeft, StartDate)
-                                    VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());";
+                                // Member Sessions Logic
+                                string checkExisting = @"
+                            SELECT SessionID, SessionsLeft 
+                            FROM MemberSessions 
+                            WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
 
-                                using var insertCmd = new SqlCommand(insertSession, conn, transaction);
-                                insertCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
-                                insertCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
-                                insertCmd.Parameters.AddWithValue("@SessionsLeft", sessionsLeft * item.Quantity);
-                                await insertCmd.ExecuteNonQueryAsync();
-                            }
-                        }
-                        else if (customer.CustomerType == CategoryConstants.WalkIn)
-                        {
-                            // Walk-In Sessions Logic
-                            string checkExisting = @"
-                                SELECT SessionID, SessionsLeft 
-                                FROM WalkInSessions 
-                                WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
+                                int? existingSessionId = null;
+                                int existingSessionsLeft = 0;
 
-                            int? existingSessionId = null;
-                            int existingSessionsLeft = 0;
-
-                            using (var checkCmd = new SqlCommand(checkExisting, conn, transaction))
-                            {
-                                checkCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
-                                checkCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
-
-                                using var reader = await checkCmd.ExecuteReaderAsync();
-                                if (await reader.ReadAsync())
+                                using (var checkCmd = new SqlCommand(checkExisting, conn, transaction))
                                 {
-                                    existingSessionId = reader.GetInt32(0);
-                                    existingSessionsLeft = reader.GetInt32(1);
+                                    checkCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
+                                    checkCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+
+                                    using var reader = await checkCmd.ExecuteReaderAsync();
+                                    if (await reader.ReadAsync())
+                                    {
+                                        existingSessionId = reader.GetInt32(0);
+                                        existingSessionsLeft = reader.GetInt32(1);
+                                    }
+                                }
+
+                                if (existingSessionId.HasValue)
+                                {
+                                    // Update existing session
+                                    string updateSession = @"
+                                UPDATE MemberSessions 
+                                SET SessionsLeft = SessionsLeft + @NewSessions
+                                WHERE SessionID = @SessionID;";
+
+                                    using var updateCmd = new SqlCommand(updateSession, conn, transaction);
+                                    updateCmd.Parameters.AddWithValue("@SessionID", existingSessionId.Value);
+                                    updateCmd.Parameters.AddWithValue("@NewSessions", sessionsLeft * item.Quantity);
+                                    await updateCmd.ExecuteNonQueryAsync();
+                                }
+                                else
+                                {
+                                    // Insert new session
+                                    string insertSession = @"
+                                INSERT INTO MemberSessions (CustomerID, PackageID, SessionsLeft, StartDate)
+                                VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());";
+
+                                    using var insertCmd = new SqlCommand(insertSession, conn, transaction);
+                                    insertCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
+                                    insertCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+                                    insertCmd.Parameters.AddWithValue("@SessionsLeft", sessionsLeft * item.Quantity);
+                                    await insertCmd.ExecuteNonQueryAsync();
                                 }
                             }
-
-                            if (existingSessionId.HasValue)
-                            {
-                                // Update existing session
-                                string updateSession = @"
-                                    UPDATE WalkInSessions 
-                                    SET SessionsLeft = SessionsLeft + @NewSessions
-                                    WHERE SessionID = @SessionID;";
-
-                                using var updateCmd = new SqlCommand(updateSession, conn, transaction);
-                                updateCmd.Parameters.AddWithValue("@SessionID", existingSessionId.Value);
-                                updateCmd.Parameters.AddWithValue("@NewSessions", sessionsLeft * item.Quantity);
-                                await updateCmd.ExecuteNonQueryAsync();
-                            }
-                            else
-                            {
-                                // Insert new session with expiry date (e.g., 30 days from now for monthly)
-                                DateTime? expiryDate = sessionsLeft == 30 ? DateTime.Now.AddDays(30) : null;
-
-                                string insertSession = @"
-                                    INSERT INTO WalkInSessions (CustomerID, PackageID, SessionsLeft, StartDate)
-                                    VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());";
-
-                                using var insertCmd = new SqlCommand(insertSession, conn, transaction);
-                                insertCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
-                                insertCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
-                                insertCmd.Parameters.AddWithValue("@SessionsLeft", sessionsLeft * item.Quantity);
-                                await insertCmd.ExecuteNonQueryAsync();
-                            }
+                            // Monthly packages: No session tracking, sale is already recorded above
                         }
+                        // Walk-in customers: No session tracking, sale is already recorded above
                     }
                 }
 
                 // Step 5: Update DailySales
                 string upsertDaily = @"
-                    MERGE DailySales AS target
-                    USING (SELECT CAST(GETDATE() AS DATE) AS SaleDate, @EmployeeID AS EmployeeID) AS source
-                    ON target.SaleDate = source.SaleDate AND target.TransactionByEmployeeID = source.EmployeeID
-                    WHEN MATCHED THEN
-                        UPDATE SET 
-                            TotalSales = target.TotalSales + @TotalAmount,
-                            TotalTransactions = target.TotalTransactions + @TotalTransactions,
-                            TransactionUpdatedDate = SYSDATETIME()
-                    WHEN NOT MATCHED THEN
-                        INSERT (SaleDate, TotalSales, TotalTransactions, TransactionByEmployeeID)
-                        VALUES (source.SaleDate, @TotalAmount, @TotalTransactions, source.EmployeeID);";
+            MERGE DailySales AS target
+            USING (SELECT CAST(GETDATE() AS DATE) AS SaleDate, @EmployeeID AS EmployeeID) AS source
+            ON target.SaleDate = source.SaleDate AND target.TransactionByEmployeeID = source.EmployeeID
+            WHEN MATCHED THEN
+                UPDATE SET 
+                    TotalSales = target.TotalSales + @TotalAmount,
+                    TotalTransactions = target.TotalTransactions + @TotalTransactions,
+                    TransactionUpdatedDate = SYSDATETIME()
+            WHEN NOT MATCHED THEN
+                INSERT (SaleDate, TotalSales, TotalTransactions, TransactionByEmployeeID)
+                VALUES (source.SaleDate, @TotalAmount, @TotalTransactions, source.EmployeeID);";
 
                 using var dailyCmd = new SqlCommand(upsertDaily, conn, transaction);
                 dailyCmd.Parameters.AddWithValue("@EmployeeID", employeeId);

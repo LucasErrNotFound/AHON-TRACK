@@ -43,6 +43,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
     [ObservableProperty]
     private List<PackageModel> _memberPackageItems = new();
+
     [ObservableProperty]
     private PackageModel? _selectedMemberPackageItem;
 

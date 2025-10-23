@@ -1,5 +1,6 @@
 using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -72,6 +73,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _changeScheduleDialogCardViewModel = changeScheduleDialogCardViewModel;
         _trainingService = trainingService;
 
+        SubscribeToEvents();
         _ = LoadTrainingsAsync();
         UpdateScheduledPeopleCounts();
     }
@@ -85,7 +87,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _changeScheduleDialogCardViewModel = new ChangeScheduleDialogCardViewModel();
         _trainingService = null!;
 
-        //LoadSampleData();
+        SubscribeToEvents();
         UpdateScheduledPeopleCounts();
     }
 
@@ -93,10 +95,24 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     public void Initialize()
     {
         if (IsInitialized) return;
+        SubscribeToEvents();
         _ = LoadTrainingsAsync();
-        //LoadSampleData();
         UpdateScheduledPeopleCounts();
         IsInitialized = true;
+    }
+
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+        eventService.TrainingSessionsUpdated += OnTrainingDataChanged;
+        eventService.ScheduleAdded += OnTrainingDataChanged;
+        eventService.ScheduleUpdated += OnTrainingDataChanged;
+        eventService.MemberUpdated += OnTrainingDataChanged;
+    }
+
+    private void OnTrainingDataChanged(object? sender, EventArgs e)
+    {
+        _ = LoadTrainingsAsync();
     }
 
     public async Task LoadTrainingsAsync()

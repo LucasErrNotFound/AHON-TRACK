@@ -1,5 +1,6 @@
 ﻿using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
@@ -113,6 +114,10 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         _toastManager = toastManager;
         _pageManager = pageManager;
         _trainingService = trainingService;
+
+        SubscribeToEvents();
+        _ = LoadCoachesAsync();
+        LoadTraineeData();
     }
 
     public AddTrainingScheduleDialogCardViewModel()
@@ -122,7 +127,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         _pageManager = new PageManager(new ServiceProvider());
         _trainingService = null!;
 
-        LoadTraineeData();
+        SubscribeToEvents();
         UpdateSuggestions();
     }
 
@@ -131,22 +136,39 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     {
         ClearAllFields();
         ClearSearch();
-
+        SubscribeToEvents();
         if (AllTrainees.Count == 0) LoadTraineeData();
         await LoadCoachesAsync();
         UpdateSuggestions();
     }
 
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        // When members are updated (sessions left changes)
+        eventService.MemberUpdated += OnTraineeDataChanged;
+
+        // When schedules are added/updated (affects sessions left)
+        eventService.ScheduleAdded += OnTraineeDataChanged;
+        eventService.ScheduleUpdated += OnTraineeDataChanged;
+    }
+
+    private async void OnTraineeDataChanged(object? sender, EventArgs e)
+    {
+        // Reload trainee data when sessions left changes
+        await LoadTraineeDataFromDatabaseAsync();
+        UpdateSuggestions();
+    }
+
     private async void LoadTraineeData()
     {
-        // If service is available, load from database
         if (_trainingService != null)
         {
             await LoadTraineeDataFromDatabaseAsync();
         }
         else
         {
-            // Fallback to sample data for design-time
             LoadTraineeDataFromSample();
         }
     }
