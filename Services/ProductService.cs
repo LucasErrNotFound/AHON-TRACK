@@ -678,7 +678,7 @@ namespace AHON_TRACK.Services
                 }
 
                 await LogActionAsync(conn, "UPDATE", $"Updated product: {product.ProductName} (ID: {product.ProductID})", true);
-                // DashboardEventService.Instance.NotifyProductUpdated();
+                DashboardEventService.Instance.NotifyProductUpdated();
                 /*  _toastManager.CreateToast("Product Updated")
                       .WithContent($"Successfully updated product '{product.ProductName}'.\nStock: {product.CurrentStock}\nExpiry: {(product.ExpiryDate.HasValue ? product.ExpiryDate.Value.ToString("yyyy-MM-dd") : "N/A")}\nStatus: {product.Status}")
                       .DismissOnClick()
