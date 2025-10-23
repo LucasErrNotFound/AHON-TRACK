@@ -250,7 +250,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         {
             ["Context"] = ProductViewContext.AddProduct
         });
-        _ = LoadProductDataAsync();
     }
 
     [RelayCommand]
@@ -262,7 +261,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             ["Context"] = ProductViewContext.EditProduct,
             ["SelectedProduct"] = SelectedProduct
         });
-        _ = LoadProductDataAsync();
     }
 
     [RelayCommand]
