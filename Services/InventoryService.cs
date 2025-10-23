@@ -296,6 +296,7 @@ namespace AHON_TRACK.Services
                          .WithContent($"Equipment '{equipment.EquipmentName}' added successfully!")
                          .DismissOnClick()
                          .ShowSuccess(); */
+                    DashboardEventService.Instance.NotifyEquipmentAdded();
                     return (true, "Equipment added successfully.", equipment.EquipmentID);
                 }
 
@@ -728,6 +729,7 @@ namespace AHON_TRACK.Services
                           .WithContent($"Equipment '{equipment.EquipmentName}' updated successfully!")
                           .DismissOnClick()
                           .ShowSuccess(); */
+                    DashboardEventService.Instance.NotifyEquipmentUpdated();
                     return (true, "Equipment updated successfully.");
                 }
 
@@ -868,6 +870,7 @@ namespace AHON_TRACK.Services
                            .WithContent($"Equipment '{equipmentName}' deleted successfully!")
                            .DismissOnClick()
                            .ShowSuccess(); */
+                    DashboardEventService.Instance.NotifyEquipmentDeleted();
                     return (true, "Equipment deleted successfully.");
                 }
 
@@ -961,7 +964,7 @@ namespace AHON_TRACK.Services
                            .WithContent($"Successfully deleted {deletedCount} equipment item(s).")
                            .DismissOnClick()
                            .ShowSuccess(); */
-
+                    DashboardEventService.Instance.NotifyEquipmentDeleted();
                     return (true, $"Successfully deleted {deletedCount} equipment item(s).", deletedCount);
                 }
                 catch
