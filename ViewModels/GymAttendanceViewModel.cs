@@ -12,6 +12,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using AHON_TRACK.Services.Events;
+using System.Runtime.Serialization;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -47,6 +49,7 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
         _pageManager = pageManager;
         _data = data;
 
+        SubscribeToEvent();
         _ = LoadDataAsync();
     }
 
@@ -60,7 +63,19 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     [AvaloniaHotReload]
     public void Initialize()
     {
+        SubscribeToEvent();
         _ = LoadDataAsync();
+    }
+
+    private void SubscribeToEvent()
+    {
+        var eventService = DashboardEventService.Instance;
+        eventService.CheckinAdded += OnAttendanceDataChanged;
+    }
+
+    private async void OnAttendanceDataChanged(object? sender, EventArgs e)
+    {
+        await LoadDataAsync();
     }
 
     private async Task LoadDataAsync()

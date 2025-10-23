@@ -15,6 +15,7 @@ using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media.Imaging;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -456,8 +457,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
             if (success)
             {
                 // Update local data
+                DashboardEventService.Instance.NotifyCheckoutAdded();
                 walkIn.CheckOutTime = DateTime.Now;
-
                 _toastManager.CreateToast("Check Out Success")
                     .WithContent($"Stamped {walkIn.FirstName} {walkIn.LastName} check-out time!")
                     .DismissOnClick()
@@ -493,7 +494,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
             {
                 // Update local data
                 member.CheckOutTime = DateTime.Now;
-
+                DashboardEventService.Instance.NotifyCheckoutAdded();
                 _toastManager.CreateToast("Check Out Success")
                     .WithContent($"Stamped {member.FirstName} {member.LastName} check-out time!")
                     .DismissOnClick()
@@ -643,9 +644,10 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     }
 
     [RelayCommand]
-    private void OpenLogWalkInPurchase()
+    private async Task OpenLogWalkInPurchase()
     {
         _pageManager.Navigate<LogWalkInPurchaseViewModel>();
+        await LoadCheckInDataFromService(SelectedDate);
     }
 
     private void OnWalkInPropertyChanged(object? sender, PropertyChangedEventArgs e)

@@ -103,6 +103,7 @@ namespace AHON_TRACK.Services
                 if (rowsAffected > 0)
                 {
                     var memberInfo = await GetMemberInfoAsync(connection, memberId);
+                    DashboardEventService.Instance.NotifyCheckinAdded();
                     await LogActionAsync(connection, "Member Check-In",
                         $"Member {memberInfo?.Name ?? memberId.ToString()} checked in", true);
                     return true;
@@ -405,6 +406,7 @@ namespace AHON_TRACK.Services
 
                 if (rowsAffected > 0)
                 {
+                    DashboardEventService.Instance.NotifyCheckoutAdded();
                     await LogActionAsync(connection, "Member Check-Out",
                         $"Member checked out (Record ID: {memberCheckInId})", true);
                     return true;
@@ -442,7 +444,7 @@ namespace AHON_TRACK.Services
                     WHERE RecordID = @recordID", conn);
 
                 cmd.Parameters.AddWithValue("@recordID", checkInID);
-
+                DashboardEventService.Instance.NotifyCheckoutAdded();
                 var rowsAffected = await cmd.ExecuteNonQueryAsync();
                 return rowsAffected > 0;
             }
@@ -480,6 +482,7 @@ namespace AHON_TRACK.Services
 
                 if (rowsAffected > 0)
                 {
+                    DashboardEventService.Instance.NotifyCheckInOutDeleted();
                     await LogActionAsync(connection, "Delete Member Check-In",
                         $"Deleted member check-in record (RecordID: {memberCheckInId})", true);
                     return true;
@@ -512,19 +515,35 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 await using var cmd = new SqlCommand(@"
-                    DELETE FROM WalkInRecords 
-                    WHERE RecordID = @recordID", conn);
+            DELETE FROM WalkInRecords 
+            WHERE RecordID = @recordID", conn);
 
                 cmd.Parameters.AddWithValue("@recordID", checkInID);
 
                 var rowsAffected = await cmd.ExecuteNonQueryAsync();
-                return rowsAffected > 0;
+
+                if (rowsAffected > 0)
+                {
+                    // 🔹 Notify UI about deletion (just like MemberCheckIn)
+                    DashboardEventService.Instance.NotifyCheckInOutDeleted();
+
+                    // 🔹 Log the deletion action for auditing
+                    await LogActionAsync(conn, "Delete Walk-In Check-In",
+                        $"Deleted walk-in check-in record (RecordID: {checkInID})", true);
+
+                    return true;
+                }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error deleting walk-in check-in: {ex.Message}");
-                return false;
+                Debug.WriteLine($"[DeleteWalkInCheckInAsync] {ex.Message}");
+                _toastManager.CreateToast("Delete Error")
+                    .WithContent($"Failed to delete walk-in check-in: {ex.Message}")
+                    .WithDelay(5)
+                    .ShowError();
             }
+
+            return false;
         }
 
         #endregion
@@ -549,6 +568,8 @@ namespace AHON_TRACK.Services
 
                 await logCmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
+                DashboardEventService.Instance.NotifyPopulationDataChanged();
+
             }
             catch (Exception ex)
             {

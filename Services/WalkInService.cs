@@ -281,26 +281,26 @@ namespace AHON_TRACK.Services
 
                             await salesCmd.ExecuteNonQueryAsync();
 
-                            // Calculate sessions
-                            int sessionsLeft = duration.ToLower() switch
-                            {
-                                "one-time only" => 1,
-                                "session" => 1,
-                                "/session" => 1,
-                                _ => 1
-                            };
+                            /* // Calculate sessions
+                             int sessionsLeft = duration.ToLower() switch
+                             {
+                                 "one-time only" => 1,
+                                 "session" => 1,
+                                 "/session" => 1,
+                                 _ => 1
+                             };
 
-                            // Insert into WalkInSessions
-                            using var sessionCmd = new SqlCommand(
-                                @"INSERT INTO WalkInSessions (CustomerID, PackageID, SessionsLeft, StartDate)
-                          VALUES (@customerId, @packageId, @sessionsLeft, GETDATE())",
-                                conn, transaction);
+                             // Insert into WalkInSessions
+                             using var sessionCmd = new SqlCommand(
+                                 @"INSERT INTO WalkInSessions (CustomerID, PackageID, SessionsLeft, StartDate)
+                           VALUES (@customerId, @packageId, @sessionsLeft, GETDATE())",
+                                 conn, transaction);
 
-                            sessionCmd.Parameters.AddWithValue("@customerId", customerId);
-                            sessionCmd.Parameters.AddWithValue("@packageId", packageId.Value);
-                            sessionCmd.Parameters.AddWithValue("@sessionsLeft", sessionsLeft * (walkIn.Quantity ?? 1));
+                             sessionCmd.Parameters.AddWithValue("@customerId", customerId);
+                             sessionCmd.Parameters.AddWithValue("@packageId", packageId.Value);
+                             sessionCmd.Parameters.AddWithValue("@sessionsLeft", sessionsLeft * (walkIn.Quantity ?? 1));
 
-                            await sessionCmd.ExecuteNonQueryAsync();
+                             await sessionCmd.ExecuteNonQueryAsync(); */
 
                             // Update DailySales
                             using var dailySalesCmd = new SqlCommand(
@@ -343,7 +343,7 @@ namespace AHON_TRACK.Services
                         true);
 
                     transaction.Commit();
-
+                    DashboardEventService.Instance.NotifyCheckinAdded();
                     return (true, "Walk-in customer registered and checked in successfully.", customerId);
                 }
                 catch

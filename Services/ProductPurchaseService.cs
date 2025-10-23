@@ -393,6 +393,7 @@ WHERE PackageID = @PackageID";
                 // Log failed transaction
                 try
                 {
+                    DashboardEventService.Instance.NotifyProductUpdated();
                     await LogActionAsync(conn, "Purchase",
                         $"Failed to process payment for {customer?.FirstName} {customer?.LastName}. Error: {ex.Message}",
                         false);
@@ -778,6 +779,7 @@ ORDER BY s.SaleDate DESC;";
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
                 DashboardEventService.Instance.NotifySalesUpdated();
                 DashboardEventService.Instance.NotifyChartDataUpdated();
+                DashboardEventService.Instance.NotifyProductPurchased();
             }
             catch (Exception ex)
             {

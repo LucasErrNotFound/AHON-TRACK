@@ -249,6 +249,7 @@ namespace AHON_TRACK.Services
                      .DismissOnClick()
                      .ShowSuccess(); */
 
+                DashboardEventService.Instance.NotifyProductAdded();
                 return (true, "Product added successfully.", productId);
             }
             catch (SqlException ex)
@@ -670,7 +671,7 @@ namespace AHON_TRACK.Services
                 }
 
                 await LogActionAsync(conn, "UPDATE", $"Updated product: {product.ProductName} (ID: {product.ProductID})", true);
-
+                DashboardEventService.Instance.NotifyProductUpdated();
                 /*  _toastManager.CreateToast("Product Updated")
                       .WithContent($"Successfully updated product '{product.ProductName}'.\nStock: {product.CurrentStock}\nExpiry: {(product.ExpiryDate.HasValue ? product.ExpiryDate.Value.ToString("yyyy-MM-dd") : "N/A")}\nStatus: {product.Status}")
                       .DismissOnClick()
@@ -795,7 +796,7 @@ namespace AHON_TRACK.Services
                 if (rowsAffected > 0)
                 {
                     await LogActionAsync(conn, "DELETE", $"Deleted product: {productName} (ID: {productId})", true);
-
+                    DashboardEventService.Instance.NotifyProductDeleted();
                     /*  _toastManager.CreateToast("Product Deleted")
                           .WithContent($"Successfully deleted product '{productName}'.")
                           .DismissOnClick()
@@ -874,7 +875,7 @@ namespace AHON_TRACK.Services
                     await LogActionAsync(conn, "DELETE", $"Deleted {deletedCount} products: {string.Join(", ", productNames)}", true);
 
                     transaction.Commit();
-
+                    DashboardEventService.Instance.NotifyProductDeleted();
                     /* _toastManager.CreateToast("Products Deleted")
                          .WithContent($"Successfully deleted {deletedCount} product(s).")
                          .DismissOnClick()
