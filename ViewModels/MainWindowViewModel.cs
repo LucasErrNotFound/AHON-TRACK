@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using Avalonia.Media.Imaging;
 
 namespace AHON_TRACK.ViewModels;
@@ -82,6 +83,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _manageEmployeesViewModel = manageEmployeesViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _settingsDialogCardViewModel = settingsDialogCardViewModel;
+        
+        UserProfileEventService.Instance.ProfilePictureUpdated += OnProfilePictureUpdated;
     }
 
     // Design-time constructor
@@ -281,5 +284,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         desktop.MainWindow = loginWindow;
         loginWindow.Show();
         currentWindow?.Close();
+    }
+    
+    private void OnProfilePictureUpdated()
+    {
+        // Refresh the avatar from CurrentUserModel
+        AvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
+    }
+
+    // Optional: Unsubscribe when disposing (add if you implement IDisposable)
+    public void Dispose()
+    {
+        UserProfileEventService.Instance.ProfilePictureUpdated -= OnProfilePictureUpdated;
     }
 }

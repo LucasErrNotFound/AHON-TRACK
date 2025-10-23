@@ -925,6 +925,16 @@ namespace AHON_TRACK.Services
                         await LogActionAsync(conn, "UPDATE", $"Updated employee: {employee.FirstName} {employee.LastName}", true, transaction);
 
                         transaction.Commit();
+                        
+                        // Check if the updated employee is the current user
+                        if (employee.EmployeeId == CurrentUserModel.UserId)
+                        {
+                            // Update the current user's avatar in memory
+                            CurrentUserModel.AvatarBytes = employee.ProfilePicture;
+    
+                            // Notify listeners that the profile picture changed
+                            UserProfileEventService.Instance.NotifyProfilePictureUpdated();
+                        }
 
                         /* _toastManager?.CreateToast("Employee Updated")
                              .WithContent($"Successfully updated {employee.FirstName} {employee.LastName}.")
