@@ -92,8 +92,6 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
 
-    private static List<ManageEmployeesItem>? _cachedEmployees; // add this at class level
-    private bool _isSubscribedToEvents;
 
     public ObservableCollection<ManageEmployeeModel> Employees { get; } = new ObservableCollection<ManageEmployeeModel>();
 
@@ -109,10 +107,9 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _employeeService = employeeService;
+        SubscribToEvent();
         _ = LoadEmployeesFromDatabaseAsync(); ;
         _ = UpdateCounts();
-
-
 
     }
 
@@ -124,40 +121,37 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _addNewEmployeeDialogCardViewModel = new AddNewEmployeeDialogCardViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _employeeService = null!;
+        SubscribToEvent();
         _ = LoadEmployeesFromDatabaseAsync();
-
 
     }
 
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
-        if (IsInitialized)
-            return;
+        if (IsInitialized) return;
 
-        // ✅ Load cached data first (instant UI)
-        if (_cachedEmployees is not null && _cachedEmployees.Count > 0)
+        SubscribToEvent();
+
+        if (_employeeService != null)
         {
-            EmployeeItems = new ObservableCollection<ManageEmployeesItem>(_cachedEmployees);
-            _ = UpdateCounts();
+            await LoadEmployeesFromDatabaseAsync();
         }
         else
         {
-            // ✅ Otherwise, fetch from DB
-            _ = LoadEmployeesFromDatabaseAsync();
+            LoadSampleData();
         }
-
-        // ✅ Subscribe to global refresh events
-        if (!_isSubscribedToEvents)
-        {
-            DashboardEventService.Instance.MemberAdded += OnEmployeeChanged;
-            DashboardEventService.Instance.MemberUpdated += OnEmployeeChanged;
-            DashboardEventService.Instance.MemberDeleted += OnEmployeeChanged;
-            _isSubscribedToEvents = true;
-        }
-
         IsInitialized = true;
+    }
+
+    private void SubscribToEvent()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.EmployeeAdded += OnEmployeeChanged;
+        eventService.EmployeeUpdated += OnEmployeeChanged;
+        eventService.EmployeeUpdated += OnEmployeeChanged;
     }
 
     private async void OnEmployeeChanged(object? sender, EventArgs e)
@@ -286,7 +280,6 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 DateJoined = emp.DateJoined
             }).ToList();
 
-            _cachedEmployees = employeeItems;
             OriginalEmployeeData = employeeItems;
             CurrentFilteredData = [.. employeeItems];
 

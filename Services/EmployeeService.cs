@@ -330,7 +330,7 @@ namespace AHON_TRACK.Services
                     cmd.Parameters.AddWithValue("@Barangay", employee.Barangay ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@CityTown", employee.CityTown ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@Province", employee.Province ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@DateJoined",employee.DateJoined == default ? DateTime.Now : employee.DateJoined);
+                    cmd.Parameters.AddWithValue("@DateJoined", employee.DateJoined == default ? DateTime.Now : employee.DateJoined);
                     cmd.Parameters.AddWithValue("@Status", employee.Status ?? "Active");
                     cmd.Parameters.AddWithValue("@Position", employee.Position ?? (object)DBNull.Value);
 
@@ -390,7 +390,7 @@ namespace AHON_TRACK.Services
                           .WithContent($"Successfully added {employee.FirstName} {employee.LastName}.")
                           .DismissOnClick()
                           .ShowSuccess(); */
-
+                    DashboardEventService.Instance.NotifyEmployeeAdded();
                     return (true, "Employee added successfully.", employeeId);
                 }
                 catch
@@ -670,10 +670,10 @@ namespace AHON_TRACK.Services
 
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
-    
+
             return await connection.QueryFirstOrDefaultAsync<byte[]?>(query, new { EmployeeID = employeeId });
         }
-        
+
         #endregion
 
         #region UPDATE
@@ -925,14 +925,15 @@ namespace AHON_TRACK.Services
                         await LogActionAsync(conn, "UPDATE", $"Updated employee: {employee.FirstName} {employee.LastName}", true, transaction);
 
                         transaction.Commit();
-                        
+
                         // Check if the updated employee is the current user
                         if (employee.EmployeeId == CurrentUserModel.UserId)
                         {
                             // Update the current user's avatar in memory
                             CurrentUserModel.AvatarBytes = employee.ProfilePicture;
-    
+
                             // Notify listeners that the profile picture changed
+                            DashboardEventService.Instance.NotifyEmployeeUpdated();
                             UserProfileEventService.Instance.NotifyProfilePictureUpdated();
                         }
 
@@ -1223,6 +1224,8 @@ namespace AHON_TRACK.Services
                     {
                         await LogActionAsync(conn, "DELETE", $"Soft deleted employee: {employeeName} (ID: {employeeId})", true, transaction);
                         transaction.Commit();
+
+                        DashboardEventService.Instance.NotifyEmployeeUpdated();
 
                         _toastManager?.CreateToast("Employee Deleted")
                             .WithContent($"Successfully deleted {employeeName}.")
