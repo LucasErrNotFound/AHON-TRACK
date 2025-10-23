@@ -134,6 +134,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _toastManager = toastManager;
         _pageManager = pageManager;
         _productPurchaseService = productPurchaseService;
+        SubscribeToEvent();
         _ = LoadCustomerListFromDatabaseAsync();
         _ = LoadProductsFromDatabaseAsync();
         _ = LoadPackagesFromDatabaseAsync();
@@ -146,6 +147,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _productPurchaseService = null!;
+        SubscribeToEvent();
         _ = LoadCustomerListFromDatabaseAsync();
         _ = LoadProductsFromDatabaseAsync();
         _ = LoadPackagesFromDatabaseAsync();
@@ -156,6 +158,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     {
         if (IsInitialized) return;
 
+        SubscribeToEvent();
         _ = LoadCustomerListFromDatabaseAsync();
         _ = LoadProductsFromDatabaseAsync();
         _ = LoadPackagesFromDatabaseAsync();
@@ -175,7 +178,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         var eventService = DashboardEventService.Instance;
 
         eventService.CheckinAdded += OnCheckInOutDataChanged;
-        eventService.CheckoutUpdated += OnCheckInOutDataChanged;
+        eventService.CheckoutAdded += OnCheckInOutDataChanged;
     }
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)

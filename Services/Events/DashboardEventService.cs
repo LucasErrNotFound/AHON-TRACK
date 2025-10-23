@@ -45,6 +45,11 @@ namespace AHON_TRACK.Services.Events
         public event EventHandler? ScheduleAdded;
         public event EventHandler? ScheduleUpdated;
 
+        // New Events for checkin/out
+        public event EventHandler? CheckinAdded;
+        public event EventHandler? CheckoutAdded;
+        public event EventHandler? CheckInOutDeleted;
+
         private DashboardEventService() { }
 
         // --- Dashboard events ---
@@ -97,5 +102,10 @@ namespace AHON_TRACK.Services.Events
         // --- Schedule events ---
         public void NotifyScheduleAdded() => ScheduleAdded?.Invoke(this, EventArgs.Empty);
         public void NotifyScheduleUpdated() => ScheduleUpdated?.Invoke(this, EventArgs.Empty);
+
+        // --- Check In - Out ---
+        public void NotifyCheckinAdded() => CheckinAdded?.Invoke(this, EventArgs.Empty);
+        public void NotifyCheckoutAdded() => CheckoutAdded?.Invoke(this, EventArgs.Empty);
+        public void NotifyCheckInOutDeleted() => CheckInOutDeleted?.Invoke(this, EventArgs.Empty);
     }
 }
