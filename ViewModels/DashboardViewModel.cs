@@ -28,6 +28,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     private readonly PageManager _pageManager;
     private readonly IDashboardService _dashboardService;
     private readonly IInventoryService _inventoryService;
+    private readonly IProductService _productService;
     private readonly ToastManager _toastManager;
     private readonly DashboardModel _dashboardModel;
     private int _selectedYearIndex;
@@ -164,15 +165,17 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     #region Constructor
 
     public DashboardViewModel(ToastManager toastManager, PageManager pageManager, DashboardModel dashboardModel, 
-        IDashboardService dashboardService, IInventoryService inventoryService)
+        IDashboardService dashboardService, IInventoryService inventoryService, IProductService productService)
     {
         _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
         _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
         _dashboardModel = dashboardModel ?? throw new ArgumentNullException(nameof(dashboardModel));
         _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
         _inventoryService = inventoryService ?? throw new ArgumentNullException(nameof(inventoryService));
+        _productService = productService ?? throw new ArgumentNullException(nameof(productService));
         
         _inventoryService.RegisterNotificationCallback(AddNotification);
+        _productService.RegisterNotificationCallback(AddNotification);
         
         _ = InitializeViewModel();
     }
@@ -199,6 +202,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         await RefreshRecentLogs();
         
         // await _inventoryService.ShowEquipmentAlertsAsync();
+        // await _productService.ShowProductAlertsAsync();
 
         DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
         {

@@ -165,11 +165,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             }
             ApplyProductFilter();
             UpdateProductCounts();
-
-            if (_productService != null)
-            {
-                await _productService.ShowProductAlertsAsync();
-            }
+            
+            await _productService.ShowProductAlertsAsync();
         }
         catch (Exception ex)
         {
