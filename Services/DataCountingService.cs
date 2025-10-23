@@ -1,11 +1,13 @@
 ﻿using AHON_TRACK.Models;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
+using System.Threading.Channels;
 using System.Threading.Tasks;
-using Dapper;
 
 namespace AHON_TRACK.Services
 {
@@ -20,6 +22,7 @@ namespace AHON_TRACK.Services
             _toastManager = toastManager;
         }
 
+        #region Demographics
         public async Task<(Dictionary<string, int> AgeGroups, Dictionary<string, int> GenderCounts, Dictionary<DateTime, int> PopulationCounts)>
             GetGymDemographicsAsync(DateTime from, DateTime to)
         {
@@ -125,6 +128,7 @@ namespace AHON_TRACK.Services
                 return (ageGroups, genderCounts, populationCounts);
             }
         }
+        #endregion
 
         #region ATTENDANCE
         public async Task<IEnumerable<AttendanceDataDto>> GetAttendanceDataAsync(DateTime fromDate, DateTime toDate)
@@ -222,6 +226,91 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region FINANCIAL REPORTS
+
+        public async Task<IEnumerable<PackageSalesDataDto>> GetPackageSalesDataAsync(DateTime fromDate, DateTime toDate)
+        {
+            const string query = @"
+    SELECT 
+        CAST(s.SaleDate AS DATE) AS SaleDate,
+        p.PackageName AS PackageType,
+        SUM(s.Amount) AS Revenue,
+        SUM(s.Quantity) AS TotalSales
+    FROM Sales s
+    INNER JOIN Packages p ON s.PackageID = p.PackageID
+    WHERE s.IsDeleted = 0
+        AND s.PackageID IS NOT NULL
+        AND CAST(s.SaleDate AS DATE) BETWEEN @FromDate AND @ToDate
+    GROUP BY CAST(s.SaleDate AS DATE), p.PackageName
+    ORDER BY SaleDate, PackageType;";
+
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryAsync<PackageSalesDataDto>(
+                query,
+                new { FromDate = fromDate, ToDate = toDate }
+            );
+        }
+
+        public async Task<Dictionary<string, double>> GetPackageSalesTotalsByTypeAsync(DateTime fromDate, DateTime toDate)
+        {
+            const string query = @"
+    SELECT 
+        p.PackageName AS PackageType,  -- Changed from p.Type
+        SUM(s.Amount) AS TotalRevenue
+    FROM Sales s
+    INNER JOIN Packages p ON s.PackageID = p.PackageID
+    WHERE s.IsDeleted = 0
+        AND s.PackageID IS NOT NULL
+        AND CAST(s.SaleDate AS DATE) BETWEEN @FromDate AND @ToDate
+    GROUP BY p.PackageName;";
+
+            using var connection = new SqlConnection(_connectionString);
+            var results = await connection.QueryAsync<(string PackageType, double TotalRevenue)>(
+                query,
+                new { FromDate = fromDate, ToDate = toDate }
+            );
+
+            var totals = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (packageType, totalRevenue) in results)
+            {
+                totals[packageType] = totalRevenue;
+            }
+
+            return totals;
+        }
+
+        public async Task<PackageSalesSummaryDto> GetPackageSalesSummaryAsync(DateTime fromDate, DateTime toDate)
+        {
+            const string query = @"
+    SELECT 
+        p.PackageName AS PackageType,  -- Changed from p.Type
+        SUM(s.Amount) AS TotalRevenue,
+        SUM(s.Quantity) AS TotalQuantity,
+        COUNT(DISTINCT s.SaleID) AS TransactionCount
+    FROM Sales s
+    INNER JOIN Packages p ON s.PackageID = p.PackageID
+    WHERE s.IsDeleted = 0
+        AND s.PackageID IS NOT NULL
+        AND CAST(s.SaleDate AS DATE) BETWEEN @FromDate AND @ToDate
+    GROUP BY p.PackageName;";
+
+            using var connection = new SqlConnection(_connectionString);
+            var results = await connection.QueryAsync<PackageTypeSummaryDto>(
+                query,
+                new { FromDate = fromDate, ToDate = toDate }
+            );
+
+            return new PackageSalesSummaryDto
+            {
+                PackageTypeSummaries = results.ToList(),
+                TotalRevenue = results.Sum(r => r.TotalRevenue),
+                TotalQuantity = results.Sum(r => r.TotalQuantity),
+                TotalTransactions = results.Sum(r => r.TransactionCount)
+            };
+        }
+
+        #endregion
+
         #region SUPPORTING CLASS
         // DTOs
         public class AttendanceDataDto
@@ -238,6 +327,30 @@ namespace AHON_TRACK.Services
             public int TotalMembers { get; set; }
             public double WalkInsPercentage { get; set; }
             public double MembersPercentage { get; set; }
+        }
+
+        public class PackageSalesDataDto
+        {
+            public DateTime SaleDate { get; set; }
+            public string PackageType { get; set; }
+            public double Revenue { get; set; }
+            public int TotalSales { get; set; }
+        }
+
+        public class PackageTypeSummaryDto
+        {
+            public string PackageType { get; set; }
+            public double TotalRevenue { get; set; }
+            public int TotalQuantity { get; set; }
+            public int TransactionCount { get; set; }
+        }
+
+        public class PackageSalesSummaryDto
+        {
+            public List<PackageTypeSummaryDto> PackageTypeSummaries { get; set; }
+            public double TotalRevenue { get; set; }
+            public int TotalQuantity { get; set; }
+            public int TotalTransactions { get; set; }
         }
         #endregion
 

@@ -281,6 +281,7 @@ namespace AHON_TRACK.Services
 
                             await salesCmd.ExecuteNonQueryAsync();
 
+                            // DO NOT REMOVE FOR FUTURE PURPOSES
                             /* // Calculate sessions
                              int sessionsLeft = duration.ToLower() switch
                              {

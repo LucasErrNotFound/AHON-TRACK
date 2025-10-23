@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
+using AHON_TRACK.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HotAvalonia;
 using LiveChartsCore;
@@ -11,6 +13,7 @@ using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ShadUI;
 using SkiaSharp;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -18,37 +21,42 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
 {
     [ObservableProperty]
     private FinancialBreakdownPieData[] _financialBreakdownPieDataCollection;
-    
+
     [ObservableProperty]
     private DateTime _financialBreakdownSelectedFromDate = DateTime.Today.AddMonths(-1);
-    
+
     [ObservableProperty]
     private DateTime _financialBreakdownSelectedToDate = DateTime.Today;
-    
+
     [ObservableProperty]
-    private ISeries[] _revenueSeriesCollection;
-    
+    private ISeries[] _revenueSeriesCollection = [];
+
     [ObservableProperty]
     private Axis[] _revenueChartXAxes;
-    
+
     [ObservableProperty]
     private Axis[] _revenueChartYAxes;
-    
+
     [ObservableProperty]
     private bool _hasValidDateRange = true;
-    
+
+    [ObservableProperty]
+    private bool _isLoading = false;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly DataCountingService _dataCountingService;
 
-    public FinancialReportsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public FinancialReportsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, DataCountingService dataCountingService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        
-        UpdateRevenueChart();
-        UpdateFinancialBreakdownChart();
+        _dataCountingService = dataCountingService;
+
+        _ = LoadFinancialDataAsync();
+        SubscribeToEvent();
     }
 
     public FinancialReportsViewModel()
@@ -56,24 +64,62 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+
+        SubscribeToEvent();
+        // For design-time, you'll need to handle this appropriately
     }
 
     [AvaloniaHotReload]
     public void Initialize()
     {
+        SubscribeToEvent();
     }
-    
-    private void UpdateFinancialBreakdownChart()
+
+    private void SubscribeToEvent()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.SalesUpdated += OnFinancialDataChanged;
+        eventService.ChartDataUpdated += OnFinancialDataChanged;
+        eventService.ProductPurchased += OnFinancialDataChanged;
+    }
+
+    private async void OnFinancialDataChanged(object? sender, EventArgs e)
+    {
+        await LoadFinancialDataAsync();
+        await UpdateRevenueChartAsync();
+    }
+
+    private async Task LoadFinancialDataAsync()
     {
         if (FinancialBreakdownSelectedFromDate > FinancialBreakdownSelectedToDate)
         {
             HasValidDateRange = false;
             FinancialBreakdownPieDataCollection = [];
+            RevenueSeriesCollection = [];
             return;
         }
 
         HasValidDateRange = true;
+        IsLoading = true;
 
+        try
+        {
+            await UpdateRevenueChartAsync();
+            UpdateFinancialBreakdownChart();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Error loading financial data: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void UpdateFinancialBreakdownChart()
+    {
         if (RevenueSeriesCollection.Length == 0)
             return;
 
@@ -83,7 +129,7 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         {
             if (series is not StackedColumnSeries<double> stackedSeries) continue;
             if (stackedSeries.Values == null) continue;
-    
+
             var total = stackedSeries.Values.Sum();
             var color = stackedSeries.Name switch
             {
@@ -92,7 +138,7 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
                 "Crossfit" => "#43A047",
                 "Coaching" => "#8E24AA",
                 "Walk-Ins" => "#FFA500",
-                "Membership" => "#FF4500", 
+                "Membership" => "#FF4500",
                 _ => "#1976D2"
             };
 
@@ -106,7 +152,153 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             .ToArray();
     }
 
-    private void UpdateRevenueChart()
+    private async Task UpdateRevenueChartAsync()
+    {
+        if (_dataCountingService == null)
+        {
+            UpdateRevenueChartWithMockData();
+            return;
+        }
+
+        try
+        {
+            // Fetch data from database
+            var salesData = await _dataCountingService.GetPackageSalesDataAsync(
+                FinancialBreakdownSelectedFromDate,
+                FinancialBreakdownSelectedToDate);
+
+            var salesList = salesData.ToList();
+
+            // If no data, show message and return
+            if (!salesList.Any())
+            {
+                RevenueSeriesCollection = [];
+                FinancialBreakdownPieDataCollection = [];
+                _toastManager?.CreateToast("No sales data found for the selected date range.");
+                return;
+            }
+
+            // Get unique package types from actual data
+            var packageTypes = salesList
+                .Select(s => s.PackageType)
+                .Distinct()
+                .OrderBy(t => t)
+                .ToList();
+
+            var dateRange = Enumerable.Range(0, (FinancialBreakdownSelectedToDate - FinancialBreakdownSelectedFromDate).Days + 1)
+                .Select(offset => FinancialBreakdownSelectedFromDate.AddDays(offset).Date)
+                .ToList();
+
+            var dates = dateRange.Select(d => d.ToString("MMM dd")).ToList();
+
+            // Initialize revenue dictionaries for each package type
+            var revenueByType = packageTypes.ToDictionary(
+                type => type,
+                type => dateRange.ToDictionary(date => date, date => 0.0)
+            );
+
+            // Fill in the actual sales data
+            foreach (var sale in salesList)
+            {
+                var saleDate = sale.SaleDate.Date;
+                if (revenueByType.ContainsKey(sale.PackageType) &&
+                    revenueByType[sale.PackageType].ContainsKey(saleDate))
+                {
+                    revenueByType[sale.PackageType][saleDate] += sale.Revenue;
+                }
+            }
+
+            // Create series for each package type with dynamic colors
+            var seriesList = new List<StackedColumnSeries<double>>();
+            var colorPalette = new[]
+            {
+            SKColors.DodgerBlue,
+            SKColors.Red,
+            SKColors.LimeGreen,
+            SKColors.Purple,
+            SKColors.Orange,
+            SKColors.OrangeRed,
+            SKColors.Teal,
+            SKColors.Goldenrod,
+            SKColors.DeepPink,
+            SKColors.MediumSeaGreen
+        };
+
+            int colorIndex = 0;
+            foreach (var packageType in packageTypes)
+            {
+                var values = dateRange.Select(date => revenueByType[packageType][date]).ToList();
+
+                // Get color based on package type name or use palette
+                var skColor = GetColorForPackageType(packageType, colorPalette[colorIndex % colorPalette.Length]);
+                colorIndex++;
+
+                seriesList.Add(new StackedColumnSeries<double>
+                {
+                    Values = values,
+                    Name = packageType,
+                    Fill = new SolidColorPaint(skColor),
+                    Stroke = null,
+                    XToolTipLabelFormatter = point =>
+                        $"{packageType}: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
+                });
+            }
+
+            RevenueSeriesCollection = seriesList.ToArray();
+
+            // Update axes
+            RevenueChartXAxes =
+            [
+                new Axis
+            {
+                Labels = dates.ToArray(),
+                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+                TextSize = 12,
+                MinStep = 1,
+                LabelsRotation = dates.Count > 10 ? 45 : 0
+            }
+            ];
+
+            RevenueChartYAxes =
+            [
+                new Axis
+            {
+                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+                TextSize = 12,
+                MinStep = 1,
+                SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
+                {
+                    StrokeThickness = 2,
+                    PathEffect = new DashEffect([3, 3])
+                },
+                Labeler = value => Labelers.FormatCurrency(value, ",", ".", "₱"),
+                LabelsRotation = 0
+            }
+            ];
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Error updating revenue chart: {ex.Message}");
+            RevenueSeriesCollection = [];
+        }
+    }
+
+    private SKColor GetColorForPackageType(string packageType, SKColor defaultColor)
+    {
+        // Match color based on package name (case-insensitive partial matching)
+        var lowerName = packageType.ToLower();
+
+        if (lowerName.Contains("boxing")) return SKColors.DodgerBlue;
+        if (lowerName.Contains("muay") || lowerName.Contains("thai")) return SKColors.Red;
+        if (lowerName.Contains("crossfit") || lowerName.Contains("cross")) return SKColors.LimeGreen;
+        if (lowerName.Contains("coaching") || lowerName.Contains("coach")) return SKColors.Purple;
+        if (lowerName.Contains("walk")) return SKColors.Orange;
+        if (lowerName.Contains("member")) return SKColors.OrangeRed;
+
+        return defaultColor;
+    }
+
+    private void UpdateRevenueChartWithMockData()
     {
         var dates = new List<string>();
         var boxingRevenue = new List<double>();
@@ -128,31 +320,31 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         while (currentDate <= FinancialBreakdownSelectedToDate)
         {
             dates.Add(currentDate.ToString("MMM dd"));
-        
+
             var boxingPurchases = random.Next(0, 20);
             var boxingPrice = boxingPrices[random.Next(boxingPrices.Length)];
             boxingRevenue.Add(boxingPurchases * boxingPrice);
-        
+
             var muayThaiPurchases = random.Next(0, 20);
             var muayThaiPrice = muayThaiPrices[random.Next(muayThaiPrices.Length)];
             muayThaiRevenue.Add(muayThaiPurchases * muayThaiPrice);
-        
+
             var crossfitPurchases = random.Next(0, 20);
             var crossfitPrice = crossfitPrices[random.Next(crossfitPrices.Length)];
             crossfitRevenue.Add(crossfitPurchases * crossfitPrice);
-        
+
             var coachingPurchases = random.Next(0, 20);
             var coachingPrice = coachingPrices[random.Next(coachingPrices.Length)];
             coachingRevenue.Add(coachingPurchases * coachingPrice);
-            
+
             var walkInPurchases = random.Next(0, 20);
             var walkInPrice = walkInPrices[random.Next(walkInPrices.Length)];
             walkInRevenue.Add(walkInPurchases * walkInPrice);
-        
+
             var membershipPurchases = random.Next(0, 20);
             var membershipPrice = membershipPrices[random.Next(membershipPrices.Length)];
             membershipRevenue.Add(membershipPurchases * membershipPrice);
-            
+
             currentDate = currentDate.AddDays(1);
         }
 
@@ -192,11 +384,11 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             },
             new StackedColumnSeries<double>
             {
-            Values = walkInRevenue,
-            Name = "Walk-Ins",
-            Fill = new SolidColorPaint(SKColors.Orange),
-            Stroke = null,
-            XToolTipLabelFormatter = point => $"Walk-Ins: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
+                Values = walkInRevenue,
+                Name = "Walk-Ins",
+                Fill = new SolidColorPaint(SKColors.Orange),
+                Stroke = null,
+                XToolTipLabelFormatter = point => $"Walk-Ins: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
             },
             new StackedColumnSeries<double>
             {
@@ -219,7 +411,7 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
                 LabelsRotation = dates.Count > 10 ? 45 : 0
             }
         ];
-    
+
         RevenueChartYAxes =
         [
             new Axis
@@ -240,14 +432,12 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
 
     partial void OnFinancialBreakdownSelectedFromDateChanged(DateTime value)
     {
-        UpdateRevenueChart();
-        UpdateFinancialBreakdownChart();
+        _ = LoadFinancialDataAsync();
     }
-    
+
     partial void OnFinancialBreakdownSelectedToDateChanged(DateTime value)
     {
-        UpdateRevenueChart();
-        UpdateFinancialBreakdownChart();
+        _ = LoadFinancialDataAsync();
     }
 }
 
@@ -260,13 +450,11 @@ public class FinancialBreakdownPieData
     public bool IsTotal => Name is "Boxing" or "Muay Thai" or "Crossfit" or "Coaching" or "Walk-Ins" or "Membership";
     public Func<ChartPoint, string> Formatter { get; }
     public Func<ChartPoint, string> ToolTipFormatter { get; }
-    
+
     public FinancialBreakdownPieData(string name, double value, string color)
     {
         Name = name;
         Value = value;
-        // For pie charts in LiveCharts, typically only one value is needed
-        // If your pie chart expects an array, use [value] instead of [null, null, value]
         Values = [value];
         Color = color;
         Formatter = point => $"{point.StackedValue!.Share:P1}";
