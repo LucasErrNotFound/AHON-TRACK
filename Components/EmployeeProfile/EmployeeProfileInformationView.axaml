@@ -509,7 +509,7 @@
 													Name="EmployeeProfileImage2"
 													Stretch="UniformToFill"
 													IsVisible="True"
-													Source="avares://AHON_TRACK/Assets/ManageEmployeesView/user-admin.png"/>
+													Source="{CompiledBinding DisplayAvatarSource}"/>
 											</Border>
 
 											<!-- Username -->
