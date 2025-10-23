@@ -83,7 +83,7 @@
 													Name="EmployeeProfileImage1"
 													Stretch="UniformToFill"
 													IsVisible="True"
-													Source="{CompiledBinding SelectedEmployeeData.AvatarSource}"/>
+													Source="{CompiledBinding DisplayAvatarSource}"/>
 											</Border>
 
 											<!-- Username -->

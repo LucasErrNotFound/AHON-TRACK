@@ -10,6 +10,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AHON_TRACK.Converters;
+using AHON_TRACK.Services.Events;
 using Avalonia.Media.Imaging;
 
 namespace AHON_TRACK.Components.ViewModels;
@@ -82,6 +84,10 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     [ObservableProperty]
     private ManageEmployeesItem? _selectedEmployeeData;
+    
+    public Bitmap? DisplayAvatarSource => IsFromCurrentUser 
+        ? ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes)
+        : _selectedEmployeeData?.AvatarSource ?? ImageHelper.GetDefaultAvatar();
 
     public EmployeeProfileInformationViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, IEmployeeService employeeService)
     {
@@ -91,6 +97,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
         _employeeService = employeeService;
 
+        UserProfileEventService.Instance.ProfilePictureUpdated += OnProfilePictureUpdated;
     }
 
     public EmployeeProfileInformationViewModel()
@@ -170,12 +177,8 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             EmployeeCityProvince = fullEmployee.CityProvince;
             EmployeeZipCode = fullEmployee.ZipCode;
             EmployeeAvatarSource = fullEmployee.AvatarSource;
-
-            // Profile Picture
-            if (fullEmployee.AvatarSource != null)
-            {
-                //
-            }
+            
+            OnPropertyChanged(nameof(DisplayAvatarSource));
         }
     }
 
@@ -220,18 +223,20 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             EmployeeBarangay = fullEmployee.Barangay;
             EmployeeCityProvince = fullEmployee.CityProvince;
             EmployeeZipCode = fullEmployee.ZipCode;
-
-            // Profile Picture
-            if (fullEmployee.AvatarSource != null)
+            
+            if (fullEmployee.AvatarBytes != null)
             {
-                // Set avatar if needed
+                CurrentUserModel.AvatarBytes = fullEmployee.AvatarBytes;
             }
+
+            OnPropertyChanged(nameof(DisplayAvatarSource));
         }
         else
         {
             // No user logged in, use defaults
             SetDefaultValues();
             EmployeeFullNameHeader = "My Profile";
+            OnPropertyChanged(nameof(DisplayAvatarSource));
         }
     }
 
@@ -289,5 +294,14 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
                     .ShowWarning()).WithMaxWidth(950)
             .Show();
         Debug.WriteLine("Edit profile dialog shown successfully.");
+    }
+    
+    private void OnProfilePictureUpdated()
+    {
+        if (IsFromCurrentUser)
+        {
+            // Refresh the display avatar
+            OnPropertyChanged(nameof(DisplayAvatarSource));
+        }
     }
 }
