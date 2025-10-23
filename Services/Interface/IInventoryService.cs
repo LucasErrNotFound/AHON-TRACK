@@ -20,7 +20,7 @@ public interface IInventoryService
 
     Task<(bool Success, string Message, List<SupplierDropdownModel>? Suppliers)> GetSuppliersForDropdownAsync();
 
-    // ✅ NEW: Register notification callback
+    // Register notification callback
     void RegisterNotificationCallback(Action<Notification> callback);
     
     // NOTIFICATIONS

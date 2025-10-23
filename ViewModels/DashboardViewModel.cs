@@ -494,11 +494,26 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     public void AddNotification(Notification newNotification)
     {
-        Notifications.Insert(0, newNotification); // Add to the beginning for "recent" notifications
+        var notificationKey = _dashboardModel.GenerateNotificationKey(newNotification.Title, newNotification.Message);
+        newNotification.NotificationKey = notificationKey;
+    
+        if (_dashboardModel.IsNotificationAlreadyShown(notificationKey))
+        {
+            Console.WriteLine($"[AddNotification] Skipping duplicate notification: {notificationKey}");
+            return;
+        }
+    
+        _dashboardModel.MarkNotificationAsShown(notificationKey);
+        Notifications.Insert(0, newNotification);
     }
 
     public void RemoveNotification(Notification notification)
     {
+        if (!string.IsNullOrEmpty(notification.NotificationKey))
+        {
+            _dashboardModel.RemoveNotificationTracking(notification.NotificationKey);
+        }
+    
         Notifications.Remove(notification);
     }
 
@@ -516,6 +531,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     
     private void ClearAllNotifications()
     {
+        _dashboardModel.ClearAllNotificationTracking();
         Notifications.Clear();
     }
     
@@ -542,52 +558,4 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     #endregion
-    
-    /*
-    private void ShowToastAndNotify(string title, string message, NotificationType type, string userName, string userRole)
-    {
-        // Create the toast
-        var toast = _toastManager.CreateToast(title)
-            .WithContent(message)
-            .DismissOnClick();
-    
-        // Show based on type
-        switch (type)
-        {
-            case NotificationType.Success:
-                toast.ShowSuccess();
-                break;
-            case NotificationType.Info:
-                toast.ShowInfo();
-                break;
-            case NotificationType.Warning:
-                toast.ShowWarning();
-                break;
-            case NotificationType.Error:
-                toast.ShowError();
-                break;
-        }
-    
-        // Add to notifications list
-        AddNotification(new Notification
-        {
-            Type = type,
-            Title = title,
-            Message = message,
-            DateAndTime = DateTime.Now
-        });
-    }
-
-    [RelayCommand]
-    private void TestToast()
-    {
-        ShowToastAndNotify(
-            title: "This test is a success",
-            message: "Hello, this test was a success!",
-            type: NotificationType.Warning,
-            userName: "Test User",
-            userRole: "Gym Admin"
-        );
-    }
-    */
 }

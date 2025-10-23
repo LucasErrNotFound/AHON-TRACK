@@ -102,7 +102,7 @@
 								<NumericUpDown
                                     shadui:ControlAssist.Label="Current Stock"
                                     Classes="Clearable"
-                                    FormatString="N2"
+                                    FormatString="N0"
                                     ShowButtonSpinner="False"
                                     Watermark="0"
                                     Value="{CompiledBinding CurrentStock, Mode=TwoWay}">

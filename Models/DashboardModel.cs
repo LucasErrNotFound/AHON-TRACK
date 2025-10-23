@@ -55,14 +55,10 @@ public class Notification
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public DateTime DateAndTime { get; set; } = DateTime.Now;
+    public string NotificationKey { get; set; } = string.Empty;
     
-    // Formatted date for display
     public string FormattedDateTime => DateAndTime.ToString("dd MMM yyyy 'at' h:mm tt");
-    
-    // Badge text based on type
     public string BadgeText => Type.ToString();
-    
-    // Badge color resource key based on type
     public string BadgeColor => Type switch
     {
         NotificationType.Success => "#FF2E7D32",
@@ -363,5 +359,52 @@ public class DashboardModel
 
         return [.. baseValues.Select(value => (int)(value * yearMultiplier))];
     }
+    #endregion
+
+    #region Notification Tracking
+
+    private readonly HashSet<string> _shownNotificationKeys = new();
+
+    /// <summary>
+    /// Generate a unique key for a notification to track if it's already been shown
+    /// </summary>
+    public string GenerateNotificationKey(string title, string message)
+    {
+        // Create a unique key based on title and core message content
+        return $"{title}|{message}".ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Check if a notification has already been shown
+    /// </summary>
+    public bool IsNotificationAlreadyShown(string notificationKey)
+    {
+        return _shownNotificationKeys.Contains(notificationKey);
+    }
+
+    /// <summary>
+    /// Mark a notification as shown
+    /// </summary>
+    public void MarkNotificationAsShown(string notificationKey)
+    {
+        _shownNotificationKeys.Add(notificationKey);
+    }
+
+    /// <summary>
+    /// Remove a notification from tracking (when user deletes it)
+    /// </summary>
+    public void RemoveNotificationTracking(string notificationKey)
+    {
+        _shownNotificationKeys.Remove(notificationKey);
+    }
+
+    /// <summary>
+    /// Clear all notification tracking
+    /// </summary>
+    public void ClearAllNotificationTracking()
+    {
+        _shownNotificationKeys.Clear();
+    }
+
     #endregion
 }
