@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Services.Events;
+using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.Services
 {
@@ -16,11 +17,17 @@ namespace AHON_TRACK.Services
     {
         private readonly string _connectionString;
         private readonly ToastManager _toastManager;
+        private Action<Notification>? _notificationCallback;
 
         public ProductService(string connectionString, ToastManager toastManager)
         {
             _connectionString = connectionString;
             _toastManager = toastManager;
+        }
+        
+        public void RegisterNotificationCallback(Action<Notification> callback)
+        {
+            _notificationCallback = callback;
         }
 
         #region Role-Based Access Control
@@ -911,7 +918,7 @@ namespace AHON_TRACK.Services
 
         #region NOTIFICATIONS
 
-        public async Task ShowProductAlertsAsync()
+        public async Task ShowProductAlertsAsync(Action<Notification>? addNotificationCallback = null)
         {
             try
             {
@@ -920,37 +927,84 @@ namespace AHON_TRACK.Services
                 var expiredCount = await GetExpiredCountAsync();
                 var outOfStockCount = await GetOutOfStockCountAsync();
 
+                // Use provided callback OR internal callback
+                var notifyCallback = addNotificationCallback ?? _notificationCallback;
+
                 // Highest priority: expired items
                 if (expiredCount > 0)
                 {
-                    _toastManager?.CreateToast("Expired Products")
-                        .WithContent($"{expiredCount} product(s) have expired!")
+                    var title = "Expired Products";
+                    var message = $"{expiredCount} product(s) have expired!";
+            
+                    _toastManager?.CreateToast(title)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowError();
+                
+                    notifyCallback?.Invoke(new Notification
+                    {
+                        Type = NotificationType.Error,
+                        Title = title,
+                        Message = message,
+                        DateAndTime = DateTime.Now
+                    });
                 }
 
                 if (expiringSoonCount > 0)
                 {
-                    _toastManager?.CreateToast("Expiring Soon")
-                        .WithContent($"{expiringSoonCount} product(s) will expire within 30 days!")
+                    var title = "Expiring Soon";
+                    var message = $"{expiringSoonCount} product(s) will expire within 30 days!";
+            
+                    _toastManager?.CreateToast(title)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowWarning();
+                
+                    notifyCallback?.Invoke(new Notification
+                    {
+                        Type = NotificationType.Warning,
+                        Title = title,
+                        Message = message,
+                        DateAndTime = DateTime.Now
+                    });
                 }
 
                 if (outOfStockCount > 0)
                 {
-                    _toastManager?.CreateToast("Out of Stock")
-                        .WithContent($"{outOfStockCount} product(s) are currently out of stock!")
+                    var title = "Out of Stock";
+                    var message = $"{outOfStockCount} product(s) are currently out of stock!";
+            
+                    _toastManager?.CreateToast(title)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowWarning();
+                
+                    notifyCallback?.Invoke(new Notification
+                    {
+                        Type = NotificationType.Warning,
+                        Title = title,
+                        Message = message,
+                        DateAndTime = DateTime.Now
+                    });
                 }
 
                 if (lowStockCount > 0)
                 {
-                    _toastManager?.CreateToast("Low Stock Alert")
-                        .WithContent($"{lowStockCount} product(s) have low stock (≤5 units)!")
+                    var title = "Low Stock Alert";
+                    var message = $"{lowStockCount} product(s) have low stock (≤5 units)!";
+            
+                    _toastManager?.CreateToast(title)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowInfo();
+                
+                    notifyCallback?.Invoke(new Notification
+                    {
+                        Type = NotificationType.Info,
+                        Title = title,
+                        Message = message,
+                        DateAndTime = DateTime.Now
+                    });
                 }
             }
             catch (Exception ex)

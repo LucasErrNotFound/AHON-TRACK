@@ -24,7 +24,8 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message, int DeletedCount)> DeleteMultipleProductsAsync(List<int> productIds);
 
         // NOTIFICATIONS
-        Task ShowProductAlertsAsync();
+        void RegisterNotificationCallback(Action<Notification> callback);
+        Task ShowProductAlertsAsync(Action<Notification>? addNotificationCallback = null);
         Task<ProductAlertSummary> GetProductAlertSummaryAsync();
     }
 }
