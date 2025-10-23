@@ -323,7 +323,19 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         EnableDiscount = package.IsDiscountChecked;
         DiscountValue = package.DiscountValue;
         SelectedDiscountForItem = package.SelectedDiscountFor;
-        SelectedDiscountTypeItem = package.SelectedDiscountType;
+        if (!string.IsNullOrEmpty(package.SelectedDiscountType))
+        {
+            SelectedDiscountTypeItem = package.SelectedDiscountType.ToLower() switch
+            {
+                "percentage" => "Percentage (%)",
+                "fixed" => "Fixed Amount (₱)",
+                _ => "Percentage (%)"
+            };
+        }
+        else
+        {
+            SelectedDiscountTypeItem = "Percentage (%)";
+        }
         ValidFrom = package.DiscountValidFrom;
         ValidTo = package.DiscountValidTo;
 

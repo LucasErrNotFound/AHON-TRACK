@@ -85,6 +85,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _productPurchaseService = productPurchaseService;
         _settingsService = settingsService;
 
+        LoadPackageOptionsAsync();
         _ = LoadRecentPurchasesFromDatabaseAsync();
         _ = LoadInvoicesFromDatabaseAsync();
         UpdateInvoiceDataCounts();
