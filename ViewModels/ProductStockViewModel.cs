@@ -19,6 +19,7 @@ using ShadUI;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -79,7 +80,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _pageManager = pageManager;
         _settingsService = settingsService;
         _productService = productService;
-
+        SubscribeToEvent();
         _ = LoadProductDataAsync();
         UpdateProductCounts();
     }
@@ -92,6 +93,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _settingsService = new SettingsService();
         _productService = null!;
 
+        SubscribeToEvent();
         UpdateProductCounts();
     }
 
@@ -99,11 +101,27 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     public async Task Initialize()
     {
         if (IsInitialized) return;
+        SubscribeToEvent();
         await LoadSettingsAsync();
         await LoadProductDataAsync();
 
         UpdateProductCounts();
         IsInitialized = true;
+    }
+
+    private void SubscribeToEvent()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.ProductAdded += OnProductDataChanged;
+        eventService.ProductUpdated += OnProductDataChanged;
+        eventService.ProductDeleted += OnProductDataChanged;
+        eventService.ProductPurchased += OnProductDataChanged;
+    }
+
+    private async void OnProductDataChanged(object? sender, EventArgs e)
+    {
+        await LoadProductDataAsync();
     }
 
     private async Task LoadProductDataAsync()

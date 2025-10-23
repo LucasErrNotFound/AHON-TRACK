@@ -170,6 +170,19 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         IsInitialized = true;
     }
 
+    private void SubscribeToEvent()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.CheckinAdded += OnCheckInOutDataChanged;
+        eventService.CheckoutUpdated += OnCheckInOutDataChanged;
+    }
+
+    private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
+    {
+        await LoadCustomerListFromDatabaseAsync();
+    }
+
     private void LoadCustomerList()
     {
         var customers = GetCustomerData();
