@@ -191,6 +191,17 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         eventService.CheckoutAdded += OnMemberChanged;
         eventService.ProductPurchased += OnMemberChanged;
     }
+    
+    partial void OnSelectedMemberChanged(ManageMembersItem? value)
+    {
+        OnPropertyChanged(nameof(IsActiveVisible));
+        OnPropertyChanged(nameof(IsExpiredVisible));
+        OnPropertyChanged(nameof(HasSelectedMember));
+        OnPropertyChanged(nameof(IsDeleteButtonEnabled));
+        OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
+        OnPropertyChanged(nameof(IsRenewButtonEnabled));
+        OnPropertyChanged(nameof(CanDeleteSelectedMembers));
+    }
 
     private async void OnMemberChanged(object? sender, EventArgs e)
     {
