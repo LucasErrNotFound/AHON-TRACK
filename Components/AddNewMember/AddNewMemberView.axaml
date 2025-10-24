@@ -170,7 +170,7 @@
                                                 Name="MemberProfileImage"
                                                 Stretch="UniformToFill"
                                                 IsVisible="True"
-                                                Source="avares://AHON_TRACK/Assets/ManageMembershipView/default-profile-picture.png" />
+                                                Source="{CompiledBinding ProfileImageSource}" />
 											<!-- Profile image placeholder -->
 										</Border>
 										<Button

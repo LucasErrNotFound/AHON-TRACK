@@ -52,7 +52,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private string[] _memberStatusItems = ["Active", "Expired"];
 
     [ObservableProperty]
-    private Bitmap? _profileImageSource;
+    private Bitmap? _profileImageSource = ImageHelper.GetDefaultAvatar();
 
     [ObservableProperty]
     private Image? _memberProfileImageControl;
@@ -477,6 +477,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     public async Task Initialize()
     {
         IsActiveSelected = true;
+        
+        if (ViewContext == MemberViewContext.AddNew)
+        {
+            ProfileImageSource = ManageMemberModel.DefaultAvatarSource;
+            ProfileImage = null;
+        }
+        
         await LoadMonthlyPackagesAsync();
     }
 
@@ -607,15 +614,20 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             _currentMemberValidUntil = member.Validity;
         }
 
-        if (member.AvatarSource != null)
-        {
-            ProfileImageSource = member.AvatarSource;
+        ProfileImageSource = member.AvatarSource;
 
-            if (member.AvatarSource != ManageMemberModel.DefaultAvatarSource)
-            {
-                ProfileImage = ImageHelper.BitmapToBytes(member.AvatarSource);
-            }
+        if (member.AvatarSource != ManageMemberModel.DefaultAvatarSource)
+        {
+            ProfileImage = ImageHelper.BitmapToBytes(member.AvatarSource);
+            Debug.WriteLine($"[PopulateFormWithMemberData] Loaded custom profile image ({ProfileImage?.Length} bytes)");
         }
+        else
+        {
+            ProfileImage = null;
+            Debug.WriteLine("[PopulateFormWithMemberData] Using default avatar");
+        }
+
+        OnPropertyChanged(nameof(ProfileImageSource));
     }
 
     private (string FirstName, string MiddleInitial, string LastName) ParseFullName(string fullName)
@@ -1019,7 +1031,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         IsInactiveSelected = false;
         IsTerminatedSelected = false;
         ProfileImage = null;
-        ProfileImageSource = ImageHelper.GetDefaultAvatar();
+        ProfileImageSource = ManageMemberModel.DefaultAvatarSource;
 
         ClearAllErrors();
 
