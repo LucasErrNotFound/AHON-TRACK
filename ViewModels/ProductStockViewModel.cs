@@ -82,7 +82,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _settingsService = settingsService;
         _productService = productService;
         SubscribeToEvent();
-        _ = LoadProductDataAsync();
+        _ = LoadProductDataAsync(showAlerts: true);
         UpdateProductCounts();
     }
 
@@ -146,10 +146,10 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
-        await LoadProductDataAsync();
+        await LoadProductDataAsync(showAlerts: false);
     }
 
-    private async Task LoadProductDataAsync()
+    private async Task LoadProductDataAsync(bool showAlerts = false)
     {
         if (_productService == null)
         {
@@ -190,8 +190,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             }
             ApplyProductFilter();
             UpdateProductCounts();
-            
-            await _productService.ShowProductAlertsAsync();
+
+            if (showAlerts)
+            {
+                await _productService.ShowProductAlertsAsync();
+            }
         }
         catch (Exception ex)
         {
