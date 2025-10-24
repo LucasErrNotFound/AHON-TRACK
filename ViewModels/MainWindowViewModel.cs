@@ -134,6 +134,39 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     
     [ObservableProperty] 
     private string? _username = CurrentUserModel.Username;
+    
+    [ObservableProperty]
+    private bool _isAdminUser;
+
+    [ObservableProperty]
+    private bool _canManageEmployees;
+    
+    [ObservableProperty]
+    private bool _canAccessCheckInOut;
+
+    [ObservableProperty]
+    private bool _canAccessMemberManagement;
+
+    [ObservableProperty]
+    private bool _canAccessBilling;
+    
+    [ObservableProperty] 
+    private bool _canAccessProductPurchase;
+
+    [ObservableProperty]
+    private bool _canManageInventory;
+
+    [ObservableProperty]
+    private bool _canViewFinancialReports;
+
+    [ObservableProperty]
+    private bool _canViewAnalytics;
+
+    [ObservableProperty] 
+    private bool _canViewAuditLogs;
+
+    [ObservableProperty]
+    private bool _canAccessTraining;
 
     private bool _shouldShowSuccessLogOutToast = false;
 
@@ -252,7 +285,37 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         _shouldShowSuccessLogOutToast = false;
         AvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
+        
+        UpdateRoleBasedPermissions();
         SwitchPage(_dashboardViewModel);
+    }
+    
+    private void UpdateRoleBasedPermissions()
+    {
+        string userRole = CurrentUserModel.Role ?? string.Empty;
+    
+        // Determine if user is Admin
+        IsAdminUser = userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                      userRole.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase);
+    
+        bool isStaff = userRole.Equals("Staff", StringComparison.OrdinalIgnoreCase) ||
+                       userRole.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase);
+    
+        // Admin-only features
+        CanManageEmployees = IsAdminUser;
+        CanManageInventory = IsAdminUser;
+        CanViewFinancialReports = IsAdminUser;
+        CanViewAuditLogs = IsAdminUser;
+    
+        // Admin + Staff features
+        CanAccessCheckInOut = IsAdminUser || isStaff;
+        CanAccessMemberManagement = IsAdminUser || isStaff;
+        CanAccessBilling = IsAdminUser || isStaff;
+        CanAccessProductPurchase = IsAdminUser || isStaff;
+        CanViewAnalytics = IsAdminUser || isStaff;
+    
+        // All roles
+        CanAccessTraining = true;
     }
 
     public void SetInitialLogInToastState(bool showLogInSuccess)

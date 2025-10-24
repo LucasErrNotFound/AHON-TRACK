@@ -100,6 +100,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenManageEmployeesCommand}"
+						IsVisible="{CompiledBinding CanManageEmployees}"
 						Route="manageEmployees"
 						Content="Manage Employees"
 						FontSize="15"
@@ -123,6 +124,7 @@
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenCheckInOutCommand}"
+						IsVisible="{CompiledBinding CanAccessCheckInOut}"
 						Route="checkInOut"
 						Content="Check-in/Check-out"
 						FontSize="15"
@@ -138,6 +140,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenManageMembershipCommand}"
+						IsVisible="{CompiledBinding CanAccessMemberManagement}"
 						Content="Manage Membership"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Manage Membership'}">
@@ -160,6 +163,7 @@
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenTrainingSchedulesCommand}"
+						IsVisible="{CompiledBinding CanAccessTraining}"
 						Content="Training Schedules"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Training Schedules'}">
@@ -182,6 +186,7 @@
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenManageBillingCommand}"
+						IsVisible="{CompiledBinding CanAccessBilling}"
 						Content="Manage Billing"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Manage Billing'}">
@@ -196,6 +201,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenProductPurchaseCommand}"
+						IsVisible="{CompiledBinding CanAccessProductPurchase}"
 						Content="Product Purchase"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Product Purchase'}">
@@ -268,6 +274,7 @@
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenFinancialReportsCommand}"
+						IsVisible="{CompiledBinding CanViewFinancialReports}"
 						Content="Financial Reports"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Financial Reports'}">
@@ -282,6 +289,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenGymDemographicsCommand}"
+						IsVisible="{CompiledBinding CanViewAnalytics}"
 						Content="Gym Demographics"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Gym Demographics'}">
@@ -296,6 +304,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenGymAttendanceReportsCommand}"
+						IsVisible="{CompiledBinding CanViewAnalytics}"
 						Content="Gym Attendance"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Class Attendance Reports'}">
@@ -310,6 +319,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenAuditLogsCommand}"
+						IsVisible="{CompiledBinding CanViewAuditLogs}"
 						Content="Audit Logs"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Equipment Usage Reports'}">
