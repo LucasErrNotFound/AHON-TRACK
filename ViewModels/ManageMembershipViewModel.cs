@@ -148,21 +148,10 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         _addNewMemberViewModel = addNewMemberViewModel;
         _memberService = memberService;
 
-        SubscribeToEvents();
         _ = LoadMemberDataAsync();
+        SubscribeToEvents();
         UpdateCounts();
 
-    }
-
-    partial void OnSelectedMemberChanged(ManageMembersItem? value)
-    {
-        OnPropertyChanged(nameof(IsActiveVisible));
-        OnPropertyChanged(nameof(IsExpiredVisible));
-        OnPropertyChanged(nameof(HasSelectedMember));
-        OnPropertyChanged(nameof(IsDeleteButtonEnabled));
-        OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
-        OnPropertyChanged(nameof(IsRenewButtonEnabled));
-        OnPropertyChanged(nameof(CanDeleteSelectedMembers));
     }
 
     // Default constructor (for design-time/testing)
@@ -174,8 +163,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         _memberDialogCardViewModel = new MemberDialogCardViewModel();
         _addNewMemberViewModel = new AddNewMemberViewModel();
 
-        SubscribeToEvents();
         _ = LoadMemberDataAsync();
+        SubscribeToEvents();
+        UpdateCounts();
 
     }
 
@@ -197,6 +187,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         eventService.MemberAdded += OnMemberChanged;
         eventService.MemberUpdated += OnMemberChanged;
         eventService.MemberUpdated += OnMemberChanged;
+        eventService.CheckinAdded += OnMemberChanged;
+        eventService.CheckoutAdded += OnMemberChanged;
+        eventService.ProductPurchased += OnMemberChanged;
     }
 
     private async void OnMemberChanged(object? sender, EventArgs e)
@@ -226,8 +219,15 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     ContactNumber = m.ContactNumber ?? string.Empty,
                     AvailedPackages = m.MembershipType ?? string.Empty,
                     Status = m.Status ?? "Active",
-                    Validity = DateTime.TryParse(m.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue
+                    Validity = DateTime.TryParse(m.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue,
+                    DateJoined = m.DateJoined,
+                    LastCheckIn = m.LastCheckIn,
+                    LastCheckOut = m.LastCheckOut,
+                    RecentPurchaseItem = m.RecentPurchaseItem,
+                    RecentPurchaseDate = m.RecentPurchaseDate,
+                    RecentPurchaseQuantity = m.RecentPurchaseQuantity
                 }).ToList();
+
 
                 OriginalMemberData = memberItems;
                 CurrentFilteredData = [.. memberItems];
@@ -938,25 +938,124 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     }
 
     [RelayCommand]
-    private void OpenUpgradeMemberView()
+    private async Task OpenUpgradeMemberView()
     {
         if (SelectedMember == null) return;
-        _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+
+        // ✅ FIX: Fetch complete member data from database before navigating
+        if (_memberService != null && int.TryParse(SelectedMember.ID, out int memberId))
         {
-            ["Context"] = MemberViewContext.Upgrade,
-            ["SelectedMember"] = SelectedMember
-        });
+            var result = await _memberService.GetMemberByIdAsync(memberId);
+
+            if (result.Success && result.Member != null)
+            {
+                // Create a fully populated ManageMembersItem with ALL data
+                var fullMemberData = new ManageMembersItem
+                {
+                    ID = result.Member.MemberID.ToString(),
+                    AvatarSource = result.Member.AvatarSource ?? ManageMemberModel.DefaultAvatarSource,
+                    Name = result.Member.Name ?? string.Empty,
+                    ContactNumber = result.Member.ContactNumber ?? string.Empty,
+                    AvailedPackages = result.Member.MembershipType ?? string.Empty,
+                    Status = result.Member.Status ?? "Active",
+                    Validity = DateTime.TryParse(result.Member.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue,
+
+                    // ✅ Include all the missing fields
+                    Gender = result.Member.Gender ?? string.Empty,
+                    BirthDate = result.Member.DateOfBirth ?? DateTime.MinValue,
+                    Age = result.Member.Age ?? 0,
+                    DateJoined = result.Member.DateJoined,
+                    LastCheckIn = result.Member.LastCheckIn,
+                    LastCheckOut = result.Member.LastCheckOut,
+                    RecentPurchaseItem = result.Member.RecentPurchaseItem,
+                    RecentPurchaseDate = result.Member.RecentPurchaseDate,
+                    RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity
+                };
+
+                _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+                {
+                    ["Context"] = MemberViewContext.Upgrade,
+                    ["SelectedMember"] = fullMemberData
+                });
+            }
+            else
+            {
+                _toastManager?.CreateToast("Load Error")
+                    .WithContent("Failed to load member data for upgrade.")
+                    .DismissOnClick()
+                    .ShowError();
+            }
+        }
+        else
+        {
+            // Fallback: use existing data if service is unavailable
+            _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+            {
+                ["Context"] = MemberViewContext.Upgrade,
+                ["SelectedMember"] = SelectedMember
+            });
+        }
     }
 
     [RelayCommand]
-    private void OpenRenewMemberView()
+    private async Task OpenRenewMemberView()
     {
         if (SelectedMember == null) return;
-        _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+
+        // ✅ FIX: Fetch complete member data from database before navigating
+        if (_memberService != null && int.TryParse(SelectedMember.ID, out int memberId))
         {
-            ["Context"] = MemberViewContext.Renew,
-            ["SelectedMember"] = SelectedMember
-        });
+            var result = await _memberService.GetMemberByIdAsync(memberId);
+
+            if (result.Success && result.Member != null)
+            {
+                // Create a fully populated ManageMembersItem with ALL data
+                var fullMemberData = new ManageMembersItem
+                {
+                    ID = result.Member.MemberID.ToString(),
+                    AvatarSource = result.Member.AvatarSource ?? ManageMemberModel.DefaultAvatarSource,
+                    Name = result.Member.Name ?? string.Empty,
+                    ContactNumber = result.Member.ContactNumber ?? string.Empty,
+                    AvailedPackages = result.Member.MembershipType ?? string.Empty,
+                    Status = result.Member.Status ?? "Active",
+                    Validity = DateTime.TryParse(result.Member.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue,
+
+                    // ✅ Include all the missing fields
+                    Gender = result.Member.Gender ?? string.Empty,
+                    BirthDate = result.Member.DateOfBirth ?? DateTime.MinValue,
+                    Age = result.Member.Age ?? 0,
+                    DateJoined = result.Member.DateJoined,
+                    LastCheckIn = result.Member.LastCheckIn,
+                    LastCheckOut = result.Member.LastCheckOut,
+                    RecentPurchaseItem = result.Member.RecentPurchaseItem,
+                    RecentPurchaseDate = result.Member.RecentPurchaseDate,
+                    RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity
+
+                };
+
+                _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+                {
+                    ["Context"] = MemberViewContext.Renew,
+                    ["SelectedMember"] = fullMemberData
+                });
+            }
+            else
+            {
+                _toastManager?.CreateToast("Load Error")
+                    .WithContent("Failed to load member data for renewal.")
+                    .DismissOnClick()
+                    .ShowError();
+            }
+        }
+        else
+        {
+            // Fallback: use existing data if service is unavailable
+            _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+            {
+                ["Context"] = MemberViewContext.Renew,
+                ["SelectedMember"] = SelectedMember
+            });
+        }
     }
 
     [RelayCommand]
@@ -1071,6 +1170,65 @@ public partial class ManageMembersItem : ObservableObject
 
     [ObservableProperty]
     private DateTime _birthDate;
+
+    [ObservableProperty]
+    private DateTime? _dateJoined;
+
+    [ObservableProperty]
+    private DateTime? _lastCheckIn;
+
+    [ObservableProperty]
+    private DateTime? _lastCheckOut;
+
+    // ✅ ADD: Recent purchase
+    [ObservableProperty]
+    private string? _recentPurchaseItem;
+
+    [ObservableProperty]
+    private DateTime? _recentPurchaseDate;
+
+    [ObservableProperty]
+    private int? _recentPurchaseQuantity;
+
+    public string MembershipStartDisplay => DateJoined?.ToString("MMMM d, yyyy") ?? "Not Set";
+    public string LastCheckInDisplay => LastCheckIn?.ToString("MMMM d, yyyy") ?? "No check-in";
+    public string LastCheckInTimeDisplay => LastCheckIn?.ToString("h:mm tt") ?? "N/A";
+
+    public string LastCheckOutDisplay => LastCheckOut?.ToString("MMMM d, yyyy") ?? "No check-out";
+    public string LastCheckOutTimeDisplay => LastCheckOut?.ToString("h:mm tt") ?? "N/A";
+
+    public string RecentPurchaseDisplay => !string.IsNullOrEmpty(RecentPurchaseItem)
+        ? $"x{RecentPurchaseQuantity} {RecentPurchaseItem}"
+        : "No purchases";
+
+    public string RecentPurchaseTimeDisplay => RecentPurchaseDate?.ToString("h:mm tt") ?? "N/A";
+
+    partial void OnLastCheckInChanged(DateTime? value)
+    {
+        OnPropertyChanged(nameof(LastCheckInDisplay));
+        OnPropertyChanged(nameof(LastCheckInTimeDisplay));
+    }
+
+    partial void OnLastCheckOutChanged(DateTime? value)
+    {
+        OnPropertyChanged(nameof(LastCheckOutDisplay));
+        OnPropertyChanged(nameof(LastCheckOutTimeDisplay));
+    }
+
+    partial void OnRecentPurchaseItemChanged(string? value)
+    {
+        OnPropertyChanged(nameof(RecentPurchaseDisplay));
+    }
+
+    partial void OnRecentPurchaseDateChanged(DateTime? value)
+    {
+        OnPropertyChanged(nameof(RecentPurchaseTimeDisplay));
+    }
+
+    partial void OnDateJoinedChanged(DateTime? value)
+    {
+        OnPropertyChanged(nameof(MembershipStartDisplay));
+    }
 
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {

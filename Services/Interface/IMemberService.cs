@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static AHON_TRACK.Services.MemberService;
 
 namespace AHON_TRACK.Services.Interface
 {
@@ -15,5 +16,11 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message)> UpdateMemberAsync(ManageMemberModel member);
         Task<(bool Success, string Message)> DeleteMemberAsync(int memberId);
         Task<(bool Success, string Message)> DeleteMultipleMembersAsync(List<int> memberIds);
+        Task<List<SellingModel>> GetAvailablePackagesForMembersAsync();
+
+        void RegisterNotificationCallback(Action<Notification> callback);
+        Task AutoInactivateExpiredMembersAsync();
+        Task ShowMemberExpirationAlertsAsync(Action<Notification>? addNotificationCallback = null);
+        Task<MemberExpirationSummary> GetMemberExpirationSummaryAsync();
     }
 }

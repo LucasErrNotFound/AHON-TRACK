@@ -281,6 +281,15 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                     MemberValidUntil = validUntilDate;
                 }
             }
+            if (memberData.AvatarSource != null)
+            {
+                ProfileImageSource = memberData.AvatarSource;
+
+                if (memberData.AvatarSource != ManageMemberModel.DefaultAvatarSource)
+                {
+                    ProfileImage = ImageHelper.BitmapToBytes(memberData.AvatarSource);
+                }
+            }
 
             IsEditMode = true;
 

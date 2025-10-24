@@ -16,7 +16,7 @@ namespace AHON_TRACK.Models
         public string? Name { get; set; }
         public string FirstName { get; set; } = string.Empty;
         public string? MiddleInitial { get; set; }
-        public DateTime DateJoined { get; set; }
+        public DateTime? DateJoined { get; set; }
         public string? LastName { get; set; } = string.Empty;
         public string? Gender { get; set; }        // must be "Male" or "Female"
         public byte[]? ProfilePicture { get; set; }
@@ -32,8 +32,12 @@ namespace AHON_TRACK.Models
         public string Status { get; set; } = "Active";      // must be "Active" | "Inactive" | "Terminated"
         public string? PaymentMethod { get; set; }
         public int RegisteredByEmployeeID { get; set; }
-        public DateTime? CheckIn { get; set; }
-        public DateTime? CheckOut { get; set; }
+
+        public DateTime? LastCheckIn { get; set; }
+        public DateTime? LastCheckOut { get; set; }
+        public string? RecentPurchaseItem { get; set; }
+        public DateTime? RecentPurchaseDate { get; set; }
+        public int? RecentPurchaseQuantity { get; set; }
 
     }
 }

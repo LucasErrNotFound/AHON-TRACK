@@ -97,10 +97,7 @@ namespace AHON_TRACK.Services
                     decimal itemTotal = item.Price * item.Quantity;
                     if (item.Category == CategoryConstants.GymPackage)
                     {
-                        string getDiscountQuery = @"
-SELECT Discount, DiscountType, DiscountFor, ValidFrom, ValidTo
-FROM Packages
-WHERE PackageID = @PackageID";
+                        string getDiscountQuery = @"SELECT Discount, DiscountType, DiscountFor, ValidFrom, ValidTo FROM Packages WHERE PackageID = @PackageID";
 
                         using var discountCmd = new SqlCommand(getDiscountQuery, conn, transaction);
                         discountCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
@@ -393,7 +390,7 @@ WHERE PackageID = @PackageID";
                 // Log failed transaction
                 try
                 {
-                    DashboardEventService.Instance.NotifyProductPurchased();
+                    DashboardEventService.Instance.NotifyProductUpdated();
                     await LogActionAsync(conn, "Purchase",
                         $"Failed to process payment for {customer?.FirstName} {customer?.LastName}. Error: {ex.Message}",
                         false);
@@ -440,7 +437,8 @@ WHERE PackageID = @PackageID";
                 ValidFrom,
                 ValidTo
             FROM Packages
-            WHERE GETDATE() BETWEEN ValidFrom AND ValidTo AND IsDeleted = 0;";
+            WHERE GETDATE() BETWEEN ValidFrom AND ValidTo AND IsDeleted = 0
+                 AND Duration LIKE '%Session%'";
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -756,7 +754,6 @@ ORDER BY s.SaleDate DESC;";
 
 
         #endregion
-
 
         #region UTILITY
 

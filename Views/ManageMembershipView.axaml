@@ -126,7 +126,7 @@
 								RowBackground="{DynamicResource CardBackgroundColor}"
 								HeadersVisibility="Column"
 								Margin="0">
-								
+
 								<DataGrid.Styles>
 									<Style Selector="TextBlock">
 										<Setter Property="TextWrapping" Value="WrapWithOverflow" />
@@ -400,12 +400,12 @@
 														FontSize="16"
 														FontWeight="SemiBold" />
 													<TextBlock
-														Text="July 13, 2025"
+														Text="{Binding SelectedMember.LastCheckInDisplay}"
 														Classes="Muted"
 														FontSize="16"
 														FontWeight="Regular" />
 													<TextBlock
-														Text="8:00 AM"
+														Text="{Binding SelectedMember.LastCheckInTimeDisplay}"
 														Classes="Muted"
 														FontSize="16"
 														FontWeight="Regular" />
@@ -416,12 +416,12 @@
 														FontSize="16"
 														FontWeight="SemiBold" />
 													<TextBlock
-														Text="x2 Protein Bar"
+														Text="{Binding SelectedMember.RecentPurchaseDisplay}"
 														Classes="Muted"
 														FontSize="16"
 														FontWeight="Regular" />
 													<TextBlock
-														Text="9:11 AM"
+														Text="{Binding SelectedMember.RecentPurchaseTimeDisplay}"
 														Classes="Muted"
 														FontSize="16"
 														FontWeight="Regular" />
@@ -433,12 +433,12 @@
 													FontSize="16"
 													FontWeight="SemiBold" />
 												<TextBlock
-													Text="July 13, 2025"
+													Text="{Binding SelectedMember.LastCheckOutDisplay}"
 													Classes="Muted"
 													FontSize="16"
 													FontWeight="Regular" />
 												<TextBlock
-													Text="11:00 AM"
+													Text="{Binding SelectedMember.LastCheckOutTimeDisplay}"
 													Classes="Muted"
 													FontSize="16"
 													FontWeight="Regular" />
@@ -472,7 +472,7 @@
 														FontSize="16"
 														FontWeight="SemiBold" />
 													<TextBlock
-														Text="June 13, 2025"
+														Text="{Binding SelectedMember.MembershipStartDisplay}"
 														Classes="Muted"
 														FontSize="16"
 														FontWeight="Regular" />

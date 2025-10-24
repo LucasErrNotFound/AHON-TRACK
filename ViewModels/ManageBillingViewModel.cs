@@ -20,6 +20,7 @@ using HotAvalonia;
 using QuestPDF.Companion;
 using QuestPDF.Fluent;
 using ShadUI;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -88,6 +89,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         LoadPackageOptionsAsync();
         _ = LoadRecentPurchasesFromDatabaseAsync();
         _ = LoadInvoicesFromDatabaseAsync();
+        SubscribeToEvents();
+
         UpdateInvoiceDataCounts();
     }
 
@@ -102,6 +105,10 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         _packageService = null!;
         _productPurchaseService = null!;
 
+        _ = LoadRecentPurchasesFromDatabaseAsync();
+        _ = LoadInvoicesFromDatabaseAsync();
+        SubscribeToEvents();
+        UpdateInvoiceDataCounts();
     }
 
     [AvaloniaHotReload]
@@ -112,8 +119,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
         if (_productPurchaseService != null)
         {
-            _ = LoadRecentPurchasesFromDatabaseAsync();
-            _ = LoadInvoicesFromDatabaseAsync();
+            await LoadInvoicesFromDatabaseAsync();
+            await LoadRecentPurchasesFromDatabaseAsync();
         }
         else
         {
@@ -124,6 +131,22 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         UpdateInvoiceDataCounts();
         IsInitialized = true;
     }
+
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.SalesUpdated += OnBillingDataChanged;
+        eventService.ProductPurchased += OnBillingDataChanged;
+
+    }
+
+    private async void OnBillingDataChanged(object? sender, EventArgs e)
+    {
+        await LoadInvoicesFromDatabaseAsync();
+        await LoadRecentPurchasesFromDatabaseAsync();
+    }
+
 
     public ObservableCollection<RecentActivity> RecentActivity
     {

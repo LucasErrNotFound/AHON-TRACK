@@ -41,11 +41,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             "I", "J", "K", "L", "M", "N", "O", "P",
             "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
+    // Store monthly membership packages from SellingModel
     [ObservableProperty]
-    private List<PackageModel> _memberPackageItems = new();
+    private List<SellingModel> _monthlyPackages = new();
 
     [ObservableProperty]
-    private PackageModel? _selectedMemberPackageItem;
+    private SellingModel? _selectedMonthlyPackage;
 
     [ObservableProperty]
     private string[] _memberStatusItems = ["Active", "Expired"];
@@ -62,9 +63,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private string _memberLastName = string.Empty;
     private string _memberGender = string.Empty;
     private string _memberContactNumber = string.Empty;
-    private string _memberPackages = string.Empty;
     private int? _memberAge;
+    private int _selectedMemberId = 0;
     private DateTime? _memberBirthDate;
+    private DateTime _currentMemberValidUntil = DateTime.MinValue;
 
     // Membership Plan 
     private int? _membershipDuration;
@@ -76,7 +78,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private bool _isMayaSelected;
 
     // Status Selection
-    private bool _isActiveSelected = true; // Default to Active
+    private bool _isActiveSelected = true;
     private bool _isInactiveSelected;
     private bool _isTerminatedSelected;
 
@@ -150,26 +152,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         }
     }
 
-    [Required(ErrorMessage = "Package is required")]
-    public string MemberPackages
-    {
-        get => _selectedMemberPackageItem?.packageName ?? _memberPackages;  // Changed from packageName to Name
-        set
-        {
-            SetProperty(ref _memberPackages, value, true);
-            // Try to find matching package in list
-            if (MemberPackageItems.Any())
-            {
-                var package = MemberPackageItems.FirstOrDefault(p => p.packageName == value);  // Changed from packageName to Name
-                if (package != null && _selectedMemberPackageItem != package)
-                {
-                    _selectedMemberPackageItem = package;
-                    OnPropertyChanged(nameof(SelectedMemberPackageItem));
-                }
-            }
-        }
-    }
-
     [Required(ErrorMessage = "Select your gender")]
     public string? MemberGender
     {
@@ -204,12 +186,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         get => _memberContactNumber;
         set => SetProperty(ref _memberContactNumber, value, true);
     }
-
-    /*public string MemberPackages
-     {
-         get => _memberPackages;
-         set => SetProperty(ref _memberPackages, value, true);
-     }*/
 
     [Required(ErrorMessage = "Age is required")]
     [Range(3, 100, ErrorMessage = "Age must be between 3 and 100")]
@@ -263,6 +239,17 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             OnPropertyChanged(nameof(MembershipDurationQuantityHeader));
             OnPropertyChanged(nameof(MembershipDurationQuantitySummary));
             OnPropertyChanged(nameof(IsPaymentPossible));
+
+            OnPropertyChanged(nameof(PackageDurationDisplay));
+            OnPropertyChanged(nameof(SubtotalDisplay));
+            OnPropertyChanged(nameof(ValidFromDate));
+            OnPropertyChanged(nameof(ValidUntilDate));
+            OnPropertyChanged(nameof(ValidityFrom));
+            OnPropertyChanged(nameof(ValidityTo));
+            OnPropertyChanged(nameof(MembershipDurationSummary));
+
+            // Auto-select monthly package when duration is set
+            _ = AutoSelectMonthlyPackageAsync();
         }
     }
 
@@ -435,7 +422,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         get
         {
             if (!MembershipDuration.HasValue || MembershipDuration == 0)
-                return "0 Sessions";
+                return "0 Months";
 
             int quantity = MembershipDuration.Value;
             return quantity == 1 ? $"{quantity} Month" : $"{quantity} Months";
@@ -446,11 +433,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     {
         get
         {
-            if (!MembershipDuration.HasValue || MembershipDuration == 0)
-                return "0 Sessions";
+            if (!MembershipDuration.HasValue || MembershipDuration == 0 || SelectedMonthlyPackage == null)
+                return "0 Months";
 
             int quantity = MembershipDuration.Value;
-            return quantity == 1 ? $"{quantity} Month × ₱500.00" : $"{quantity} Months × ₱500.00";
+            decimal price = SelectedMonthlyPackage.Price;
+            return quantity == 1 ? $"{quantity} Month × ₱{price:N2}" : $"{quantity} Months × ₱{price:N2}";
         }
     }
 
@@ -458,11 +446,14 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     {
         get
         {
-            if (!MembershipDuration.HasValue || MembershipDuration == 0)
-                return "0 Sessions";
+            if (!MembershipDuration.HasValue || MembershipDuration == 0 || SelectedMonthlyPackage == null)
+                return "No package selected";
 
             int quantity = MembershipDuration.Value;
-            return quantity == 1 ? $"Gym Membership ({quantity} Month)" : $"Gym Membership ({quantity} Months)";
+            string packageName = SelectedMonthlyPackage.Title;
+            return quantity == 1
+                ? $"{packageName} ({quantity} Month)"
+                : $"{packageName} ({quantity} Months)";
         }
     }
 
@@ -486,6 +477,95 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     public async Task Initialize()
     {
         IsActiveSelected = true;
+        await LoadMonthlyPackagesAsync();
+    }
+
+    // Load monthly membership packages using GetAvailablePackagesForMembersAsync
+    private async Task LoadMonthlyPackagesAsync()
+    {
+        try
+        {
+            Debug.WriteLine("🔹 Loading monthly membership packages for members...");
+
+            var packages = await _memberService.GetAvailablePackagesForMembersAsync();
+
+            if (packages != null && packages.Any())
+            {
+                MonthlyPackages = packages;
+
+                Debug.WriteLine($"✅ Loaded {MonthlyPackages.Count} monthly packages:");
+                foreach (var pkg in MonthlyPackages)
+                {
+                    Debug.WriteLine($"  📦 {pkg.Title} - ₱{pkg.Price}");
+                }
+            }
+            else
+            {
+                Debug.WriteLine("⚠️ No packages found or failed to load");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"❌ Error loading monthly packages: {ex.Message}");
+            _toastManager?.CreateToast("Load Error")
+                .WithContent($"Failed to load membership packages: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+
+    // Auto-select monthly package when duration is entered
+    private async Task AutoSelectMonthlyPackageAsync()
+    {
+        if (!MembershipDuration.HasValue || MembershipDuration <= 0)
+        {
+            SelectedMonthlyPackage = null;
+            OnPropertyChanged(nameof(MembershipDurationQuantityHeader));
+            OnPropertyChanged(nameof(MembershipDurationQuantitySummary));
+
+            OnPropertyChanged(nameof(PackageDisplayName));
+            OnPropertyChanged(nameof(PackagePriceDisplay));
+            OnPropertyChanged(nameof(SubtotalDisplay));
+            OnPropertyChanged(nameof(ValidFromDate));
+            OnPropertyChanged(nameof(ValidUntilDate));
+            OnPropertyChanged(nameof(ValidityFrom));
+            OnPropertyChanged(nameof(ValidityTo));
+            OnPropertyChanged(nameof(MembershipDurationSummary));
+
+            return;
+        }
+
+        // If packages not loaded yet, load them
+        if (!MonthlyPackages.Any())
+        {
+            await LoadMonthlyPackagesAsync();
+        }
+
+        // Auto-select the first monthly package (you can add logic to select a specific one based on price/tier)
+        if (MonthlyPackages.Any())
+        {
+            SelectedMonthlyPackage = MonthlyPackages.First();
+
+            OnPropertyChanged(nameof(MembershipDurationQuantityHeader));
+            OnPropertyChanged(nameof(MembershipDurationQuantitySummary));
+            OnPropertyChanged(nameof(IsPaymentPossible));
+
+            OnPropertyChanged(nameof(PackageDisplayName));
+            OnPropertyChanged(nameof(PackagePriceDisplay));
+            OnPropertyChanged(nameof(SubtotalDisplay));
+            OnPropertyChanged(nameof(ValidFromDate));
+            OnPropertyChanged(nameof(ValidUntilDate));
+            OnPropertyChanged(nameof(ValidityFrom));
+            OnPropertyChanged(nameof(ValidityTo));
+            OnPropertyChanged(nameof(MembershipDurationSummary));
+
+            Debug.WriteLine($"✅ Auto-selected package: {SelectedMonthlyPackage.Title} - ₱{SelectedMonthlyPackage.Price}/month");
+            Debug.WriteLine($"   Total for {MembershipDuration} months: ₱{SelectedMonthlyPackage.Price * MembershipDuration:N2}");
+        }
+        else
+        {
+            Debug.WriteLine("⚠️ No monthly packages available to auto-select");
+        }
     }
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
@@ -497,6 +577,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
         if (!parameters.TryGetValue("SelectedMember", out var member)) return;
         var selectedMember = (ManageMembersItem)member;
+        if (int.TryParse(selectedMember.ID, out int memberId))
+        {
+            _selectedMemberId = memberId;
+        }
         PopulateFormWithMemberData(selectedMember);
     }
 
@@ -509,9 +593,29 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         MemberFirstName = nameResult.FirstName;
         SelectedMiddleInitialItem = nameResult.MiddleInitial;
         MemberLastName = nameResult.LastName;
-
-        MemberPackages = member.AvailedPackages;
         MemberStatus = member.Status;
+        MemberGender = member.Gender;
+
+        if (member.BirthDate != DateTime.MinValue)
+        {
+            MemberBirthDate = member.BirthDate;
+            MemberAge = CalculateAge(member.BirthDate);
+        }
+
+        if (member.Validity != DateTime.MinValue)
+        {
+            _currentMemberValidUntil = member.Validity;
+        }
+
+        if (member.AvatarSource != null)
+        {
+            ProfileImageSource = member.AvatarSource;
+
+            if (member.AvatarSource != ManageMemberModel.DefaultAvatarSource)
+            {
+                ProfileImage = ImageHelper.BitmapToBytes(member.AvatarSource);
+            }
+        }
     }
 
     private (string FirstName, string MiddleInitial, string LastName) ParseFullName(string fullName)
@@ -696,7 +800,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         if (IsActiveSelected) return "Active";
         if (IsInactiveSelected) return "Inactive";
         if (IsTerminatedSelected) return "Terminated";
-        return "Active"; // Default to Active
+        return "Active";
     }
 
     [RelayCommand]
@@ -704,13 +808,63 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     {
         try
         {
-            // Calculate ValidUntil date based on membership duration
-            DateTime? validUntilDate = null;
-            if (MembershipDuration.HasValue && MembershipDuration.Value > 0)
+            // Validate that a monthly package is selected
+            if (SelectedMonthlyPackage == null)
             {
-                validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+                _toastManager?.CreateToast("Package Required")
+                    .WithContent("Please enter membership duration to select a package.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
             }
 
+            // Validate membership duration
+            if (!MembershipDuration.HasValue || MembershipDuration <= 0)
+            {
+                _toastManager?.CreateToast("Duration Required")
+                    .WithContent("Please enter a valid membership duration (1-12 months).")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            // ✅ FIX: Calculate ValidUntil based on context
+            DateTime validUntilDate;
+
+            if (ViewContext == MemberViewContext.Renew || ViewContext == MemberViewContext.Upgrade)
+            {
+                // For RENEW or UPGRADE: Extend from current ValidUntil date
+                DateTime currentValidUntil = _currentMemberValidUntil;
+
+                // If no valid date stored, try to get it from the database
+                if (currentValidUntil == DateTime.MinValue && _selectedMemberId > 0)
+                {
+                    var result = await _memberService.GetMemberByIdAsync(_selectedMemberId);
+                    if (result.Success && result.Member != null)
+                    {
+                        DateTime.TryParse(result.Member.ValidUntil, out currentValidUntil);
+                    }
+                }
+
+                // If membership already expired or no valid date, extend from today
+                if (currentValidUntil == DateTime.MinValue || currentValidUntil < DateTime.Now)
+                {
+                    validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+                    Debug.WriteLine($"[Payment] {ViewContext}: Starting from today (expired/no date) to {validUntilDate:MMM dd, yyyy}");
+                }
+                else
+                {
+                    // If still valid, extend from current expiry date
+                    validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
+                    Debug.WriteLine($"[Payment] {ViewContext}: Extending from {currentValidUntil:MMM dd, yyyy} to {validUntilDate:MMM dd, yyyy}");
+                }
+            }
+            else
+            {
+                // For ADD NEW: Start from today
+                validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+                Debug.WriteLine($"[Payment] ADD NEW: Starting from today to {validUntilDate:MMM dd, yyyy}");
+            }
 
             var member = new ManageMemberModel
             {
@@ -721,40 +875,96 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 ContactNumber = MemberContactNumber,
                 Age = MemberAge,
                 DateOfBirth = MemberBirthDate,
-                ValidUntil = validUntilDate?.ToString("MMM dd, yyyy"),
-                MembershipType = MemberPackages,  // Keep name for display
+                ValidUntil = validUntilDate.ToString("MMM dd, yyyy"),
+                MembershipType = SelectedMonthlyPackage.Title,
+                PackageID = SelectedMonthlyPackage.SellingID,
                 Status = GetSelectedStatus() ?? "Active",
                 PaymentMethod = GetSelectedPaymentMethod(),
                 ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
             };
 
-            // Use new service method
-            var result = await _memberService.AddMemberAsync(member);
+            bool isSuccess;
+            string successMessage;
 
-            if (!result.Success)
+            if (ViewContext == MemberViewContext.AddNew)
             {
-                _toastManager?.CreateToast("Registration Failed")
-                    .WithContent(result.Message)
-                    .DismissOnClick()
-                    .ShowError();
+                // ADD NEW MEMBER
+                Debug.WriteLine($"[Payment] ========== NEW MEMBER REGISTRATION ==========");
+                Debug.WriteLine($"[Payment] Name: {member.FirstName} {member.LastName}");
+                Debug.WriteLine($"[Payment] Package: {SelectedMonthlyPackage.Title} (ID: {SelectedMonthlyPackage.SellingID})");
+                Debug.WriteLine($"[Payment] Price per month: ₱{SelectedMonthlyPackage.Price:N2}");
+                Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months");
+                Debug.WriteLine($"[Payment] Total Amount: ₱{SelectedMonthlyPackage.Price * MembershipDuration:N2}");
+                Debug.WriteLine($"[Payment] ValidUntil: {member.ValidUntil}");
+                Debug.WriteLine($"[Payment] =======================================");
+
+                var result = await _memberService.AddMemberAsync(member);
+                isSuccess = result.Success;
+                successMessage = $"{member.FirstName} {member.LastName} registered successfully!";
+
+                if (!result.Success)
+                {
+                    _toastManager?.CreateToast("Registration Failed")
+                        .WithContent(result.Message)
+                        .DismissOnClick()
+                        .ShowError();
+                    return;
+                }
+
+                member.MemberID = result.MemberId ?? 0;
+            }
+            else if (ViewContext == MemberViewContext.Upgrade || ViewContext == MemberViewContext.Renew)
+            {
+                // UPDATE EXISTING MEMBER (Upgrade/Renew)
+                string actionType = ViewContext == MemberViewContext.Upgrade ? "UPGRADE" : "RENEW";
+                Debug.WriteLine($"[Payment] ========== {actionType} MEMBER ==========");
+                Debug.WriteLine($"[Payment] Member ID: {_selectedMemberId}");
+                Debug.WriteLine($"[Payment] Name: {member.FirstName} {member.LastName}");
+                Debug.WriteLine($"[Payment] New Package: {SelectedMonthlyPackage.Title}");
+                Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months added");
+                Debug.WriteLine($"[Payment] New ValidUntil: {member.ValidUntil}");
+                Debug.WriteLine($"[Payment] =======================================");
+
+                // Set the MemberID from the member being upgraded/renewed
+                member.MemberID = _selectedMemberId;
+
+                var result = await _memberService.UpdateMemberAsync(member);
+                isSuccess = result.Success;
+
+                successMessage = ViewContext == MemberViewContext.Upgrade
+                    ? $"{member.FirstName} {member.LastName} upgraded successfully! Extended by {MembershipDuration} months."
+                    : $"{member.FirstName} {member.LastName} renewed successfully! Extended by {MembershipDuration} months.";
+
+                if (!result.Success)
+                {
+                    _toastManager?.CreateToast("Update Failed")
+                        .WithContent(result.Message)
+                        .DismissOnClick()
+                        .ShowError();
+                    return;
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"[Payment] ❌ Unknown ViewContext: {ViewContext}");
                 return;
             }
 
-            Debug.WriteLine($"[Payment] Member registered successfully with ID: {result.MemberId}");
+            // Calculate total amount
+            decimal totalAmount = SelectedMonthlyPackage.Price * MembershipDuration.Value;
 
-            _toastManager?.CreateToast("Payment Successful!")
-                .WithContent($"Member {member.FirstName} {member.LastName} registered successfully.")
+            _toastManager?.CreateToast(successMessage)
+                .WithContent($"{SelectedMonthlyPackage.Title} ({MembershipDuration} months) = ₱{totalAmount:N2}")
                 .DismissOnClick()
                 .ShowSuccess();
-
-            DashboardEventService.Instance.NotifyMemberAdded();
 
             ClearAllFields();
             _pageManager.Navigate<ManageMembershipViewModel>();
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[Payment] Error saving member: {ex.Message}");
+            Debug.WriteLine($"[Payment] ❌ Error: {ex.Message}");
+            Debug.WriteLine($"[Payment] Stack trace: {ex.StackTrace}");
             _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to save member: {ex.Message}")
                 .DismissOnClick()
@@ -775,8 +985,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
             bool hasValidQuantity = (MembershipDuration.HasValue && MembershipDuration > 0);
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
+            bool hasPackage = SelectedMonthlyPackage != null;
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod;
+            return hasValidInputs && hasValidQuantity && hasPaymentMethod && hasPackage;
         }
     }
 
@@ -796,11 +1007,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         MemberLastName = string.Empty;
         MemberGender = null;
         MemberContactNumber = string.Empty;
-        MemberPackages = string.Empty;
         MemberAge = null;
         MemberBirthDate = null;
         MemberStatus = string.Empty;
         MembershipDuration = null;
+        SelectedMonthlyPackage = null;
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
@@ -814,6 +1025,134 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
         ImageResetRequested?.Invoke();
     }
+
+    #region Payment Summary Display Properties
+
+    public string PackageDisplayName => SelectedMonthlyPackage?.Title ?? "No package selected";
+
+    public string PackagePriceDisplay => SelectedMonthlyPackage != null
+        ? $"₱{SelectedMonthlyPackage.Price:N2}"
+        : "₱0.00";
+
+    public string PackageDurationDisplay
+    {
+        get
+        {
+            if (!MembershipDuration.HasValue || MembershipDuration <= 0)
+                return "0 Month";
+
+            int duration = MembershipDuration.Value;
+            return duration == 1 ? $"{duration} Month" : $"{duration} Months";
+        }
+    }
+
+    public string SubtotalDisplay
+    {
+        get
+        {
+            if (SelectedMonthlyPackage == null || !MembershipDuration.HasValue || MembershipDuration <= 0)
+                return "₱0.00";
+
+            decimal subtotal = SelectedMonthlyPackage.Price * MembershipDuration.Value;
+            return $"₱{subtotal:N2}";
+        }
+    }
+
+    public string MemberIdDisplay => _selectedMemberId > 0
+        ? $"ID: GM-2025-{_selectedMemberId:D6}"
+        : "ID: GM-2025-001234";
+
+    // ✅ ADD: Transaction Details
+    public string CurrentDate => DateTime.Now.ToString("MMMM dd, yyyy");
+
+    public string CurrentTime => DateTime.Now.ToString("h:mm tt");
+
+    public string TransactionID => $"TX-{DateTime.Now:yyyy}-{new Random().Next(1000, 9999)}";
+
+    // ✅ ADD: Membership Validity Dates
+    public string ValidFromDate
+    {
+        get
+        {
+            if (ViewContext == MemberViewContext.Renew || ViewContext == MemberViewContext.Upgrade)
+            {
+                DateTime currentValidUntil = _currentMemberValidUntil;
+
+                // If membership already expired or no valid date, start from today
+                if (currentValidUntil == DateTime.MinValue || currentValidUntil < DateTime.Now)
+                {
+                    return DateTime.Now.ToString("MMMM dd, yyyy");
+                }
+                else
+                {
+                    // If still valid, start from current expiry date
+                    return currentValidUntil.ToString("MMMM dd, yyyy");
+                }
+            }
+            else
+            {
+                // For ADD NEW: Start from today
+                return DateTime.Now.ToString("MMMM dd, yyyy");
+            }
+        }
+    }
+
+    public string ValidUntilDate
+    {
+        get
+        {
+            if (!MembershipDuration.HasValue || MembershipDuration <= 0)
+                return DateTime.Now.ToString("MMMM dd, yyyy");
+
+            DateTime validUntilDate;
+
+            if (ViewContext == MemberViewContext.Renew || ViewContext == MemberViewContext.Upgrade)
+            {
+                // For RENEW or UPGRADE: Extend from current ValidUntil date
+                DateTime currentValidUntil = _currentMemberValidUntil;
+
+                // If membership already expired or no valid date, extend from today
+                if (currentValidUntil == DateTime.MinValue || currentValidUntil < DateTime.Now)
+                {
+                    validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+                }
+                else
+                {
+                    // If still valid, extend from current expiry date
+                    validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
+                }
+            }
+            else
+            {
+                // For ADD NEW: Start from today
+                validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+            }
+
+            return validUntilDate.ToString("MMMM dd, yyyy");
+        }
+    }
+
+    public string ValidityFrom => $"Valid from: {ValidFromDate}";
+    public string ValidityTo => $"Valid to: {ValidUntilDate}";
+
+    // ✅ ADD: Formatted membership duration for Purchase Summary
+    public string MembershipDurationSummary
+    {
+        get
+        {
+            if (!MembershipDuration.HasValue || MembershipDuration <= 0 || SelectedMonthlyPackage == null)
+                return "No package selected";
+
+            int duration = MembershipDuration.Value;
+            string packageName = SelectedMonthlyPackage.Title;
+
+            return duration == 1
+                ? $"{packageName} ({duration} Month)"
+                : $"{packageName} ({duration} Months)";
+        }
+    }
+
+    #endregion
 
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
