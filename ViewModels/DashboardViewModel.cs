@@ -29,6 +29,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     private readonly IDashboardService _dashboardService;
     private readonly IInventoryService _inventoryService;
     private readonly IProductService _productService;
+    private readonly IMemberService _memberService;
     private readonly ToastManager _toastManager;
     private readonly DashboardModel _dashboardModel;
     private int _selectedYearIndex;
@@ -165,7 +166,8 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     #region Constructor
 
     public DashboardViewModel(ToastManager toastManager, PageManager pageManager, DashboardModel dashboardModel, 
-        IDashboardService dashboardService, IInventoryService inventoryService, IProductService productService)
+        IDashboardService dashboardService, IInventoryService inventoryService, IProductService productService, 
+        IMemberService memberService)
     {
         _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
         _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
@@ -173,9 +175,11 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
         _inventoryService = inventoryService ?? throw new ArgumentNullException(nameof(inventoryService));
         _productService = productService ?? throw new ArgumentNullException(nameof(productService));
+        _memberService = memberService ?? throw new ArgumentNullException(nameof(memberService));
         
         _inventoryService.RegisterNotificationCallback(AddNotification);
         _productService.RegisterNotificationCallback(AddNotification);
+        _memberService.RegisterNotificationCallback(AddNotification);
         
         _ = InitializeViewModel();
     }
