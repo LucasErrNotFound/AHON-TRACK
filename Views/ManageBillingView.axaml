@@ -178,11 +178,6 @@
                                                                                             Orientation="Horizontal"
                                                                                             VerticalAlignment="Center"
                                                                                             HorizontalAlignment="Left">
-																							<shadui:Avatar
-                                                                                                Width="36"
-                                                                                                Height="36"
-                                                                                                VerticalAlignment="Center"
-                                                                                                Source="{CompiledBinding PicturePath, Converter={StaticResource StringToBitMapConverter}}" />
 																							<StackPanel Margin="15,0">
 																								<TextBlock
                                                                                                     Classes="Small"
@@ -255,6 +250,7 @@
                                                                 HorizontalAlignment="Right"
                                                                 Margin="0,-20"
                                                                 shadui:ControlAssist.Label="Date Today"
+                                                                shadui:ControlAssist.ReadOnly="True"
                                                                 SelectedDate="{CompiledBinding SelectedDate}" />
 														</Grid>
 														<StackPanel>
