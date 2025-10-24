@@ -117,7 +117,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         eventService.ProductAdded += OnProductDataChanged;
         eventService.ProductUpdated += OnProductDataChanged;
         eventService.ProductDeleted += OnProductDataChanged;
-        eventService.ProductPurchased += OnProductDataChanged;
+        eventService.ProductPurchased += OnProductPurchased;
     }
     
     private void UnsubscribeFromEvents()
@@ -127,7 +127,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         eventService.ProductAdded -= OnProductDataChanged;
         eventService.ProductUpdated -= OnProductDataChanged;
         eventService.ProductDeleted -= OnProductDataChanged;
-        eventService.ProductPurchased -= OnProductDataChanged;
+        eventService.ProductPurchased -= OnProductPurchased;
     }
 
     public void Dispose()
@@ -147,6 +147,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
         await LoadProductDataAsync(showAlerts: false);
+    }
+    
+    private async void OnProductPurchased(object? sender, EventArgs e)
+    {
+        await LoadProductDataAsync(showAlerts: true);
     }
 
     private async Task LoadProductDataAsync(bool showAlerts = false)
