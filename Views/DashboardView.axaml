@@ -521,11 +521,6 @@
 																			Orientation="Horizontal"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left">
-																			<shadui:Avatar
-																				Width="36"
-																				Height="36"
-																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
@@ -711,11 +706,6 @@
 																			Orientation="Horizontal"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left">
-																			<shadui:Avatar
-																				Width="36"
-																				Height="36"
-																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
