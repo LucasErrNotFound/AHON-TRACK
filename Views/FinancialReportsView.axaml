@@ -54,7 +54,7 @@
                 TextWrapping="Wrap"
                 Margin="90,0" />
         </StackPanel>
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Interaction.Behaviors>
                 <scroll:VerticalScrollViewerAnimatedBehavior />
             </Interaction.Behaviors>
@@ -157,19 +157,6 @@
                         shadui:ControlAssist.Label="To"
                         shadui:ControlAssist.ReadOnly="True"
                         SelectedDate="{CompiledBinding FinancialBreakdownSelectedToDate}" />
-                    <Button
-                        Classes="Primary"
-                        VerticalAlignment="Bottom">
-                        <StackPanel Orientation="Horizontal">
-                            <Svg
-                                Width="20"
-                                Height="20"
-                                Path="avares://AHON_TRACK/Assets/GymDemographicsView/download-icon.svg"
-                                VerticalAlignment="Center"
-                                Margin="0,0,8,0" />
-                            <TextBlock Text="Download" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
                 </StackPanel>
                 <Grid RowDefinitions="* *" ColumnDefinitions="4.5* 2.35*" ColumnSpacing="30">
                     <shadui:Card Grid.Row="0" Grid.Column="0">

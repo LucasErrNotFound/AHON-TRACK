@@ -161,19 +161,6 @@
                                 shadui:ControlAssist.Label="To"
                                 shadui:ControlAssist.ReadOnly="True"
                                 SelectedDate="{CompiledBinding AttendanceGroupSelectedToDate}" />
-                            <Button
-                                Classes="Primary"
-                                VerticalAlignment="Bottom">
-                                <StackPanel Orientation="Horizontal">
-                                    <Svg
-                                        Width="20"
-                                        Height="20"
-                                        Path="avares://AHON_TRACK/Assets/GymDemographicsView/download-icon.svg"
-                                        VerticalAlignment="Center"
-                                        Margin="0,0,8,0" />
-                                    <TextBlock Text="Download" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
                         </StackPanel>
                         <Grid RowDefinitions="* *" ColumnDefinitions="2* *" ColumnSpacing="30" Margin="0,15,0,0">
                             <shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True" VerticalAlignment="Top">
