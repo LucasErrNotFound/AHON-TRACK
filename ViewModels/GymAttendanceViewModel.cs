@@ -1,7 +1,6 @@
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Events;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Dapper;
 using HotAvalonia;
 using LiveChartsCore;
 using LiveChartsCore.Kernel;
@@ -13,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
@@ -47,16 +45,12 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     [ObservableProperty] private double _memberChangePercent;
     [ObservableProperty] private double _attendanceChangePercent;
 
-    private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly DataCountingService _data;
 
-    public GymAttendanceViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, DataCountingService data)
+    public GymAttendanceViewModel(ToastManager toastManager, DataCountingService data)
     {
-        _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
         _data = data;
 
         SubscribeToEvent();
@@ -65,9 +59,7 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
 
     public GymAttendanceViewModel()
     {
-        _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
     }
 
     [AvaloniaHotReload]
@@ -270,12 +262,12 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     // Helper method to compute percentage change
     private static double ComputeChangePercent(double current, double previous)
     {
-        if (previous == 0 && current > 0)
-            return 100.0;     // 100% increase
-        else if (previous == 0 && current == 0)
-            return 0;         // no change at all
-        else
-            return Math.Round(((current - previous) / previous) * 100.0, 2);
+        return previous switch
+        {
+            0 when current > 0 => 100.0,
+            0 when current == 0 => 0,
+            _ => Math.Round(((current - previous) / previous) * 100.0, 2)
+        };
     }
 
     private async Task UpdateCustomerTypeGroupChartAsync()
@@ -327,7 +319,8 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
 public class CustomerPieData(string name, double?[] values, string color)
 {
     public string Name { get; set; } = name;
-    public double?[] Values { get; set; } = values;
+    public double?[] Values { get; set; } = values.Select(v => 
+        v.HasValue ? Math.Round(v.Value, 1) : v).ToArray();
     public string Color { get; set; } = color;
     public bool IsTotal => Name is "Walk-Ins" or "Gym Members";
     public Func<ChartPoint, string> Formatter { get; } = point =>

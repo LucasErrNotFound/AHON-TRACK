@@ -179,16 +179,16 @@
 										<lvc:PieChart.SeriesTemplate>
 											<DataTemplate x:DataType="viewModels:CustomerPieData">
 												<lvc:XamlPieSeries
-                                                    SeriesName="{Binding Name}"
-                                                    Values="{Binding Values}"
+                                                    SeriesName="{CompiledBinding Name}"
+                                                    Values="{CompiledBinding Values}"
                                                     Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
-                                                    Fill="{Binding Color, Converter={StaticResource StringToPaintConverter}}"
+                                                    Fill="{CompiledBinding Color, Converter={StaticResource StringToPaintConverter}}"
                                                     HoverPushout="15"
-                                                    DataLabelsFormatter="{Binding Formatter}"
+                                                    DataLabelsFormatter="{CompiledBinding Formatter}"
                                                     DataLabelsSize="15"
-                                                    ShowDataLabels="{Binding IsTotal}"
+                                                    ShowDataLabels="{CompiledBinding IsTotal}"
                                                     DataLabelsPosition="Outer"
-                                                    IsVisibleAtLegend="{Binding IsTotal}" >
+                                                    IsVisibleAtLegend="{CompiledBinding IsTotal}" >
 												</lvc:XamlPieSeries>
 											</DataTemplate>
 										</lvc:PieChart.SeriesTemplate>
