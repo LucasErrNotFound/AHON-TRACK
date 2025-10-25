@@ -849,8 +849,6 @@
 								</shadui:BreakpointViewPort>
 							</StackPanel>
 						</TabItem>
-						<TabItem Header="Analytics" />
-						<TabItem Header="Reports" />
 						<TabItem Header="Notifications">
 							<shadui:Card MaxWidth="900" MaxHeight="820" Margin="0,15,0,0">
 								<DockPanel Dock="Top" MaxHeight="720">
