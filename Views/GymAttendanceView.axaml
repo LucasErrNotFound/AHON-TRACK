@@ -63,7 +63,7 @@
 						<scroll:VerticalScrollViewerAnimatedBehavior />
 					</Interaction.Behaviors>
 					<StackPanel Margin="0,30,0,0">
-						<UniformGrid Margin="-6,0,-6,20" Columns="4">
+						<UniformGrid Margin="-6,0,-6,20" Columns="3">
 							<UniformGrid.Resources>
 								<LinearGradientBrush
                                     x:Key="GreenGradient"
@@ -136,19 +136,6 @@
                                         Width="30"
                                         Height="30"
                                         Path="/Assets/DashboardView/member-subscriptions-icon.svg" />
-								</dashboard:OverviewCard.Icon>
-							</dashboard:OverviewCard>
-							<dashboard:OverviewCard
-                                Title="Active Now"
-                                CardBackground="{StaticResource OrangeGradient}"
-                                Foreground="White"
-                                Hint="+26 since last hour"
-                                Value="+9">
-								<dashboard:OverviewCard.Icon>
-									<Svg
-                                        Width="30"
-                                        Height="30"
-                                        Path="/Assets/DashboardView/active-now-icon.svg" />
 								</dashboard:OverviewCard.Icon>
 							</dashboard:OverviewCard>
 						</UniformGrid>
