@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
-using System.Reflection.PortableExecutable;
 using System.Threading.Tasks;
 using Notification = AHON_TRACK.Models.Notification;
 
@@ -20,11 +19,15 @@ namespace AHON_TRACK.Services
         private readonly ToastManager _toastManager;
         private Action<Notification>? _notificationCallback;
 
+        private const int EXPIRATION_THRESHOLD_DAYS = 4;
+        private const string MEMBER_NOT_DELETED_FILTER = "(IsDeleted = 0 OR IsDeleted IS NULL)";
+
         public MemberService(string connectionString, ToastManager toastManager)
         {
             _connectionString = connectionString;
             _toastManager = toastManager;
         }
+
         public void RegisterNotificationCallback(Action<Notification> callback)
         {
             _notificationCallback = callback;
@@ -32,29 +35,21 @@ namespace AHON_TRACK.Services
 
         #region Role-Based Access Control
 
-        private bool CanCreate()
-        {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanCreate() =>
+            CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+            CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
 
-        private bool CanUpdate()
-        {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanUpdate() =>
+            CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+            CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
 
-        private bool CanDelete()
-        {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanDelete() =>
+            CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
 
-        private bool CanView()
-        {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanView() =>
+            CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+            CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
+            CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
 
         #endregion
 
@@ -64,10 +59,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanCreate())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to add members.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowAccessDeniedToast("add members");
                 return (false, "Insufficient permissions to add members.", null);
             }
 
@@ -79,199 +71,30 @@ namespace AHON_TRACK.Services
 
                 try
                 {
-                    // Check if member already exists (including soft deleted)
-                    string checkQuery = @"
-                SELECT MemberID, IsDeleted 
-                FROM Members 
-                WHERE Firstname = @Firstname 
-                AND Lastname = @Lastname 
-                AND DateOfBirth = @DateOfBirth";
+                    var (existingMemberId, isDeleted) = await CheckMemberExistsAsync(conn, transaction, member);
 
-                    using var checkCmd = new SqlCommand(checkQuery, conn, transaction);
-                    checkCmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
-                    checkCmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
-                    checkCmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
-
-                    int? existingMemberId = null;
-                    bool isDeleted = false;
-
-                    using var reader = await checkCmd.ExecuteReaderAsync();
-                    if (await reader.ReadAsync())
-                    {
-                        existingMemberId = reader.GetInt32(0);
-                        isDeleted = !reader.IsDBNull(1) && reader.GetBoolean(1);
-                    }
-                    reader.Close();
-
-                    // If member exists and is soft deleted, restore them
                     if (existingMemberId.HasValue && isDeleted)
                     {
-                        string restoreQuery = @"
-                    UPDATE Members 
-                    SET IsDeleted = 0,
-                        MiddleInitial = @MiddleInitial,
-                        Gender = @Gender,
-                        ProfilePicture = @ProfilePicture,
-                        ContactNumber = @ContactNumber,
-                        Age = @Age,
-                        ValidUntil = @ValidUntil,
-                        PackageID = @PackageID,
-                        Status = @Status,
-                        PaymentMethod = @PaymentMethod,
-                        RegisteredByEmployeeID = @RegisteredByEmployeeID
-                    WHERE MemberID = @MemberID";
-
-                        using var restoreCmd = new SqlCommand(restoreQuery, conn, transaction);
-                        restoreCmd.Parameters.AddWithValue("@MemberID", existingMemberId.Value);
-                        restoreCmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(member.MiddleInitial) ? (object)DBNull.Value : member.MiddleInitial.Substring(0, 1).ToUpper());
-                        restoreCmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
-                        restoreCmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;
-                        restoreCmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
-                        restoreCmd.Parameters.AddWithValue("@Age", member.Age > 0 ? member.Age : (object)DBNull.Value);
-                        restoreCmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
-                        restoreCmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
-                        restoreCmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
-                        restoreCmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
-                        restoreCmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                        await restoreCmd.ExecuteNonQueryAsync();
-
-                        await LogActionAsync(conn, transaction, "RESTORE", $"Restored member: {member.FirstName} {member.LastName}", true);
-
-                        transaction.Commit();
-
-                        _toastManager?.CreateToast("Member Restored")
-                            .WithContent($"Successfully restored {member.FirstName} {member.LastName}.")
-                            .DismissOnClick()
-                            .ShowSuccess();
-
-                        return (true, "Member restored successfully.", existingMemberId.Value);
+                        return await RestoreMemberAsync(conn, transaction, existingMemberId.Value, member);
                     }
 
-                    // If member exists but is not deleted, return error
-                    if (existingMemberId.HasValue && !isDeleted)
+                    if (existingMemberId.HasValue)
                     {
-                        _toastManager?.CreateToast("Member Already Exists")
-                            .WithContent($"{member.FirstName} {member.LastName} already exists in the system.")
-                            .DismissOnClick()
-                            .ShowWarning();
+                        ShowMemberExistsToast(member);
                         return (false, "Member already exists.", null);
                     }
 
-                    // Insert new member with IsDeleted = 0
-                    string memberQuery = @"
-                INSERT INTO Members 
-                (Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
-                 ValidUntil, PackageID, Status, PaymentMethod, RegisteredByEmployeeID, IsDeleted)
-                OUTPUT INSERTED.MemberID
-                VALUES 
-                (@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
-                 @ValidUntil, @PackageID, @Status, @PaymentMethod, @RegisteredByEmployeeID, 0)";
+                    int memberId = await InsertNewMemberAsync(conn, transaction, member);
 
-                    using var cmd = new SqlCommand(memberQuery, conn, transaction);
-                    cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(member.MiddleInitial) ? (object)DBNull.Value : member.MiddleInitial.Substring(0, 1).ToUpper());
-                    cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
-                    cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;
-                    cmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Age", member.Age > 0 ? member.Age : (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
-                    cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                    int memberId = (int)await cmd.ExecuteScalarAsync();
-
-                    // ✅ NEW: Record sale if member has a package
                     if (member.PackageID.HasValue && member.PackageID.Value > 0)
                     {
-                        // Get package details
-                        using var pkgCmd = new SqlCommand(
-                            @"SELECT PackageID, PackageName, Price, Duration FROM Packages 
-                      WHERE PackageID = @packageId AND IsDeleted = 0",
-                            conn, transaction);
-                        pkgCmd.Parameters.AddWithValue("@packageId", member.PackageID.Value);
-
-                        decimal packagePrice = 0;
-                        string packageName = "";
-                        string duration = "";
-
-                        using (var pkgReader = await pkgCmd.ExecuteReaderAsync())
-                        {
-                            if (await pkgReader.ReadAsync())
-                            {
-                                packagePrice = pkgReader.GetDecimal(2);
-                                packageName = pkgReader.GetString(1);
-                                duration = pkgReader.GetString(3);
-                            }
-                            pkgReader.Close();
-                        }
-
-
-                        if (packagePrice > 0)
-                        {
-                            // Calculate quantity based on ValidUntil date (months)
-                            int quantity = 1;
-                            if (!string.IsNullOrEmpty(member.ValidUntil))
-                            {
-                                if (DateTime.TryParse(member.ValidUntil, out DateTime validUntil))
-                                {
-                                    var monthsDiff = ((validUntil.Year - DateTime.Now.Year) * 12) + validUntil.Month - DateTime.Now.Month;
-                                    quantity = Math.Max(1, monthsDiff);
-                                }
-                            }
-
-                            decimal totalAmount = packagePrice * quantity;
-
-                            // Record in Sales table
-                            using var salesCmd = new SqlCommand(
-                                @"INSERT INTO Sales (SaleDate, PackageID, MemberID, Quantity, Amount, RecordedBy)
-                          VALUES (GETDATE(), @packageId, @memberId, @quantity, @amount, @employeeId)",
-                                conn, transaction);
-
-                            salesCmd.Parameters.AddWithValue("@packageId", member.PackageID.Value);
-                            salesCmd.Parameters.AddWithValue("@memberId", memberId);
-                            salesCmd.Parameters.AddWithValue("@quantity", quantity);
-                            salesCmd.Parameters.AddWithValue("@amount", totalAmount);
-                            salesCmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                            await salesCmd.ExecuteNonQueryAsync();
-
-                            Debug.WriteLine($"[AddMemberAsync] Sale recorded: {packageName} x{quantity} = ₱{totalAmount:N2}");
-
-                            // Update DailySales
-                            using var dailySalesCmd = new SqlCommand(
-                                @"MERGE DailySales AS target
-                          USING (SELECT CAST(GETDATE() AS DATE) AS SaleDate, @EmployeeID AS EmployeeID) AS source
-                          ON target.SaleDate = source.SaleDate AND target.TransactionByEmployeeID = source.EmployeeID
-                          WHEN MATCHED THEN
-                              UPDATE SET 
-                                  TotalSales = target.TotalSales + @TotalAmount,
-                                  TotalTransactions = target.TotalTransactions + 1,
-                                  TransactionUpdatedDate = SYSDATETIME()
-                          WHEN NOT MATCHED THEN
-                              INSERT (SaleDate, TotalSales, TotalTransactions, TransactionByEmployeeID)
-                              VALUES (source.SaleDate, @TotalAmount, 1, source.EmployeeID);",
-                                conn, transaction);
-
-                            dailySalesCmd.Parameters.AddWithValue("@EmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
-                            dailySalesCmd.Parameters.AddWithValue("@TotalAmount", totalAmount);
-
-                            await dailySalesCmd.ExecuteNonQueryAsync();
-
-                            Debug.WriteLine($"[AddMemberAsync] DailySales updated with ₱{totalAmount:N2}");
-                        }
+                        await RecordPackageSaleAsync(conn, transaction, member, memberId);
                     }
 
                     await LogActionAsync(conn, transaction, "CREATE", $"Added new member: {member.FirstName} {member.LastName}", true);
-
                     transaction.Commit();
 
                     DashboardEventService.Instance.NotifyMemberAdded();
-
                     return (true, "Member added successfully.", memberId);
                 }
                 catch
@@ -282,24 +105,199 @@ namespace AHON_TRACK.Services
             }
             catch (SqlException ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to add member: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"AddMemberAsync Error: {ex}");
+                ShowDatabaseErrorToast("add member", ex.Message);
+                Debug.WriteLine($"AddMemberAsync Error: {ex}");
                 return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"AddMemberAsync Error: {ex}");
+                ShowErrorToast(ex.Message);
+                Debug.WriteLine($"AddMemberAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}", null);
             }
+        }
+
+        private async Task<(int? MemberId, bool IsDeleted)> CheckMemberExistsAsync(
+            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
+        {
+            const string query = @"
+                SELECT MemberID, IsDeleted 
+                FROM Members 
+                WHERE Firstname = @Firstname 
+                AND Lastname = @Lastname 
+                AND DateOfBirth = @DateOfBirth";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                int memberId = reader.GetInt32(0);
+                bool isDeleted = !reader.IsDBNull(1) && reader.GetBoolean(1);
+                return (memberId, isDeleted);
+            }
+
+            return (null, false);
+        }
+
+        private async Task<(bool Success, string Message, int? MemberId)> RestoreMemberAsync(
+            SqlConnection conn, SqlTransaction transaction, int memberId, ManageMemberModel member)
+        {
+            const string query = @"
+                UPDATE Members 
+                SET IsDeleted = 0,
+                    MiddleInitial = @MiddleInitial,
+                    Gender = @Gender,
+                    ProfilePicture = @ProfilePicture,
+                    ContactNumber = @ContactNumber,
+                    Age = @Age,
+                    ValidUntil = @ValidUntil,
+                    PackageID = @PackageID,
+                    Status = @Status,
+                    PaymentMethod = @PaymentMethod,
+                    RegisteredByEmployeeID = @RegisteredByEmployeeID
+                WHERE MemberID = @MemberID";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            AddMemberParameters(cmd, member);
+            cmd.Parameters.AddWithValue("@MemberID", memberId);
+
+            await cmd.ExecuteNonQueryAsync();
+            await LogActionAsync(conn, transaction, "RESTORE", $"Restored member: {member.FirstName} {member.LastName}", true);
+            transaction.Commit();
+
+            _toastManager?.CreateToast("Member Restored")
+                .WithContent($"Successfully restored {member.FirstName} {member.LastName}.")
+                .DismissOnClick()
+                .ShowSuccess();
+
+            return (true, "Member restored successfully.", memberId);
+        }
+
+        private async Task<int> InsertNewMemberAsync(
+            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
+        {
+            const string query = @"
+                INSERT INTO Members 
+                (Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
+                 ValidUntil, PackageID, Status, PaymentMethod, RegisteredByEmployeeID, IsDeleted)
+                OUTPUT INSERTED.MemberID
+                VALUES 
+                (@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
+                 @ValidUntil, @PackageID, @Status, @PaymentMethod, @RegisteredByEmployeeID, 0)";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            AddMemberParameters(cmd, member);
+            cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
+
+            return (int)await cmd.ExecuteScalarAsync();
+        }
+
+        private async Task RecordPackageSaleAsync(
+            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member, int memberId)
+        {
+            var (packagePrice, packageName, duration) = await GetPackageDetailsAsync(conn, transaction, member.PackageID!.Value);
+
+            if (packagePrice <= 0) return;
+
+            int quantity = CalculateQuantityFromValidUntil(member.ValidUntil);
+            decimal totalAmount = packagePrice * quantity;
+
+            await InsertSaleRecordAsync(conn, transaction, member.PackageID!.Value, memberId, quantity, totalAmount);
+            await UpdateDailySalesAsync(conn, transaction, totalAmount);
+
+            Debug.WriteLine($"[AddMemberAsync] Sale recorded: {packageName} x{quantity} = ₱{totalAmount:N2}");
+        }
+
+        private async Task<(decimal Price, string Name, string Duration)> GetPackageDetailsAsync(
+            SqlConnection conn, SqlTransaction transaction, int packageId)
+        {
+            const string query = @"
+                SELECT PackageID, PackageName, Price, Duration 
+                FROM Packages 
+                WHERE PackageID = @packageId AND IsDeleted = 0";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@packageId", packageId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return (reader.GetDecimal(2), reader.GetString(1), reader.GetString(3));
+            }
+
+            return (0, "", "");
+        }
+
+        private int CalculateQuantityFromValidUntil(string? validUntil)
+        {
+            if (string.IsNullOrEmpty(validUntil) || !DateTime.TryParse(validUntil, out DateTime validDate))
+                return 1;
+
+            var monthsDiff = ((validDate.Year - DateTime.Now.Year) * 12) + validDate.Month - DateTime.Now.Month;
+            return Math.Max(1, monthsDiff);
+        }
+
+        private async Task InsertSaleRecordAsync(
+            SqlConnection conn, SqlTransaction transaction, int packageId, int memberId, int quantity, decimal amount)
+        {
+            const string query = @"
+                INSERT INTO Sales (SaleDate, PackageID, MemberID, Quantity, Amount, RecordedBy)
+                VALUES (GETDATE(), @packageId, @memberId, @quantity, @amount, @employeeId)";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@packageId", packageId);
+            cmd.Parameters.AddWithValue("@memberId", memberId);
+            cmd.Parameters.AddWithValue("@quantity", quantity);
+            cmd.Parameters.AddWithValue("@amount", amount);
+            cmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        private async Task UpdateDailySalesAsync(SqlConnection conn, SqlTransaction transaction, decimal totalAmount)
+        {
+            const string query = @"
+                MERGE DailySales AS target
+                USING (SELECT CAST(GETDATE() AS DATE) AS SaleDate, @EmployeeID AS EmployeeID) AS source
+                ON target.SaleDate = source.SaleDate AND target.TransactionByEmployeeID = source.EmployeeID
+                WHEN MATCHED THEN
+                    UPDATE SET 
+                        TotalSales = target.TotalSales + @TotalAmount,
+                        TotalTransactions = target.TotalTransactions + 1,
+                        TransactionUpdatedDate = SYSDATETIME()
+                WHEN NOT MATCHED THEN
+                    INSERT (SaleDate, TotalSales, TotalTransactions, TransactionByEmployeeID)
+                    VALUES (source.SaleDate, @TotalAmount, 1, source.EmployeeID);";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@EmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@TotalAmount", totalAmount);
+
+            await cmd.ExecuteNonQueryAsync();
+            Debug.WriteLine($"[AddMemberAsync] DailySales updated with ₱{totalAmount:N2}");
+        }
+
+        private void AddMemberParameters(SqlCommand cmd, ManageMemberModel member)
+        {
+            cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@MiddleInitial",
+                string.IsNullOrWhiteSpace(member.MiddleInitial)
+                    ? (object)DBNull.Value
+                    : member.MiddleInitial.Substring(0, 1).ToUpper());
+            cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
+            cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;
+            cmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Age", member.Age > 0 ? member.Age : (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
+            cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
         }
 
         #endregion
@@ -310,10 +308,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanView())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to view members.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowAccessDeniedToast("view members");
                 return (false, "Insufficient permissions to view members.", null);
             }
 
@@ -322,66 +317,39 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = @"
-            SELECT 
-                m.MemberID,
-                m.Firstname,
-                m.MiddleInitial,
-                m.Lastname,
-                LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
-                m.Gender,
-                m.ContactNumber,
-                m.Age,
-                m.DateOfBirth,
-                m.ValidUntil,
-                m.PackageID,
-                p.PackageName,
-                m.Status,
-                m.PaymentMethod,
-                m.ProfilePicture,
-                m.DateJoined,
-                -- ✅ Add last check-in info
-                (SELECT TOP 1 CheckIn 
-                 FROM MemberCheckIns 
-                 WHERE MemberID = m.MemberID 
-                   AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY CheckIn DESC) AS LastCheckIn,
-                -- ✅ Add last check-out info
-                (SELECT TOP 1 CheckOut 
-                 FROM MemberCheckIns 
-                 WHERE MemberID = m.MemberID 
-                   AND CheckOut IS NOT NULL
-                   AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY CheckOut DESC) AS LastCheckOut,
-                -- ✅ Add recent purchase item
-                (SELECT TOP 1 
-                    CASE 
-                        WHEN s.ProductID IS NOT NULL THEN pr.ProductName
-                        WHEN s.PackageID IS NOT NULL THEN pk.PackageName
-                        ELSE 'Unknown'
-                    END
-                 FROM Sales s
-                 LEFT JOIN Products pr ON s.ProductID = pr.ProductID
-                 LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
-                 WHERE s.MemberID = m.MemberID 
-                   AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-                 ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
-                -- ✅ Add recent purchase date
-                (SELECT TOP 1 SaleDate 
-                 FROM Sales 
-                 WHERE MemberID = m.MemberID 
-                   AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY SaleDate DESC) AS RecentPurchaseDate,
-                -- ✅ Add recent purchase quantity
-                (SELECT TOP 1 Quantity 
-                 FROM Sales 
-                 WHERE MemberID = m.MemberID 
-                   AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
-            FROM Members m
-            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-            WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
-            ORDER BY Name";
+                const string query = @"
+                    SELECT 
+                        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname,
+                        LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
+                        m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil,
+                        m.PackageID, p.PackageName, m.Status, m.PaymentMethod, m.ProfilePicture, m.DateJoined,
+                        (SELECT TOP 1 CheckIn FROM MemberCheckIns 
+                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                         ORDER BY CheckIn DESC) AS LastCheckIn,
+                        (SELECT TOP 1 CheckOut FROM MemberCheckIns 
+                         WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                         ORDER BY CheckOut DESC) AS LastCheckOut,
+                        (SELECT TOP 1 
+                            CASE 
+                                WHEN s.ProductID IS NOT NULL THEN pr.ProductName
+                                WHEN s.PackageID IS NOT NULL THEN pk.PackageName
+                                ELSE 'Unknown'
+                            END
+                         FROM Sales s
+                         LEFT JOIN Products pr ON s.ProductID = pr.ProductID
+                         LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
+                         WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+                         ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+                        (SELECT TOP 1 SaleDate FROM Sales 
+                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                         ORDER BY SaleDate DESC) AS RecentPurchaseDate,
+                        (SELECT TOP 1 Quantity FROM Sales 
+                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                         ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
+                    FROM Members m
+                    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+                    WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
+                    ORDER BY Name";
 
                 var members = new List<ManageMemberModel>();
 
@@ -390,59 +358,21 @@ namespace AHON_TRACK.Services
 
                 while (await reader.ReadAsync())
                 {
-                    members.Add(new ManageMemberModel
-                    {
-                        MemberID = reader.GetInt32(0),
-                        FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                        MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
-                        Name = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                        Gender = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
-                        ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
-                        Age = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                        DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
-                        ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
-                        PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
-                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),
-                        Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
-                        PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                        AvatarBytes = reader.IsDBNull(14) ? null : (byte[])reader[14],
-                        AvatarSource = reader.IsDBNull(14)
-                            ? ImageHelper.GetDefaultAvatar()
-                            : ImageHelper.BytesToBitmap((byte[])reader[14]),
-                        DateJoined = reader.IsDBNull(15) ? null : reader.GetDateTime(15),
-
-                        // ✅ NEW: Map check-in/check-out data
-                        LastCheckIn = reader.IsDBNull(16) ? null : reader.GetDateTime(16),
-                        LastCheckOut = reader.IsDBNull(17) ? null : reader.GetDateTime(17),
-
-                        // ✅ NEW: Map recent purchase data
-                        RecentPurchaseItem = reader.IsDBNull(18) ? null : reader.GetString(18),
-                        RecentPurchaseDate = reader.IsDBNull(19) ? null : reader.GetDateTime(19),
-                        RecentPurchaseQuantity = reader.IsDBNull(20) ? null : reader.GetInt32(20)
-                    });
+                    members.Add(MapMemberFromReader(reader));
                 }
 
                 return (true, "Members retrieved successfully.", members);
             }
             catch (SqlException ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load members: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"GetMembersAsync Error: {ex}");
+                ShowDatabaseErrorToast("load members", ex.Message);
+                Debug.WriteLine($"GetMembersAsync Error: {ex}");
                 return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"GetMembersAsync Error: {ex}");
+                ShowErrorToast(ex.Message);
+                Debug.WriteLine($"GetMembersAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}", null);
             }
         }
@@ -459,66 +389,37 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                var query = @"
-            SELECT 
-                m.MemberID,
-                m.Firstname,
-                m.MiddleInitial,
-                m.Lastname,
-                m.Gender,
-                m.ProfilePicture,
-                m.ContactNumber,
-                m.Age,
-                m.DateOfBirth,
-                m.ValidUntil,
-                m.PackageID,
-                p.PackageName,
-                m.Status,
-                m.PaymentMethod,
-                m.RegisteredByEmployeeID,
-                m.DateJoined,
-                -- ✅ Get last check-in info
-                (SELECT TOP 1 CheckIn 
-                 FROM MemberCheckIns 
-                 WHERE MemberID = m.MemberID 
-                   AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY CheckIn DESC) AS LastCheckIn,
-                -- ✅ Get last check-out info
-                (SELECT TOP 1 CheckOut 
-                 FROM MemberCheckIns 
-                 WHERE MemberID = m.MemberID 
-                   AND CheckOut IS NOT NULL
-                   AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY CheckOut DESC) AS LastCheckOut,
-                -- ✅ Get recent purchase item (Product or Package name)
-                (SELECT TOP 1 
-                    CASE 
-                        WHEN s.ProductID IS NOT NULL THEN pr.ProductName
-                        WHEN s.PackageID IS NOT NULL THEN pk.PackageName
-                        ELSE 'Unknown'
-                    END
-                 FROM Sales s
-                 LEFT JOIN Products pr ON s.ProductID = pr.ProductID
-                 LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
-                 WHERE s.MemberID = m.MemberID 
-                   AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-                 ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
-                -- ✅ Get recent purchase date
-                (SELECT TOP 1 SaleDate 
-                 FROM Sales 
-                 WHERE MemberID = m.MemberID 
-                   AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY SaleDate DESC) AS RecentPurchaseDate,
-                -- ✅ Get recent purchase quantity
-                (SELECT TOP 1 Quantity 
-                 FROM Sales 
-                 WHERE MemberID = m.MemberID 
-                   AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
-            FROM Members m
-            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-            WHERE m.MemberID = @Id 
-            AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
+                const string query = @"
+                    SELECT 
+                        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
+                        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, p.PackageName,
+                        m.Status, m.PaymentMethod, m.RegisteredByEmployeeID, m.DateJoined,
+                        (SELECT TOP 1 CheckIn FROM MemberCheckIns 
+                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                         ORDER BY CheckIn DESC) AS LastCheckIn,
+                        (SELECT TOP 1 CheckOut FROM MemberCheckIns 
+                         WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                         ORDER BY CheckOut DESC) AS LastCheckOut,
+                        (SELECT TOP 1 
+                            CASE 
+                                WHEN s.ProductID IS NOT NULL THEN pr.ProductName
+                                WHEN s.PackageID IS NOT NULL THEN pk.PackageName
+                                ELSE 'Unknown'
+                            END
+                         FROM Sales s
+                         LEFT JOIN Products pr ON s.ProductID = pr.ProductID
+                         LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
+                         WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+                         ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+                        (SELECT TOP 1 SaleDate FROM Sales 
+                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                         ORDER BY SaleDate DESC) AS RecentPurchaseDate,
+                        (SELECT TOP 1 Quantity FROM Sales 
+                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                         ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
+                    FROM Members m
+                    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+                    WHERE m.MemberID = @Id AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", memberId);
@@ -527,38 +428,8 @@ namespace AHON_TRACK.Services
 
                 if (await reader.ReadAsync())
                 {
-                    var member = new ManageMemberModel
-                    {
-                        MemberID = reader.GetInt32(0),
-                        FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                        MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
-                        Gender = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                        AvatarBytes = reader.IsDBNull(5) ? null : (byte[])reader[5],
-                        AvatarSource = reader.IsDBNull(5) ? ImageHelper.GetDefaultAvatar() : ImageHelper.BytesToBitmap((byte[])reader[5]),
-                        ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
-                        Age = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                        DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
-                        ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
-                        PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
-                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),
-                        Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
-                        PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                        RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14),
-                        DateJoined = reader.IsDBNull(15) ? null : reader.GetDateTime(15),
-
-                        // ✅ NEW: Check-in/Check-out data
-                        LastCheckIn = reader.IsDBNull(16) ? null : reader.GetDateTime(16),
-                        LastCheckOut = reader.IsDBNull(17) ? null : reader.GetDateTime(17),
-
-                        // ✅ NEW: Recent purchase data
-                        RecentPurchaseItem = reader.IsDBNull(18) ? null : reader.GetString(18),
-                        RecentPurchaseDate = reader.IsDBNull(19) ? null : reader.GetDateTime(19),
-                        RecentPurchaseQuantity = reader.IsDBNull(20) ? null : reader.GetInt32(20)
-                    };
-
+                    var member = MapMemberFromReader(reader, includeRegisteredBy: true);
                     member.Name = $"{member.FirstName} {(string.IsNullOrWhiteSpace(member.MiddleInitial) ? "" : member.MiddleInitial + ". ")}{member.LastName}";
-
                     return (true, "Member retrieved successfully.", member);
                 }
 
@@ -566,60 +437,43 @@ namespace AHON_TRACK.Services
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Error retrieving member: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-                System.Diagnostics.Debug.WriteLine($"GetMemberByIdAsync Error: {ex}");
+                ShowDatabaseErrorToast("retrieve member", ex.Message);
+                Debug.WriteLine($"GetMemberByIdAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}", null);
             }
         }
 
         public async Task<List<SellingModel>> GetAvailablePackagesForMembersAsync()
         {
-            System.Diagnostics.Debug.WriteLine("🔹 GetAvailablePackagesForWalkInAsync called");
+            Debug.WriteLine("🔹 GetAvailablePackagesForMembersAsync called");
             var packages = new List<SellingModel>();
 
             if (!CanView())
             {
-                System.Diagnostics.Debug.WriteLine("❌ Access denied - CanView() returned false");
+                Debug.WriteLine("❌ Access denied - CanView() returned false");
                 _toastManager.CreateToast("Access Denied")
                     .WithContent("You do not have permission to view gym packages.")
                     .ShowError();
                 return packages;
             }
 
-            System.Diagnostics.Debug.WriteLine("✅ Permission check passed");
-
             try
             {
-                System.Diagnostics.Debug.WriteLine($"🔌 Connecting to database...");
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                System.Diagnostics.Debug.WriteLine("✅ Database connection opened");
-
-                string query = @"
-    SELECT 
-        PackageID,
-        PackageName,
-        Description,
-        Price,
-        Duration,
-        Features,
-        Discount,
-        DiscountType,
-        DiscountFor,
-        DiscountedPrice,
-        ValidFrom,
-        ValidTo
-    FROM Packages
-    WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
-    AND IsDeleted = 0
-    AND (Duration NOT LIKE '%One-time Only%' AND Duration NOT LIKE '%One time Only% AND Duration NOT LIKE %Session% AND Duration NOT LIKE %session%')
-    ORDER BY Price ASC;";
-
-                System.Diagnostics.Debug.WriteLine($"📝 Executing query");
+                const string query = @"
+                    SELECT 
+                        PackageID, PackageName, Description, Price, Duration, Features,
+                        Discount, DiscountType, DiscountFor, DiscountedPrice, ValidFrom, ValidTo
+                    FROM Packages
+                    WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
+                    AND IsDeleted = 0
+                    AND Duration NOT LIKE '%One-time Only%' 
+                    AND Duration NOT LIKE '%One time Only%' 
+                    AND Duration NOT LIKE '%Session%'
+                    AND Duration NOT LIKE '%session%'
+                    ORDER BY Price ASC";
 
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
@@ -628,44 +482,68 @@ namespace AHON_TRACK.Services
                 while (await reader.ReadAsync())
                 {
                     count++;
-                    var packageName = reader["PackageName"]?.ToString() ?? string.Empty;
-                    var duration = reader["Duration"]?.ToString() ?? string.Empty;
-                    var price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0;
-
-                    var package = new SellingModel
+                    packages.Add(new SellingModel
                     {
                         SellingID = reader.GetInt32(reader.GetOrdinal("PackageID")),
-                        Title = packageName,
+                        Title = reader["PackageName"]?.ToString() ?? string.Empty,
                         Description = reader["Description"]?.ToString() ?? string.Empty,
                         Category = CategoryConstants.GymPackage,
-                        Price = price,
+                        Price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0,
                         Stock = 999,
                         ImagePath = null,
                         Features = reader["Features"]?.ToString() ?? string.Empty
-                    };
-
-                    packages.Add(package);
-                    System.Diagnostics.Debug.WriteLine($"  ✓ Package {count}: {packageName} (Duration: {duration}, Price: ₱{price})");
+                    });
                 }
 
-                System.Diagnostics.Debug.WriteLine($"✅ Total packages loaded: {count}");
-
-                if (count == 0)
-                {
-                    System.Diagnostics.Debug.WriteLine("⚠️ Query returned 0 results - check database conditions");
-                }
-
+                Debug.WriteLine($"✅ Total packages loaded: {count}");
                 return packages;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"❌ Error in GetAvailablePackagesForWalkInAsync: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                Debug.WriteLine($"❌ Error in GetAvailablePackagesForMembersAsync: {ex.Message}");
                 _toastManager.CreateToast("Load Packages Failed")
                     .WithContent($"Error loading packages: {ex.Message}")
                     .ShowError();
                 return packages;
             }
+        }
+
+        private ManageMemberModel MapMemberFromReader(SqlDataReader reader, bool includeRegisteredBy = false)
+        {
+            var member = new ManageMemberModel
+            {
+                MemberID = reader.GetInt32(0),
+                FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
+                LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                Name = includeRegisteredBy ? null : (reader.IsDBNull(4) ? string.Empty : reader.GetString(4)),
+                Gender = reader.IsDBNull(includeRegisteredBy ? 4 : 5) ? string.Empty : reader.GetString(includeRegisteredBy ? 4 : 5),
+                ContactNumber = reader.IsDBNull(includeRegisteredBy ? 6 : 6) ? string.Empty : reader.GetString(includeRegisteredBy ? 6 : 6),
+                Age = reader.IsDBNull(includeRegisteredBy ? 7 : 7) ? null : reader.GetInt32(includeRegisteredBy ? 7 : 7),
+                DateOfBirth = reader.IsDBNull(includeRegisteredBy ? 8 : 8) ? null : reader.GetDateTime(includeRegisteredBy ? 8 : 8),
+                ValidUntil = reader.IsDBNull(includeRegisteredBy ? 9 : 9) ? null : reader.GetDateTime(includeRegisteredBy ? 9 : 9).ToString("MMM dd, yyyy"),
+                PackageID = reader.IsDBNull(includeRegisteredBy ? 10 : 10) ? null : reader.GetInt32(includeRegisteredBy ? 10 : 10),
+                MembershipType = reader.IsDBNull(includeRegisteredBy ? 11 : 11) ? "None" : reader.GetString(includeRegisteredBy ? 11 : 11),
+                Status = reader.IsDBNull(includeRegisteredBy ? 12 : 12) ? "Active" : reader.GetString(includeRegisteredBy ? 12 : 12),
+                PaymentMethod = reader.IsDBNull(includeRegisteredBy ? 13 : 13) ? string.Empty : reader.GetString(includeRegisteredBy ? 13 : 13),
+                AvatarBytes = reader.IsDBNull(includeRegisteredBy ? 5 : 14) ? null : (byte[])reader[includeRegisteredBy ? 5 : 14],
+                AvatarSource = reader.IsDBNull(includeRegisteredBy ? 5 : 14)
+                    ? ImageHelper.GetDefaultAvatar()
+                    : ImageHelper.BytesToBitmap((byte[])reader[includeRegisteredBy ? 5 : 14]),
+                DateJoined = reader.IsDBNull(includeRegisteredBy ? 15 : 15) ? null : reader.GetDateTime(includeRegisteredBy ? 15 : 15),
+                LastCheckIn = reader.IsDBNull(16) ? null : reader.GetDateTime(16),
+                LastCheckOut = reader.IsDBNull(17) ? null : reader.GetDateTime(17),
+                RecentPurchaseItem = reader.IsDBNull(18) ? null : reader.GetString(18),
+                RecentPurchaseDate = reader.IsDBNull(19) ? null : reader.GetDateTime(19),
+                RecentPurchaseQuantity = reader.IsDBNull(20) ? null : reader.GetInt32(20)
+            };
+
+            if (includeRegisteredBy)
+            {
+                member.RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14);
+            }
+
+            return member;
         }
 
         #endregion
@@ -676,10 +554,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanUpdate())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to update member data.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowAccessDeniedToast("update member data");
                 return (false, "Insufficient permissions to update members.");
             }
 
@@ -688,12 +563,7 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Members WHERE MemberID = @memberId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
-                checkCmd.Parameters.AddWithValue("@memberId", member.MemberID);
-
-                var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
-                if (!exists)
+                if (!await MemberExistsAsync(conn, member.MemberID))
                 {
                     _toastManager?.CreateToast("Member Not Found")
                         .WithContent("The member you're trying to update doesn't exist.")
@@ -702,29 +572,10 @@ namespace AHON_TRACK.Services
                     return (false, "Member not found.");
                 }
 
-                byte[]? existingImage = null;
-                using var getImageCmd = new SqlCommand(
-                    "SELECT ProfilePicture FROM Members WHERE MemberID = @memberId", conn);
-                getImageCmd.Parameters.AddWithValue("@memberId", member.MemberID);
+                byte[]? imageToSave = await GetImageToSaveAsync(conn, member);
 
-                var imageResult = await getImageCmd.ExecuteScalarAsync();
-                if (imageResult != null && imageResult != DBNull.Value)
-                {
-                    existingImage = (byte[])imageResult;
-                }
-
-                byte[]? imageToSave = existingImage;
-
-                if (member.ProfilePicture != null && member.ProfilePicture.Length > 0)
-                {
-                    imageToSave = member.ProfilePicture;
-                }
-                else if (member.AvatarBytes != null && member.AvatarBytes.Length > 0)
-                {
-                    imageToSave = member.AvatarBytes;
-                }
-
-                string query = @"UPDATE Members 
+                const string query = @"
+                    UPDATE Members 
                     SET Firstname = @Firstname, 
                         MiddleInitial = @MiddleInitial, 
                         Lastname = @Lastname, 
@@ -740,37 +591,16 @@ namespace AHON_TRACK.Services
                     WHERE MemberID = @MemberID";
 
                 using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@MemberID", member.MemberID);
-                cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@MiddleInitial", string.IsNullOrWhiteSpace(member.MiddleInitial) ? (object)DBNull.Value : member.MiddleInitial.Substring(0, 1).ToUpper());
-                cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Gender", member.Gender ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Age", member.Age > 0 ? member.Age : (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
-                cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
+                member.ProfilePicture = imageToSave;
 
-                if (imageToSave != null && imageToSave.Length > 0)
-                {
-                    cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = imageToSave;
-                }
-                else
-                {
-                    cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = DBNull.Value;
-                }
+                AddMemberParameters(cmd, member);
+                cmd.Parameters.AddWithValue("@MemberID", member.MemberID);
+                cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
 
                 int rows = await cmd.ExecuteNonQueryAsync();
                 if (rows > 0)
                 {
                     await LogActionAsync(conn, "UPDATE", $"Updated member: {member.FirstName} {member.LastName}", true);
-
-                    /*  _toastManager?.CreateToast("Member Updated")
-                          .WithContent($"Successfully updated {member.FirstName} {member.LastName}.")
-                          .DismissOnClick()
-                          .ShowSuccess(); */
                     DashboardEventService.Instance.NotifyMemberUpdated();
                     return (true, "Member updated successfully.");
                 }
@@ -779,24 +609,46 @@ namespace AHON_TRACK.Services
             }
             catch (SqlException ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to update member: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
+                ShowDatabaseErrorToast("update member", ex.Message);
+                Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
                 return (false, $"Database error: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
+                ShowErrorToast(ex.Message);
+                Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}");
             }
+        }
+
+        private async Task<bool> MemberExistsAsync(SqlConnection conn, int memberId)
+        {
+            using var cmd = new SqlCommand(
+                $"SELECT COUNT(*) FROM Members WHERE MemberID = @memberId AND {MEMBER_NOT_DELETED_FILTER}", conn);
+            cmd.Parameters.AddWithValue("@memberId", memberId);
+            return (int)await cmd.ExecuteScalarAsync() > 0;
+        }
+
+        private async Task<byte[]?> GetImageToSaveAsync(SqlConnection conn, ManageMemberModel member)
+        {
+            byte[]? existingImage = null;
+            using var getImageCmd = new SqlCommand(
+                "SELECT ProfilePicture FROM Members WHERE MemberID = @memberId", conn);
+            getImageCmd.Parameters.AddWithValue("@memberId", member.MemberID);
+
+            var imageResult = await getImageCmd.ExecuteScalarAsync();
+            if (imageResult != null && imageResult != DBNull.Value)
+            {
+                existingImage = (byte[])imageResult;
+            }
+
+            if (member.ProfilePicture != null && member.ProfilePicture.Length > 0)
+                return member.ProfilePicture;
+
+            if (member.AvatarBytes != null && member.AvatarBytes.Length > 0)
+                return member.AvatarBytes;
+
+            return existingImage;
         }
 
         #endregion
@@ -807,10 +659,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanDelete())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("Only administrators can delete members.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowAccessDeniedToast("delete members", "Only administrators can delete members.");
                 return (false, "Insufficient permissions to delete members.");
             }
 
@@ -819,17 +668,7 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string memberName = string.Empty;
-                using var getNameCmd = new SqlCommand(
-                    "SELECT Firstname, Lastname FROM Members WHERE MemberID = @memberId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
-                getNameCmd.Parameters.AddWithValue("@memberId", memberId);
-
-                using var nameReader = await getNameCmd.ExecuteReaderAsync();
-                if (await nameReader.ReadAsync())
-                {
-                    memberName = $"{nameReader[0]} {nameReader[1]}";
-                }
-                nameReader.Close();
+                string memberName = await GetMemberNameAsync(conn, memberId);
 
                 if (string.IsNullOrEmpty(memberName))
                 {
@@ -840,23 +679,15 @@ namespace AHON_TRACK.Services
                     return (false, "Member not found.");
                 }
 
-                using var deleteMemberCmd = new SqlCommand(
+                using var cmd = new SqlCommand(
                     "UPDATE Members SET IsDeleted = 1 WHERE MemberID = @memberId", conn);
-                deleteMemberCmd.Parameters.AddWithValue("@memberId", memberId);
-                int rowsAffected = await deleteMemberCmd.ExecuteNonQueryAsync();
+                cmd.Parameters.AddWithValue("@memberId", memberId);
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
 
                 if (rowsAffected > 0)
                 {
                     await LogActionAsync(conn, "DELETE", $"Soft deleted member: {memberName} (ID: {memberId})", true);
-
-
-                    /*  _toastManager?.CreateToast("Member Deleted")
-                          .WithContent($"Successfully deleted {memberName}.")
-                          .DismissOnClick()
-                          .ShowSuccess(); */
-                    DashboardEventService.Instance.NotifyMemberDeleted();
-                    DashboardEventService.Instance.NotifyPopulationDataChanged();
-
+                    NotifyDashboardOfDeletion();
                     return (true, "Member deleted successfully.");
                 }
 
@@ -864,22 +695,14 @@ namespace AHON_TRACK.Services
             }
             catch (SqlException ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to delete member: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"DeleteMemberAsync Error: {ex}");
+                ShowDatabaseErrorToast("delete member", ex.Message);
+                Debug.WriteLine($"DeleteMemberAsync Error: {ex}");
                 return (false, $"Database error: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"DeleteMemberAsync Error: {ex}");
+                ShowErrorToast(ex.Message);
+                Debug.WriteLine($"DeleteMemberAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}");
             }
         }
@@ -888,10 +711,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanDelete())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("Only administrators can delete members.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowAccessDeniedToast("delete members", "Only administrators can delete members.");
                 return (false, "Insufficient permissions to delete members.");
             }
 
@@ -909,13 +729,7 @@ namespace AHON_TRACK.Services
                 if (rowsAffected > 0)
                 {
                     await LogActionAsync(conn, "DELETE", $"Soft deleted {rowsAffected} members", true);
-
-                    /*   _toastManager?.CreateToast("Members Deleted")
-                           .WithContent($"Successfully deleted {rowsAffected} members.")
-                           .DismissOnClick()
-                           .ShowSuccess(); */
-
-                    DashboardEventService.Instance.NotifyMemberDeleted();
+                    NotifyDashboardOfDeletion();
                     return (true, "Members deleted successfully.");
                 }
 
@@ -923,53 +737,61 @@ namespace AHON_TRACK.Services
             }
             catch (SqlException ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to delete members: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"DeleteMultipleMembersAsync Error: {ex}");
+                ShowDatabaseErrorToast("delete members", ex.Message);
+                Debug.WriteLine($"DeleteMultipleMembersAsync Error: {ex}");
                 return (false, $"Database error: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                System.Diagnostics.Debug.WriteLine($"DeleteMultipleMembersAsync Error: {ex}");
+                ShowErrorToast(ex.Message);
+                Debug.WriteLine($"DeleteMultipleMembersAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}");
             }
+        }
+
+        private async Task<string> GetMemberNameAsync(SqlConnection conn, int memberId)
+        {
+            using var cmd = new SqlCommand(
+                $"SELECT Firstname, Lastname FROM Members WHERE MemberID = @memberId AND {MEMBER_NOT_DELETED_FILTER}", conn);
+            cmd.Parameters.AddWithValue("@memberId", memberId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return $"{reader[0]} {reader[1]}";
+            }
+
+            return string.Empty;
+        }
+
+        private void NotifyDashboardOfDeletion()
+        {
+            DashboardEventService.Instance.NotifyMemberDeleted();
+            DashboardEventService.Instance.NotifyPopulationDataChanged();
         }
 
         #endregion
 
         #region EXPIRATION NOTIFICATIONS
 
-        private async Task<List<MemberExpirationAlert>> GetExpiringMembersAsync(SqlConnection conn, int daysThreshold = 4)
+        private async Task<List<MemberExpirationAlert>> GetExpiringMembersAsync(SqlConnection conn, int daysThreshold = EXPIRATION_THRESHOLD_DAYS)
         {
             var alerts = new List<MemberExpirationAlert>();
 
             try
             {
-                string query = @"
-            SELECT 
-                m.MemberID,
-                m.Firstname,
-                m.MiddleInitial,
-                m.Lastname,
-                m.ValidUntil,
-                m.ContactNumber,
-                p.PackageName,
-                DATEDIFF(DAY, GETDATE(), m.ValidUntil) AS DaysRemaining
-            FROM Members m
-            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-            WHERE m.ValidUntil IS NOT NULL
-            AND m.Status = 'Active'
-            AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
-            AND DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @DaysThreshold
-            ORDER BY m.ValidUntil ASC";
+                const string query = @"
+                    SELECT 
+                        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.ValidUntil,
+                        m.ContactNumber, p.PackageName,
+                        DATEDIFF(DAY, GETDATE(), m.ValidUntil) AS DaysRemaining
+                    FROM Members m
+                    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+                    WHERE m.ValidUntil IS NOT NULL
+                    AND m.Status = 'Active'
+                    AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
+                    AND DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @DaysThreshold
+                    ORDER BY m.ValidUntil ASC";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@DaysThreshold", daysThreshold);
@@ -977,7 +799,7 @@ namespace AHON_TRACK.Services
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
-                    var alert = new MemberExpirationAlert
+                    alerts.Add(new MemberExpirationAlert
                     {
                         MemberID = reader.GetInt32(0),
                         FirstName = reader.GetString(1),
@@ -987,26 +809,17 @@ namespace AHON_TRACK.Services
                         ContactNumber = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
                         PackageName = reader.IsDBNull(6) ? "None" : reader.GetString(6),
                         DaysRemaining = reader.GetInt32(7)
-                    };
-
-                    alert.FullName = $"{alert.FirstName} " +
-                                   $"{(string.IsNullOrWhiteSpace(alert.MiddleInitial) ? "" : alert.MiddleInitial + ". ")}" +
-                                   $"{alert.LastName}";
-
-                    alerts.Add(alert);
+                    });
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetExpiringMembersAsync Error: {ex}");
+                Debug.WriteLine($"GetExpiringMembersAsync Error: {ex}");
             }
 
             return alerts;
         }
 
-        /// <summary>
-        /// Get count of members expiring within 4 days
-        /// </summary>
         private async Task<int> GetExpiringMembersCountAsync()
         {
             try
@@ -1014,28 +827,27 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = @"
-            SELECT COUNT(*)
-            FROM Members
-            WHERE ValidUntil IS NOT NULL
-            AND Status = 'Active'
-            AND (IsDeleted = 0 OR IsDeleted IS NULL)
-            AND DATEDIFF(DAY, GETDATE(), ValidUntil) BETWEEN 1 AND 4";
+                const string query = @"
+                    SELECT COUNT(*)
+                    FROM Members
+                    WHERE ValidUntil IS NOT NULL
+                    AND Status = 'Active'
+                    AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                    AND DATEDIFF(DAY, GETDATE(), ValidUntil) BETWEEN 1 AND @DaysThreshold";
 
                 using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@DaysThreshold", EXPIRATION_THRESHOLD_DAYS);
+
                 var result = await cmd.ExecuteScalarAsync();
                 return Convert.ToInt32(result);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetExpiringMembersCountAsync Error: {ex}");
+                Debug.WriteLine($"GetExpiringMembersCountAsync Error: {ex}");
                 return 0;
             }
         }
 
-        /// <summary>
-        /// Automatically set members to Inactive if their ValidUntil date has passed
-        /// </summary>
         public async Task AutoInactivateExpiredMembersAsync()
         {
             try
@@ -1043,12 +855,12 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = @"
-            UPDATE Members 
-            SET Status = 'Inactive'
-            WHERE ValidUntil < CAST(GETDATE() AS DATE)
-            AND Status = 'Active'
-            AND (IsDeleted = 0 OR IsDeleted IS NULL)";
+                const string query = @"
+                    UPDATE Members 
+                    SET Status = 'Inactive'
+                    WHERE ValidUntil < CAST(GETDATE() AS DATE)
+                    AND Status = 'Active'
+                    AND (IsDeleted = 0 OR IsDeleted IS NULL)";
 
                 using var cmd = new SqlCommand(query, conn);
                 int rowsAffected = await cmd.ExecuteNonQueryAsync();
@@ -1057,40 +869,30 @@ namespace AHON_TRACK.Services
                 {
                     await LogActionAsync(conn, "AUTO_UPDATE", $"Auto-inactivated {rowsAffected} expired members", true);
                     DashboardEventService.Instance.NotifyMemberUpdated();
-                    System.Diagnostics.Debug.WriteLine($"[AutoInactivateExpiredMembers] Inactivated {rowsAffected} members");
+                    Debug.WriteLine($"[AutoInactivateExpiredMembers] Inactivated {rowsAffected} members");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AutoInactivateExpiredMembersAsync Error: {ex}");
+                Debug.WriteLine($"AutoInactivateExpiredMembersAsync Error: {ex}");
             }
         }
 
-        /// <summary>
-        /// Show member expiration alerts for memberships expiring within 4 days
-        /// </summary>
         public async Task ShowMemberExpirationAlertsAsync(Action<Notification>? addNotificationCallback = null)
         {
-            if (!CanView())
-            {
-                return;
-            }
+            if (!CanView()) return;
 
             try
             {
                 var expiringCount = await GetExpiringMembersCountAsync();
-
-                // Auto-inactivate expired members first
                 await AutoInactivateExpiredMembersAsync();
 
-                // Use provided callback OR internal callback
                 var notifyCallback = addNotificationCallback ?? _notificationCallback;
 
-                // Show alert if members are expiring within 4 days
                 if (expiringCount > 0)
                 {
                     var title = "Membership Expiring Soon";
-                    var message = $"{expiringCount} member(s) will expire within 4 days!";
+                    var message = $"{expiringCount} member(s) will expire within {EXPIRATION_THRESHOLD_DAYS} days!";
 
                     _toastManager?.CreateToast(title)
                         .WithContent(message)
@@ -1108,34 +910,28 @@ namespace AHON_TRACK.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ShowMemberExpirationAlertsAsync] Error: {ex.Message}");
+                Debug.WriteLine($"[ShowMemberExpirationAlertsAsync] Error: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Get summary of member expiration alerts for dashboards or status widgets
-        /// </summary>
         public async Task<MemberExpirationSummary> GetMemberExpirationSummaryAsync()
         {
             var summary = new MemberExpirationSummary();
 
-            if (!CanView())
-            {
-                return summary;
-            }
+            if (!CanView()) return summary;
 
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                summary.ExpiringMembers = await GetExpiringMembersAsync(conn, 4);
+                summary.ExpiringMembers = await GetExpiringMembersAsync(conn, EXPIRATION_THRESHOLD_DAYS);
                 summary.ExpiringCount = summary.ExpiringMembers.Count;
                 summary.TotalAlerts = summary.ExpiringCount;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetMemberExpirationSummaryAsync] Error: {ex.Message}");
+                Debug.WriteLine($"[GetMemberExpirationSummaryAsync] Error: {ex.Message}");
             }
 
             return summary;
@@ -1149,27 +945,18 @@ namespace AHON_TRACK.Services
         {
             try
             {
-                using var logCmd = new SqlCommand(
-                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
-              VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)",
-                    conn, transaction);
+                const string query = @"
+                    INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+                    VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)";
 
-                logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@success", success);
-                logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                await logCmd.ExecuteNonQueryAsync();
-                DashboardEventService.Instance.NotifyRecentLogsUpdated();
-                DashboardEventService.Instance.NotifyPopulationDataChanged();
-                DashboardEventService.Instance.NotifyChartDataUpdated();
-                DashboardEventService.Instance.NotifySalesUpdated();
+                using var cmd = new SqlCommand(query, conn, transaction);
+                AddLogParameters(cmd, actionType, description, success);
+                await cmd.ExecuteNonQueryAsync();
+                NotifyDashboardOfLogUpdate();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[LogActionAsync] {ex.Message}");
+                Debug.WriteLine($"[LogActionAsync] {ex.Message}");
             }
         }
 
@@ -1177,27 +964,37 @@ namespace AHON_TRACK.Services
         {
             try
             {
-                using var logCmd = new SqlCommand(
-                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
-                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)", conn);
+                const string query = @"
+                    INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+                    VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)";
 
-                logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@success", success);
-                logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                await logCmd.ExecuteNonQueryAsync();
-                DashboardEventService.Instance.NotifyRecentLogsUpdated();
-                DashboardEventService.Instance.NotifyPopulationDataChanged();
-                DashboardEventService.Instance.NotifyChartDataUpdated();
-                DashboardEventService.Instance.NotifySalesUpdated();
+                using var cmd = new SqlCommand(query, conn);
+                AddLogParameters(cmd, actionType, description, success);
+                await cmd.ExecuteNonQueryAsync();
+                NotifyDashboardOfLogUpdate();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[LogActionAsync] {ex.Message}");
+                Debug.WriteLine($"[LogActionAsync] {ex.Message}");
             }
+        }
+
+        private void AddLogParameters(SqlCommand cmd, string actionType, string description, bool success)
+        {
+            cmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@success", success);
+            cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+        }
+
+        private void NotifyDashboardOfLogUpdate()
+        {
+            DashboardEventService.Instance.NotifyRecentLogsUpdated();
+            DashboardEventService.Instance.NotifyPopulationDataChanged();
+            DashboardEventService.Instance.NotifyChartDataUpdated();
+            DashboardEventService.Instance.NotifySalesUpdated();
         }
 
         public async Task<int> GetTotalMemberCountAsync()
@@ -1207,15 +1004,15 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = "SELECT COUNT(*) FROM Members WHERE (IsDeleted = 0 OR IsDeleted IS NULL)";
-                using var cmd = new SqlCommand(query, conn);
+                using var cmd = new SqlCommand(
+                    $"SELECT COUNT(*) FROM Members WHERE {MEMBER_NOT_DELETED_FILTER}", conn);
 
                 var result = await cmd.ExecuteScalarAsync();
                 return Convert.ToInt32(result);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetTotalMemberCountAsync Error: {ex}");
+                Debug.WriteLine($"GetTotalMemberCountAsync Error: {ex}");
                 return 0;
             }
         }
@@ -1227,8 +1024,8 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = "SELECT COUNT(*) FROM Members WHERE Status = @Status AND (IsDeleted = 0 OR IsDeleted IS NULL)";
-                using var cmd = new SqlCommand(query, conn);
+                using var cmd = new SqlCommand(
+                    $"SELECT COUNT(*) FROM Members WHERE Status = @Status AND {MEMBER_NOT_DELETED_FILTER}", conn);
                 cmd.Parameters.AddWithValue("@Status", status);
 
                 var result = await cmd.ExecuteScalarAsync();
@@ -1236,7 +1033,7 @@ namespace AHON_TRACK.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetMemberCountByStatusAsync Error: {ex}");
+                Debug.WriteLine($"GetMemberCountByStatusAsync Error: {ex}");
                 return 0;
             }
         }
@@ -1253,15 +1050,17 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                using var cmd = new SqlCommand(
-                    @"SELECT 
+                const string query = @"
+                    SELECT 
                         SUM(CASE WHEN Status = 'Active' THEN 1 ELSE 0 END) as ActiveCount,
                         SUM(CASE WHEN Status = 'Inactive' THEN 1 ELSE 0 END) as InactiveCount,
                         SUM(CASE WHEN Status = 'Terminated' THEN 1 ELSE 0 END) as TerminatedCount
-                      FROM Members
-                      WHERE (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
+                    FROM Members
+                    WHERE (IsDeleted = 0 OR IsDeleted IS NULL)";
 
+                using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
+
                 if (await reader.ReadAsync())
                 {
                     return (true,
@@ -1274,14 +1073,50 @@ namespace AHON_TRACK.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetMemberStatisticsAsync] {ex.Message}");
+                Debug.WriteLine($"[GetMemberStatisticsAsync] {ex.Message}");
                 return (false, 0, 0, 0);
             }
         }
 
         #endregion
 
-        #region SUPPORTING CLASS
+        #region TOAST HELPERS
+
+        private void ShowAccessDeniedToast(string action, string? customMessage = null)
+        {
+            _toastManager?.CreateToast("Access Denied")
+                .WithContent(customMessage ?? $"You don't have permission to {action}.")
+                .DismissOnClick()
+                .ShowError();
+        }
+
+        private void ShowDatabaseErrorToast(string action, string errorMessage)
+        {
+            _toastManager?.CreateToast("Database Error")
+                .WithContent($"Failed to {action}: {errorMessage}")
+                .DismissOnClick()
+                .ShowError();
+        }
+
+        private void ShowErrorToast(string errorMessage)
+        {
+            _toastManager?.CreateToast("Error")
+                .WithContent($"An unexpected error occurred: {errorMessage}")
+                .DismissOnClick()
+                .ShowError();
+        }
+
+        private void ShowMemberExistsToast(ManageMemberModel member)
+        {
+            _toastManager?.CreateToast("Member Already Exists")
+                .WithContent($"{member.FirstName} {member.LastName} already exists in the system.")
+                .DismissOnClick()
+                .ShowWarning();
+        }
+
+        #endregion
+
+        #region SUPPORTING CLASSES
 
         public class MemberExpirationAlert
         {
@@ -1289,39 +1124,27 @@ namespace AHON_TRACK.Services
             public string FirstName { get; set; } = string.Empty;
             public string? MiddleInitial { get; set; }
             public string LastName { get; set; } = string.Empty;
-            public string FullName { get; set; } = string.Empty;
+            public string FullName
+            {
+                get => $"{FirstName} {(string.IsNullOrWhiteSpace(MiddleInitial) ? "" : MiddleInitial + ". ")}{LastName}";
+                set { }
+            }
             public DateTime ValidUntil { get; set; }
             public string ContactNumber { get; set; } = string.Empty;
             public string PackageName { get; set; } = string.Empty;
             public int DaysRemaining { get; set; }
 
-            public string AlertSeverity
-            {
-                get
-                {
-                    if (DaysRemaining == 1)
-                        return "Critical";
-                    else if (DaysRemaining <= 2)
-                        return "High";
-                    else if (DaysRemaining <= 4)
-                        return "Warning";
-                    else
-                        return "Normal";
-                }
-            }
+            public string AlertSeverity =>
+                DaysRemaining == 1 ? "Critical" :
+                DaysRemaining <= 2 ? "High" :
+                DaysRemaining <= 4 ? "Warning" : "Normal";
 
             public string FormattedValidUntil => ValidUntil.ToString("MMM dd, yyyy");
 
-            public string Details
-            {
-                get
-                {
-                    if (DaysRemaining == 1)
-                        return $"Expires tomorrow ({FormattedValidUntil})";
-                    else
-                        return $"Expires in {DaysRemaining} days ({FormattedValidUntil})";
-                }
-            }
+            public string Details =>
+                DaysRemaining == 1
+                    ? $"Expires tomorrow ({FormattedValidUntil})"
+                    : $"Expires in {DaysRemaining} days ({FormattedValidUntil})";
         }
 
         public class MemberExpirationSummary
@@ -1329,7 +1152,6 @@ namespace AHON_TRACK.Services
             public List<MemberExpirationAlert> ExpiringMembers { get; set; } = new();
             public int ExpiringCount { get; set; }
             public int TotalAlerts { get; set; }
-
             public bool HasAlerts => TotalAlerts > 0;
         }
 

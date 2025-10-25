@@ -25,7 +25,7 @@ namespace AHON_TRACK.Services
             _connectionString = connectionString;
             _toastManager = toastManager;
         }
-        
+
         public void RegisterNotificationCallback(Action<Notification> callback)
         {
             _notificationCallback = callback;
@@ -46,13 +46,13 @@ namespace AHON_TRACK.Services
 
         private bool CanCreate()
         {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private bool CanUpdate()
         {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private bool CanDelete()
@@ -1030,12 +1030,12 @@ namespace AHON_TRACK.Services
                 {
                     var title = "Equipment Condition Alert";
                     var message = $"{conditionAlertCount} equipment item(s) need attention (Repairing/Broken)!";
-            
+
                     _toastManager?.CreateToast(title)
                         .WithContent(message)
                         .DismissOnClick()
                         .ShowError();
-                
+
                     notifyCallback?.Invoke(new Notification
                     {
                         Type = NotificationType.Alert,
@@ -1049,12 +1049,12 @@ namespace AHON_TRACK.Services
                 {
                     var title = "Maintenance Alert";
                     var message = $"{maintenanceDueCount} equipment item(s) require maintenance within 7 days!";
-            
+
                     _toastManager?.CreateToast(title)
                         .WithContent(message)
                         .DismissOnClick()
                         .ShowWarning();
-                
+
                     notifyCallback?.Invoke(new Notification
                     {
                         Type = NotificationType.Warning,
@@ -1068,12 +1068,12 @@ namespace AHON_TRACK.Services
                 {
                     var title = "Warranty Expiring";
                     var message = $"{warrantyExpiringCount} equipment warranty(ies) expiring within 30 days!";
-            
+
                     _toastManager?.CreateToast(title)
                         .WithContent(message)
                         .DismissOnClick()
                         .ShowInfo();
-                
+
                     notifyCallback?.Invoke(new Notification
                     {
                         Type = NotificationType.Reminder,
@@ -1087,12 +1087,12 @@ namespace AHON_TRACK.Services
                 {
                     var title = "Low Stock Alert";
                     var message = $"{lowStockCount} equipment item(s) have low stock (≤5 units)!";
-            
+
                     _toastManager?.CreateToast(title)
                         .WithContent(message)
                         .DismissOnClick()
                         .ShowWarning();
-                
+
                     notifyCallback?.Invoke(new Notification
                     {
                         Type = NotificationType.Warning,

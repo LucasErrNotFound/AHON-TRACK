@@ -25,32 +25,19 @@ namespace AHON_TRACK.Services
 
         #region Role-Based Access Control
 
-        private bool CanCreate()
-        {
-            // Both Admin and Staff can create
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanCreate() =>
+            CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
 
-        private bool CanUpdate()
-        {
-            // Only Admin can update
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanUpdate() =>
+            CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
 
-        private bool CanDelete()
-        {
-            // Only Admin can delete
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanDelete() =>
+            CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
 
-        private bool CanView()
-        {
-            // Both Admin and Staff can view
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanView() =>
+            CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
+            CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
+            CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
 
         #endregion
 
@@ -60,10 +47,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanCreate())
             {
-                _toastManager.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to add suppliers.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Access Denied", "You don't have permission to add suppliers.", ToastType.Error);
                 return (false, "Insufficient permissions to add suppliers.", null);
             }
 
@@ -73,100 +57,99 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 // Check for existing active supplier
-                using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Suppliers WHERE SupplierName = @supplierName AND IsDeleted = 0", conn);
-                checkCmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
-
-                var existingCount = (int)await checkCmd.ExecuteScalarAsync();
-                if (existingCount > 0)
+                if (await SupplierExistsAsync(conn, supplier.SupplierName, isDeleted: false))
                 {
-                    _toastManager.CreateToast("Duplicate Supplier")
-                        .WithContent($"Supplier '{supplier.SupplierName}' already exists.")
-                        .DismissOnClick()
-                        .ShowWarning();
+                    ShowToast("Duplicate Supplier", $"Supplier '{supplier.SupplierName}' already exists.", ToastType.Warning);
                     return (false, "Supplier already exists.", null);
                 }
 
                 // Check if soft deleted supplier exists (restore)
-                using var restoreCheckCmd = new SqlCommand(
-                    "SELECT SupplierID FROM Suppliers WHERE SupplierName = @supplierName AND IsDeleted = 1", conn);
-                restoreCheckCmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
-
-                var restoreResult = await restoreCheckCmd.ExecuteScalarAsync();
-                if (restoreResult != null)
+                var deletedSupplierId = await GetDeletedSupplierIdAsync(conn, supplier.SupplierName);
+                if (deletedSupplierId.HasValue)
                 {
-                    int supplierId = Convert.ToInt32(restoreResult);
-
-                    using var restoreCmd = new SqlCommand(
-                        @"UPDATE Suppliers 
-                          SET IsDeleted = 0,
-                              Status = 'Active',
-                              ContactPerson = @contactPerson,
-                              Email = @email,
-                              PhoneNumber = @phoneNumber,
-                              Products = @products,
-                              UpdatedAt = GETDATE()
-                          WHERE SupplierID = @supplierId", conn);
-
-                    restoreCmd.Parameters.AddWithValue("@supplierId", supplierId);
-                    restoreCmd.Parameters.AddWithValue("@contactPerson", supplier.ContactPerson ?? (object)DBNull.Value);
-                    restoreCmd.Parameters.AddWithValue("@email", supplier.Email ?? (object)DBNull.Value);
-                    restoreCmd.Parameters.AddWithValue("@phoneNumber", supplier.PhoneNumber ?? (object)DBNull.Value);
-                    restoreCmd.Parameters.AddWithValue("@products", supplier.Products ?? (object)DBNull.Value);
-
-                    await restoreCmd.ExecuteNonQueryAsync();
-
+                    await RestoreSupplierAsync(conn, deletedSupplierId.Value, supplier);
                     await LogActionAsync(conn, "Restored supplier.", $"Restored supplier: {supplier.SupplierName}", true);
-
-                    _toastManager.CreateToast("Supplier Restored")
-                        .WithContent($"Supplier '{supplier.SupplierName}' was restored successfully.")
-                        .DismissOnClick()
-                        .ShowSuccess();
-
-                    return (true, "Supplier restored successfully.", supplierId);
+                    ShowToast("Supplier Restored", $"Supplier '{supplier.SupplierName}' was restored successfully.", ToastType.Success);
+                    return (true, "Supplier restored successfully.", deletedSupplierId.Value);
                 }
 
                 // Insert new supplier
-                using var cmd = new SqlCommand(
-                    @"INSERT INTO Suppliers (SupplierName, ContactPerson, Email, PhoneNumber, Products, Status, AddedByEmployeeID, IsDeleted) 
-                      OUTPUT INSERTED.SupplierID
-                      VALUES (@supplierName, @contactPerson, @email, @phoneNumber, @products, @status, @employeeID, 0)", conn);
-
-                cmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@contactPerson", supplier.ContactPerson ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@email", supplier.Email ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@phoneNumber", supplier.PhoneNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@products", supplier.Products ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@status", supplier.Status ?? "Active");
-                cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                var supplierIdInserted = (int)await cmd.ExecuteScalarAsync();
-
+                var supplierId = await InsertNewSupplierAsync(conn, supplier);
                 await LogActionAsync(conn, "Added new supplier.", $"Added new supplier: {supplier.SupplierName}", true);
-
-                /* _toastManager.CreateToast("Supplier Added")
-                     .WithContent($"Successfully added supplier '{supplier.SupplierName}'.")
-                     .DismissOnClick()
-                     .ShowSuccess(); */
-
-                return (true, "Supplier added successfully.", supplierIdInserted);
+                return (true, "Supplier added successfully.", supplierId);
             }
             catch (SqlException ex)
             {
-                _toastManager.CreateToast("Database Error")
-                    .WithContent($"Failed to add supplier: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Database Error", $"Failed to add supplier: {ex.Message}", ToastType.Error);
                 return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
-                _toastManager.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Error", $"An unexpected error occurred: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}", null);
             }
+        }
+
+        private async Task<bool> SupplierExistsAsync(SqlConnection conn, string supplierName, bool isDeleted)
+        {
+            using var cmd = new SqlCommand(
+                "SELECT COUNT(*) FROM Suppliers WHERE SupplierName = @supplierName AND IsDeleted = @isDeleted", conn);
+            cmd.Parameters.AddWithValue("@supplierName", supplierName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@isDeleted", isDeleted);
+
+            return (int)await cmd.ExecuteScalarAsync() > 0;
+        }
+
+        private async Task<int?> GetDeletedSupplierIdAsync(SqlConnection conn, string supplierName)
+        {
+            using var cmd = new SqlCommand(
+                "SELECT SupplierID FROM Suppliers WHERE SupplierName = @supplierName AND IsDeleted = 1", conn);
+            cmd.Parameters.AddWithValue("@supplierName", supplierName ?? (object)DBNull.Value);
+
+            var result = await cmd.ExecuteScalarAsync();
+            return result != null ? Convert.ToInt32(result) : null;
+        }
+
+        private async Task RestoreSupplierAsync(SqlConnection conn, int supplierId, SupplierManagementModel supplier)
+        {
+            using var cmd = new SqlCommand(
+                @"UPDATE Suppliers 
+                  SET IsDeleted = 0,
+                      Status = 'Active',
+                      ContactPerson = @contactPerson,
+                      Email = @email,
+                      PhoneNumber = @phoneNumber,
+                      Products = @products,
+                      UpdatedAt = GETDATE()
+                  WHERE SupplierID = @supplierId", conn);
+
+            cmd.Parameters.AddWithValue("@supplierId", supplierId);
+            AddSupplierParameters(cmd, supplier);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        private async Task<int> InsertNewSupplierAsync(SqlConnection conn, SupplierManagementModel supplier)
+        {
+            using var cmd = new SqlCommand(
+                @"INSERT INTO Suppliers (SupplierName, ContactPerson, Email, PhoneNumber, Products, Status, AddedByEmployeeID, IsDeleted) 
+                  OUTPUT INSERTED.SupplierID
+                  VALUES (@supplierName, @contactPerson, @email, @phoneNumber, @products, @status, @employeeID, 0)", conn);
+
+            cmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@status", supplier.Status ?? "Active");
+            cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+            AddSupplierParameters(cmd, supplier);
+
+            return (int)await cmd.ExecuteScalarAsync();
+        }
+
+        private void AddSupplierParameters(SqlCommand cmd, SupplierManagementModel supplier)
+        {
+            cmd.Parameters.AddWithValue("@contactPerson", supplier.ContactPerson ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@email", supplier.Email ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@phoneNumber", supplier.PhoneNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@products", supplier.Products ?? (object)DBNull.Value);
         }
 
         #endregion
@@ -177,10 +160,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanView())
             {
-                _toastManager.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to view suppliers.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Access Denied", "You don't have permission to view suppliers.", ToastType.Error);
                 return (false, "Insufficient permissions to view suppliers.", null);
             }
 
@@ -200,35 +180,19 @@ namespace AHON_TRACK.Services
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
-                    suppliers.Add(new SupplierManagementModel
-                    {
-                        SupplierID = reader.GetInt32(0),
-                        SupplierName = reader.GetString(1),
-                        ContactPerson = reader.GetString(2),
-                        Email = reader.GetString(3),
-                        PhoneNumber = reader.GetString(4),
-                        Products = reader.GetString(5),
-                        Status = reader.GetString(6),
-                        IsSelected = false
-                    });
+                    suppliers.Add(MapSupplierFromReader(reader));
                 }
 
                 return (true, "Suppliers retrieved successfully.", suppliers);
             }
             catch (SqlException ex)
             {
-                _toastManager.CreateToast("Database Error")
-                    .WithContent($"Failed to retrieve suppliers: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Database Error", $"Failed to retrieve suppliers: {ex.Message}", ToastType.Error);
                 return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
-                _toastManager.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Error", $"An unexpected error occurred: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}", null);
             }
         }
@@ -253,19 +217,7 @@ namespace AHON_TRACK.Services
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
-                    var supplier = new SupplierManagementModel
-                    {
-                        SupplierID = reader.GetInt32(0),
-                        SupplierName = reader.GetString(1),
-                        ContactPerson = reader.GetString(2),
-                        Email = reader.GetString(3),
-                        PhoneNumber = reader.GetString(4),
-                        Products = reader.GetString(5),
-                        Status = reader.GetString(6),
-                        IsSelected = false
-                    };
-
-                    return (true, "Supplier retrieved successfully.", supplier);
+                    return (true, "Supplier retrieved successfully.", MapSupplierFromReader(reader));
                 }
 
                 return (false, "Supplier not found.", null);
@@ -299,17 +251,7 @@ namespace AHON_TRACK.Services
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
-                    suppliers.Add(new SupplierManagementModel
-                    {
-                        SupplierID = reader.GetInt32(0),
-                        SupplierName = reader.GetString(1),
-                        ContactPerson = reader.GetString(2),
-                        Email = reader.GetString(3),
-                        PhoneNumber = reader.GetString(4),
-                        Products = reader.GetString(5),
-                        Status = reader.GetString(6),
-                        IsSelected = false
-                    });
+                    suppliers.Add(MapSupplierFromReader(reader));
                 }
 
                 return (true, "Suppliers retrieved successfully.", suppliers);
@@ -320,6 +262,21 @@ namespace AHON_TRACK.Services
             }
         }
 
+        private SupplierManagementModel MapSupplierFromReader(SqlDataReader reader)
+        {
+            return new SupplierManagementModel
+            {
+                SupplierID = reader.GetInt32(0),
+                SupplierName = reader.GetString(1),
+                ContactPerson = reader.GetString(2),
+                Email = reader.GetString(3),
+                PhoneNumber = reader.GetString(4),
+                Products = reader.GetString(5),
+                Status = reader.GetString(6),
+                IsSelected = false
+            };
+        }
+
         #endregion
 
         #region UPDATE
@@ -328,10 +285,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanUpdate())
             {
-                _toastManager.CreateToast("Access Denied")
-                    .WithContent("Only administrators can update supplier information.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Access Denied", "Only administrators can update supplier information.", ToastType.Error);
                 return (false, "Insufficient permissions to update suppliers.");
             }
 
@@ -341,93 +295,82 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 // Check if supplier exists
-                using var checkCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Suppliers WHERE SupplierID = @supplierId", conn);
-                checkCmd.Parameters.AddWithValue("@supplierId", supplier.SupplierID);
-
-                var exists = (int)await checkCmd.ExecuteScalarAsync() > 0;
-                if (!exists)
+                if (!await SupplierExistsByIdAsync(conn, supplier.SupplierID))
                 {
-                    _toastManager.CreateToast("Supplier Not Found")
-                        .WithContent("The supplier you're trying to update doesn't exist.")
-                        .DismissOnClick()
-                        .ShowWarning();
+                    ShowToast("Supplier Not Found", "The supplier you're trying to update doesn't exist.", ToastType.Warning);
                     return (false, "Supplier not found.");
                 }
 
                 // Check for duplicate name (excluding current supplier)
-                using var dupCmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM Suppliers WHERE SupplierName = @supplierName AND SupplierID != @supplierId", conn);
-                dupCmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
-                dupCmd.Parameters.AddWithValue("@supplierId", supplier.SupplierID);
-
-                var duplicateCount = (int)await dupCmd.ExecuteScalarAsync();
-                if (duplicateCount > 0)
+                if (await IsDuplicateSupplierNameAsync(conn, supplier.SupplierName, supplier.SupplierID))
                 {
-                    _toastManager.CreateToast("Duplicate Supplier")
-                        .WithContent($"Another supplier with name '{supplier.SupplierName}' already exists.")
-                        .DismissOnClick()
-                        .ShowWarning();
+                    ShowToast("Duplicate Supplier", $"Another supplier with name '{supplier.SupplierName}' already exists.", ToastType.Warning);
                     return (false, "Supplier name already exists.");
                 }
 
                 // Update supplier
-                using var cmd = new SqlCommand(
-                    @"UPDATE Suppliers 
-                      SET SupplierName = @supplierName,
-                          ContactPerson = @contactPerson,
-                          Email = @email,
-                          PhoneNumber = @phoneNumber,
-                          Products = @products,
-                          Status = @status,
-                          UpdatedAt = GETDATE()
-                      WHERE SupplierID = @supplierId", conn);
-
-                cmd.Parameters.AddWithValue("@supplierId", supplier.SupplierID);
-                cmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@contactPerson", supplier.ContactPerson ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@email", supplier.Email ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@phoneNumber", supplier.PhoneNumber ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@products", supplier.Products ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@status", supplier.Status ?? (object)DBNull.Value);
-
-                await cmd.ExecuteNonQueryAsync();
-
+                await ExecuteUpdateSupplierAsync(conn, supplier);
                 await LogActionAsync(conn, "Updated supplier data.", $"Updated supplier: {supplier.SupplierName}", true);
-
-                /*  _toastManager.CreateToast("Supplier Updated")
-                      .WithContent($"Successfully updated supplier '{supplier.SupplierName}'.")
-                      .DismissOnClick()
-                      .ShowSuccess(); */
 
                 return (true, "Supplier updated successfully.");
             }
             catch (SqlException ex)
             {
-                _toastManager.CreateToast("Database Error")
-                    .WithContent($"Failed to update supplier: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Database Error", $"Failed to update supplier: {ex.Message}", ToastType.Error);
                 return (false, $"Database error: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _toastManager.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Error", $"An unexpected error occurred: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}");
             }
+        }
+
+        private async Task<bool> SupplierExistsByIdAsync(SqlConnection conn, int supplierId)
+        {
+            using var cmd = new SqlCommand(
+                "SELECT COUNT(*) FROM Suppliers WHERE SupplierID = @supplierId", conn);
+            cmd.Parameters.AddWithValue("@supplierId", supplierId);
+
+            return (int)await cmd.ExecuteScalarAsync() > 0;
+        }
+
+        private async Task<bool> IsDuplicateSupplierNameAsync(SqlConnection conn, string supplierName, int excludeSupplierId)
+        {
+            using var cmd = new SqlCommand(
+                "SELECT COUNT(*) FROM Suppliers WHERE SupplierName = @supplierName AND SupplierID != @supplierId", conn);
+            cmd.Parameters.AddWithValue("@supplierName", supplierName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@supplierId", excludeSupplierId);
+
+            return (int)await cmd.ExecuteScalarAsync() > 0;
+        }
+
+        private async Task ExecuteUpdateSupplierAsync(SqlConnection conn, SupplierManagementModel supplier)
+        {
+            using var cmd = new SqlCommand(
+                @"UPDATE Suppliers 
+                  SET SupplierName = @supplierName,
+                      ContactPerson = @contactPerson,
+                      Email = @email,
+                      PhoneNumber = @phoneNumber,
+                      Products = @products,
+                      Status = @status,
+                      UpdatedAt = GETDATE()
+                  WHERE SupplierID = @supplierId", conn);
+
+            cmd.Parameters.AddWithValue("@supplierId", supplier.SupplierID);
+            cmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@status", supplier.Status ?? (object)DBNull.Value);
+            AddSupplierParameters(cmd, supplier);
+
+            await cmd.ExecuteNonQueryAsync();
         }
 
         public async Task<(bool Success, string Message)> UpdateSupplierStatusAsync(int supplierId, string newStatus)
         {
             if (!CanUpdate())
             {
-                _toastManager.CreateToast("Access Denied")
-                    .WithContent("Only administrators can update supplier status.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Access Denied", "Only administrators can update supplier status.", ToastType.Error);
                 return (false, "Insufficient permissions to update supplier status.");
             }
 
@@ -449,12 +392,6 @@ namespace AHON_TRACK.Services
                 if (rowsAffected > 0)
                 {
                     await LogActionAsync(conn, "Updated supplier status.", $"Updated supplier status to: {newStatus}", true);
-
-                    /*  _toastManager.CreateToast("Status Updated")
-                          .WithContent($"Supplier status updated to '{newStatus}'.")
-                          .DismissOnClick()
-                          .ShowSuccess(); */
-
                     return (true, "Status updated successfully.");
                 }
 
@@ -462,10 +399,7 @@ namespace AHON_TRACK.Services
             }
             catch (Exception ex)
             {
-                _toastManager.CreateToast("Error")
-                    .WithContent($"Failed to update status: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Error", $"Failed to update status: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}");
             }
         }
@@ -478,10 +412,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanDelete())
             {
-                _toastManager.CreateToast("Access Denied")
-                    .WithContent("Only administrators can delete suppliers.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Access Denied", "Only administrators can delete suppliers.", ToastType.Error);
                 return (false, "Insufficient permissions to delete suppliers.");
             }
 
@@ -497,16 +428,10 @@ namespace AHON_TRACK.Services
 
                 cmd.Parameters.AddWithValue("@supplierId", supplierId);
 
-                var rows = await cmd.ExecuteNonQueryAsync();
-                if (rows > 0)
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                if (rowsAffected > 0)
                 {
                     await LogActionAsync(conn, "Soft deleted supplier.", $"Soft deleted supplier ID: {supplierId}", true);
-
-                    /*  _toastManager.CreateToast("Supplier Deleted")
-                          .WithContent("Supplier has been moved to archive.")
-                          .DismissOnClick()
-                          .ShowSuccess(); */
-
                     return (true, "Supplier deleted (soft delete).");
                 }
 
@@ -514,10 +439,7 @@ namespace AHON_TRACK.Services
             }
             catch (Exception ex)
             {
-                _toastManager.CreateToast("Error")
-                    .WithContent($"Failed to delete supplier: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Error", $"Failed to delete supplier: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}");
             }
         }
@@ -526,10 +448,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanDelete())
             {
-                _toastManager.CreateToast("Access Denied")
-                    .WithContent("Only administrators can delete suppliers.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Access Denied", "Only administrators can delete suppliers.", ToastType.Error);
                 return (false, "Insufficient permissions to delete suppliers.", 0);
             }
 
@@ -543,42 +462,15 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                var deletedCount = 0;
-                var supplierNames = new List<string>();
-
                 using var transaction = conn.BeginTransaction();
                 try
                 {
-                    foreach (var supplierId in supplierIds)
-                    {
-                        // Get supplier name
-                        using var getNameCmd = new SqlCommand(
-                            "SELECT SupplierName FROM Suppliers WHERE SupplierID = @supplierId", conn, transaction);
-                        getNameCmd.Parameters.AddWithValue("@supplierId", supplierId);
-                        var name = await getNameCmd.ExecuteScalarAsync() as string;
+                    var (deletedCount, supplierNames) = await ExecuteMultipleDeletesAsync(conn, transaction, supplierIds);
 
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            supplierNames.Add(name);
-                        }
-
-                        // 🔹 Soft delete supplier instead of removing it
-                        using var deleteCmd = new SqlCommand(
-                            @"UPDATE Suppliers 
-                      SET IsDeleted = 1, UpdatedAt = GETDATE() 
-                      WHERE SupplierID = @supplierId AND IsDeleted = 0", conn, transaction);
-                        deleteCmd.Parameters.AddWithValue("@supplierId", supplierId);
-                        deletedCount += await deleteCmd.ExecuteNonQueryAsync();
-                    }
-
-                    await LogActionAsync(conn, "Soft deleted multiple suppliers.", $"Soft deleted {deletedCount} supplier(s): {string.Join(", ", supplierNames)}", true);
+                    await LogActionAsync(conn, "Soft deleted multiple suppliers.",
+                        $"Soft deleted {deletedCount} supplier(s): {string.Join(", ", supplierNames)}", true);
 
                     transaction.Commit();
-
-                    /*  _toastManager.CreateToast("Suppliers Deleted")
-                          .WithContent($"Successfully deleted (soft) {deletedCount} supplier(s).")
-                          .DismissOnClick()
-                          .ShowSuccess(); */
 
                     return (true, $"Successfully deleted (soft) {deletedCount} supplier(s).", deletedCount);
                 }
@@ -590,20 +482,49 @@ namespace AHON_TRACK.Services
             }
             catch (SqlException ex)
             {
-                _toastManager.CreateToast("Database Error")
-                    .WithContent($"Failed to delete suppliers: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Database Error", $"Failed to delete suppliers: {ex.Message}", ToastType.Error);
                 return (false, $"Database error: {ex.Message}", 0);
             }
             catch (Exception ex)
             {
-                _toastManager.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowToast("Error", $"An unexpected error occurred: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}", 0);
             }
+        }
+
+        private async Task<(int DeletedCount, List<string> SupplierNames)> ExecuteMultipleDeletesAsync(
+            SqlConnection conn, SqlTransaction transaction, List<int> supplierIds)
+        {
+            var deletedCount = 0;
+            var supplierNames = new List<string>();
+
+            foreach (var supplierId in supplierIds)
+            {
+                // Get supplier name
+                var name = await GetSupplierNameAsync(conn, transaction, supplierId);
+                if (!string.IsNullOrEmpty(name))
+                {
+                    supplierNames.Add(name);
+                }
+
+                // Soft delete supplier
+                using var deleteCmd = new SqlCommand(
+                    @"UPDATE Suppliers 
+                      SET IsDeleted = 1, UpdatedAt = GETDATE() 
+                      WHERE SupplierID = @supplierId AND IsDeleted = 0", conn, transaction);
+                deleteCmd.Parameters.AddWithValue("@supplierId", supplierId);
+                deletedCount += await deleteCmd.ExecuteNonQueryAsync();
+            }
+
+            return (deletedCount, supplierNames);
+        }
+
+        private async Task<string?> GetSupplierNameAsync(SqlConnection conn, SqlTransaction transaction, int supplierId)
+        {
+            using var cmd = new SqlCommand(
+                "SELECT SupplierName FROM Suppliers WHERE SupplierID = @supplierId", conn, transaction);
+            cmd.Parameters.AddWithValue("@supplierId", supplierId);
+            return await cmd.ExecuteScalarAsync() as string;
         }
 
         #endregion
@@ -614,18 +535,18 @@ namespace AHON_TRACK.Services
         {
             try
             {
-                using var logCmd = new SqlCommand(
+                using var cmd = new SqlCommand(
                     @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
                       VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)", conn);
 
-                logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@success", success);
-                logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@success", success);
+                cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
-                await logCmd.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync();
                 DashboardEventService.Instance.NotifyRecentLogsUpdated();
             }
             catch (Exception ex)
@@ -668,6 +589,33 @@ namespace AHON_TRACK.Services
                 Console.WriteLine($"[GetSupplierStatisticsAsync] {ex.Message}");
                 return (false, 0, 0, 0);
             }
+        }
+
+        private void ShowToast(string title, string content, ToastType type)
+        {
+            var toast = _toastManager.CreateToast(title)
+                .WithContent(content)
+                .DismissOnClick();
+
+            switch (type)
+            {
+                case ToastType.Success:
+                    toast.ShowSuccess();
+                    break;
+                case ToastType.Warning:
+                    toast.ShowWarning();
+                    break;
+                case ToastType.Error:
+                    toast.ShowError();
+                    break;
+            }
+        }
+
+        private enum ToastType
+        {
+            Success,
+            Warning,
+            Error
         }
 
         #endregion

@@ -15,183 +15,183 @@
     mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
     x:Class="AHON_TRACK.Views.GymAttendanceView">
 
-    <Design.DataContext>
-        <viewModels:GymAttendanceViewModel />
-    </Design.DataContext>
+	<Design.DataContext>
+		<viewModels:GymAttendanceViewModel />
+	</Design.DataContext>
 
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
-        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
-        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
 
-        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
-        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
-        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
-        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
 
-        <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
-        <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
-        <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+		<SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
+		<SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
+		<SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
 
-        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
-        <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
-        <converters:DateToStringConverter x:Key="DateToStringConverter" />
-        <converters:StringToPaintConverter x:Key="StringToPaintConverter" />
-    </UserControl.Resources>
+		<converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+		<converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
+		<converters:DateToStringConverter x:Key="DateToStringConverter" />
+		<converters:StringToPaintConverter x:Key="StringToPaintConverter" />
+	</UserControl.Resources>
 
-    <DockPanel LastChildFill="True">
-        <StackPanel
+	<DockPanel LastChildFill="True">
+		<StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
             Margin="{StaticResource PageMargin}"
             DockPanel.Dock="Top">
-            <TextBlock
+			<TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
                 Text="Gym Attendance"
                 Margin="90,30,0,0" />
-            <TextBlock
+			<TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
                 Text="Visualize attendance patterns across different days, weeks, or months to identify peak hours and engagement trends"
                 TextWrapping="Wrap"
                 Margin="90,0" />
-        </StackPanel>
-        <ScrollViewer HorizontalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <Interaction.Behaviors>
-                        <scroll:VerticalScrollViewerAnimatedBehavior />
-                    </Interaction.Behaviors>
-                    <StackPanel Margin="0,30,0,0">
-                        <UniformGrid Margin="-6,0,-6,20" Columns="4">
-                            <UniformGrid.Resources>
-                                <LinearGradientBrush
+		</StackPanel>
+		<ScrollViewer HorizontalScrollBarVisibility="Auto">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
+				<ScrollViewer VerticalScrollBarVisibility="Auto">
+					<Interaction.Behaviors>
+						<scroll:VerticalScrollViewerAnimatedBehavior />
+					</Interaction.Behaviors>
+					<StackPanel Margin="0,30,0,0">
+						<UniformGrid Margin="-6,0,-6,20" Columns="4">
+							<UniformGrid.Resources>
+								<LinearGradientBrush
                                     x:Key="GreenGradient"
                                     StartPoint="0%,50%"
                                     EndPoint="100%, 50%">
-                                    <GradientStop Color="#22C55E" Offset="0.0" />
-                                    <GradientStop Color="#4CAF50" Offset="1.0" />
-                                </LinearGradientBrush>
+									<GradientStop Color="#22C55E" Offset="0.0" />
+									<GradientStop Color="#4CAF50" Offset="1.0" />
+								</LinearGradientBrush>
 
-                                <LinearGradientBrush
+								<LinearGradientBrush
                                     x:Key="BlueGradient"
                                     StartPoint="0%,50%"
                                     EndPoint="100%,50%">
-                                    <GradientStop Color="#64B5F6" Offset="0.0" />
-                                    <GradientStop Color="#2196F3" Offset="1.0" />
-                                </LinearGradientBrush>
+									<GradientStop Color="#64B5F6" Offset="0.0" />
+									<GradientStop Color="#2196F3" Offset="1.0" />
+								</LinearGradientBrush>
 
-                                <LinearGradientBrush
+								<LinearGradientBrush
                                     x:Key="OrangeGradient"
                                     StartPoint="0%,50%"
                                     EndPoint="100%,50%">
-                                    <GradientStop Color="#FFB74D" Offset="0.0" />
-                                    <GradientStop Color="#FF9800" Offset="1.0" />
-                                </LinearGradientBrush>
+									<GradientStop Color="#FFB74D" Offset="0.0" />
+									<GradientStop Color="#FF9800" Offset="1.0" />
+								</LinearGradientBrush>
 
-                                <LinearGradientBrush
+								<LinearGradientBrush
                                     x:Key="PurpleGradient"
                                     StartPoint="0%,50%"
                                     EndPoint="100%,50%">
-                                    <GradientStop Color="#BA68C8" Offset="0.0" />
-                                    <GradientStop Color="#9C27B0" Offset="1.0" />
-                                </LinearGradientBrush>
-                            </UniformGrid.Resources>
+									<GradientStop Color="#BA68C8" Offset="0.0" />
+									<GradientStop Color="#9C27B0" Offset="1.0" />
+								</LinearGradientBrush>
+							</UniformGrid.Resources>
 
-                            <dashboard:OverviewCard
+							<dashboard:OverviewCard
                                 Title="Total Walk-ins"
                                 CardBackground="{StaticResource GreenGradient}"
                                 Foreground="White"
-                                Hint="+96% from last month"
-                                Value="+12">
-                                <dashboard:OverviewCard.Icon>
-                                    <Svg
+                                Hint="{CompiledBinding WalkInChangePercent, StringFormat={}{0:+0.0;-0.0;0.0}%}"
+                                Value="{CompiledBinding TotalWalkIns}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
                                         Width="30"
                                         Height="30"
                                         Path="/Assets/DashboardView/member-subscriptions-icon.svg"
                                         Opacity="0.5" />
-                                </dashboard:OverviewCard.Icon>
-                            </dashboard:OverviewCard>
-                            <dashboard:OverviewCard
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
                                 Title="Total Gym Members"
                                 CardBackground="{StaticResource BlueGradient}"
                                 Foreground="White"
-                                Hint="+16% from last month"
-                                Value="+18">
-                                <dashboard:OverviewCard.Icon>
-                                    <Svg
+                                Hint="{CompiledBinding MemberChangePercent, StringFormat={}{0:+0.0;-0.0;0.0}%}"
+                                Value="{CompiledBinding TotalMembers}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
                                         Width="30"
                                         Height="30"
                                         Path="/Assets/DashboardView/member-subscriptions-icon.svg" />
-                                </dashboard:OverviewCard.Icon>
-                            </dashboard:OverviewCard>
-                            <dashboard:OverviewCard
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
                                 Title="Total Customers"
                                 CardBackground="{StaticResource PurpleGradient}"
                                 Foreground="White"
-                                Hint="+16% from last month"
-                                Value="+69">
-                                <dashboard:OverviewCard.Icon>
-                                    <Svg
+                                Hint="{CompiledBinding AttendanceChangePercent, StringFormat={}{0:+0.0;-0.0;0.0}%}"
+                                Value="{CompiledBinding TotalAttendance}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
                                         Width="30"
                                         Height="30"
                                         Path="/Assets/DashboardView/member-subscriptions-icon.svg" />
-                                </dashboard:OverviewCard.Icon>
-                            </dashboard:OverviewCard>
-                            <dashboard:OverviewCard
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
                                 Title="Active Now"
                                 CardBackground="{StaticResource OrangeGradient}"
                                 Foreground="White"
                                 Hint="+26 since last hour"
                                 Value="+9">
-                                <dashboard:OverviewCard.Icon>
-                                    <Svg
+								<dashboard:OverviewCard.Icon>
+									<Svg
                                         Width="30"
                                         Height="30"
                                         Path="/Assets/DashboardView/active-now-icon.svg" />
-                                </dashboard:OverviewCard.Icon>
-                            </dashboard:OverviewCard>
-                        </UniformGrid>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15" Margin="0,0,0,10">
-                            <CalendarDatePicker
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+						</UniformGrid>
+						<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15" Margin="0,0,0,10">
+							<CalendarDatePicker
                                 shadui:ControlAssist.Label="From"
                                 shadui:ControlAssist.ReadOnly="True"
                                 SelectedDate="{CompiledBinding AttendanceGroupSelectedFromDate}" />
-                            <CalendarDatePicker
+							<CalendarDatePicker
                                 shadui:ControlAssist.Label="To"
                                 shadui:ControlAssist.ReadOnly="True"
                                 SelectedDate="{CompiledBinding AttendanceGroupSelectedToDate}" />
-                        </StackPanel>
-                        <Grid RowDefinitions="* *" ColumnDefinitions="2* *" ColumnSpacing="30" Margin="0,15,0,0">
-                            <shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True" VerticalAlignment="Top">
-                                <StackPanel>
-                                    <shadui:CardTitle 
-                                        Content="Gym Attendance Report" 
+						</StackPanel>
+						<Grid RowDefinitions="* *" ColumnDefinitions="2* *" ColumnSpacing="30" Margin="0,15,0,0">
+							<shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True" VerticalAlignment="Top">
+								<StackPanel>
+									<shadui:CardTitle
+                                        Content="Gym Attendance Report"
                                         FontSize="20"
                                         FontWeight="SemiBold" />
-                                    <lvc:CartesianChart
+									<lvc:CartesianChart
                                         Height="400"
                                         Series="{CompiledBinding AttendanceSeriesCollection}"
                                         XAxes="{CompiledBinding AttendanceLineChartXAxes}"
                                         LegendPosition="Bottom">
-                                    </lvc:CartesianChart>
-                                </StackPanel>
-                            </shadui:Card>
-                            <shadui:Card Grid.Row="0" Grid.Column="1" HasShadow="True" VerticalAlignment="Top">
-                                <StackPanel>
-                                    <shadui:CardTitle 
-                                        Content="Walk-ins vs. Members" 
+									</lvc:CartesianChart>
+								</StackPanel>
+							</shadui:Card>
+							<shadui:Card Grid.Row="0" Grid.Column="1" HasShadow="True" VerticalAlignment="Top">
+								<StackPanel>
+									<shadui:CardTitle
+                                        Content="Walk-ins vs. Members"
                                         FontSize="20"
                                         FontWeight="SemiBold" />
-                                    <lvc:PieChart
+									<lvc:PieChart
                                         Height="400"
                                         InitialRotation="130"
                                         LegendPosition="Bottom"
                                         ZIndex="2"
                                         SeriesSource="{CompiledBinding CustomerTypePieDataCollection}">
-                                        <lvc:PieChart.SeriesTemplate>
-                                            <DataTemplate x:DataType="viewModels:CustomerPieData">
-                                                <lvc:XamlPieSeries
+										<lvc:PieChart.SeriesTemplate>
+											<DataTemplate x:DataType="viewModels:CustomerPieData">
+												<lvc:XamlPieSeries
                                                     SeriesName="{Binding Name}"
                                                     Values="{Binding Values}"
                                                     Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
@@ -202,16 +202,16 @@
                                                     ShowDataLabels="{Binding IsTotal}"
                                                     DataLabelsPosition="Outer"
                                                     IsVisibleAtLegend="{Binding IsTotal}" >
-                                                </lvc:XamlPieSeries>
-                                            </DataTemplate>
-                                        </lvc:PieChart.SeriesTemplate>
-                                    </lvc:PieChart>
-                                </StackPanel>
-                            </shadui:Card>
-                        </Grid>
-                    </StackPanel>
-                </ScrollViewer>
-            </StackPanel>
-        </ScrollViewer>
-    </DockPanel>
+												</lvc:XamlPieSeries>
+											</DataTemplate>
+										</lvc:PieChart.SeriesTemplate>
+									</lvc:PieChart>
+								</StackPanel>
+							</shadui:Card>
+						</Grid>
+					</StackPanel>
+				</ScrollViewer>
+			</StackPanel>
+		</ScrollViewer>
+	</DockPanel>
 </UserControl>

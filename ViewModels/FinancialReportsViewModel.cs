@@ -43,6 +43,18 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     [ObservableProperty]
     private bool _isLoading = false;
 
+    // === Dashboard Summary Cards ===
+    [ObservableProperty] private double _totalRevenue;
+    [ObservableProperty] private int _sales;
+    [ObservableProperty] private int _gymPackageRevenue;
+    [ObservableProperty] private int _walkInMember;
+
+    // For growth indicators (optional UI use)
+    [ObservableProperty] private double _revenueGrowthPercent;
+    [ObservableProperty] private double _salesGrowthPercent;
+    [ObservableProperty] private double _gymPackageGrowthPercent;
+    [ObservableProperty] private double _walkInGrowthPercent;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -56,6 +68,7 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         _dataCountingService = dataCountingService;
 
         _ = LoadFinancialDataAsync();
+        _ = LoadFinancialSummaryAsync();
         SubscribeToEvent();
     }
 
@@ -88,6 +101,46 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     {
         await LoadFinancialDataAsync();
         await UpdateRevenueChartAsync();
+        await LoadFinancialSummaryAsync();
+    }
+
+    private async Task LoadFinancialSummaryAsync()
+    {
+        try
+        {
+            // Current and previous date ranges for comparison
+            var from = FinancialBreakdownSelectedFromDate;
+            var to = FinancialBreakdownSelectedToDate;
+
+            var prevFrom = from.AddMonths(-1);
+            var prevTo = to.AddMonths(-1);
+
+            // Fetch current and previous data
+            var current = await _dataCountingService.GetFinancialSummaryAsync(from, to);
+            var previous = await _dataCountingService.GetFinancialSummaryAsync(prevFrom, prevTo);
+
+            // Assign values for current period
+            TotalRevenue = current.TotalRevenue;
+            Sales = current.TotalSales;
+            GymPackageRevenue = current.TotalGymPackages;
+            WalkInMember = current.TotalWalkInMembers;
+
+            // Compute growth % safely
+            RevenueGrowthPercent = CalculateGrowth(current.TotalRevenue, previous.TotalRevenue);
+            SalesGrowthPercent = CalculateGrowth(current.TotalSales, previous.TotalSales);
+            GymPackageGrowthPercent = CalculateGrowth(current.TotalGymPackages, previous.TotalGymPackages);
+            WalkInGrowthPercent = CalculateGrowth(current.TotalWalkInMembers, previous.TotalWalkInMembers);
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Error loading financial summary: {ex.Message}");
+        }
+    }
+
+    private static double CalculateGrowth(double current, double previous)
+    {
+        if (previous <= 0) return 100;
+        return Math.Round(((current - previous) / previous) * 100, 2);
     }
 
     private async Task LoadFinancialDataAsync()

@@ -21,38 +21,28 @@ namespace AHON_TRACK.Services
         private readonly string _connectionString;
         private readonly ToastManager _toastManager;
 
+        // Constants
+        private const int MAX_DAILY_SESSIONS = 8;
+        private const int MAX_SCHEDULE_CAPACITY = 8;
+        private const string DEFAULT_CUSTOMER_TYPE = "Member";
+        private const string DEFAULT_ATTENDANCE = "Pending";
+
         public TrainingService(string connectionString, ToastManager toastManager)
         {
-            _connectionString = connectionString;
+            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
             _toastManager = toastManager;
         }
 
         #region Role-Based Access Control
 
-        private bool CanCreate()
-        {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
-        }
+        private bool CanCreate() => IsInRole("Admin", "Staff", "Coach");
+        private bool CanUpdate() => IsInRole("Admin", "Staff", "Coach");
+        private bool CanDelete() => IsInRole("Admin");
+        private bool CanView() => IsInRole("Admin", "Staff", "Coach");
 
-        private bool CanUpdate()
+        private bool IsInRole(params string[] roles)
         {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
-        }
-
-        private bool CanDelete()
-        {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
-        }
-
-        private bool CanView()
-        {
-            return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
+            return roles.Any(role => string.Equals(CurrentUserModel.Role, role, StringComparison.OrdinalIgnoreCase));
         }
 
         #endregion
@@ -66,13 +56,89 @@ namespace AHON_TRACK.Services
         {
             if (!CanCreate())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to add training schedules.")
-                    .ShowError();
+                ShowAccessDeniedToast("add training schedules");
                 return false;
             }
 
-            const string trainingInsertQuery = @"
+            if (training == null)
+                throw new ArgumentNullException(nameof(training));
+
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+                using var transaction = connection.BeginTransaction();
+
+                try
+                {
+                    // Validate and get coach ID
+                    var coachId = await GetCoachIdByNameAsync(connection, transaction, training.assignedCoach);
+                    if (!coachId.HasValue)
+                    {
+                        ShowToast("Coach Not Found", $"Coach '{training.assignedCoach}' does not exist.", ToastType.Error);
+                        return false;
+                    }
+
+                    // Check daily capacity
+                    if (!await CheckDailyCapacityAsync(connection, transaction, coachId.Value, training.scheduledDate))
+                    {
+                        ShowToast("Coach Limit Reached",
+                            $"Coach {training.assignedCoach} has already reached {MAX_DAILY_SESSIONS} sessions for {training.scheduledDate:MMM dd}.",
+                            ToastType.Warning);
+                        return false;
+                    }
+
+                    // Handle schedule (get existing or create new)
+                    var scheduleId = await GetOrCreateScheduleAsync(connection, transaction, coachId.Value,
+                        training.scheduledDate, training.scheduledTimeStart, training.scheduledTimeEnd);
+
+                    if (!scheduleId.HasValue)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+
+                    // Insert training record
+                    training.trainingID = await InsertTrainingRecordAsync(connection, transaction, training);
+                    if (training.trainingID == 0)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+
+                    // Decrement package session count
+                    await DecrementSessionCountAsync(connection, transaction,
+                        training.customerID,
+                        training.customerType?.Trim() ?? DEFAULT_CUSTOMER_TYPE,
+                        training.packageID);
+
+                    // Commit and notify
+                    transaction.Commit();
+                    NotifyTrainingAdded();
+
+                    await LogActionAsync(connection, "CREATE",
+                        $"Added training schedule for {training.firstName} {training.lastName} with {training.assignedCoach} on {training.scheduledDate:MMM dd, yyyy}.",
+                        true);
+
+                    return true;
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowToast("Error Adding Schedule", ex.Message, ToastType.Error);
+                Debug.WriteLine($"AddTrainingScheduleAsync Error: {ex}");
+                return false;
+            }
+        }
+
+        private async Task<int> InsertTrainingRecordAsync(SqlConnection connection, SqlTransaction transaction, TrainingModel training)
+        {
+            const string query = @"
 INSERT INTO Trainings (
     CustomerID, CustomerType, FirstName, LastName, ContactNumber, 
     ProfilePicture, PackageID, PackageType, AssignedCoach, 
@@ -87,121 +153,25 @@ VALUES (
     @Attendance, @EmployeeID
 )";
 
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-                using var transaction = connection.BeginTransaction();
+            using var cmd = new SqlCommand(query, connection, transaction);
 
-                // Step 1: Find CoachID
-                var coachId = await GetCoachIdByNameAsync(connection, transaction, training.assignedCoach);
-                if (coachId == null)
-                {
-                    _toastManager?.CreateToast("Coach Not Found")
-                        .WithContent($"Coach '{training.assignedCoach}' does not exist.")
-                        .ShowError();
-                    return false;
-                }
+            cmd.Parameters.AddWithValue("@CustomerID", training.customerID);
+            cmd.Parameters.AddWithValue("@CustomerType", training.customerType?.Trim() ?? DEFAULT_CUSTOMER_TYPE);
+            cmd.Parameters.AddWithValue("@FirstName", training.firstName ?? string.Empty);
+            cmd.Parameters.AddWithValue("@LastName", training.lastName ?? string.Empty);
+            cmd.Parameters.AddWithValue("@ContactNumber", ToDbValue(training.contactNumber));
+            cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary).Value = ToDbValue(training.picture);
+            cmd.Parameters.AddWithValue("@PackageID", training.packageID);
+            cmd.Parameters.AddWithValue("@PackageType", training.packageType ?? string.Empty);
+            cmd.Parameters.AddWithValue("@AssignedCoach", training.assignedCoach ?? string.Empty);
+            cmd.Parameters.AddWithValue("@ScheduledDate", training.scheduledDate.Date);
+            cmd.Parameters.AddWithValue("@ScheduledTimeStart", training.scheduledTimeStart);
+            cmd.Parameters.AddWithValue("@ScheduledTimeEnd", training.scheduledTimeEnd);
+            cmd.Parameters.AddWithValue("@Attendance", training.attendance ?? DEFAULT_ATTENDANCE);
+            cmd.Parameters.AddWithValue("@EmployeeID", ToDbValue(CurrentUserModel.UserId));
 
-                // Step 2: Check daily capacity (8 sessions max per day)
-                bool canTakeMore = await CheckDailyCapacityAsync(connection, transaction, coachId.Value, training.scheduledDate);
-                if (!canTakeMore)
-                {
-                    _toastManager?.CreateToast("Coach Limit Reached")
-                        .WithContent($"Coach {training.assignedCoach} has already reached 8 sessions for {training.scheduledDate:MMM dd}.")
-                        .ShowWarning();
-                    return false;
-                }
-
-                // Step 3: Check for existing or overlapping schedule
-                var scheduleId = await GetCoachScheduleIdAsync(connection, transaction, coachId.Value,
-                    training.scheduledDate, training.scheduledTimeStart, training.scheduledTimeEnd);
-
-                if (scheduleId == -1)
-                {
-                    transaction.Rollback();
-                    return false;
-                }
-                else if (scheduleId == null)
-                {
-                    scheduleId = await CreateCoachScheduleAsync(connection, transaction, coachId.Value,
-                        training.scheduledDate, training.scheduledTimeStart, training.scheduledTimeEnd);
-
-                    if (scheduleId == null)
-                    {
-                        transaction.Rollback();
-                        return false;
-                    }
-                }
-                else
-                {
-                    bool hasSpace = await CheckScheduleCapacityAsync(connection, transaction, scheduleId.Value);
-                    if (!hasSpace)
-                    {
-                        _toastManager?.CreateToast("Schedule Full")
-                            .WithContent($"The selected time slot for {training.assignedCoach} is already full.")
-                            .ShowWarning();
-                        transaction.Rollback();
-                        return false;
-                    }
-
-                    await IncrementScheduleCapacityAsync(connection, transaction, scheduleId.Value);
-                }
-
-                // Step 4: Insert training record
-                using var trainingCmd = new SqlCommand(trainingInsertQuery, connection, transaction);
-                trainingCmd.Parameters.AddWithValue("@CustomerID", training.customerID);
-                trainingCmd.Parameters.AddWithValue("@CustomerType", training.customerType?.Trim() ?? "Member");
-                trainingCmd.Parameters.AddWithValue("@FirstName", training.firstName ?? string.Empty);
-                trainingCmd.Parameters.AddWithValue("@LastName", training.lastName ?? string.Empty);
-                trainingCmd.Parameters.AddWithValue("@ContactNumber", (object?)training.contactNumber ?? DBNull.Value);
-                trainingCmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary).Value = (object?)training.picture ?? DBNull.Value;
-                trainingCmd.Parameters.AddWithValue("@PackageID", training.packageID);
-                trainingCmd.Parameters.AddWithValue("@PackageType", training.packageType ?? string.Empty);
-                trainingCmd.Parameters.AddWithValue("@AssignedCoach", training.assignedCoach ?? string.Empty);
-                trainingCmd.Parameters.AddWithValue("@ScheduledDate", training.scheduledDate.Date);
-                trainingCmd.Parameters.AddWithValue("@ScheduledTimeStart", training.scheduledTimeStart);
-                trainingCmd.Parameters.AddWithValue("@ScheduledTimeEnd", training.scheduledTimeEnd);
-                trainingCmd.Parameters.AddWithValue("@Attendance", training.attendance ?? "Pending");
-                trainingCmd.Parameters.AddWithValue("@EmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                var newId = await trainingCmd.ExecuteScalarAsync();
-                if (newId == null || newId == DBNull.Value)
-                {
-                    transaction.Rollback();
-                    return false;
-                }
-
-                training.trainingID = Convert.ToInt32(newId);
-
-                // Step 5: Decrement package session count
-                await DecrementSessionCountAsync(connection, transaction, training.customerID,
-                    training.customerType?.Trim() ?? "Member", training.packageID);
-
-                // Step 6: Commit transaction
-                transaction.Commit();
-                DashboardEventService.Instance.NotifyScheduleAdded();
-                DashboardEventService.Instance.NotifyMemberUpdated();
-                DashboardEventService.Instance.NotifyTrainingSessionsUpdated();
-
-                await LogActionAsync(connection, "CREATE",
-                    $"Added training schedule for {training.firstName} {training.lastName} with {training.assignedCoach} on {training.scheduledDate:MMM dd, yyyy}.", true);
-
-                /*   _toastManager?.CreateToast("Training Added")
-                       .WithContent($"Training scheduled for {training.firstName} {training.lastName} successfully!")
-                       .ShowSuccess(); */
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _toastManager?.CreateToast("Error Adding Schedule")
-                    .WithContent(ex.Message)
-                    .ShowError();
-
-                Debug.WriteLine($"AddTrainingScheduleAsync Error: {ex}");
-                return false;
-            }
+            var result = await cmd.ExecuteScalarAsync();
+            return result != null && result != DBNull.Value ? Convert.ToInt32(result) : 0;
         }
 
         #endregion
@@ -215,9 +185,7 @@ VALUES (
         {
             if (!CanView())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to view training schedules.")
-                    .ShowError();
+                ShowAccessDeniedToast("view training schedules");
                 return new List<TrainingModel>();
             }
 
@@ -241,38 +209,12 @@ ORDER BY ScheduledDate, ScheduledTimeStart";
 
                 while (await reader.ReadAsync())
                 {
-                    byte[]? pictureBytes = reader["ProfilePicture"] != DBNull.Value
-                        ? (byte[])reader["ProfilePicture"]
-                        : null;
-
-                    trainings.Add(new TrainingModel
-                    {
-                        trainingID = reader.GetInt32(reader.GetOrdinal("TrainingID")),
-                        customerID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
-                        firstName = reader["FirstName"]?.ToString() ?? "",
-                        lastName = reader["LastName"]?.ToString() ?? "",
-                        contactNumber = reader["ContactNumber"]?.ToString() ?? "",
-                        picture = pictureBytes,
-                        packageType = reader["PackageType"]?.ToString() ?? "",
-                        assignedCoach = reader["AssignedCoach"]?.ToString() ?? "",
-                        scheduledDate = reader.GetDateTime(reader.GetOrdinal("ScheduledDate")),
-                        scheduledTimeStart = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeStart")),
-                        scheduledTimeEnd = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeEnd")),
-                        attendance = reader["Attendance"]?.ToString(),
-                        createdAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        updatedAt = reader["UpdatedAt"] != DBNull.Value
-                            ? reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
-                            : DateTime.MinValue
-                    });
+                    trainings.Add(MapTrainingFromReader(reader));
                 }
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load training schedules: {ex.Message}")
-                    .WithDelay(5)
-                    .ShowError();
-
+                ShowToast("Database Error", $"Failed to load training schedules: {ex.Message}", ToastType.Error, 5);
                 Debug.WriteLine($"GetTrainingSchedulesAsync Error: {ex}");
             }
 
@@ -286,9 +228,7 @@ ORDER BY ScheduledDate, ScheduledTimeStart";
         {
             if (!CanView())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to view training schedules.")
-                    .ShowError();
+                ShowAccessDeniedToast("view training schedules");
                 return null;
             }
 
@@ -312,40 +252,12 @@ WHERE TrainingID = @TrainingID";
 
                 if (await reader.ReadAsync())
                 {
-                    return new TrainingModel
-                    {
-                        trainingID = reader.GetInt32(reader.GetOrdinal("TrainingID")),
-                        customerID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
-                        customerType = reader["CustomerType"]?.ToString() ?? "",
-                        firstName = reader["FirstName"]?.ToString() ?? "",
-                        lastName = reader["LastName"]?.ToString() ?? "",
-                        contactNumber = reader["ContactNumber"]?.ToString() ?? "",
-                        picture = !reader.IsDBNull(reader.GetOrdinal("ProfilePicture"))
-                            ? (byte[])reader["ProfilePicture"]
-                            : Array.Empty<byte>(),
-                        packageID = reader.GetInt32(reader.GetOrdinal("PackageID")),
-                        packageType = reader["PackageType"]?.ToString() ?? "",
-                        assignedCoach = reader["AssignedCoach"]?.ToString() ?? "",
-                        scheduledDate = reader.GetDateTime(reader.GetOrdinal("ScheduledDate")),
-                        scheduledTimeStart = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeStart")),
-                        scheduledTimeEnd = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeEnd")),
-                        attendance = reader["Attendance"]?.ToString() ?? "Pending",
-                        createdAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        updatedAt = reader["UpdatedAt"] != DBNull.Value
-                            ? reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
-                            : DateTime.MinValue,
-                        addedByEmployeeID = reader["CreatedByEmployeeID"] != DBNull.Value
-                            ? reader.GetInt32(reader.GetOrdinal("CreatedByEmployeeID"))
-                            : 0
-                    };
+                    return MapTrainingDetailsFromReader(reader);
                 }
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load training schedule: {ex.Message}")
-                    .ShowError();
-
+                ShowToast("Database Error", $"Failed to load training schedule: {ex.Message}", ToastType.Error);
                 Debug.WriteLine($"GetTrainingScheduleByIdAsync Error: {ex}");
             }
 
@@ -359,18 +271,18 @@ WHERE TrainingID = @TrainingID";
         {
             if (!CanView())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to view trainees.")
-                    .ShowError();
+                ShowAccessDeniedToast("view trainees");
                 return new List<TraineeModel>();
             }
+
             var trainees = new List<TraineeModel>();
+
             try
             {
                 await using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
+
                 const string query = @"
--- Get Members with sessions
 SELECT 
     m.MemberID AS CustomerID,
     m.CustomerType AS CustomerType,
@@ -385,43 +297,22 @@ FROM Members m
 INNER JOIN MemberSessions ms ON m.MemberID = ms.CustomerID
 INNER JOIN Packages p ON ms.PackageID = p.PackageID
 WHERE COALESCE(ms.SessionsLeft, 0) > 0
-ORDER BY FirstName, LastName;";
+ORDER BY FirstName, LastName";
+
                 await using var command = new SqlCommand(query, connection);
                 await using var reader = await command.ExecuteReaderAsync();
+
                 while (await reader.ReadAsync())
                 {
-                    Bitmap? picture = null;
-                    if (!reader.IsDBNull(reader.GetOrdinal("ProfilePicture")))
-                    {
-                        var pictureBytes = (byte[])reader["ProfilePicture"];
-                        if (pictureBytes.Length > 0)
-                        {
-                            using var ms = new MemoryStream(pictureBytes);
-                            picture = new Bitmap(ms);
-                        }
-                    }
-                    trainees.Add(new TraineeModel
-                    {
-                        ID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
-                        CustomerType = reader["CustomerType"]?.ToString() ?? "",
-                        FirstName = reader["FirstName"]?.ToString() ?? "",
-                        LastName = reader["LastName"]?.ToString() ?? "",
-                        ContactNumber = reader["ContactNumber"]?.ToString() ?? "",
-                        PackageType = reader["PackageType"]?.ToString() ?? "",
-                        PackageID = reader.GetInt32(reader.GetOrdinal("PackageID")),
-                        SessionLeft = reader.GetInt32(reader.GetOrdinal("SessionsLeft")),
-                        Picture = picture ?? new Bitmap(AssetLoader.Open(new Uri("avares://AHON_TRACK/Assets/MainWindowView/user.png")))
-                    });
+                    trainees.Add(MapTraineeFromReader(reader));
                 }
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load available trainees: {ex.Message}")
-                    .WithDelay(5)
-                    .ShowError();
+                ShowToast("Database Error", $"Failed to load available trainees: {ex.Message}", ToastType.Error, 5);
                 Debug.WriteLine($"GetAvailableTraineesAsync Error: {ex}");
             }
+
             return trainees;
         }
 
@@ -446,26 +337,23 @@ FROM Coach c
 INNER JOIN Employees e ON c.CoachID = e.EmployeeID
 WHERE c.Username LIKE '%coach%'
   AND c.IsDeleted = 0
-ORDER BY e.FirstName;";
+ORDER BY e.FirstName";
 
                 using var command = new SqlCommand(query, connection);
                 using var reader = await command.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
                 {
-                    int coachId = reader.GetInt32(0);
-                    string fullName = reader.GetString(1);
-                    string username = reader.GetString(2);
-                    coaches.Add((coachId, fullName, username));
+                    coaches.Add((
+                        reader.GetInt32(0),
+                        reader.GetString(1),
+                        reader.GetString(2)
+                    ));
                 }
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load coaches: {ex.Message}")
-                    .WithDelay(5)
-                    .ShowError();
-
+                ShowToast("Database Error", $"Failed to load coaches: {ex.Message}", ToastType.Error, 5);
                 Debug.WriteLine($"GetCoachNamesAsync Error: {ex}");
             }
 
@@ -483,11 +371,12 @@ ORDER BY e.FirstName;";
         {
             if (!CanUpdate())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to update training schedules.")
-                    .ShowError();
+                ShowAccessDeniedToast("update training schedules");
                 return false;
             }
+
+            if (training == null)
+                throw new ArgumentNullException(nameof(training));
 
             const string query = @"
 UPDATE Trainings SET 
@@ -515,14 +404,14 @@ WHERE TrainingID = @TrainingID";
                 command.Parameters.AddWithValue("@CustomerID", training.customerID);
                 command.Parameters.AddWithValue("@FirstName", training.firstName);
                 command.Parameters.AddWithValue("@LastName", training.lastName);
-                command.Parameters.AddWithValue("@ContactNumber", (object)training.contactNumber ?? DBNull.Value);
-                command.Parameters.AddWithValue("@ProfilePicture", (object)training.picture ?? DBNull.Value);
+                command.Parameters.AddWithValue("@ContactNumber", ToDbValue(training.contactNumber));
+                command.Parameters.AddWithValue("@ProfilePicture", ToDbValue(training.picture));
                 command.Parameters.AddWithValue("@PackageType", training.packageType);
                 command.Parameters.AddWithValue("@AssignedCoach", training.assignedCoach);
                 command.Parameters.AddWithValue("@ScheduledDate", training.scheduledDate);
                 command.Parameters.AddWithValue("@ScheduledTimeStart", training.scheduledTimeStart);
                 command.Parameters.AddWithValue("@ScheduledTimeEnd", training.scheduledTimeEnd);
-                command.Parameters.AddWithValue("@Attendance", (object)training.attendance ?? DBNull.Value);
+                command.Parameters.AddWithValue("@Attendance", ToDbValue(training.attendance));
 
                 var rowsAffected = await command.ExecuteNonQueryAsync();
 
@@ -531,10 +420,6 @@ WHERE TrainingID = @TrainingID";
                     DashboardEventService.Instance.NotifyScheduleUpdated();
                     await LogActionAsync(connection, "UPDATE",
                         $"Updated training schedule for {training.firstName} {training.lastName} (ID: {training.trainingID})", true);
-
-                    /*  _toastManager?.CreateToast("Training Schedule Updated")
-                          .WithContent($"Training schedule for {training.firstName} {training.lastName} updated successfully!")
-                          .ShowSuccess(); */
 
                     return true;
                 }
@@ -548,10 +433,7 @@ WHERE TrainingID = @TrainingID";
                 await LogActionAsync(connection, "UPDATE",
                     $"Failed to update training schedule for {training.firstName} {training.lastName} - Error: {ex.Message}", false);
 
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"Error updating training schedule: {ex.Message}")
-                    .ShowError();
-
+                ShowToast("Error", $"Error updating training schedule: {ex.Message}", ToastType.Error);
                 Debug.WriteLine($"UpdateTrainingScheduleAsync Error: {ex}");
             }
 
@@ -565,9 +447,7 @@ WHERE TrainingID = @TrainingID";
         {
             if (!CanUpdate())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to update attendance.")
-                    .ShowError();
+                ShowAccessDeniedToast("update attendance");
                 return false;
             }
 
@@ -604,10 +484,7 @@ WHERE TrainingID = @TrainingID";
                 await LogActionAsync(connection, "UPDATE",
                     $"Failed to update attendance for training ID {trainingID} - Error: {ex.Message}", false);
 
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"Error updating attendance: {ex.Message}")
-                    .ShowError();
-
+                ShowToast("Error", $"Error updating attendance: {ex.Message}", ToastType.Error);
                 Debug.WriteLine($"UpdateAttendanceAsync Error: {ex}");
             }
 
@@ -625,9 +502,7 @@ WHERE TrainingID = @TrainingID";
         {
             if (!CanDelete())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("Only administrators can delete training schedules.")
-                    .ShowError();
+                ShowToast("Access Denied", "Only administrators can delete training schedules.", ToastType.Error);
                 return false;
             }
 
@@ -650,10 +525,6 @@ WHERE TrainingID = @TrainingID";
                     await LogActionAsync(connection, "DELETE",
                         $"Deleted training schedule: {trainingInfo} (ID: {trainingID})", true);
 
-                    /*   _toastManager?.CreateToast("Training Schedule Deleted")
-                        .WithContent("Training schedule deleted successfully!")
-                        .ShowSuccess();*/
-
                     return true;
                 }
 
@@ -666,10 +537,7 @@ WHERE TrainingID = @TrainingID";
                 await LogActionAsync(connection, "DELETE",
                     $"Failed to delete training schedule ID {trainingID} - Error: {ex.Message}", false);
 
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"Error deleting training schedule: {ex.Message}")
-                    .ShowError();
-
+                ShowToast("Error", $"Error deleting training schedule: {ex.Message}", ToastType.Error);
                 Debug.WriteLine($"DeleteTrainingScheduleAsync Error: {ex}");
             }
 
@@ -678,83 +546,32 @@ WHERE TrainingID = @TrainingID";
 
         #endregion
 
-        #region UTILITY METHODS
-
-        /// <summary>
-        /// Logs system actions to database
-        /// </summary>
-        private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success)
-        {
-            try
-            {
-                using var logCmd = new SqlCommand(
-                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
-                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)", conn);
-
-                logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@actionType", actionType ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
-                logCmd.Parameters.AddWithValue("@success", success);
-                logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                await logCmd.ExecuteNonQueryAsync();
-                DashboardEventService.Instance.NotifyTrainingSessionsUpdated();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[LogActionAsync] {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Gets training participant's name by training ID
-        /// </summary>
-        private async Task<string> GetTrainingNameByIdAsync(SqlConnection connection, int trainingID)
-        {
-            const string query = "SELECT FirstName + ' ' + LastName AS FullName FROM Trainings WHERE TrainingID = @TrainingID";
-
-            using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@TrainingID", trainingID);
-
-            var result = await command.ExecuteScalarAsync();
-            return result?.ToString() ?? "Unknown Training";
-        }
-
-        #endregion
-
         #region HELPER METHODS - Coach & Schedule Management
 
-        /// <summary>
-        /// Gets coach ID by their full name
-        /// </summary>
         private async Task<int?> GetCoachIdByNameAsync(SqlConnection connection, SqlTransaction transaction, string coachFullName)
         {
             const string query = @"
-SELECT TOP 1 c.CoachID
-FROM Coach c
-INNER JOIN Employees e ON c.CoachID = e.EmployeeID
-WHERE (e.FirstName + ' ' + e.LastName) = @CoachFullName
-  AND c.IsDeleted = 0";
+            SELECT TOP 1 c.CoachID
+            FROM Coach c
+            INNER JOIN Employees e ON c.CoachID = e.EmployeeID
+            WHERE (e.FirstName + ' ' + e.LastName) = @CoachFullName
+             AND c.IsDeleted = 0";
 
             using var cmd = new SqlCommand(query, connection, transaction);
-            cmd.Parameters.AddWithValue("@CoachFullName", coachFullName.Trim());
+            cmd.Parameters.AddWithValue("@CoachFullName", coachFullName?.Trim() ?? string.Empty);
 
             var result = await cmd.ExecuteScalarAsync();
-            return result != null && result != DBNull.Value ? Convert.ToInt32(result) : (int?)null;
+            return result != null && result != DBNull.Value ? Convert.ToInt32(result) : null;
         }
 
-        /// <summary>
-        /// Checks if coach has capacity for more sessions on a given date (max 8 per day)
-        /// </summary>
         private async Task<bool> CheckDailyCapacityAsync(SqlConnection connection, SqlTransaction transaction, int coachId, DateTime date)
         {
             const string query = @"
-SELECT SUM(CurrentCapacity)
-FROM CoachSchedule
-WHERE CoachID = @CoachID 
-  AND ScheduledDate = @Date 
-  AND IsDeleted = 0";
+            SELECT SUM(CurrentCapacity)
+            FROM CoachSchedule
+            WHERE CoachID = @CoachID 
+             AND ScheduledDate = @Date 
+              AND IsDeleted = 0";
 
             using var cmd = new SqlCommand(query, connection, transaction);
             cmd.Parameters.AddWithValue("@CoachID", coachId);
@@ -762,74 +579,41 @@ WHERE CoachID = @CoachID
 
             var result = await cmd.ExecuteScalarAsync();
             int totalToday = result != DBNull.Value ? Convert.ToInt32(result) : 0;
-            return totalToday < 8;
+            return totalToday < MAX_DAILY_SESSIONS;
         }
 
-        /// <summary>
-        /// Gets or detects coach schedule ID for a given time slot
-        /// Returns: scheduleId if found, null if none exists, -1 if overlap detected
-        /// </summary>
-        private async Task<int?> GetCoachScheduleIdAsync(SqlConnection connection, SqlTransaction transaction, int coachId, DateTime date, DateTime start, DateTime end)
+        private async Task<int?> GetOrCreateScheduleAsync(SqlConnection connection, SqlTransaction transaction,
+            int coachId, DateTime date, DateTime start, DateTime end)
         {
-            // 1️⃣ Try to find exact match first
-            const string exactQuery = @"
-SELECT TOP 1 ScheduleID 
-FROM CoachSchedule 
-WHERE CoachID = @CoachID 
-  AND ScheduledDate = @Date 
-  AND ScheduledTimeStart = @Start 
-  AND ScheduledTimeEnd = @End 
-  AND IsDeleted = 0";
+            // Try exact match first
+            var scheduleId = await GetExactScheduleAsync(connection, transaction, coachId, date, start, end);
+            if (scheduleId.HasValue)
+                return scheduleId;
 
-            using var exactCmd = new SqlCommand(exactQuery, connection, transaction);
-            exactCmd.Parameters.AddWithValue("@CoachID", coachId);
-            exactCmd.Parameters.AddWithValue("@Date", date.Date);
-            exactCmd.Parameters.AddWithValue("@Start", start);
-            exactCmd.Parameters.AddWithValue("@End", end);
-
-            var exactResult = await exactCmd.ExecuteScalarAsync();
-            if (exactResult != null && exactResult != DBNull.Value)
-                return Convert.ToInt32(exactResult);
-
-            // 2️⃣ If no exact match, check for overlapping schedule
-            const string overlapQuery = @"
-SELECT TOP 1 ScheduleID
-FROM CoachSchedule
-WHERE CoachID = @CoachID 
-  AND ScheduledDate = @Date
-  AND IsDeleted = 0
-  AND (@Start < ScheduledTimeEnd AND @End > ScheduledTimeStart)";
-
-            using var overlapCmd = new SqlCommand(overlapQuery, connection, transaction);
-            overlapCmd.Parameters.AddWithValue("@CoachID", coachId);
-            overlapCmd.Parameters.AddWithValue("@Date", date.Date);
-            overlapCmd.Parameters.AddWithValue("@Start", start);
-            overlapCmd.Parameters.AddWithValue("@End", end);
-
-            var overlapResult = await overlapCmd.ExecuteScalarAsync();
-
-            if (overlapResult != null && overlapResult != DBNull.Value)
+            // Check for overlap
+            if (await HasScheduleOverlapAsync(connection, transaction, coachId, date, start, end))
             {
-                // ⚠ Time conflict found
-                _toastManager?.CreateToast("Conflict Detected")
-                    .WithContent($"Coach already has a schedule overlapping this time slot ({start:hh\\:mm tt}–{end:hh\\:mm tt}).")
-                    .ShowWarning();
-                return -1;
+                ShowToast("Conflict Detected",
+                    $"Coach already has a schedule overlapping this time slot ({start:hh\\:mm tt}–{end:hh\\:mm tt}).",
+                    ToastType.Warning);
+                return null;
             }
 
-            // 3️⃣ Otherwise, no schedule at all for that time
-            return null;
+            // Create new schedule
+            return await CreateCoachScheduleAsync(connection, transaction, coachId, date, start, end);
         }
 
-        /// <summary>
-        /// Creates a new coach schedule entry
-        /// </summary>
-        private async Task<int?> CreateCoachScheduleAsync(SqlConnection connection, SqlTransaction transaction, int coachId, DateTime date, DateTime start, DateTime end)
+        private async Task<int?> GetExactScheduleAsync(SqlConnection connection, SqlTransaction transaction,
+            int coachId, DateTime date, DateTime start, DateTime end)
         {
             const string query = @"
-INSERT INTO CoachSchedule (CoachID, ScheduledDate, ScheduledTimeStart, ScheduledTimeEnd, MaxCapacity, CurrentCapacity, CreatedAt)
-OUTPUT INSERTED.ScheduleID
-VALUES (@CoachID, @Date, @Start, @End, 8, 1, GETDATE())";
+                SELECT TOP 1 ScheduleID 
+                FROM CoachSchedule 
+                WHERE CoachID = @CoachID 
+              AND ScheduledDate = @Date 
+              AND ScheduledTimeStart = @Start 
+              AND ScheduledTimeEnd = @End 
+             AND IsDeleted = 0";
 
             using var cmd = new SqlCommand(query, connection, transaction);
             cmd.Parameters.AddWithValue("@CoachID", coachId);
@@ -838,20 +622,71 @@ VALUES (@CoachID, @Date, @Start, @End, 8, 1, GETDATE())";
             cmd.Parameters.AddWithValue("@End", end);
 
             var result = await cmd.ExecuteScalarAsync();
+
+            if (result != null && result != DBNull.Value)
+            {
+                int scheduleId = Convert.ToInt32(result);
+
+                // Check if this schedule has space
+                if (!await CheckScheduleCapacityAsync(connection, transaction, scheduleId))
+                {
+                    ShowToast("Schedule Full", "The selected time slot is already full.", ToastType.Warning);
+                    return null;
+                }
+
+                // Increment capacity
+                await IncrementScheduleCapacityAsync(connection, transaction, scheduleId);
+                return scheduleId;
+            }
+
+            return null;
+        }
+
+        private async Task<bool> HasScheduleOverlapAsync(SqlConnection connection, SqlTransaction transaction,
+            int coachId, DateTime date, DateTime start, DateTime end)
+        {
+            const string query = @"
+                SELECT TOP 1 ScheduleID
+                FROM CoachSchedule
+                WHERE CoachID = @CoachID 
+              AND ScheduledDate = @Date
+              AND IsDeleted = 0
+              AND (@Start < ScheduledTimeEnd AND @End > ScheduledTimeStart)";
+
+            using var cmd = new SqlCommand(query, connection, transaction);
+            cmd.Parameters.AddWithValue("@CoachID", coachId);
+            cmd.Parameters.AddWithValue("@Date", date.Date);
+            cmd.Parameters.AddWithValue("@Start", start);
+            cmd.Parameters.AddWithValue("@End", end);
+
+            var result = await cmd.ExecuteScalarAsync();
+            return result != null && result != DBNull.Value;
+        }
+
+        private async Task<int?> CreateCoachScheduleAsync(SqlConnection connection, SqlTransaction transaction,
+            int coachId, DateTime date, DateTime start, DateTime end)
+        {
+            const string query = @"INSERT INTO CoachSchedule (CoachID, ScheduledDate, ScheduledTimeStart, ScheduledTimeEnd, MaxCapacity, CurrentCapacity, CreatedAt)
+            OUTPUT INSERTED.ScheduleID
+            VALUES (@CoachID, @Date, @Start, @End, @MaxCapacity, 1, GETDATE())";
+
+            using var cmd = new SqlCommand(query, connection, transaction);
+            cmd.Parameters.AddWithValue("@CoachID", coachId);
+            cmd.Parameters.AddWithValue("@Date", date.Date);
+            cmd.Parameters.AddWithValue("@Start", start);
+            cmd.Parameters.AddWithValue("@End", end);
+            cmd.Parameters.AddWithValue("@MaxCapacity", MAX_SCHEDULE_CAPACITY);
+
+            var result = await cmd.ExecuteScalarAsync();
             if (result == null || result == DBNull.Value)
             {
-                _toastManager?.CreateToast("Error")
-                    .WithContent("Failed to create coach schedule.")
-                    .ShowError();
+                ShowToast("Error", "Failed to create coach schedule.", ToastType.Error);
                 return null;
             }
 
             return Convert.ToInt32(result);
         }
 
-        /// <summary>
-        /// Checks if a schedule has available capacity
-        /// </summary>
         private async Task<bool> CheckScheduleCapacityAsync(SqlConnection connection, SqlTransaction transaction, int scheduleId)
         {
             const string query = @"
@@ -866,9 +701,6 @@ WHERE ScheduleID = @ScheduleID";
             return result != null && Convert.ToInt32(result) == 1;
         }
 
-        /// <summary>
-        /// Increments the current capacity of a schedule
-        /// </summary>
         private async Task IncrementScheduleCapacityAsync(SqlConnection connection, SqlTransaction transaction, int scheduleId)
         {
             const string query = @"
@@ -883,14 +715,12 @@ WHERE ScheduleID = @ScheduleID
             await cmd.ExecuteNonQueryAsync();
         }
 
-        /// <summary>
-        /// Decrements session count for a customer's package
-        /// </summary>
-        private async Task DecrementSessionCountAsync(SqlConnection connection, SqlTransaction transaction, int customerID, string customerType, int packageID)
+        private async Task DecrementSessionCountAsync(SqlConnection connection, SqlTransaction transaction,
+            int customerID, string customerType, int packageID)
         {
             try
             {
-                string table = customerType == "Member" ? "MemberSessions" : "WalkInSessions";
+                string table = customerType == DEFAULT_CUSTOMER_TYPE ? "MemberSessions" : "WalkInSessions";
                 string query = $@"
 UPDATE {table}
 SET SessionsLeft = SessionsLeft - 1
@@ -907,6 +737,188 @@ WHERE CustomerID = @CustomerID
             {
                 Debug.WriteLine($"[DecrementSessionCountAsync] {ex.Message}");
             }
+        }
+
+        #endregion
+
+        #region UTILITY METHODS
+
+        private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success)
+        {
+            try
+            {
+                const string query = @"
+INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@username", ToDbValue(CurrentUserModel.Username));
+                cmd.Parameters.AddWithValue("@role", ToDbValue(CurrentUserModel.Role));
+                cmd.Parameters.AddWithValue("@actionType", ToDbValue(actionType));
+                cmd.Parameters.AddWithValue("@description", ToDbValue(description));
+                cmd.Parameters.AddWithValue("@success", success);
+                cmd.Parameters.AddWithValue("@employeeID", ToDbValue(CurrentUserModel.UserId));
+
+                await cmd.ExecuteNonQueryAsync();
+                DashboardEventService.Instance.NotifyTrainingSessionsUpdated();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LogActionAsync] {ex.Message}");
+            }
+        }
+
+        private async Task<string> GetTrainingNameByIdAsync(SqlConnection connection, int trainingID)
+        {
+            const string query = "SELECT FirstName + ' ' + LastName AS FullName FROM Trainings WHERE TrainingID = @TrainingID";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@TrainingID", trainingID);
+
+            var result = await command.ExecuteScalarAsync();
+            return result?.ToString() ?? "Unknown Training";
+        }
+
+        #endregion
+
+        #region MAPPING METHODS
+
+        private TrainingModel MapTrainingFromReader(SqlDataReader reader)
+        {
+            return new TrainingModel
+            {
+                trainingID = reader.GetInt32(reader.GetOrdinal("TrainingID")),
+                customerID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
+                firstName = reader["FirstName"]?.ToString() ?? string.Empty,
+                lastName = reader["LastName"]?.ToString() ?? string.Empty,
+                contactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
+                picture = !reader.IsDBNull(reader.GetOrdinal("ProfilePicture"))
+                    ? (byte[])reader["ProfilePicture"]
+                    : null,
+                packageType = reader["PackageType"]?.ToString() ?? string.Empty,
+                assignedCoach = reader["AssignedCoach"]?.ToString() ?? string.Empty,
+                scheduledDate = reader.GetDateTime(reader.GetOrdinal("ScheduledDate")),
+                scheduledTimeStart = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeStart")),
+                scheduledTimeEnd = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeEnd")),
+                attendance = reader["Attendance"]?.ToString(),
+                createdAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+                updatedAt = !reader.IsDBNull(reader.GetOrdinal("UpdatedAt"))
+                    ? reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
+                    : DateTime.MinValue
+            };
+        }
+
+        private TrainingModel MapTrainingDetailsFromReader(SqlDataReader reader)
+        {
+            return new TrainingModel
+            {
+                trainingID = reader.GetInt32(reader.GetOrdinal("TrainingID")),
+                customerID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
+                customerType = reader["CustomerType"]?.ToString() ?? string.Empty,
+                firstName = reader["FirstName"]?.ToString() ?? string.Empty,
+                lastName = reader["LastName"]?.ToString() ?? string.Empty,
+                contactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
+                picture = !reader.IsDBNull(reader.GetOrdinal("ProfilePicture"))
+                    ? (byte[])reader["ProfilePicture"]
+                    : Array.Empty<byte>(),
+                packageID = reader.GetInt32(reader.GetOrdinal("PackageID")),
+                packageType = reader["PackageType"]?.ToString() ?? string.Empty,
+                assignedCoach = reader["AssignedCoach"]?.ToString() ?? string.Empty,
+                scheduledDate = reader.GetDateTime(reader.GetOrdinal("ScheduledDate")),
+                scheduledTimeStart = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeStart")),
+                scheduledTimeEnd = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeEnd")),
+                attendance = reader["Attendance"]?.ToString() ?? DEFAULT_ATTENDANCE,
+                createdAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+                updatedAt = !reader.IsDBNull(reader.GetOrdinal("UpdatedAt"))
+                    ? reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
+                    : DateTime.MinValue,
+                addedByEmployeeID = !reader.IsDBNull(reader.GetOrdinal("CreatedByEmployeeID"))
+                    ? reader.GetInt32(reader.GetOrdinal("CreatedByEmployeeID"))
+                    : 0
+            };
+        }
+
+        private TraineeModel MapTraineeFromReader(SqlDataReader reader)
+        {
+            Bitmap? picture = null;
+
+            if (!reader.IsDBNull(reader.GetOrdinal("ProfilePicture")))
+            {
+                var pictureBytes = (byte[])reader["ProfilePicture"];
+                if (pictureBytes.Length > 0)
+                {
+                    using var ms = new MemoryStream(pictureBytes);
+                    picture = new Bitmap(ms);
+                }
+            }
+
+            return new TraineeModel
+            {
+                ID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
+                CustomerType = reader["CustomerType"]?.ToString() ?? string.Empty,
+                FirstName = reader["FirstName"]?.ToString() ?? string.Empty,
+                LastName = reader["LastName"]?.ToString() ?? string.Empty,
+                ContactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
+                PackageType = reader["PackageType"]?.ToString() ?? string.Empty,
+                PackageID = reader.GetInt32(reader.GetOrdinal("PackageID")),
+                SessionLeft = reader.GetInt32(reader.GetOrdinal("SessionsLeft")),
+                Picture = picture ?? new Bitmap(AssetLoader.Open(new Uri("avares://AHON_TRACK/Assets/MainWindowView/user.png")))
+            };
+        }
+
+        #endregion
+
+        #region TOAST & NOTIFICATION HELPERS
+
+        private enum ToastType
+        {
+            Success,
+            Error,
+            Warning,
+            Info
+        }
+
+        private void ShowToast(string title, string content, ToastType type, int delay = 3)
+        {
+            if (_toastManager == null) return;
+
+            var toast = _toastManager.CreateToast(title).WithContent(content);
+
+            if (delay != 3)
+                toast.WithDelay(delay);
+
+            switch (type)
+            {
+                case ToastType.Success:
+                    toast.ShowSuccess();
+                    break;
+                case ToastType.Error:
+                    toast.ShowError();
+                    break;
+                case ToastType.Warning:
+                    toast.ShowWarning();
+                    break;
+                case ToastType.Info:
+                    toast.ShowInfo();
+                    break;
+            }
+        }
+
+        private void ShowAccessDeniedToast(string action)
+        {
+            ShowToast("Access Denied", $"You don't have permission to {action}.", ToastType.Error);
+        }
+
+        private void NotifyTrainingAdded()
+        {
+            DashboardEventService.Instance.NotifyScheduleAdded();
+            DashboardEventService.Instance.NotifyMemberUpdated();
+            DashboardEventService.Instance.NotifyTrainingSessionsUpdated();
+        }
+
+        private static object ToDbValue(object? value)
+        {
+            return value ?? DBNull.Value;
         }
 
         #endregion

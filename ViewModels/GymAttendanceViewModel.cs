@@ -1,4 +1,5 @@
 using AHON_TRACK.Services;
+using AHON_TRACK.Services.Events;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dapper;
 using HotAvalonia;
@@ -11,19 +12,19 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Threading.Tasks;
-using AHON_TRACK.Services.Events;
+using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
 public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private DateTime _attendanceGroupSelectedFromDate = DateTime.Today;
+    private DateTime _attendanceGroupSelectedFromDate = DateTime.Today.AddMonths(-1);
 
     [ObservableProperty]
-    private DateTime _attendanceGroupSelectedToDate = DateTime.Today.AddMonths(1);
+    private DateTime _attendanceGroupSelectedToDate = DateTime.Today;
 
     [ObservableProperty]
     private CustomerPieData[] _customerTypePieDataCollection;
@@ -36,6 +37,15 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
 
     [ObservableProperty]
     private bool _isLoading;
+
+    // === Totals & Percentages ===
+    [ObservableProperty] private int _totalWalkIns;
+    [ObservableProperty] private int _totalMembers;
+    [ObservableProperty] private int _totalAttendance;
+
+    [ObservableProperty] private double _walkInChangePercent;
+    [ObservableProperty] private double _memberChangePercent;
+    [ObservableProperty] private double _attendanceChangePercent;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -71,11 +81,13 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     {
         var eventService = DashboardEventService.Instance;
         eventService.CheckinAdded += OnAttendanceDataChanged;
+
     }
 
     private async void OnAttendanceDataChanged(object? sender, EventArgs e)
     {
-        await LoadDataAsync();
+        await UpdateAttendanceChartAsync();
+        await UpdateCustomerTypeGroupChartAsync();
     }
 
     private async Task LoadDataAsync()
@@ -124,40 +136,70 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
         AttendanceSeriesCollection =
         [
             new LineSeries<double>
-            {
-                Name = "Walk-Ins",
-                Values = walkIns,
-                ShowDataLabels = false,
-                Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(100)),
-                Stroke = new SolidColorPaint(SKColors.DodgerBlue) { StrokeThickness = 2 },
-                GeometryFill = null,
-                GeometryStroke = null,
-                LineSmoothness = 0.3
-            },
+        {
+            Name = "Walk-Ins",
+            Values = walkIns,
+            ShowDataLabels = false,
+            Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(100)),
+            Stroke = new SolidColorPaint(SKColors.DodgerBlue) { StrokeThickness = 2 },
+            GeometryFill = null,
+            GeometryStroke = null,
+            LineSmoothness = 0.3
+        },
 
-            new LineSeries<double>
-            {
-                Name = "Gym Members",
-                Values = gymMembers,
-                ShowDataLabels = false,
-                Fill = new SolidColorPaint(SKColors.Red.WithAlpha(100)),
-                Stroke = new SolidColorPaint(SKColors.Red) { StrokeThickness = 2 },
-                GeometryFill = null,
-                GeometryStroke = null,
-                LineSmoothness = 0.3
-            }
+        new LineSeries<double>
+        {
+            Name = "Gym Members",
+            Values = gymMembers,
+            ShowDataLabels = false,
+            Fill = new SolidColorPaint(SKColors.Red.WithAlpha(100)),
+            Stroke = new SolidColorPaint(SKColors.Red) { StrokeThickness = 2 },
+            GeometryFill = null,
+            GeometryStroke = null,
+            LineSmoothness = 0.3
+        }
         ];
 
         AttendanceLineChartXAxes =
         [
             new Axis
-            {
-                Labels = days.ToArray(),
-                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
-                TextSize = 12,
-                MinStep = 1
-            }
+        {
+            Labels = days.ToArray(),
+            LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+            TextSize = 12,
+            MinStep = 1
+        }
         ];
+
+        // === Compute Totals ===
+        TotalWalkIns = (int)walkIns.Sum();
+        TotalMembers = (int)gymMembers.Sum();
+        TotalAttendance = TotalWalkIns + TotalMembers;
+
+        // === Compute Comparison with Past 30 Days ===
+        var prevTo = AttendanceGroupSelectedFromDate.AddDays(-1);
+        var prevFrom = prevTo.AddDays(-30);
+
+        try
+        {
+            var previousData = await _data.GetAttendanceDataAsync(prevFrom, prevTo);
+
+            var prevWalkIns = previousData.Sum(x => x.WalkIns);
+            var prevMembers = previousData.Sum(x => x.Members);
+            var prevTotal = prevWalkIns + prevMembers;
+
+            WalkInChangePercent = ComputeChangePercent(TotalWalkIns, prevWalkIns);
+            MemberChangePercent = ComputeChangePercent(TotalMembers, prevMembers);
+            AttendanceChangePercent = ComputeChangePercent(TotalAttendance, prevTotal);
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Error calculating attendance percentage: {ex.Message}");
+            // Set to 0 if calculation fails
+            WalkInChangePercent = 0;
+            MemberChangePercent = 0;
+            AttendanceChangePercent = 0;
+        }
     }
 
     private void UpdateAttendanceChartMock()
@@ -179,40 +221,61 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
         AttendanceSeriesCollection =
         [
             new LineSeries<double>
-            {
-                Name = "Walk-Ins",
-                Values = walkIns,
-                ShowDataLabels = false,
-                Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(100)),
-                Stroke = new SolidColorPaint(SKColors.DodgerBlue) { StrokeThickness = 2 },
-                GeometryFill = null,
-                GeometryStroke = null,
-                LineSmoothness = 0.3
-            },
+        {
+            Name = "Walk-Ins",
+            Values = walkIns,
+            ShowDataLabels = false,
+            Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(100)),
+            Stroke = new SolidColorPaint(SKColors.DodgerBlue) { StrokeThickness = 2 },
+            GeometryFill = null,
+            GeometryStroke = null,
+            LineSmoothness = 0.3
+        },
 
-            new LineSeries<double>
-            {
-                Name = "Gym Members",
-                Values = gymMembers,
-                ShowDataLabels = false,
-                Fill = new SolidColorPaint(SKColors.Red.WithAlpha(100)),
-                Stroke = new SolidColorPaint(SKColors.Red) { StrokeThickness = 2 },
-                GeometryFill = null,
-                GeometryStroke = null,
-                LineSmoothness = 0.3
-            }
+        new LineSeries<double>
+        {
+            Name = "Gym Members",
+            Values = gymMembers,
+            ShowDataLabels = false,
+            Fill = new SolidColorPaint(SKColors.Red.WithAlpha(100)),
+            Stroke = new SolidColorPaint(SKColors.Red) { StrokeThickness = 2 },
+            GeometryFill = null,
+            GeometryStroke = null,
+            LineSmoothness = 0.3
+        }
         ];
 
         AttendanceLineChartXAxes =
         [
             new Axis
-            {
-                Labels = days.ToArray(),
-                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
-                TextSize = 12,
-                MinStep = 1
-            }
+        {
+            Labels = days.ToArray(),
+            LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+            TextSize = 12,
+            MinStep = 1
+        }
         ];
+
+        // === Compute Totals ===
+        TotalWalkIns = (int)walkIns.Sum();
+        TotalMembers = (int)gymMembers.Sum();
+        TotalAttendance = TotalWalkIns + TotalMembers;
+
+        // === Mock: Generate random percentages for design-time ===
+        WalkInChangePercent = random.Next(-50, 50);
+        MemberChangePercent = random.Next(-50, 50);
+        AttendanceChangePercent = random.Next(-50, 50);
+    }
+
+    // Helper method to compute percentage change
+    private static double ComputeChangePercent(double current, double previous)
+    {
+        if (previous == 0 && current > 0)
+            return 100.0;     // 100% increase
+        else if (previous == 0 && current == 0)
+            return 0;         // no change at all
+        else
+            return Math.Round(((current - previous) / previous) * 100.0, 2);
     }
 
     private async Task UpdateCustomerTypeGroupChartAsync()

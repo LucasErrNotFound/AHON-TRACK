@@ -311,6 +311,67 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region NONFUNCTIONAL REQUIREMENTS
+
+        public async Task<(double TotalRevenue, int TotalSales, int TotalGymPackages, int TotalWalkInMembers)> GetFinancialSummaryAsync(DateTime fromDate, DateTime toDate)
+        {
+            double totalRevenue = 0;
+            int totalSales = 0;
+            int totalGymPackages = 0;
+            int totalWalkInMembers = 0;
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // TOTAL REVENUE
+                const string revenueQuery = @"
+            SELECT ISNULL(SUM(Amount), 0) 
+            FROM Sales 
+            WHERE IsDeleted = 0 
+              AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
+
+                totalRevenue = await conn.ExecuteScalarAsync<double>(revenueQuery, new { From = fromDate, To = toDate });
+
+                // TOTAL SALES
+                const string salesQuery = @"
+            SELECT COUNT(DISTINCT SaleID)
+            FROM Sales
+            WHERE IsDeleted = 0 
+              AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
+
+                totalSales = await conn.ExecuteScalarAsync<int>(salesQuery, new { From = fromDate, To = toDate });
+
+                // TOTAL GYM PACKAGES SOLD
+                const string packageQuery = @"
+            SELECT COUNT(*) 
+            FROM Sales 
+            WHERE PackageID IS NOT NULL AND IsDeleted = 0 
+              AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
+
+                totalGymPackages = await conn.ExecuteScalarAsync<int>(packageQuery, new { From = fromDate, To = toDate });
+
+                // TOTAL WALK-IN / MEMBER TRANSACTIONS
+                const string walkInQuery = @"
+            SELECT COUNT(*) 
+            FROM WalkInRecords
+            WHERE IsDeleted = 0 
+              AND CAST(Attendance AS DATE) BETWEEN @From AND @To";
+
+                totalWalkInMembers = await conn.ExecuteScalarAsync<int>(walkInQuery, new { From = fromDate, To = toDate });
+
+                return (totalRevenue, totalSales, totalGymPackages, totalWalkInMembers);
+            }
+            catch (Exception ex)
+            {
+                _toastManager.CreateToast($"Error loading financial summary: {ex.Message}");
+                return (totalRevenue, totalSales, totalGymPackages, totalWalkInMembers);
+            }
+        }
+
+        #endregion
+
         #region SUPPORTING CLASS
         // DTOs
         public class AttendanceDataDto
