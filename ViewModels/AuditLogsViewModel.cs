@@ -37,7 +37,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     private string _selectedSortFilterItem = "By newest to oldest";
 
     [ObservableProperty]
-    private string[] _sortPositionItems = ["All", "Admin", "Staff"];
+    private string[] _sortPositionItems = ["All", "Administrator", "Gym Staff"];
 
     [ObservableProperty]
     private string _selectedSortPositionItem = "All";

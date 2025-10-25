@@ -83,7 +83,7 @@
                                         SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
 									<ComboBox
                                         Grid.Column="2"
-                                        Width="100"
+                                        Width="150"
                                         shadui:ControlAssist.Height="40"
                                         VerticalAlignment="Center"
                                         ItemsSource="{CompiledBinding SortPositionItems}"
