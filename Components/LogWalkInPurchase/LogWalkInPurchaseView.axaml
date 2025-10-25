@@ -338,7 +338,7 @@
 												Text="{CompiledBinding CustomerFullName}"
 												Classes="h4"/>
 											<TextBlock
-												Text="ID: GM-2025-001234"
+												Text="{CompiledBinding TransactionID}"
 												Classes="h5"/>
 										</StackPanel>
 									</StackPanel>
@@ -473,7 +473,7 @@
 									</StackPanel>
 								</Grid>
 								<Separator Background="{StaticResource ForegroundColor}"/>
-								<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPaymentPossible}">
+								<Grid RowDefinitions="Auto" ColumnDefinitions="4* 2*" IsVisible="{CompiledBinding IsPaymentPossible}">
 									<!-- Left Column -->
 									<StackPanel Grid.Column="0" Spacing="0">
 										<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
@@ -504,18 +504,21 @@
 									</StackPanel>
 
 									<!-- Right Column -->
-									<StackPanel Grid.Column="1">
-										<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
+									<StackPanel Grid.Column="1" HorizontalAlignment="Right">
+										<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
 											<StackPanel Spacing="5" Margin="0,4,0,0">
 												<TextBlock
 													Text="{CompiledBinding TransactionID}"
-													TextWrapping="NoWrap"
+													TextAlignment="Right"
+													HorizontalAlignment="Left"
 													FontWeight="SemiBold"
 													Classes="h5"/>
 												<TextBlock
 													Text="{CompiledBinding CurrentDate}"
+													TextAlignment="Right"
 													Classes="h5"/>
 												<TextBlock
+													TextAlignment="Right"
 													Text="{CompiledBinding CurrentTime}"
 													Classes="h5"/>
 											</StackPanel>

@@ -157,7 +157,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
     }
 
-    [Required(ErrorMessage = "Select your MI")]
     public string SelectedMiddleInitialItem
     {
         get => _selectedMiddleInitialItem;
@@ -481,7 +480,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         get
         {
             bool hasValidInputs = !string.IsNullOrWhiteSpace(WalkInFirstName)
-                && !string.IsNullOrWhiteSpace(SelectedMiddleInitialItem)
                 && !string.IsNullOrWhiteSpace(WalkInLastName)
                 && !string.IsNullOrWhiteSpace(WalkInContactNumber)
                 && ContactNumberRegex().IsMatch(WalkInContactNumber)
