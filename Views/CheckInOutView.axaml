@@ -10,7 +10,6 @@
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
     xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
     mc:Ignorable="d"
-    xmlns:system="clr-namespace:System;assembly=System.Runtime"
     d:DesignWidth="1920" d:DesignHeight="1080">
 
     <UserControl.Resources>
@@ -156,32 +155,9 @@
                                                 <DataTemplate x:DataType="viewModels:WalkInPerson">
                                                     <StackPanel 
                                                         Orientation="Horizontal" 
-                                                        Spacing="8" Width="120"
+                                                        Spacing="8" 
+                                                        Width="40"
                                                         Height="25">
-                                                        <Button
-                                                            Height="20"
-                                                            Classes="Icon"
-                                                            ToolTip.Tip="Delete from table"
-                                                            VerticalAlignment="Center"
-                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).ShowWalkInItemDeletionDialogCommand, FallbackValue={x:Null}}"
-                                                            CommandParameter="{CompiledBinding}">
-                                                            <shadui:ButtonAssist.Icon>
-                                                                <Svg
-                                                                    Path="avares://AHON_TRACK/Assets/CheckInOutView/delete-icon.svg"
-                                                                    Width="18" />
-                                                            </shadui:ButtonAssist.Icon>
-                                                        </Button>
-                                                        <Button
-                                                            Height="20"
-                                                            Classes="Icon"
-                                                            ToolTip.Tip="Edit"
-                                                            VerticalAlignment="Center">
-                                                            <shadui:ButtonAssist.Icon>
-                                                                <Svg
-                                                                    Path="avares://AHON_TRACK/Assets/CheckInOutView/edit-icon.svg"
-                                                                    Width="18" />
-                                                            </shadui:ButtonAssist.Icon>
-                                                        </Button>
                                                         <Menu>
                                                             <MenuItem
                                                                 ToolTip.Tip="Menu"
@@ -315,7 +291,7 @@
                                             Binding="{CompiledBinding LastName}" />
                                         <DataGridTextColumn
                                             Width="Auto"
-                                            MinWidth="120"
+                                            MinWidth="150"
                                             Header="Contact No."
                                             x:DataType="viewModels:MemberPerson"
                                             Binding="{CompiledBinding ContactNumber}" />
@@ -367,32 +343,8 @@
                                                     <StackPanel 
                                                         Orientation="Horizontal" 
                                                         Spacing="8" 
-                                                        Width="120"
+                                                        Width="40"
                                                         Height="25">
-                                                        <Button
-                                                            Height="20"
-                                                            Classes="Icon"
-                                                            ToolTip.Tip="Delete from table"
-                                                            VerticalAlignment="Center"
-                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).ShowMemberItemDeletionDialogCommand, FallbackValue={x:Null}}"
-                                                            CommandParameter="{CompiledBinding}">
-                                                            <shadui:ButtonAssist.Icon>
-                                                                <Svg
-                                                                    Path="avares://AHON_TRACK/Assets/CheckInOutView/delete-icon.svg"
-                                                                    Width="18" />
-                                                            </shadui:ButtonAssist.Icon>
-                                                        </Button>
-                                                        <Button
-                                                            Height="20"
-                                                            Classes="Icon"
-                                                            ToolTip.Tip="Edit"
-                                                            VerticalAlignment="Center">
-                                                            <shadui:ButtonAssist.Icon>
-                                                                <Svg
-                                                                    Path="avares://AHON_TRACK/Assets/CheckInOutView/edit-icon.svg"
-                                                                    Width="18" />
-                                                            </shadui:ButtonAssist.Icon>
-                                                        </Button>
                                                         <Menu>
                                                             <MenuItem
                                                                 ToolTip.Tip="Menu"
@@ -416,10 +368,6 @@
                                                                 <MenuItem 
                                                                     Header="Stamp Check-out" 
                                                                     Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).StampMemberInCheckOutCommand, FallbackValue={x:Null}}"
-                                                                    CommandParameter="{CompiledBinding}" />
-                                                                <MenuItem
-                                                                    Header="View Profile"
-                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).OpenViewMemberProfileCommand, FallbackValue={x:Null}}"
                                                                     CommandParameter="{CompiledBinding}" />
                                                             </MenuItem>
                                                         </Menu>
