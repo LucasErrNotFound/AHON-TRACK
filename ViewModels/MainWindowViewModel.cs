@@ -136,7 +136,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string? _username = CurrentUserModel.Username;
     
     [ObservableProperty]
-    private bool _isAdminUser;
+    private bool _isAdmin;
+    
+    [ObservableProperty]
+    private bool _isStaff;
+    
+    [ObservableProperty]
+    private bool _isCoach;
 
     [ObservableProperty]
     private bool _canManageEmployees;
@@ -264,7 +270,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenSettingsDialog()
     {
-        _settingsDialogCardViewModel.Initialize();
+        _ = _settingsDialogCardViewModel.Initialize();
         DialogManager.CreateDialog(_settingsDialogCardViewModel)
             .WithSuccessCallback(_ =>
                 ToastManager.CreateToast("Settings Saved!")
@@ -295,24 +301,27 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         string userRole = CurrentUserModel.Role ?? string.Empty;
     
         // Determine if user is Admin
-        IsAdminUser = userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+        IsAdmin = userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
                       userRole.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase);
     
-        bool isStaff = userRole.Equals("Staff", StringComparison.OrdinalIgnoreCase) ||
+        IsStaff = userRole.Equals("Staff", StringComparison.OrdinalIgnoreCase) ||
                        userRole.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase);
     
+        IsCoach = userRole.Equals("Coach", StringComparison.OrdinalIgnoreCase) ||
+                       userRole.Equals("Gym Coach", StringComparison.OrdinalIgnoreCase);
+    
         // Admin-only features
-        CanManageEmployees = IsAdminUser;
-        CanManageInventory = IsAdminUser;
-        CanViewFinancialReports = IsAdminUser;
-        CanViewAuditLogs = IsAdminUser;
+        CanManageEmployees = IsAdmin;
+        CanManageInventory = IsAdmin;
+        CanViewFinancialReports = IsAdmin;
+        CanViewAuditLogs = IsAdmin;
     
         // Admin + Staff features
-        CanAccessCheckInOut = IsAdminUser || isStaff;
-        CanAccessMemberManagement = IsAdminUser || isStaff;
-        CanAccessBilling = IsAdminUser || isStaff;
-        CanAccessProductPurchase = IsAdminUser || isStaff;
-        CanViewAnalytics = IsAdminUser || isStaff;
+        CanAccessCheckInOut = IsAdmin || IsStaff || IsCoach;
+        CanAccessMemberManagement = IsAdmin || IsStaff || IsCoach;
+        CanAccessBilling = IsAdmin || IsStaff || IsCoach;
+        CanAccessProductPurchase = IsAdmin || IsStaff || IsCoach;
+        CanViewAnalytics = IsAdmin || IsStaff || IsCoach;
     
         // All roles
         CanAccessTraining = true;
