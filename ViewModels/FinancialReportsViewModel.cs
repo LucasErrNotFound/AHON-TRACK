@@ -265,17 +265,17 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             var seriesList = new List<StackedColumnSeries<double>>();
             var colorPalette = new[]
             {
-            SKColors.DodgerBlue,
-            SKColors.Red,
-            SKColors.LimeGreen,
-            SKColors.Purple,
-            SKColors.Orange,
-            SKColors.OrangeRed,
-            SKColors.Teal,
-            SKColors.Goldenrod,
-            SKColors.DeepPink,
-            SKColors.MediumSeaGreen
-        };
+                SKColors.DodgerBlue,
+                SKColors.Red,
+                SKColors.LimeGreen,
+                SKColors.Purple,
+                SKColors.Orange,
+                SKColors.OrangeRed,
+                SKColors.DarkGreen,
+                SKColors.DarkGoldenrod,
+                SKColors.DeepPink,
+                SKColors.MediumSeaGreen
+            };
 
             int colorIndex = 0;
             foreach (var packageType in packageTypes)
