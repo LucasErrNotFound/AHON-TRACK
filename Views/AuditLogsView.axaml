@@ -196,7 +196,7 @@
                                             Header="Action"
                                             IsReadOnly="True"
                                             FontSize="14"
-                                            Width="263"/>
+                                            Width="237"/>
 									</DataGrid.Columns>
 								</DataGrid>
 							</StackPanel>
@@ -238,7 +238,7 @@
                                     Text="Audit log numbers"
                                     FontSize="25"
                                     HorizontalAlignment="Center"
-                                    Margin="0,-60,0,0" />
+                                    Margin="0,-25,0,0" />
 							</StackPanel>
 						</shadui:Card>
 					</Grid>
