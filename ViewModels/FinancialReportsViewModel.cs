@@ -189,13 +189,13 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             var total = stackedSeries.Values.Sum();
             var color = stackedSeries.Name switch
             {
-                "Boxing" => "#1E88E5",
-                "Muay Thai" => "#E53935",
-                "Crossfit" => "#43A047",
+                "Boxing" => "#FF0000",
+                "Muay Thai" => "#FFC0CB",
+                "Crossfit" => "#1E90FF",
                 "Coaching" => "#8E24AA",
                 "Walk-Ins" => "#FFA500",
-                "Membership" => "#FF4500",
-                _ => "#1976D2"
+                "Monthly Membership" => "#1D2021",
+                _ => "#585D61"
             };
 
             categoryTotals.Add((stackedSeries.Name, total, color)!);
@@ -344,12 +344,12 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         // Match color based on package name (case-insensitive partial matching)
         var lowerName = packageType.ToLower();
 
-        if (lowerName.Contains("boxing")) return SKColors.DodgerBlue;
-        if (lowerName.Contains("muay") || lowerName.Contains("thai")) return SKColors.Red;
-        if (lowerName.Contains("crossfit") || lowerName.Contains("cross")) return SKColors.LimeGreen;
+        if (lowerName.Contains("boxing")) return SKColors.Red;
+        if (lowerName.Contains("muay") || lowerName.Contains("thai")) return SKColors.Pink;
+        if (lowerName.Contains("crossfit") || lowerName.Contains("cross")) return SKColors.DodgerBlue;
         if (lowerName.Contains("coaching") || lowerName.Contains("coach")) return SKColors.Purple;
         if (lowerName.Contains("walk")) return SKColors.Orange;
-        if (lowerName.Contains("member")) return SKColors.OrangeRed;
+        if (lowerName.Contains("member")) return SKColors.Black;
 
         return defaultColor;
     }
