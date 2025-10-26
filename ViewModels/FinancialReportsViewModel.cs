@@ -95,7 +95,6 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         eventService.SalesUpdated += OnFinancialDataChanged;
         eventService.ChartDataUpdated += OnFinancialDataChanged;
         eventService.ProductPurchased += OnFinancialDataChanged;
-        eventService.RecentLogsUpdated += OnFinancialDataChanged;
     }
 
     private async void OnFinancialDataChanged(object? sender, EventArgs e)
