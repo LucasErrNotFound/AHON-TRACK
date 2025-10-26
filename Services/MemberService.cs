@@ -41,7 +41,8 @@ namespace AHON_TRACK.Services
 
         private bool CanUpdate() =>
             CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-            CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+            CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
+            CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
 
         private bool CanDelete() =>
             CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
