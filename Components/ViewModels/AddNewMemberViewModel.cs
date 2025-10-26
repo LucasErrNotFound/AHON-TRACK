@@ -858,17 +858,27 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                     }
                 }
 
-                // If membership already expired or no valid date, extend from today
-                if (currentValidUntil == DateTime.MinValue || currentValidUntil < DateTime.Now)
+                // ✅ CRITICAL FIX: Always add months to existing expiry (even if expired)
+                // This ensures the sale records the EXACT months the user is purchasing
+                if (currentValidUntil == DateTime.MinValue)
                 {
+                    // Only use today if we have NO expiry date at all (shouldn't happen in renew/upgrade)
                     validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
-                    Debug.WriteLine($"[Payment] {ViewContext}: Starting from today (expired/no date) to {validUntilDate:MMM dd, yyyy}");
+                    Debug.WriteLine($"[Payment] {ViewContext}: No existing date, starting from today → {validUntilDate:MMM dd, yyyy}");
                 }
                 else
                 {
-                    // If still valid, extend from current expiry date
+                    // ✅ Always extend from existing expiry, even if it's in the past
+                    // Example: Expired on Feb 1, user buys 3 months → Feb 1 + 3 = May 1
+                    // CalculateMonthsAdded(Feb 1, May 1) = 3 months ✓
                     validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
-                    Debug.WriteLine($"[Payment] {ViewContext}: Extending from {currentValidUntil:MMM dd, yyyy} to {validUntilDate:MMM dd, yyyy}");
+
+                    string status = currentValidUntil < DateTime.Now ? "expired" : "active";
+                    int monthsAdded = MembershipDuration.Value;
+                    Debug.WriteLine($"[Payment] {ViewContext}: Member {status}");
+                    Debug.WriteLine($"  Current expiry: {currentValidUntil:MMM dd, yyyy}");
+                    Debug.WriteLine($"  Adding: {monthsAdded} months");
+                    Debug.WriteLine($"  New expiry: {validUntilDate:MMM dd, yyyy}");
                 }
             }
             else

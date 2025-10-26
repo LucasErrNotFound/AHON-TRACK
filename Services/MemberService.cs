@@ -199,20 +199,62 @@ namespace AHON_TRACK.Services
         }
 
         private async Task RecordPackageSaleAsync(
-            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member, int memberId)
+    SqlConnection conn, SqlTransaction transaction,
+    ManageMemberModel member, int memberId, ManageMemberModel? originalMember = null)
         {
-            var (packagePrice, packageName, duration) = await GetPackageDetailsAsync(conn, transaction, member.PackageID!.Value);
+            var (packagePrice, packageName, duration) = await GetPackageDetailsAsync(
+                conn, transaction, member.PackageID!.Value);
 
             if (packagePrice <= 0) return;
 
-            int quantity = CalculateQuantityFromValidUntil(member.ValidUntil);
+            int quantity;
+
+            if (originalMember?.ValidUntil != null)
+            {
+                // ✅ RENEWAL/UPGRADE: Calculate months ADDED (difference between old and new ValidUntil)
+                quantity = CalculateMonthsAdded(originalMember.ValidUntil, member.ValidUntil);
+
+                Debug.WriteLine($"[RecordPackageSaleAsync] RENEWAL/UPGRADE");
+                Debug.WriteLine($"  Old ValidUntil: {originalMember.ValidUntil}");
+                Debug.WriteLine($"  New ValidUntil: {member.ValidUntil}");
+                Debug.WriteLine($"  Months ADDED: {quantity}");
+            }
+            else
+            {
+                // ✅ NEW MEMBER: Calculate from today to ValidUntil
+                quantity = CalculateQuantityFromValidUntil(member.ValidUntil);
+
+                Debug.WriteLine($"[RecordPackageSaleAsync] NEW MEMBER");
+                Debug.WriteLine($"  ValidUntil: {member.ValidUntil}");
+                Debug.WriteLine($"  Months from today: {quantity}");
+            }
+
             decimal totalAmount = packagePrice * quantity;
 
             await InsertSaleRecordAsync(conn, transaction, member.PackageID!.Value, memberId, quantity, totalAmount);
             await UpdateDailySalesAsync(conn, transaction, totalAmount);
 
-            Debug.WriteLine($"[AddMemberAsync] Sale recorded: {packageName} x{quantity} = ₱{totalAmount:N2}");
+            Debug.WriteLine($"[RecordPackageSaleAsync] Sale recorded: {packageName} x{quantity} months = ₱{totalAmount:N2}");
         }
+
+        private int CalculateMonthsAdded(string? oldValidUntil, string? newValidUntil)
+        {
+            if (string.IsNullOrEmpty(oldValidUntil) || string.IsNullOrEmpty(newValidUntil))
+                return 1;
+
+            if (!DateTime.TryParse(oldValidUntil, out DateTime oldDate) ||
+                !DateTime.TryParse(newValidUntil, out DateTime newDate))
+                return 1;
+
+            // ✅ Calculate ONLY the months being ADDED
+            // Example: Old = Feb 1, New = May 1 → 3 months added
+            int monthsAdded = ((newDate.Year - oldDate.Year) * 12) + (newDate.Month - oldDate.Month);
+
+            Debug.WriteLine($"[CalculateMonthsAdded] {oldDate:MMM dd, yyyy} → {newDate:MMM dd, yyyy} = {monthsAdded} months");
+
+            return Math.Max(1, monthsAdded);
+        }
+
 
         private async Task<(decimal Price, string Name, string Duration)> GetPackageDetailsAsync(
             SqlConnection conn, SqlTransaction transaction, int packageId)
@@ -577,7 +619,7 @@ namespace AHON_TRACK.Services
                         return (false, "Member not found.");
                     }
 
-                    // Get original member data to detect package renewal
+                    // ✅ Get original member data BEFORE updating
                     var originalMember = await GetOriginalMemberDataAsync(conn, member.MemberID, transaction);
                     byte[]? imageToSave = await GetImageToSaveAsync(conn, member, transaction);
 
@@ -608,23 +650,18 @@ namespace AHON_TRACK.Services
 
                     if (rows > 0)
                     {
-                        // Check if this is a gym membership package renewal/upgrade
+                        // ✅ Check if this is a gym membership package renewal/upgrade
                         bool isGymMembershipRenewal = await IsGymMembershipRenewalAsync(
                             conn, transaction, originalMember, member);
 
                         if (isGymMembershipRenewal && member.PackageID.HasValue && member.PackageID.Value > 0)
                         {
-                            // Record the package sale for gym membership
-                            await RecordPackageSaleAsync(conn, transaction, member, member.MemberID);
+                            // ✅ Record the package sale with ORIGINAL member data
+                            await RecordPackageSaleAsync(conn, transaction, member, member.MemberID, originalMember);
 
                             string actionType = originalMember?.PackageID == member.PackageID ? "RENEWAL" : "UPGRADE";
                             await LogActionAsync(conn, transaction, actionType,
                                 $"{actionType}: {member.FirstName} {member.LastName} - Package ID: {member.PackageID}", true);
-
-                            // Trigger sales/billing events
-                            DashboardEventService.Instance.NotifySalesUpdated();
-                            DashboardEventService.Instance.NotifyProductPurchased();
-                            DashboardEventService.Instance.NotifyChartDataUpdated();
 
                             _toastManager?.CreateToast($"Package {actionType}")
                                 .WithContent($"Successfully {actionType.ToLower()}ed gym membership for {member.FirstName} {member.LastName}")
@@ -664,19 +701,20 @@ namespace AHON_TRACK.Services
             }
         }
 
-        private async Task<bool> MemberExistsAsync(SqlConnection conn, int memberId)
+        private async Task<bool> MemberExistsAsync(SqlConnection conn, int memberId, SqlTransaction? transaction = null)
         {
             using var cmd = new SqlCommand(
-                $"SELECT COUNT(*) FROM Members WHERE MemberID = @memberId AND {MEMBER_NOT_DELETED_FILTER}", conn);
+                $"SELECT COUNT(*) FROM Members WHERE MemberID = @memberId AND {MEMBER_NOT_DELETED_FILTER}",
+                conn, transaction);
             cmd.Parameters.AddWithValue("@memberId", memberId);
             return (int)await cmd.ExecuteScalarAsync() > 0;
         }
 
-        private async Task<byte[]?> GetImageToSaveAsync(SqlConnection conn, ManageMemberModel member)
+        private async Task<byte[]?> GetImageToSaveAsync(SqlConnection conn, ManageMemberModel member, SqlTransaction? transaction = null)
         {
             byte[]? existingImage = null;
             using var getImageCmd = new SqlCommand(
-                "SELECT ProfilePicture FROM Members WHERE MemberID = @memberId", conn);
+                "SELECT ProfilePicture FROM Members WHERE MemberID = @memberId", conn, transaction);
             getImageCmd.Parameters.AddWithValue("@memberId", member.MemberID);
 
             var imageResult = await getImageCmd.ExecuteScalarAsync();
@@ -1121,118 +1159,6 @@ namespace AHON_TRACK.Services
             }
         }
 
-        private async Task<ManageMemberModel?> GetOriginalMemberDataAsync(
-    SqlConnection conn, int memberId, SqlTransaction transaction)
-        {
-            const string query = @"
-        SELECT PackageID, ValidUntil, PaymentMethod
-        FROM Members 
-        WHERE MemberID = @MemberId";
-
-            using var cmd = new SqlCommand(query, conn, transaction);
-            cmd.Parameters.AddWithValue("@MemberId", memberId);
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                return new ManageMemberModel
-                {
-                    MemberID = memberId,
-                    PackageID = reader.IsDBNull(0) ? null : reader.GetInt32(0),
-                    ValidUntil = reader.IsDBNull(1) ? null : reader.GetDateTime(1).ToString("MMM dd, yyyy"),
-                    PaymentMethod = reader.IsDBNull(2) ? null : reader.GetString(2)
-                };
-            }
-
-            return null;
-        }
-
-        private async Task<bool> IsGymMembershipRenewalAsync(
-    SqlConnection conn, SqlTransaction transaction,
-    ManageMemberModel? originalMember, ManageMemberModel updatedMember)
-        {
-            if (originalMember == null || !updatedMember.PackageID.HasValue)
-                return false;
-
-            // First, check if the new package is a GYM MEMBERSHIP package (not session-based)
-            bool isGymMembershipPackage = await IsGymMembershipPackageAsync(
-                conn, transaction, updatedMember.PackageID.Value);
-
-            if (!isGymMembershipPackage)
-                return false;
-
-            // Check if package changed (upgrade/downgrade to different membership)
-            bool packageChanged = originalMember.PackageID != updatedMember.PackageID;
-
-            // Check if validity was extended (renewal of same membership)
-            bool validityExtended = originalMember.PackageID == updatedMember.PackageID &&
-                                   !string.IsNullOrEmpty(updatedMember.ValidUntil) &&
-                                   !string.IsNullOrEmpty(originalMember.ValidUntil) &&
-                                   DateTime.TryParse(updatedMember.ValidUntil, out DateTime newDate) &&
-                                   DateTime.TryParse(originalMember.ValidUntil, out DateTime oldDate) &&
-                                   newDate > oldDate;
-
-            return packageChanged || validityExtended;
-        }
-
-        private async Task<bool> IsGymMembershipPackageAsync(SqlConnection conn, SqlTransaction transaction, int packageId)
-        {
-            const string query = @"
-        SELECT Duration 
-        FROM Packages 
-        WHERE PackageID = @PackageID 
-            AND IsDeleted = 0";
-
-            using var cmd = new SqlCommand(query, conn, transaction);
-            cmd.Parameters.AddWithValue("@PackageID", packageId);
-
-            var result = await cmd.ExecuteScalarAsync();
-            if (result == null || result == DBNull.Value)
-                return false;
-
-            string duration = result.ToString()?.Trim().ToLower() ?? "";
-
-            // Gym membership packages are NOT session-based or one-time only
-            // They have durations like "1 Month", "3 Months", "6 Months", "1 Year", etc.
-            bool isSessionBased = duration.Contains("session") ||
-                                 duration.Contains("one-time only") ||
-                                 duration.Contains("one time only");
-
-            return !isSessionBased;
-        }
-
-        private async Task<bool> MemberExistsAsync(SqlConnection conn, int memberId, SqlTransaction transaction)
-        {
-            using var cmd = new SqlCommand(
-                $"SELECT COUNT(*) FROM Members WHERE MemberID = @memberId AND {MEMBER_NOT_DELETED_FILTER}",
-                conn, transaction);
-            cmd.Parameters.AddWithValue("@memberId", memberId);
-            return (int)await cmd.ExecuteScalarAsync() > 0;
-        }
-
-        // Update GetImageToSaveAsync to accept transaction:
-        private async Task<byte[]?> GetImageToSaveAsync(SqlConnection conn, ManageMemberModel member, SqlTransaction transaction)
-        {
-            byte[]? existingImage = null;
-            using var getImageCmd = new SqlCommand(
-                "SELECT ProfilePicture FROM Members WHERE MemberID = @memberId", conn, transaction);
-            getImageCmd.Parameters.AddWithValue("@memberId", member.MemberID);
-
-            var imageResult = await getImageCmd.ExecuteScalarAsync();
-            if (imageResult != null && imageResult != DBNull.Value)
-            {
-                existingImage = (byte[])imageResult;
-            }
-
-            if (member.ProfilePicture != null && member.ProfilePicture.Length > 0)
-                return member.ProfilePicture;
-
-            if (member.AvatarBytes != null && member.AvatarBytes.Length > 0)
-                return member.AvatarBytes;
-
-            return existingImage;
-        }
-
         #endregion
 
         #region TOAST HELPERS
@@ -1308,6 +1234,90 @@ namespace AHON_TRACK.Services
             public int ExpiringCount { get; set; }
             public int TotalAlerts { get; set; }
             public bool HasAlerts => TotalAlerts > 0;
+        }
+
+        #endregion
+
+        #region HELPER METHODS FOR RENEWAL/UPGRADE
+
+        private async Task<ManageMemberModel?> GetOriginalMemberDataAsync(
+    SqlConnection conn, int memberId, SqlTransaction transaction)
+        {
+            const string query = @"
+        SELECT PackageID, ValidUntil, PaymentMethod
+        FROM Members 
+        WHERE MemberID = @MemberId";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@MemberId", memberId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return new ManageMemberModel
+                {
+                    MemberID = memberId,
+                    PackageID = reader.IsDBNull(0) ? null : reader.GetInt32(0),
+                    ValidUntil = reader.IsDBNull(1) ? null : reader.GetDateTime(1).ToString("MMM dd, yyyy"),
+                    PaymentMethod = reader.IsDBNull(2) ? null : reader.GetString(2)
+                };
+            }
+
+            return null;
+        }
+
+        private async Task<bool> IsGymMembershipRenewalAsync(
+            SqlConnection conn, SqlTransaction transaction,
+            ManageMemberModel? originalMember, ManageMemberModel updatedMember)
+        {
+            if (originalMember == null || !updatedMember.PackageID.HasValue)
+                return false;
+
+            // Check if the new package is a GYM MEMBERSHIP package (not session-based)
+            bool isGymMembershipPackage = await IsGymMembershipPackageAsync(
+                conn, transaction, updatedMember.PackageID.Value);
+
+            if (!isGymMembershipPackage)
+                return false;
+
+            // Check if package changed (upgrade/downgrade)
+            bool packageChanged = originalMember.PackageID != updatedMember.PackageID;
+
+            // Check if validity was extended (renewal)
+            bool validityExtended = originalMember.PackageID == updatedMember.PackageID &&
+                                   !string.IsNullOrEmpty(updatedMember.ValidUntil) &&
+                                   !string.IsNullOrEmpty(originalMember.ValidUntil) &&
+                                   DateTime.TryParse(updatedMember.ValidUntil, out DateTime newDate) &&
+                                   DateTime.TryParse(originalMember.ValidUntil, out DateTime oldDate) &&
+                                   newDate > oldDate;
+
+            return packageChanged || validityExtended;
+        }
+
+        private async Task<bool> IsGymMembershipPackageAsync(
+            SqlConnection conn, SqlTransaction transaction, int packageId)
+        {
+            const string query = @"
+        SELECT Duration 
+        FROM Packages 
+        WHERE PackageID = @PackageID 
+            AND IsDeleted = 0";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@PackageID", packageId);
+
+            var result = await cmd.ExecuteScalarAsync();
+            if (result == null || result == DBNull.Value)
+                return false;
+
+            string duration = result.ToString()?.Trim().ToLower() ?? "";
+
+            // Gym memberships are NOT session-based or one-time
+            bool isSessionBased = duration.Contains("session") ||
+                                 duration.Contains("one-time only") ||
+                                 duration.Contains("one time only");
+
+            return !isSessionBased;
         }
 
         #endregion
