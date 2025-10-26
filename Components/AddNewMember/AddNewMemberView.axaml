@@ -371,7 +371,7 @@
                                                 Text="{CompiledBinding MemberFullName}"
                                                 Classes="h4"/>
 											<TextBlock
-                                                Text="ID: GM-2025-001234"
+                                                Text="{CompiledBinding TransactionID}"
                                                 Classes="h5"/>
 										</StackPanel>
 									</StackPanel>
@@ -424,6 +424,7 @@
 											<Border
                                                 CornerRadius="5"
                                                 Padding="20,5,20,5"
+                                                HorizontalAlignment="Right"
                                                 Background="LightGray">
 												<TextBlock
                                                     Text="{CompiledBinding MembershipDurationQuantity}"
@@ -435,9 +436,11 @@
 											<StackPanel Spacing="5" Margin="0,20,0,0">
 												<TextBlock
                                                     Text="{CompiledBinding SubtotalDisplay}"
+                                                    TextAlignment="Right"
                                                     Classes="h5" />
 												<TextBlock
                                                     Text="-₱0"
+                                                    TextAlignment="Right"
                                                     Classes="h5SuccessColor" />
 											</StackPanel>
 										</StackPanel>
@@ -543,14 +546,17 @@
 											<StackPanel Spacing="5" Margin="0,4,0,0">
 												<TextBlock
                                                     Text="{CompiledBinding TransactionID}"
+                                                    TextAlignment="Right"
                                                     TextWrapping="NoWrap"
                                                     FontWeight="SemiBold"
                                                     Classes="h5"/>
 												<TextBlock
                                                     Text="{CompiledBinding CurrentDate}"
+                                                    TextAlignment="Right"
                                                     Classes="h5"/>
 												<TextBlock
                                                     Text="{CompiledBinding CurrentTime}"
+                                                    TextAlignment="Right"
                                                     Classes="h5"/>
 											</StackPanel>
 										</StackPanel>
@@ -586,9 +592,6 @@
 										<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15"
                                                     HorizontalAlignment="Right">
 											<StackPanel Spacing="5" Margin="0,4,0,0">
-												<TextBlock
-                                                    Text="{CompiledBinding MembershipDurationSummary}"
-                                                    Classes="h5" />
 												<TextBlock
                                                     Text="{CompiledBinding PackagePriceDisplay}"
                                                     Classes="h5" />
