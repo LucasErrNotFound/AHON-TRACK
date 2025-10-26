@@ -491,7 +491,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Email = supplier.Email,
                     PhoneNumber = supplier.PhoneNumber,
                     Products = supplier.Products,
-                    Status = supplier.Status
+                    Status = supplier.Status,
+                    DeliverySchedule = supplier.DeliverySchedule,
+                    ContractTerms = supplier.ContractTerms
                 }).ToList()
             };
 
@@ -501,7 +503,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
-                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
 
             _toastManager.CreateToast("Supplier list exported successfully")
                 .WithContent($"Supplier list has been saved to {pdfFile.Name}")

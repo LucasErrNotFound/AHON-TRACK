@@ -110,13 +110,15 @@ public class SupplierDocument : IDocument
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(40);
+                columns.ConstantColumn(30);
+                columns.RelativeColumn(55);
+                columns.ConstantColumn(75);
+                columns.RelativeColumn(70);
                 columns.RelativeColumn(45);
-                columns.ConstantColumn(100);
-                columns.RelativeColumn(90);
                 columns.RelativeColumn(50);
-                columns.RelativeColumn(50);
-                columns.RelativeColumn(30);
+                columns.RelativeColumn(40);
+                columns.RelativeColumn(40);
+                columns.RelativeColumn(40);
             });
 
             table.Header(header =>
@@ -127,6 +129,8 @@ public class SupplierDocument : IDocument
                 header.Cell().Element(CellStyle).AlignLeft().Text("Email").FontSize(10);
                 header.Cell().Element(CellStyle).AlignLeft().Text("Phone Number").FontSize(10);
                 header.Cell().Element(CellStyle).Text("Products").FontSize(10);
+                header.Cell().Element(CellStyle).Text("Delivery Schedule").FontSize(10);
+                header.Cell().Element(CellStyle).Text("Contract Terms").FontSize(10);
                 header.Cell().Element(CellStyle).AlignLeft().Text("Status").FontSize(10);
 
                 static IContainer CellStyle(IContainer container)
@@ -147,6 +151,8 @@ public class SupplierDocument : IDocument
                 table.Cell().Element(CellStyle).Text(item.Email).FontSize(9);
                 table.Cell().Element(CellStyle).Text(item.PhoneNumber).FontSize(9);
                 table.Cell().Element(CellStyle).Text(item.Products).FontSize(9);
+                table.Cell().Element(CellStyle).Text(item.DeliverySchedule).FontSize(9);
+                table.Cell().Element(CellStyle).Text(item.ContractTerms).FontSize(9);
                 table.Cell().Element(CellStyle).AlignLeft().Text(item.Status).FontSize(9);
                 
                 /* This might be the delivery schedule thingy
