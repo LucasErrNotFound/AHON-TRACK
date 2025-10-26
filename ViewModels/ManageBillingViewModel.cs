@@ -139,6 +139,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         eventService.SalesUpdated += OnBillingDataChanged;
         eventService.ProductPurchased += OnBillingDataChanged;
         eventService.ChartDataUpdated += OnBillingDataChanged;
+        eventService.MemberAdded += OnBillingDataChanged;
+        eventService.MemberUpdated += OnBillingDataChanged;
 
     }
 

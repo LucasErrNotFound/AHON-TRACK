@@ -71,7 +71,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
-    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
         SupplierDialogCardViewModel supplierDialogCardViewModel, SettingsService settingsService, ISupplierService supplierService)
     {
         _dialogManager = dialogManager;
@@ -103,7 +103,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         if (IsInitialized) return;
         await LoadSettingsAsync();
-        
+
         if (_supplierService != null)
         {
             await LoadSupplierDataFromDatabaseAsync();
@@ -122,12 +122,10 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         try
         {
-            // Call the service to get suppliers from database
             var result = await _supplierService.GetAllSuppliersAsync();
 
             if (result.Success && result.Suppliers != null)
             {
-                // Convert SupplierManagementModel to Supplier (UI model)
                 var suppliers = result.Suppliers.Select(s => new Supplier
                 {
                     ID = s.SupplierID,
@@ -137,6 +135,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     PhoneNumber = s.PhoneNumber,
                     Products = s.Products,
                     Status = s.Status,
+                    DeliverySchedule = s.DeliverySchedule,
+                    ContractTerms = s.ContractTerms,
                     IsSelected = false
                 }).ToList();
 
@@ -159,7 +159,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             }
             else
             {
-                // Handle failure - show error or load sample data
                 _toastManager.CreateToast("Data Load Failed")
                     .WithContent(result.Message)
                     .DismissOnClick()
@@ -263,7 +262,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
-                // Get the supplier data from dialog
                 var newSupplier = new SupplierManagementModel
                 {
                     SupplierName = _supplierDialogCardViewModel.SupplierName,
@@ -273,15 +271,15 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Products = _supplierDialogCardViewModel.Products,
                     Status = _supplierDialogCardViewModel.Status ?? "Active",
                     DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
-                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
+                    DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
+                    ContractTerms = _supplierDialogCardViewModel.ContractTerms,
+                    ContractPattern = _supplierDialogCardViewModel.ContractPattern
                 };
 
-                // Call service to add to database
                 var result = await _supplierService.AddSupplierAsync(newSupplier);
 
                 if (result.Success)
                 {
-                    // Reload data from database to refresh UI
                     await LoadSupplierDataFromDatabaseAsync();
 
                     _toastManager.CreateToast("Supplier Added Successfully")
@@ -289,7 +287,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                         .DismissOnClick()
                         .ShowSuccess();
                 }
-                // Error handling is done inside the service with toast notifications
             })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new supplier contact cancelled")
@@ -310,7 +307,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
-                // Prepare updated supplier data
                 var updatedSupplier = new SupplierManagementModel
                 {
                     SupplierID = supplier.ID ?? 0,
@@ -321,15 +317,15 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Products = _supplierDialogCardViewModel.Products,
                     Status = _supplierDialogCardViewModel.Status ?? "Active",
                     DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
-                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
+                    DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
+                    ContractTerms = _supplierDialogCardViewModel.ContractTerms,
+                    ContractPattern = _supplierDialogCardViewModel.ContractPattern
                 };
 
-                // Call service to update in database
                 var result = await _supplierService.UpdateSupplierAsync(updatedSupplier);
 
                 if (result.Success)
                 {
-                    // Reload data to refresh UI
                     await LoadSupplierDataFromDatabaseAsync();
 
                     _toastManager.CreateToast("Supplier Updated")
@@ -434,7 +430,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             IsSearchingSupplier = false;
         }
     }
-    
+
     [RelayCommand]
     private async Task ExportSupplierList()
     {
@@ -454,7 +450,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 ? desktop.MainWindow
                 : null;
             if (toplevel == null) return;
-        
+
             IStorageFolder? startLocation = null;
             if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
             {
@@ -467,7 +463,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     // If path is invalid, startLocation will remain null
                 }
             }
-        
+
             var fileName = $"Supplier_List_{DateTime.Today:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -480,14 +476,14 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
             if (pdfFile == null) return;
 
-            var supplierModel = new SupplierDocumentModel 
+            var supplierModel = new SupplierDocumentModel
             {
                 GeneratedDate = DateTime.Today,
                 GymName = "AHON Victory Fitness Gym",
                 GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
                 GymPhone = "+63 123 456 7890",
                 GymEmail = "info@ahonfitness.com",
-                Items = SupplierItems.Select(supplier => new SupplierItem 
+                Items = SupplierItems.Select(supplier => new SupplierItem
                 {
                     ID = supplier.ID ?? 0,
                     Name = supplier.Name,
@@ -500,13 +496,13 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             };
 
             var document = new SupplierDocument(supplierModel);
-        
+
             await using var stream = await pdfFile.OpenWriteAsync();
-            
+
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
-            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
-        
+                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+
             _toastManager.CreateToast("Supplier list exported successfully")
                 .WithContent($"Supplier list has been saved to {pdfFile.Name}")
                 .DismissOnClick()
@@ -520,9 +516,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 .ShowError();
         }
     }
-    
+
     private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
-    
+
     private void ApplySupplierFilter()
     {
         if (OriginalSupplierData.Count == 0) return;
@@ -664,10 +660,10 @@ public partial class Supplier : ObservableObject
 
     [ObservableProperty]
     private string? _products;
-    
+
     [ObservableProperty]
     private string? _deliverySchedule;
-    
+
     [ObservableProperty]
     private string? _contractTerms;
 

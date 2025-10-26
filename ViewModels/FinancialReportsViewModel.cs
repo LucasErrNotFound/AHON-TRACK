@@ -95,6 +95,7 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         eventService.SalesUpdated += OnFinancialDataChanged;
         eventService.ChartDataUpdated += OnFinancialDataChanged;
         eventService.ProductPurchased += OnFinancialDataChanged;
+        eventService.RecentLogsUpdated += OnFinancialDataChanged;
     }
 
     private async void OnFinancialDataChanged(object? sender, EventArgs e)
@@ -102,6 +103,8 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         await LoadFinancialDataAsync();
         await UpdateRevenueChartAsync();
         await LoadFinancialSummaryAsync();
+        await UpdateRevenueChartAsync();
+        UpdateFinancialBreakdownChart();
     }
 
     private async Task LoadFinancialSummaryAsync()

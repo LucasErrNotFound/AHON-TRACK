@@ -10,7 +10,9 @@ public class SupplierManagementModel
     public string? Products { get; set; }
     public string? Status { get; set; }
     public string? DeliverySchedule { get; set; }
+    public string? DeliveryPattern { get; set; }
     public string? ContractTerms { get; set; }
+    public string? ContractPattern { get; set; }
     public bool IsSelected { get; set; }
-    private int AddedByEmployeeID { get; set; }
+    public int AddedByEmployeeID { get; set; }
 }

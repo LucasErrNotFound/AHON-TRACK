@@ -564,50 +564,91 @@ namespace AHON_TRACK.Services
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
+                using var transaction = conn.BeginTransaction();
 
-                if (!await MemberExistsAsync(conn, member.MemberID))
+                try
                 {
-                    _toastManager?.CreateToast("Member Not Found")
-                        .WithContent("The member you're trying to update doesn't exist.")
-                        .DismissOnClick()
-                        .ShowWarning();
-                    return (false, "Member not found.");
+                    if (!await MemberExistsAsync(conn, member.MemberID, transaction))
+                    {
+                        _toastManager?.CreateToast("Member Not Found")
+                            .WithContent("The member you're trying to update doesn't exist.")
+                            .DismissOnClick()
+                            .ShowWarning();
+                        return (false, "Member not found.");
+                    }
+
+                    // Get original member data to detect package renewal
+                    var originalMember = await GetOriginalMemberDataAsync(conn, member.MemberID, transaction);
+                    byte[]? imageToSave = await GetImageToSaveAsync(conn, member, transaction);
+
+                    const string query = @"
+                UPDATE Members 
+                SET Firstname = @Firstname, 
+                    MiddleInitial = @MiddleInitial, 
+                    Lastname = @Lastname, 
+                    Gender = @Gender,
+                    ContactNumber = @ContactNumber, 
+                    Age = @Age,
+                    DateOfBirth = @DateOfBirth,
+                    ValidUntil = @ValidUntil,
+                    PackageID = @PackageID,
+                    Status = @Status,
+                    PaymentMethod = @PaymentMethod,
+                    ProfilePicture = @ProfilePicture
+                WHERE MemberID = @MemberID";
+
+                    using var cmd = new SqlCommand(query, conn, transaction);
+                    member.ProfilePicture = imageToSave;
+
+                    AddMemberParameters(cmd, member);
+                    cmd.Parameters.AddWithValue("@MemberID", member.MemberID);
+                    cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
+
+                    int rows = await cmd.ExecuteNonQueryAsync();
+
+                    if (rows > 0)
+                    {
+                        // Check if this is a gym membership package renewal/upgrade
+                        bool isGymMembershipRenewal = await IsGymMembershipRenewalAsync(
+                            conn, transaction, originalMember, member);
+
+                        if (isGymMembershipRenewal && member.PackageID.HasValue && member.PackageID.Value > 0)
+                        {
+                            // Record the package sale for gym membership
+                            await RecordPackageSaleAsync(conn, transaction, member, member.MemberID);
+
+                            string actionType = originalMember?.PackageID == member.PackageID ? "RENEWAL" : "UPGRADE";
+                            await LogActionAsync(conn, transaction, actionType,
+                                $"{actionType}: {member.FirstName} {member.LastName} - Package ID: {member.PackageID}", true);
+
+                            // Trigger sales/billing events
+                            DashboardEventService.Instance.NotifySalesUpdated();
+                            DashboardEventService.Instance.NotifyProductPurchased();
+                            DashboardEventService.Instance.NotifyChartDataUpdated();
+
+                            _toastManager?.CreateToast($"Package {actionType}")
+                                .WithContent($"Successfully {actionType.ToLower()}ed gym membership for {member.FirstName} {member.LastName}")
+                                .DismissOnClick()
+                                .ShowSuccess();
+                        }
+                        else
+                        {
+                            await LogActionAsync(conn, transaction, "UPDATE",
+                                $"Updated member: {member.FirstName} {member.LastName}", true);
+                        }
+
+                        transaction.Commit();
+                        DashboardEventService.Instance.NotifyMemberUpdated();
+                        return (true, "Member updated successfully.");
+                    }
+
+                    return (false, "Failed to update member.");
                 }
-
-                byte[]? imageToSave = await GetImageToSaveAsync(conn, member);
-
-                const string query = @"
-                    UPDATE Members 
-                    SET Firstname = @Firstname, 
-                        MiddleInitial = @MiddleInitial, 
-                        Lastname = @Lastname, 
-                        Gender = @Gender,
-                        ContactNumber = @ContactNumber, 
-                        Age = @Age,
-                        DateOfBirth = @DateOfBirth,
-                        ValidUntil = @ValidUntil,
-                        PackageID = @PackageID,
-                        Status = @Status,
-                        PaymentMethod = @PaymentMethod,
-                        ProfilePicture = @ProfilePicture
-                    WHERE MemberID = @MemberID";
-
-                using var cmd = new SqlCommand(query, conn);
-                member.ProfilePicture = imageToSave;
-
-                AddMemberParameters(cmd, member);
-                cmd.Parameters.AddWithValue("@MemberID", member.MemberID);
-                cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
-
-                int rows = await cmd.ExecuteNonQueryAsync();
-                if (rows > 0)
+                catch
                 {
-                    await LogActionAsync(conn, "UPDATE", $"Updated member: {member.FirstName} {member.LastName}", true);
-                    DashboardEventService.Instance.NotifyMemberUpdated();
-                    return (true, "Member updated successfully.");
+                    transaction.Rollback();
+                    throw;
                 }
-
-                return (false, "Failed to update member.");
             }
             catch (SqlException ex)
             {
@@ -1078,6 +1119,118 @@ namespace AHON_TRACK.Services
                 Debug.WriteLine($"[GetMemberStatisticsAsync] {ex.Message}");
                 return (false, 0, 0, 0);
             }
+        }
+
+        private async Task<ManageMemberModel?> GetOriginalMemberDataAsync(
+    SqlConnection conn, int memberId, SqlTransaction transaction)
+        {
+            const string query = @"
+        SELECT PackageID, ValidUntil, PaymentMethod
+        FROM Members 
+        WHERE MemberID = @MemberId";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@MemberId", memberId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return new ManageMemberModel
+                {
+                    MemberID = memberId,
+                    PackageID = reader.IsDBNull(0) ? null : reader.GetInt32(0),
+                    ValidUntil = reader.IsDBNull(1) ? null : reader.GetDateTime(1).ToString("MMM dd, yyyy"),
+                    PaymentMethod = reader.IsDBNull(2) ? null : reader.GetString(2)
+                };
+            }
+
+            return null;
+        }
+
+        private async Task<bool> IsGymMembershipRenewalAsync(
+    SqlConnection conn, SqlTransaction transaction,
+    ManageMemberModel? originalMember, ManageMemberModel updatedMember)
+        {
+            if (originalMember == null || !updatedMember.PackageID.HasValue)
+                return false;
+
+            // First, check if the new package is a GYM MEMBERSHIP package (not session-based)
+            bool isGymMembershipPackage = await IsGymMembershipPackageAsync(
+                conn, transaction, updatedMember.PackageID.Value);
+
+            if (!isGymMembershipPackage)
+                return false;
+
+            // Check if package changed (upgrade/downgrade to different membership)
+            bool packageChanged = originalMember.PackageID != updatedMember.PackageID;
+
+            // Check if validity was extended (renewal of same membership)
+            bool validityExtended = originalMember.PackageID == updatedMember.PackageID &&
+                                   !string.IsNullOrEmpty(updatedMember.ValidUntil) &&
+                                   !string.IsNullOrEmpty(originalMember.ValidUntil) &&
+                                   DateTime.TryParse(updatedMember.ValidUntil, out DateTime newDate) &&
+                                   DateTime.TryParse(originalMember.ValidUntil, out DateTime oldDate) &&
+                                   newDate > oldDate;
+
+            return packageChanged || validityExtended;
+        }
+
+        private async Task<bool> IsGymMembershipPackageAsync(SqlConnection conn, SqlTransaction transaction, int packageId)
+        {
+            const string query = @"
+        SELECT Duration 
+        FROM Packages 
+        WHERE PackageID = @PackageID 
+            AND IsDeleted = 0";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@PackageID", packageId);
+
+            var result = await cmd.ExecuteScalarAsync();
+            if (result == null || result == DBNull.Value)
+                return false;
+
+            string duration = result.ToString()?.Trim().ToLower() ?? "";
+
+            // Gym membership packages are NOT session-based or one-time only
+            // They have durations like "1 Month", "3 Months", "6 Months", "1 Year", etc.
+            bool isSessionBased = duration.Contains("session") ||
+                                 duration.Contains("one-time only") ||
+                                 duration.Contains("one time only");
+
+            return !isSessionBased;
+        }
+
+        private async Task<bool> MemberExistsAsync(SqlConnection conn, int memberId, SqlTransaction transaction)
+        {
+            using var cmd = new SqlCommand(
+                $"SELECT COUNT(*) FROM Members WHERE MemberID = @memberId AND {MEMBER_NOT_DELETED_FILTER}",
+                conn, transaction);
+            cmd.Parameters.AddWithValue("@memberId", memberId);
+            return (int)await cmd.ExecuteScalarAsync() > 0;
+        }
+
+        // Update GetImageToSaveAsync to accept transaction:
+        private async Task<byte[]?> GetImageToSaveAsync(SqlConnection conn, ManageMemberModel member, SqlTransaction transaction)
+        {
+            byte[]? existingImage = null;
+            using var getImageCmd = new SqlCommand(
+                "SELECT ProfilePicture FROM Members WHERE MemberID = @memberId", conn, transaction);
+            getImageCmd.Parameters.AddWithValue("@memberId", member.MemberID);
+
+            var imageResult = await getImageCmd.ExecuteScalarAsync();
+            if (imageResult != null && imageResult != DBNull.Value)
+            {
+                existingImage = (byte[])imageResult;
+            }
+
+            if (member.ProfilePicture != null && member.ProfilePicture.Length > 0)
+                return member.ProfilePicture;
+
+            if (member.AvatarBytes != null && member.AvatarBytes.Length > 0)
+                return member.AvatarBytes;
+
+            return existingImage;
         }
 
         #endregion

@@ -23,7 +23,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
 
     [ObservableProperty]
     private string _dialogDescription = "Register new supplier with their contact to maintain reliable supply management";
-    
+
     [ObservableProperty]
     private ObservableCollection<string> _deliveryScheduleItems = [];
 
@@ -35,9 +35,11 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
 
     [ObservableProperty]
     private string? _selectedContractTerms;
-    
+
     [ObservableProperty]
     private bool _isEditMode = false;
+
+    public string? DeliveryPattern => SchedulePattern;
 
     private string? _supplierName = string.Empty;
     private string? _contactPerson = string.Empty;
@@ -57,7 +59,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        
+
         PopulateDeliveryScheduleItems();
         PopulateContractTermsItems();
     }
@@ -67,7 +69,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        
+
         PopulateDeliveryScheduleItems();
         PopulateContractTermsItems();
     }
@@ -96,7 +98,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         Status = supplier?.Status;
 
         if (string.IsNullOrWhiteSpace(supplier?.DeliverySchedule)) return;
-        
+
         if (supplier.DeliverySchedule.Contains("day", StringComparison.OrdinalIgnoreCase))
         {
             SchedulePattern = "Day";
@@ -108,7 +110,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         SelectedDeliverySchedule = supplier.DeliverySchedule;
 
         if (string.IsNullOrWhiteSpace(supplier?.ContractTerms)) return;
-        
+
         if (supplier.ContractTerms.Contains("day", StringComparison.OrdinalIgnoreCase))
         {
             ContractPattern = "Day";
@@ -203,10 +205,10 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                 OnPropertyChanged(nameof(SchedulePattern));
                 OnPropertyChanged(nameof(IsScheduleDeliveryByDay));
                 OnPropertyChanged(nameof(IsScheduleDeliveryByMonth));
-                
+
                 // Repopulate items when pattern changes
                 PopulateDeliveryScheduleItems();
-                
+
                 // Clear selection when switching patterns
                 SelectedDeliverySchedule = null;
             }
@@ -224,14 +226,14 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                 OnPropertyChanged(nameof(ContractPattern));
                 OnPropertyChanged(nameof(IsContractTermsByDay));
                 OnPropertyChanged(nameof(IsContractTermsByMonth));
-                
+
                 // Repopulate items when pattern changes
                 PopulateContractTermsItems();
-                
+
                 // Clear selection when switching patterns
                 SelectedContractTerms = null;
             }
-        } 
+        }
     }
 
     public bool IsScheduleDeliveryByDay
@@ -239,19 +241,19 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => SchedulePattern == "Day";
         set { if (value) SchedulePattern = "Day"; }
     }
-    
+
     public bool IsScheduleDeliveryByMonth
     {
         get => SchedulePattern == "Month";
         set { if (value) SchedulePattern = "Month"; }
     }
-    
+
     public bool IsContractTermsByDay
     {
         get => ContractPattern == "Day";
         set { if (value) ContractPattern = "Day"; }
     }
-    
+
     public bool IsContractTermsByMonth
     {
         get => ContractPattern == "Month";
@@ -264,14 +266,14 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _status;
         set => SetProperty(ref _status, value, true);
     }
-    
+
     public string? DeliverySchedule => SelectedDeliverySchedule;
     public string? ContractTerms => SelectedContractTerms;
-    
+
     private void PopulateDeliveryScheduleItems()
     {
         DeliveryScheduleItems.Clear();
-        
+
         if (SchedulePattern == "Day")
         {
             DeliveryScheduleItems.Add("everyday");
@@ -293,7 +295,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     private void PopulateContractTermsItems()
     {
         ContractTermsItems.Clear();
-        
+
         if (ContractPattern == "Day")
         {
             ContractTermsItems.Add("1 day");
