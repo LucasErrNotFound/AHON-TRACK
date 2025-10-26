@@ -1,3 +1,5 @@
+using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using AHON_TRACK.Validators;
@@ -21,7 +23,19 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
 
     [ObservableProperty]
     private string _dialogDescription = "Register new supplier with their contact to maintain reliable supply management";
+    
+    [ObservableProperty]
+    private ObservableCollection<string> _deliveryScheduleItems = [];
 
+    [ObservableProperty]
+    private ObservableCollection<string> _contractTermsItems = [];
+
+    [ObservableProperty]
+    private string? _selectedDeliverySchedule;
+
+    [ObservableProperty]
+    private string? _selectedContractTerms;
+    
     [ObservableProperty]
     private bool _isEditMode = false;
 
@@ -30,6 +44,8 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     private string? _email = string.Empty;
     private string? _phoneNumber = string.Empty;
     private string? _products = string.Empty;
+    private string? _schedulePattern = "Month";
+    private string? _contractPattern = "Month";
     private string? _status = string.Empty;
 
     private readonly DialogManager _dialogManager;
@@ -41,6 +57,9 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        
+        PopulateDeliveryScheduleItems();
+        PopulateContractTermsItems();
     }
 
     public SupplierDialogCardViewModel()
@@ -48,6 +67,9 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        
+        PopulateDeliveryScheduleItems();
+        PopulateContractTermsItems();
     }
 
     [AvaloniaHotReload]
@@ -72,6 +94,30 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         PhoneNumber = supplier?.PhoneNumber;
         Products = supplier?.Products;
         Status = supplier?.Status;
+
+        if (string.IsNullOrWhiteSpace(supplier?.DeliverySchedule)) return;
+        
+        if (supplier.DeliverySchedule.Contains("day", StringComparison.OrdinalIgnoreCase))
+        {
+            SchedulePattern = "Day";
+        }
+        else if (supplier.DeliverySchedule.Contains("month", StringComparison.OrdinalIgnoreCase))
+        {
+            SchedulePattern = "Month";
+        }
+        SelectedDeliverySchedule = supplier.DeliverySchedule;
+
+        if (string.IsNullOrWhiteSpace(supplier?.ContractTerms)) return;
+        
+        if (supplier.ContractTerms.Contains("day", StringComparison.OrdinalIgnoreCase))
+        {
+            ContractPattern = "Day";
+        }
+        else if (supplier.ContractTerms.Contains("month", StringComparison.OrdinalIgnoreCase))
+        {
+            ContractPattern = "Month";
+        }
+        SelectedContractTerms = supplier.ContractTerms;
     }
 
     [RelayCommand]
@@ -97,6 +143,8 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         PhoneNumber = string.Empty;
         Products = string.Empty;
         Status = string.Empty;
+        SelectedDeliverySchedule = string.Empty;
+        SelectedContractTerms = string.Empty;
 
         ClearAllErrors();
     }
@@ -144,10 +192,123 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         set => SetProperty(ref _products, value, true);
     }
 
+    public string? SchedulePattern
+    {
+        get => _schedulePattern;
+        set
+        {
+            if (_schedulePattern != value)
+            {
+                _schedulePattern = value;
+                OnPropertyChanged(nameof(SchedulePattern));
+                OnPropertyChanged(nameof(IsScheduleDeliveryByDay));
+                OnPropertyChanged(nameof(IsScheduleDeliveryByMonth));
+                
+                // Repopulate items when pattern changes
+                PopulateDeliveryScheduleItems();
+                
+                // Clear selection when switching patterns
+                SelectedDeliverySchedule = null;
+            }
+        }
+    }
+
+    public string? ContractPattern
+    {
+        get => _contractPattern;
+        set
+        {
+            if (_contractPattern != value)
+            {
+                _contractPattern = value;
+                OnPropertyChanged(nameof(ContractPattern));
+                OnPropertyChanged(nameof(IsContractTermsByDay));
+                OnPropertyChanged(nameof(IsContractTermsByMonth));
+                
+                // Repopulate items when pattern changes
+                PopulateContractTermsItems();
+                
+                // Clear selection when switching patterns
+                SelectedContractTerms = null;
+            }
+        } 
+    }
+
+    public bool IsScheduleDeliveryByDay
+    {
+        get => SchedulePattern == "Day";
+        set { if (value) SchedulePattern = "Day"; }
+    }
+    
+    public bool IsScheduleDeliveryByMonth
+    {
+        get => SchedulePattern == "Month";
+        set { if (value) SchedulePattern = "Month"; }
+    }
+    
+    public bool IsContractTermsByDay
+    {
+        get => ContractPattern == "Day";
+        set { if (value) ContractPattern = "Day"; }
+    }
+    
+    public bool IsContractTermsByMonth
+    {
+        get => ContractPattern == "Month";
+        set { if (value) ContractPattern = "Month"; }
+    }
+
     [Required(ErrorMessage = "Select a status")]
     public string? Status
     {
         get => _status;
         set => SetProperty(ref _status, value, true);
+    }
+    
+    public string? DeliverySchedule => SelectedDeliverySchedule;
+    public string? ContractTerms => SelectedContractTerms;
+    
+    private void PopulateDeliveryScheduleItems()
+    {
+        DeliveryScheduleItems.Clear();
+        
+        if (SchedulePattern == "Day")
+        {
+            DeliveryScheduleItems.Add("everyday");
+            for (int i = 2; i <= 30; i++)
+            {
+                DeliveryScheduleItems.Add($"every {i} days");
+            }
+        }
+        else
+        {
+            DeliveryScheduleItems.Add("every 1 month");
+            for (int i = 2; i <= 12; i++)
+            {
+                DeliveryScheduleItems.Add($"every {i} months");
+            }
+        }
+    }
+
+    private void PopulateContractTermsItems()
+    {
+        ContractTermsItems.Clear();
+        
+        if (ContractPattern == "Day")
+        {
+            ContractTermsItems.Add("1 day");
+            for (int i = 2; i <= 30; i++)
+            {
+                ContractTermsItems.Add($"{i} days");
+            }
+        }
+        else
+        {
+            ContractTermsItems.Add("1 month");
+            for (int i = 2; i <= 12; i++)
+            {
+                ContractTermsItems.Add($"{i} months");
+            }
+        }
     }
 }
