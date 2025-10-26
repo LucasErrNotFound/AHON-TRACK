@@ -79,22 +79,15 @@
                         Title="Current Schedule"
                         CardBackground="{StaticResource GreenGradient}"
                         Foreground="White"
-                        Hint="+0.6% from yesterday"
-                        Value="9 Appointments">
+                        Hint="{CompiledBinding CurrentScheduleChangeText}"
+                        Value="{CompiledBinding CurrentScheduleCount}">
 					</card:OverviewCard>
 					<card:OverviewCard
                         Title="Upcoming Schedule"
                         CardBackground="{StaticResource BlueGradient}"
                         Foreground="White"
-                        Hint="+0.3% from yesterday"
-                        Value="3 Appointments">
-					</card:OverviewCard>
-					<card:OverviewCard
-                        Title="Coaches"
-                        CardBackground="{StaticResource OrangeGradient}"
-                        Foreground="White"
-                        Hint="Number of Coaches"
-                        Value="3 Appointments">
+                        Hint="{CompiledBinding UpcomingScheduleChangeText}"
+                        Value="{CompiledBinding UpcomingScheduleCount}">
 					</card:OverviewCard>
 				</UniformGrid>
 				<!--

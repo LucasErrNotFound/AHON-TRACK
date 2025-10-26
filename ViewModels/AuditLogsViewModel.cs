@@ -24,6 +24,7 @@ using QuestPDF.Companion;
 using QuestPDF.Fluent;
 using ShadUI;
 using NotificationType = Avalonia.Controls.Notifications.NotificationType;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -99,6 +100,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         _dashboardService = dashboardService;
         _settingsService = settingsService;
 
+        SubscribeToEvents();
         _ = LoadDataFromDatabaseAsync();
         UpdateCounts();
     }
@@ -120,6 +122,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 
         if (_dashboardService != null)
         {
+            SubscribeToEvents();
             await LoadDataFromDatabaseAsync();
         }
         else
@@ -131,9 +134,17 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         IsInitialized = true;
     }
 
-    /// <summary>
-    /// Loads audit logs from the database
-    /// </summary>
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+        eventService.RecentLogsUpdated += OnAuditDataChanged;
+    }
+
+    private async void OnAuditDataChanged(object? sender, EventArgs e)
+    {
+        await LoadDataFromDatabaseAsync();
+    }
+
     private async Task LoadDataFromDatabaseAsync()
     {
         IsLoading = true;

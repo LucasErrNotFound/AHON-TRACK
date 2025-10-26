@@ -54,6 +54,24 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     private bool _isLoading;
 
     [ObservableProperty]
+    private int _currentScheduleCount;
+
+    [ObservableProperty]
+    private int _upcomingScheduleCount;
+
+    [ObservableProperty]
+    private double _currentSchedulePercentageChange;
+
+    [ObservableProperty]
+    private double _upcomingSchedulePercentageChange;
+
+    [ObservableProperty]
+    private string _currentScheduleChangeText = string.Empty;
+
+    [ObservableProperty]
+    private string _upcomingScheduleChangeText = string.Empty;
+
+    [ObservableProperty]
     private ObservableCollection<ScheduledPerson> _scheduledPeople = [];
 
     private readonly DialogManager _dialogManager;
@@ -115,6 +133,62 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _ = LoadTrainingsAsync();
     }
 
+    private void UpdateDashboardStatistics()
+    {
+        var today = SelectedDate.Date;
+        var yesterday = today.AddDays(-1);
+
+        // Current Schedule (Today)
+        var todaySchedules = OriginalScheduledPeople
+            .Where(s => s.ScheduledDate?.Date == today)
+            .ToList();
+        CurrentScheduleCount = todaySchedules.Count;
+
+        // Upcoming Schedule (Future dates, excluding today)
+        var upcomingSchedules = OriginalScheduledPeople
+            .Where(s => s.ScheduledDate?.Date > today)
+            .ToList();
+        UpcomingScheduleCount = upcomingSchedules.Count;
+
+        // Calculate percentage changes for Current Schedule
+        var yesterdaySchedules = OriginalScheduledPeople
+            .Where(s => s.ScheduledDate?.Date == yesterday)
+            .ToList();
+        int yesterdayCount = yesterdaySchedules.Count;
+
+        if (yesterdayCount > 0)
+        {
+            CurrentSchedulePercentageChange = ((double)(CurrentScheduleCount - yesterdayCount) / yesterdayCount) * 100;
+            // Cap at ±100%
+            CurrentSchedulePercentageChange = Math.Max(-100, Math.Min(100, CurrentSchedulePercentageChange));
+            CurrentScheduleChangeText = $"{(CurrentSchedulePercentageChange >= 0 ? "+" : "")}{CurrentSchedulePercentageChange:F1}% from yesterday";
+        }
+        else
+        {
+            CurrentSchedulePercentageChange = 0;
+            CurrentScheduleChangeText = "No data from yesterday";
+        }
+
+        // For upcoming schedule comparison (compare with yesterday's upcoming count)
+        var yesterdayUpcomingSchedules = OriginalScheduledPeople
+            .Where(s => s.ScheduledDate?.Date > yesterday)
+            .ToList();
+        int yesterdayUpcomingCount = yesterdayUpcomingSchedules.Count;
+
+        if (yesterdayUpcomingCount > 0)
+        {
+            UpcomingSchedulePercentageChange = ((double)(UpcomingScheduleCount - yesterdayUpcomingCount) / yesterdayUpcomingCount) * 100;
+            // Cap at ±100%
+            UpcomingSchedulePercentageChange = Math.Max(-100, Math.Min(100, UpcomingSchedulePercentageChange));
+            UpcomingScheduleChangeText = $"{(UpcomingSchedulePercentageChange >= 0 ? "+" : "")}{UpcomingSchedulePercentageChange:F1}% from yesterday";
+        }
+        else
+        {
+            UpcomingSchedulePercentageChange = 0;
+            UpcomingScheduleChangeText = "No data from yesterday";
+        }
+    }
+
     public async Task LoadTrainingsAsync()
     {
         IsLoading = true;
@@ -152,7 +226,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
         // Now filter based on current date and package selection
         FilterDataByPackageAndDate();
-
+        UpdateDashboardStatistics();
         IsLoading = false;
     }
 
@@ -364,7 +438,11 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         }
     }
 
-    partial void OnSelectedDateChanged(DateTime value) => FilterDataByPackageAndDate();
+    partial void OnSelectedDateChanged(DateTime value)
+    {
+        FilterDataByPackageAndDate();
+        UpdateDashboardStatistics();
+    }
 
     partial void OnSelectedPackageFilterItemChanged(string value)
     {
