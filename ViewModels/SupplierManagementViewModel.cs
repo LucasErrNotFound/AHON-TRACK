@@ -271,7 +271,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Email = _supplierDialogCardViewModel.Email,
                     PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
                     Products = _supplierDialogCardViewModel.Products,
-                    Status = _supplierDialogCardViewModel.Status ?? "Active"
+                    Status = _supplierDialogCardViewModel.Status ?? "Active",
+                    DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
+                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
                 };
 
                 // Call service to add to database
@@ -317,7 +319,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Email = _supplierDialogCardViewModel.Email,
                     PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
                     Products = _supplierDialogCardViewModel.Products,
-                    Status = _supplierDialogCardViewModel.Status ?? "Active"
+                    Status = _supplierDialogCardViewModel.Status ?? "Active",
+                    DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
+                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
                 };
 
                 // Call service to update in database
@@ -660,6 +664,12 @@ public partial class Supplier : ObservableObject
 
     [ObservableProperty]
     private string? _products;
+    
+    [ObservableProperty]
+    private string? _deliverySchedule;
+    
+    [ObservableProperty]
+    private string? _contractTerms;
 
     [ObservableProperty]
     private string? _status;

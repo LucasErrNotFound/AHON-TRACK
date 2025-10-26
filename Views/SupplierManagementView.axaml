@@ -162,21 +162,21 @@
                                 <!-- Contact Person -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="250"
+                                    MinWidth="170"
                                     Header="Contact Person"
                                     Binding="{CompiledBinding ContactPerson}" />
 
                                 <!-- Email -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="250"
+                                    MinWidth="200"
                                     Header="Email"
                                     Binding="{CompiledBinding Email}" />
 
                                 <!-- Phone -->
                                 <DataGridTextColumn
                                     Width="Auto"
-                                    MinWidth="180"
+                                    MinWidth="150"
                                     Header="Phone"
                                     Binding="{CompiledBinding PhoneNumber}" />
 
@@ -186,12 +186,26 @@
                                     MinWidth="160"
                                     Header="Products"
                                     Binding="{CompiledBinding Products}" />
+                                
+                                <!-- Delivery Schedule -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="130"
+                                    Header="Delivery Schedule"
+                                    Binding="{CompiledBinding DeliverySchedule}" />
+                                
+                                <!-- Contract Terms -->
+                                <DataGridTextColumn
+                                    Width="Auto"
+                                    MinWidth="130"
+                                    Header="Contract Terms"
+                                    Binding="{CompiledBinding ContractTerms}" />
 
                                 <!-- Status -->
                                 <DataGridTemplateColumn
                                     CanUserSort="False"
                                     Header="Status"
-                                    Width="170">
+                                    Width="150">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="viewModels:Supplier">
                                             <Border
