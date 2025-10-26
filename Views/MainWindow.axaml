@@ -406,7 +406,6 @@
 								</Grid>
 							</shadui:MenuItemAssist.Label>
 							<Separator/>
-							<!--Show Profile: Command property missing-->
 							<MenuItem Header="View Profile" Command="{CompiledBinding OpenViewProfileCommand}">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -414,7 +413,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show Setting: Command property missing-->
 							<MenuItem Header="Settings" Command="{CompiledBinding OpenSettingsDialogCommand}">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -423,7 +421,7 @@
 								</MenuItem.Icon>
 							</MenuItem>
 							<Separator/>
-							<!--Show About: Command property missing-->
+							<!--
 							<MenuItem Header="About">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -431,7 +429,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show ReadMe: Command property missing-->
 							<MenuItem Header="Readme">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -439,7 +436,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show Source Repo: Command property missing-->
 							<MenuItem Header="Source Repository">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -448,7 +444,6 @@
 								</MenuItem.Icon>
 							</MenuItem>
 							<Separator/>
-							<!--Show Source Repo: Command property missing-->
 							<MenuItem Header="GPLv3 License">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -456,7 +451,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show Code of Conduct: Command property missing-->
 							<MenuItem Header="Code of Conduct">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -464,7 +458,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show Security: Command property missing-->
 							<MenuItem Header="Security">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -473,7 +466,7 @@
 								</MenuItem.Icon>
 							</MenuItem>
 							<Separator/>
-							<!--Show Logout: Command property missing-->
+							-->
 							<MenuItem Header="Logout" Foreground="{DynamicResource DestructiveColor}" Command="{CompiledBinding TryLogoutCommand}">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
