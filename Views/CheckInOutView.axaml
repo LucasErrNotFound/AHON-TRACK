@@ -447,14 +447,14 @@
                                         IsReadOnly="True"
                                         ItemsSource="{CompiledBinding WalkInPersons}"
                                         SelectionMode="Single">
+                                        
+                                        <DataGrid.Styles>
+                                            <Style Selector="TextBlock">
+                                                <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+                                            </Style>
+                                        </DataGrid.Styles>
+                                        
                                         <DataGrid.Columns>
-                                            
-                                            <DataGrid.Styles>
-                                                <Style Selector="TextBlock">
-                                                    <Setter Property="TextWrapping" Value="WrapWithOverflow" />
-                                                </Style>
-                                            </DataGrid.Styles>
-                                            
                                             <DataGridTextColumn
                                                 MaxWidth="80"
                                                 Header="ID"
