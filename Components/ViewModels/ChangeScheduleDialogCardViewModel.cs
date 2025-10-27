@@ -240,4 +240,18 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         SelectedCoach = null;
         ClearAllErrors();
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Clear fields that may hold data
+        StartTime = null;
+        EndTime = null;
+        SelectedTrainingDate = null;
+        SelectedCoach = null;
+
+        // Clear coach map
+        _coachNameToIdMap?.Clear();
+
+        base.DisposeManagedResources();
+    }
 }

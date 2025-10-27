@@ -28,10 +28,10 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
 
     // Supplier dropdown items - now contains supplier names as strings
     [ObservableProperty]
-    private string[] _supplierFilterItems = Array.Empty<string>();
+    private string[] _supplierFilterItems = [];
 
     // This maintains the internal list of supplier objects
-    private List<SupplierDropdownModel> _supplierModels = new();
+    private List<SupplierDropdownModel> _supplierModels = [];
 
     [ObservableProperty]
     private string _dialogTitle = "Add New Equipment";
@@ -392,5 +392,22 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         LastMaintenance = null;
         NextMaintenance = null;
         ClearAllErrors();
+    }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Clear supplier models and UI lists
+        _supplierModels?.Clear();
+        SupplierFilterItems = [];
+
+        // Clear text/fields
+        BrandName = string.Empty;
+        Category = string.Empty;
+        Condition = string.Empty;
+        Status = string.Empty;
+        Supplier = string.Empty;
+
+        // Null services (we can't reassign readonly injected ones) — clear what we own
+        base.DisposeManagedResources();
     }
 }

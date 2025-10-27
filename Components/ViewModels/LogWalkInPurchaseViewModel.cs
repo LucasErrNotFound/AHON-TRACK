@@ -841,4 +841,61 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
 
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
+    
+    protected override void DisposeManagedResources()
+    {
+        // Wipe out static arrays to drop references
+        MiddleInitialItems = [];
+        WalkInTypeItems = [];
+        SpecializedPackageItems = [];
+
+        // Clear and replace package collections
+        AvailablePackages?.Clear();
+        AvailablePackages = [];
+
+        // Reset simple primitives / flags
+        LastRegisteredCustomerID = null;
+        IsProcessing = false;
+        HasFreeTrialWarning = false;
+        FreeTrialWarningMessage = string.Empty;
+        QuantityHelperMessage = string.Empty;
+
+        // Clear all input fields aggressively
+        WalkInFirstName = string.Empty;
+        SelectedMiddleInitialItem = string.Empty;
+        WalkInLastName = string.Empty;
+        WalkInContactNumber = string.Empty;
+        WalkInAge = null;
+        WalkInGender = string.Empty;
+        SelectedWalkInTypeItem = string.Empty;
+        SelectedSpecializedPackageItem = "None";
+        SpecializedPackageQuantity = 1;
+
+        // Reset payment selections
+        IsCashSelected = false;
+        IsGCashSelected = false;
+        IsMayaSelected = false;
+
+        // Clear computed/display properties
+        OnPropertyChanged(nameof(CustomerFullName));
+        OnPropertyChanged(nameof(IsPaymentPossible));
+        OnPropertyChanged(nameof(PackageName));
+        OnPropertyChanged(nameof(PackageUnitPrice));
+        OnPropertyChanged(nameof(PackageSubtotal));
+        OnPropertyChanged(nameof(PackageTotal));
+        OnPropertyChanged(nameof(PurchaseSummarySubtotal));
+        OnPropertyChanged(nameof(TotalAmount));
+        OnPropertyChanged(nameof(GrandTotal));
+        OnPropertyChanged(nameof(SelectedPaymentMethod));
+        OnPropertyChanged(nameof(TransactionID));
+        OnPropertyChanged(nameof(CurrentDate));
+        OnPropertyChanged(nameof(CurrentTime));
+
+        // Remove any PropertyChanged subscribers
+        PropertyChanged = null;
+
+        // Note: injected readonly services (dialog/toast/page/walkInService) are not reassigned here.
+
+        base.DisposeManagedResources();
+    }
 }

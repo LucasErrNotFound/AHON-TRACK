@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("add-new-product")]
-public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters, IDisposable
+public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters
 {
     [ObservableProperty]
     private ProductViewContext _viewContext = ProductViewContext.AddProduct;
@@ -111,16 +111,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         {
             await LoadSuppliersAsync();
         }
-    }
-    
-    public void Dispose()
-    {
-        if (_disposed) return;
-
-        // No event subscriptions to clean up in this ViewModel currently,
-        // but good practice to implement IDisposable
-        
-        _disposed = true;
     }
 
     private async Task LoadSuppliersAsync()
@@ -616,6 +606,24 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     {
         OnPropertyChanged(nameof(DiscountSymbol));
         OnPropertyChanged(nameof(DiscountFormat));
+    }
+
+    protected override void DisposeManagedResources()
+    {
+        // Clear large blobs / image buffers
+        ProductImage = null;
+        ProductImageBytes = null;
+        ProductImageFilePath = null;
+        ProductImageControl = null;
+
+        // Clear supplier maps/lists
+        _supplierNameToIdMap?.Clear();
+        ProductSupplierItems = [];
+
+        // Mark disposed
+        _disposed = true;
+
+        base.DisposeManagedResources();
     }
 }
 

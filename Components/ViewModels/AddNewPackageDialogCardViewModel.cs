@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
@@ -361,5 +360,29 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
             validTo = validToDate
         };
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Clear text fields and large values
+        PackageName = string.Empty;
+        Description = string.Empty;
+        Price = null;
+        SelectedDurationItem = string.Empty;
 
+        // Clear feature descriptions
+        FeatureDescription1 = string.Empty;
+        FeatureDescription2 = string.Empty;
+        FeatureDescription3 = string.Empty;
+        FeatureDescription4 = string.Empty;
+        FeatureDescription5 = string.Empty;
+
+        // Clear arrays
+        DiscountTypeItems = [];
+        DiscountForItems = [];
+        DurationItems = [];
+
+        // Null services (design-time ctor sets these; aggressively null anyway)
+        // (readonly services cannot be set here; only clear properties we control)
+        base.DisposeManagedResources();
+    }
 }

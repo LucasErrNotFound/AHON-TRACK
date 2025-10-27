@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
@@ -8,12 +7,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
-using AHON_TRACK.Models;
-using AHON_TRACK.Services.Interface;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
     private string[] _statusFilterItems = ["Active", "Inactive", "Suspended"];
@@ -312,5 +309,39 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                 ContractTermsItems.Add($"{i} months");
             }
         }
+    }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Wipe out lightweight/static arrays
+        StatusFilterItems = [];
+
+        // Clear UI/dialog text
+        DialogTitle = string.Empty;
+        DialogDescription = string.Empty;
+
+        // Clear and replace collections to drop references
+        DeliveryScheduleItems?.Clear();
+        ContractTermsItems?.Clear();
+        DeliveryScheduleItems = [];
+        ContractTermsItems = [];
+
+        // Clear selections/flags
+        SelectedDeliverySchedule = null;
+        SelectedContractTerms = null;
+        IsEditMode = false;
+
+        // Aggressively drop field data
+        _supplierName = null;
+        _contactPerson = null;
+        _email = null;
+        _phoneNumber = null;
+        _products = null;
+        _schedulePattern = null;
+        _contractPattern = null;
+        _status = null;
+
+        // Let base do any additional cleanup
+        base.DisposeManagedResources();
     }
 }

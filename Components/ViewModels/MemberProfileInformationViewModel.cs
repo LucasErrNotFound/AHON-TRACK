@@ -288,4 +288,43 @@ public sealed partial class MemberProfileInformationViewModel : ViewModelBase, I
                 .ShowSuccess();
         }
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Dispose image if necessary and drop reference
+        if (MemberProfileImage is IDisposable imgDisposable) imgDisposable.Dispose();
+        MemberProfileImage = null;
+
+        // Reset identity / flags
+        IsFromCurrentUser = false;
+        CurrentMemberId = 0;
+
+        // Clear all displayed strings
+        MemberFullNameHeader = string.Empty;
+        MemberID = string.Empty;
+        MemberPosition = string.Empty;
+        MemberStatus = string.Empty;
+        MemberValidUntil = string.Empty;
+        MemberFullName = string.Empty;
+        MemberAge = string.Empty;
+        MemberBirthDate = string.Empty;
+        MemberGender = string.Empty;
+        MemberPhoneNumber = string.Empty;
+        MemberPackage = string.Empty;
+        MemberPaymentMethod = string.Empty;
+        MemberLastLogin = string.Empty;
+        MemberHouseAddress = string.Empty;
+        MemberHouseNumber = string.Empty;
+        MemberStreet = string.Empty;
+        MemberBarangay = string.Empty;
+        MemberCityProvince = string.Empty;
+
+        // Reset nullable/date fields and loading state
+        MemberDateJoined = null;
+        IsLoading = false;
+
+        // Do not reassign injected readonly services — we only clear what we own.
+
+        base.DisposeManagedResources();
+    }
 }

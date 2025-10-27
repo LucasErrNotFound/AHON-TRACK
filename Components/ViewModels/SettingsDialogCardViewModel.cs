@@ -14,7 +14,7 @@ using ShadUI;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty] 
     private TextBox? _downloadTextBoxControl;
@@ -251,5 +251,33 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable, IN
     {
         if (value != null)
             value.Text = RecoveryFilePath;
+    }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Clear UI controls' contents and release references
+        if (DownloadTextBoxControl != null)
+            DownloadTextBoxControl.Text = string.Empty;
+        if (DataRecoveryTextBoxControl != null)
+            DataRecoveryTextBoxControl.Text = string.Empty;
+
+        DownloadTextBoxControl = null;
+        DataRecoveryTextBoxControl = null;
+
+        // Reset simple properties
+        IsDarkMode = false;
+        DownloadPath = string.Empty;
+        RecoveryFilePath = string.Empty;
+        SelectedBackupFrequency = string.Empty;
+
+        // Aggressively clear collections
+        BackupFrequencyOptions?.Clear();
+
+        // Drop loaded settings and any cached objects
+        _currentSettings = null;
+
+        // Note: injected readonly services cannot be reassigned here; we clear what we own.
+
+        base.DisposeManagedResources();
     }
 }

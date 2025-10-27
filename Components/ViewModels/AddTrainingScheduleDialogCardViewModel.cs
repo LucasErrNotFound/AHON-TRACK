@@ -593,7 +593,29 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         SelectedTrainee = null;
         ClearAllErrors();
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe events
+        var eventService = DashboardEventService.Instance;
+        eventService.MemberUpdated -= OnTraineeDataChanged;
+        eventService.ScheduleAdded -= OnTraineeDataChanged;
+        eventService.ScheduleUpdated -= OnTraineeDataChanged;
 
+        // Clear collections and suggestions
+        AllTrainees?.Clear();
+        FilteredTrainees?.Clear();
+        TraineesSuggestions?.Clear();
+
+        // Dispose DataGridCollectionView if disposable, then null
+        TraineeList = null!;
+
+        // Null UI/image related
+        SelectedTrainee = null;
+        SelectedCoachItems = null!;
+
+        base.DisposeManagedResources();
+    }
 }
 
 public partial class Trainees : ObservableObject

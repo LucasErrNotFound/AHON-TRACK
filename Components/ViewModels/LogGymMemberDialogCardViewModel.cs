@@ -341,4 +341,18 @@ public sealed partial class LogGymMemberDialogCardViewModel : ViewModelBase
             await LoadMembersFromServiceAsync();
         }
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Clear collections and suggestions
+        AllMembers?.Clear();
+        FilteredMembers?.Clear();
+        MemberSuggestions?.Clear();
+
+        // Null selection
+        SelectedMember = null;
+        LastSelectedMember = null;
+
+        base.DisposeManagedResources();
+    }
 }

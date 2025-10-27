@@ -474,4 +474,48 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         ProfileImageSource = ImageHelper.GetDefaultAvatar();
         ClearAllErrors();
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Dispose and drop image resources
+        if (ProfileImageSource is IDisposable bmp) bmp.Dispose();
+        ProfileImageSource = null;
+        if (MemberProfileImageControl != null)
+        {
+            MemberProfileImageControl.Source = null;
+            MemberProfileImageControl.IsVisible = false;
+        }
+        MemberProfileImageControl = null;
+
+        // Clear binary blob
+        ProfileImage = null;
+
+        // Reset identity and flags
+        IsEditMode = false;
+        CurrentMemberId = 0;
+
+        // Clear text / date fields
+        MemberFirstName = string.Empty;
+        SelectedMiddleInitialItem = string.Empty;
+        MemberLastName = string.Empty;
+        MemberGender = string.Empty;
+        MemberContactNumber = string.Empty;
+        MemberPackages = string.Empty;
+        MemberAge = null;
+        MemberBirthDate = null;
+        MemberDateJoined = null;
+        MemberValidUntil = null;
+        MemberStatus = string.Empty;
+
+        // Aggressively clear package models
+        _memberPackageModels?.Clear();
+        _memberPackageModels = new List<PackageModel>();
+
+        // Clear dialog metadata
+        DialogTitle = string.Empty;
+        DialogDescription = string.Empty;
+
+        // Let base handle any remaining managed cleanup
+        base.DisposeManagedResources();
+    }
 }

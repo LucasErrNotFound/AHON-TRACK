@@ -304,4 +304,21 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
             OnPropertyChanged(nameof(DisplayAvatarSource));
         }
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe profile picture update event
+        UserProfileEventService.Instance.ProfilePictureUpdated -= OnProfilePictureUpdated;
+
+        // Dispose bitmap if disposable and clear avatar
+        if (EmployeeAvatarSource is IDisposable d) d.Dispose();
+        EmployeeAvatarSource = null;
+        SelectedEmployeeData = null;
+
+        // Null other UI fields
+        EmployeeFullName = string.Empty;
+        EmployeeFullNameHeader = string.Empty;
+
+        base.DisposeManagedResources();
+    }
 }

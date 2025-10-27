@@ -30,7 +30,7 @@ public enum MemberViewContext
 }
 
 [Page("add-member")]
-public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigableWithParameters
+public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParameters
 {
     [ObservableProperty]
     private MemberViewContext _viewContext = MemberViewContext.AddNew;
@@ -1180,4 +1180,26 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     private static partial Regex ContactNumberRegex();
 
     public event Action? ImageResetRequested;
+    
+    protected override void DisposeManagedResources()
+    {
+        // Dispose / null bitmaps and image bytes
+        if (ProfileImageSource is IDisposable d0) d0.Dispose();
+        ProfileImageSource = null;
+        MemberProfileImageControl = null;
+        ProfileImage = null;
+
+        // Clear collections
+        MonthlyPackages.Clear();
+        MonthlyPackages = [];
+
+        // Clear suggestions & arrays
+        MiddleInitialItems = [];
+        MemberStatusItems = [];
+
+        // Null references to large objects
+        SelectedMonthlyPackage = null;
+
+        base.DisposeManagedResources();
+    }
 }

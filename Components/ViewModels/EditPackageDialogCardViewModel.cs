@@ -393,4 +393,26 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             validTo = validToDate
         };
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Clear strings and fields
+        PackageName = string.Empty;
+        Description = string.Empty;
+        Price = null;
+        SelectedDurationItem = string.Empty;
+
+        FeatureDescription1 = string.Empty;
+        FeatureDescription2 = string.Empty;
+        FeatureDescription3 = string.Empty;
+        FeatureDescription4 = string.Empty;
+        FeatureDescription5 = string.Empty;
+
+        // Clear arrays
+        DiscountTypeItems = [];
+        DiscountForItems = [];
+        DurationItems = [];
+
+        base.DisposeManagedResources();
+    }
 }
