@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace AHON_TRACK.ViewModels;
 
-public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
+public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo, IDisposable
 {
     private readonly Dictionary<string, List<string>> _errors = new();
 
@@ -101,5 +101,31 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
             var value = property.GetValue(this);
             ValidateProperty(value, property.Name);
         }
+    }
+    
+    private bool _disposed;
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing)
+        {
+            // Dispose managed resources here
+            DisposeManagedResources();
+        }
+
+        _disposed = true;
+    }
+
+    protected virtual void DisposeManagedResources()
+    {
+        // Override in derived classes to clean up resources
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

@@ -73,6 +73,8 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     [ObservableProperty]
     private ObservableCollection<ScheduledPerson> _scheduledPeople = [];
+    
+    private bool _disposed = false;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -455,6 +457,27 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         TotalCount = ScheduledPeople.Count;
 
         SelectAll = ScheduledPeople.Count > 0 && ScheduledPeople.All(x => x.IsSelected);
+    }
+
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        var eventService = DashboardEventService.Instance;
+        eventService.TrainingSessionsUpdated -= OnTrainingDataChanged;
+        eventService.ScheduleAdded -= OnTrainingDataChanged;
+        eventService.ScheduleUpdated -= OnTrainingDataChanged;
+        eventService.MemberUpdated -= OnTrainingDataChanged;
+
+        // Unsubscribe from property changed events
+        foreach (var schedule in ScheduledPeople)
+        {
+            schedule.PropertyChanged -= OnScheduledChanged;
+        }
+
+        // Clear collections
+        ScheduledPeople.Clear();
+        OriginalScheduledPeople.Clear();
+        CurrentScheduledPeople.Clear();
     }
 }
 

@@ -613,6 +613,38 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
         SelectAll = MemberPersons.Count > 0 && MemberPersons.All(x => x.IsSelected);
     }
+    
+    // Add to CheckInOutViewModel class
+
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        var eventService = DashboardEventService.Instance;
+        eventService.CheckinAdded -= OnCheckInOutDataChanged;
+        eventService.CheckoutAdded -= OnCheckInOutDataChanged;
+        eventService.CheckInOutDeleted -= OnCheckInOutDataChanged;
+    
+        // Unsubscribe from property change handlers
+        foreach (var walkIn in WalkInPersons)
+        {
+            walkIn.PropertyChanged -= OnWalkInPropertyChanged;
+        }
+    
+        foreach (var member in MemberPersons)
+        {
+            member.PropertyChanged -= OnMemberPropertyChanged;
+        }
+    
+        // Clear collections
+        WalkInPersons?.Clear();
+        MemberPersons?.Clear();
+        OriginalWalkInData?.Clear();
+        OriginalMemberData?.Clear();
+        CurrentWalkInFilteredData?.Clear();
+        CurrentMemberFilteredData?.Clear();
+    
+        base.DisposeManagedResources();
+    }
 }
 
 public partial class WalkInPerson : ObservableObject

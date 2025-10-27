@@ -1145,6 +1145,28 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             .Dismissible()
             .Show();
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        var eventService = DashboardEventService.Instance;
+        eventService.MemberAdded -= OnMemberChanged;
+        eventService.MemberUpdated -= OnMemberChanged;
+        eventService.CheckinAdded -= OnMemberChanged;
+        eventService.CheckoutAdded -= OnMemberChanged;
+        eventService.ProductPurchased -= OnMemberChanged;
+
+        // Unsubscribe from property changed events
+        foreach (var member in MemberItems)
+        {
+            member.PropertyChanged -= OnMemberPropertyChanged;
+        }
+
+        // Clear collections
+        MemberItems.Clear();
+        OriginalMemberData.Clear();
+        CurrentFilteredData.Clear();
+    }
 }
 
 public partial class ManageMembersItem : ObservableObject

@@ -349,6 +349,22 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         /*UpdateDemographicsGroupChart();
         UpdatePopulationChart();*/
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        // var eventService = DashboardEventService.Instance;
+    
+        // Clear chart data
+        PopulationSeriesCollection = [];
+        PopulationLineChartXAxes = [];
+        PopulationLineChartXAxes = [];
+        GenderPieDataCollection = [];
+        XAxes = [];
+        YAxes = [];
+    
+        base.DisposeManagedResources();
+    }
 }
 
 public class PieData(string name, double?[] values, string color)

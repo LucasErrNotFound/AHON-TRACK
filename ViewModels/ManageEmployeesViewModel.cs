@@ -1046,6 +1046,26 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         SearchEmployeesCommand.Execute(null);
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        var eventService = DashboardEventService.Instance;
+        eventService.EmployeeAdded -= OnEmployeeChanged;
+        eventService.EmployeeUpdated -= OnEmployeeChanged;
+
+        // Unsubscribe from property changed events
+        foreach (var employee in EmployeeItems)
+        {
+            employee.PropertyChanged -= OnEmployeePropertyChanged;
+        }
+
+        // Clear collections
+        EmployeeItems.Clear();
+        OriginalEmployeeData.Clear();
+        CurrentFilteredData.Clear();
+        Employees.Clear();
+    }
 }
 
 public partial class ManageEmployeesItem : ObservableObject

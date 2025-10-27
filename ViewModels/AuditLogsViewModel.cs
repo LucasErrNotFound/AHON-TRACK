@@ -570,6 +570,28 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     {
         SearchAuditLogsCommand.Execute(null);
     }
+    
+    // Add to AuditLogsViewModel class
+
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        var eventService = DashboardEventService.Instance;
+        eventService.RecentLogsUpdated -= OnAuditDataChanged;
+    
+        // Unsubscribe from property change handlers
+        foreach (var log in AuditLogs)
+        {
+            log.PropertyChanged -= OnAuditLogPropertyChanged;
+        }
+    
+        // Clear collections
+        AuditLogs?.Clear();
+        OriginalAuditLogData?.Clear();
+        CurrentFilteredAuditLogData?.Clear();
+    
+        base.DisposeManagedResources();
+    }
 }
 
 public partial class AuditLogItems : ObservableObject

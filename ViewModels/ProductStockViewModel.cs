@@ -24,7 +24,7 @@ using AHON_TRACK.Services.Events;
 namespace AHON_TRACK.ViewModels;
 
 [Page("item-stock")]
-public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged, IDisposable
+public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
     private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements", "Apparel"];
@@ -114,34 +114,15 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     {
         var eventService = DashboardEventService.Instance;
 
+        eventService.ProductAdded -= OnProductDataChanged;  // Unsubscribe first to prevent double subscription
+        eventService.ProductUpdated -= OnProductDataChanged;
+        eventService.ProductDeleted -= OnProductDataChanged;
+        eventService.ProductPurchased -= OnProductPurchased;
+
         eventService.ProductAdded += OnProductDataChanged;
         eventService.ProductUpdated += OnProductDataChanged;
         eventService.ProductDeleted += OnProductDataChanged;
         eventService.ProductPurchased += OnProductPurchased;
-    }
-    
-    private void UnsubscribeFromEvents()
-    {
-        var eventService = DashboardEventService.Instance;
-
-        eventService.ProductAdded -= OnProductDataChanged;
-        eventService.ProductUpdated -= OnProductDataChanged;
-        eventService.ProductDeleted -= OnProductDataChanged;
-        eventService.ProductPurchased -= OnProductPurchased;
-    }
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-
-        UnsubscribeFromEvents();
-        
-        foreach (var product in ProductItems)
-        {
-            product.PropertyChanged -= OnProductPropertyChanged;
-        }
-
-        _disposed = true;
     }
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
@@ -601,6 +582,24 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             DiscountInPercentage = model.IsPercentageDiscount,
             Poster = posterPath
         };
+    }
+    
+    protected override void DisposeManagedResources()
+    {
+        var eventService = DashboardEventService.Instance;
+        eventService.ProductAdded -= OnProductDataChanged;
+        eventService.ProductUpdated -= OnProductDataChanged;
+        eventService.ProductDeleted -= OnProductDataChanged;
+        eventService.ProductPurchased -= OnProductPurchased;
+
+        foreach (var product in ProductItems)
+        {
+            product.PropertyChanged -= OnProductPropertyChanged;
+        }
+
+        ProductItems.Clear();
+        OriginalProductData.Clear();
+        CurrentFilteredProductData.Clear();
     }
 }
 

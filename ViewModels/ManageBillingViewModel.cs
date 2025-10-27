@@ -662,6 +662,30 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         _ = LoadInvoicesFromDatabaseAsync();
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        var eventService = DashboardEventService.Instance;
+        eventService.SalesUpdated -= OnBillingDataChanged;
+        eventService.ProductPurchased -= OnBillingDataChanged;
+        eventService.ChartDataUpdated -= OnBillingDataChanged;
+        eventService.MemberAdded -= OnBillingDataChanged;
+        eventService.MemberUpdated -= OnBillingDataChanged;
+
+        // Unsubscribe from property changed events
+        foreach (var invoice in InvoiceList)
+        {
+            invoice.PropertyChanged -= OnInvoicePropertyChanged;
+        }
+
+        // Clear collections
+        InvoiceList.Clear();
+        OriginalInvoiceData.Clear();
+        CurrentInvoiceData.Clear();
+        PackageOptions.Clear();
+        RecentActivities.Clear();
+    }
 }
 
 public class RecentActivity

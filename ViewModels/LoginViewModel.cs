@@ -8,6 +8,7 @@ using ShadUI;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
@@ -20,6 +21,7 @@ public partial class LoginViewModel : ViewModelBase
 
     private readonly IEmployeeService _employeeService;
     private bool _shouldShowSuccessLogInToast = false;
+    private CancellationTokenSource? _loginCts;
 
     public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IEmployeeService employeeService)
     {
@@ -69,6 +71,10 @@ public partial class LoginViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSignIn))]
     private async Task SignIn()
     {
+        _loginCts?.Cancel();
+        _loginCts = new CancellationTokenSource();
+        var token = _loginCts.Token;
+
         ClearAllErrors();
         ValidateAllProperties();
 
@@ -82,10 +88,12 @@ public partial class LoginViewModel : ViewModelBase
                 .ShowError();
             return;
         }
+        
         try
         {
-            // Authenticate using the service
             var (success, message, employeeId, role) = await _employeeService.AuthenticateUserAsync(Username, Password);
+
+            if (token.IsCancellationRequested) return;
 
             if (!success || employeeId == null || role == null)
             {
@@ -98,16 +106,19 @@ public partial class LoginViewModel : ViewModelBase
                 return;
             }
 
-            // Set current user information
             CurrentUserModel.UserId = employeeId.Value;
             CurrentUserModel.Username = Username;
             CurrentUserModel.Role = role;
             CurrentUserModel.LastLogin = DateTime.Now;
             CurrentUserModel.AvatarBytes = await _employeeService.GetEmployeeProfilePictureAsync(employeeId.Value);
-            System.Diagnostics.Debug.WriteLine($"UserId: {CurrentUserModel.UserId}, Username: {CurrentUserModel.Username}, Role: {CurrentUserModel.Role}, LastLogin: {CurrentUserModel.LastLogin}");
+            Debug.WriteLine($"UserId: {CurrentUserModel.UserId}, Username: {CurrentUserModel.Username}, Role: {CurrentUserModel.Role}, LastLogin: {CurrentUserModel.LastLogin}");
 
             _shouldShowSuccessLogInToast = true;
             SwitchToMainWindow();
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.WriteLine("Login operation cancelled");
         }
         catch (ArgumentOutOfRangeException ex)
         {
@@ -143,6 +154,21 @@ public partial class LoginViewModel : ViewModelBase
         viewModel.SetInitialLogInToastState(_shouldShowSuccessLogInToast);
         desktop.MainWindow = mainWindow;
         mainWindow.Show();
+        
+        // Dispose old view model and close window
+        if (currentWindow?.DataContext is IDisposable disposableVm)
+        {
+            disposableVm.Dispose();
+        }
         currentWindow?.Close();
+    }
+
+    protected override void DisposeManagedResources()
+    {
+        _loginCts?.Cancel();
+        _loginCts?.Dispose();
+        _loginCts = null;
+
+        base.DisposeManagedResources();
     }
 }

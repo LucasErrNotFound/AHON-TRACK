@@ -566,4 +566,36 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     #endregion
+    
+    // Add to DashboardViewModel class
+
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from event service
+        DashboardEventService.Instance.RecentLogsUpdated -= async (s, e) => await RefreshRecentLogs();
+        DashboardEventService.Instance.ChartDataUpdated -= async (s, e) => await UpdateChartData();
+        DashboardEventService.Instance.SalesUpdated -= async (s, e) => await LoadSalesFromDatabaseAsync();
+        DashboardEventService.Instance.TrainingSessionsUpdated -= async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
+    
+        // Unsubscribe from notification callbacks
+        /*
+        _inventoryService?.UnregisterNotificationCallback(AddNotification);
+        _productService?.UnregisterNotificationCallback(AddNotification);
+        _memberService?.UnregisterNotificationCallback(AddNotification);
+        */
+    
+        // Clear observable collections
+        RecentSales?.Clear();
+        UpcomingTrainingSessions?.Clear();
+        RecentLogs?.Clear();
+        Notifications?.Clear();
+        AvailableYears?.Clear();
+    
+        // Clear chart data
+        Series = [];
+        XAxes = [];
+        YAxes = [];
+    
+        base.DisposeManagedResources();
+    }
 }

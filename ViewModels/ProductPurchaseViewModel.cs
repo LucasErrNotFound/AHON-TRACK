@@ -939,6 +939,61 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         SelectedCustomer != null &&
         !IsCartEmpty &&
         (IsCashSelected || IsGCashSelected || IsMayaSelected);
+    
+    protected override void DisposeManagedResources()
+    {
+        var eventService = DashboardEventService.Instance;
+        eventService.CheckinAdded -= OnCheckInOutDataChanged;
+        eventService.CheckoutAdded -= OnCheckInOutDataChanged;
+        eventService.ProductAdded -= OnProductDataChanged;
+        eventService.ProductUpdated -= OnProductDataChanged;
+        eventService.ProductDeleted -= OnProductDataChanged;
+        eventService.PackageAdded -= OnPackageDataChanged;
+        eventService.PackageUpdated -= OnPackageDataChanged;
+        eventService.PackageDeleted -= OnPackageDataChanged;
+
+        // 2) Unsubscribe from PropertyChanged events on customers
+        foreach (var customer in CustomerList)
+            customer.PropertyChanged -= OnCustomerPropertyChanged;
+
+        // 3) Unsubscribe from PropertyChanged events on cart items
+        foreach (var cartItem in CartItems)
+            cartItem.PropertyChanged -= OnCartItemPropertyChanged;
+
+        // 4) Dispose and clear cached bitmaps
+        foreach (var bmp in _imageCache.Values)
+            bmp?.Dispose();
+        _imageCache.Clear();
+
+        // 5) Clear collections and lists
+        CustomerList.Clear();
+        ProductList.Clear();
+        PackageList.Clear();
+        CartItems.Clear();
+
+        OriginalCustomerList?.Clear();
+        CurrentCustomerList?.Clear();
+        OriginalProductList?.Clear();
+        CurrentProductList?.Clear();
+        OriginalPackageList?.Clear();
+
+        switch (_productPurchaseService)
+        {
+            // 6) Dispose service if applicable
+            case IDisposable disposableService:
+                disposableService.Dispose();
+                break;
+            case IAsyncDisposable asyncDisposableService:
+                asyncDisposableService.DisposeAsync().AsTask().Wait();
+                break;
+        }
+
+        // 7) Reset transient references and state
+        SelectedCustomer = null;
+        IsInitialized = false;
+        CustomerSearchStringResult = string.Empty;
+        ProductSearchStringResult = string.Empty;
+    }
 }
 
 public partial class Customer : ObservableObject

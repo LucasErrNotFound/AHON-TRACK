@@ -679,6 +679,24 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         ApplyEquipmentFilter();
     }
+    
+    // Add to EquipmentInventoryViewModel class
+
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from property change handlers
+        foreach (var equipment in EquipmentItems)
+        {
+            equipment.PropertyChanged -= OnEquipmentPropertyChanged;
+        }
+    
+        // Clear collections
+        EquipmentItems?.Clear();
+        OriginalEquipmentData?.Clear();
+        CurrentFilteredEquipmentData?.Clear();
+    
+        base.DisposeManagedResources();
+    }
 }
 
 public partial class Equipment : ObservableObject

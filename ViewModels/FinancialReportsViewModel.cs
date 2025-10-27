@@ -494,6 +494,25 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     {
         _ = LoadFinancialDataAsync();
     }
+    
+    // Add to FinancialReportsViewModel class
+
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        var eventService = DashboardEventService.Instance;
+        eventService.SalesUpdated -= OnFinancialDataChanged;
+        eventService.ChartDataUpdated -= OnFinancialDataChanged;
+        eventService.ProductPurchased -= OnFinancialDataChanged;
+    
+        // Clear chart data
+        RevenueSeriesCollection = [];
+        RevenueChartXAxes = [];
+        RevenueChartYAxes = [];
+        FinancialBreakdownPieDataCollection = [];
+    
+        base.DisposeManagedResources();
+    }
 }
 
 public class FinancialBreakdownPieData

@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using System;
 using Window = ShadUI.Window;
 
 namespace AHON_TRACK.Views;
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Closing += OnClosing;
+        Closed += OnClosed;
     }
 
     private void OnClosing(object? sender, WindowClosingEventArgs e)
@@ -27,5 +29,15 @@ public partial class MainWindow : Window
         {
             viewModel.TryCloseCommand.Execute(null);
         }
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        // Dispose the ViewModel when window is closed
+        if (DataContext is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+        DataContext = null;
     }
 }

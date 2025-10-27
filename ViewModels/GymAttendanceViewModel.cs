@@ -73,7 +73,6 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     {
         var eventService = DashboardEventService.Instance;
         eventService.CheckinAdded += OnAttendanceDataChanged;
-
     }
 
     private async void OnAttendanceDataChanged(object? sender, EventArgs e)
@@ -313,6 +312,20 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     partial void OnAttendanceGroupSelectedToDateChanged(DateTime value)
     {
         _ = LoadDataAsync();
+    }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from events
+        var eventService = DashboardEventService.Instance;
+        eventService.CheckinAdded -= OnAttendanceDataChanged;
+    
+        // Clear chart data
+        AttendanceSeriesCollection = [];
+        AttendanceLineChartXAxes = [];
+        CustomerTypePieDataCollection = [];
+    
+        base.DisposeManagedResources();
     }
 }
 

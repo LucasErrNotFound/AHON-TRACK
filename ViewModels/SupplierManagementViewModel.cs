@@ -641,6 +641,20 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         ApplySupplierFilter();
     }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from property changed events
+        foreach (var supplier in SupplierItems)
+        {
+            supplier.PropertyChanged -= OnSupplierPropertyChanged;
+        }
+
+        // Clear collections
+        SupplierItems.Clear();
+        OriginalSupplierData.Clear();
+        CurrentFilteredSupplierData.Clear();
+    }
 }
 
 public partial class Supplier : ObservableObject
