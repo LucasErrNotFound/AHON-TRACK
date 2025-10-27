@@ -4,18 +4,16 @@ using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
-using System;
-using System.IO;
-using ShadUI;
 using Jab;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using ShadUI;
-using System;
-using System.IO;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace AHON_TRACK;
 
 [ServiceProvider]
+[Singleton<ServiceProvider>] 
 [Transient<LoginViewModel>]
 [Transient<MainWindowViewModel>]
 [Transient<DashboardViewModel>]
@@ -31,7 +29,6 @@ namespace AHON_TRACK;
 [Transient<SupplierManagementViewModel>]
 [Transient<AddNewEmployeeDialogCardViewModel>]
 [Transient<EmployeeProfileInformationViewModel>]
-[Transient<MemberProfileInformationViewModel>]
 [Transient<LogGymMemberDialogCardViewModel>]
 [Transient<LogWalkInPurchaseViewModel>]
 [Transient<AddTrainingScheduleDialogCardViewModel>]
@@ -52,8 +49,9 @@ namespace AHON_TRACK;
 [Singleton<ToastManager>]
 [Singleton<SettingsService>]
 [Singleton<IMessenger, WeakReferenceMessenger>]
-[Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
-[Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
+[Singleton(typeof(INavigationService), Factory = nameof(NavigationServiceFactory))]
+[Singleton<ILoggerFactory>(Factory = nameof(LoggerFactoryFactory))]
+[Singleton<ILogger>(Factory = nameof(LoggerFactoryLogger))]
 [Singleton<string>(Factory = nameof(ConnectionStringFactory))]
 [Singleton<IEmployeeService, EmployeeService>]
 [Singleton<IDashboardService, DashboardService>]
@@ -66,36 +64,46 @@ namespace AHON_TRACK;
 [Singleton<ISupplierService, SupplierService>]
 [Singleton<IWalkInService, WalkInService>]
 [Singleton<IProductPurchaseService, ProductPurchaseService>]
-[Singleton<DataCountingService, DataCountingService>]
-
+[Singleton<DataCountingService>]
 public partial class ServiceProvider
 {
-    public static ILogger LoggerFactory()
+    public INavigationService NavigationServiceFactory()
     {
-        var currentFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AHON_TRACK\\logs");
-
-        Directory.CreateDirectory(currentFolder);
-
-        var file = Path.Combine(currentFolder, "log.txt");
-
-        var config = new LoggerConfiguration()
+        ILogger logger = GetService<ILogger>();
+        return new NavigationService(this, logger);
+    }
+    
+    private ILoggerFactory LoggerFactoryFactory()
+    {
+        // Configure Serilog once
+        Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.File(file, rollingInterval: RollingInterval.Day)
+            .WriteTo.Console()
+            .WriteTo.File(
+                "Logs\\AHON_TRACK-.log",
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 10,
+                shared: true)
             .CreateLogger();
 
-        Log.Logger = config;
+        // Create Microsoft logger factory bridged to Serilog
+        var factory = LoggerFactory.Create(builder =>
+        {
+            builder.AddSerilog(dispose: true);
+        });
 
-        return config;
+        return factory;
     }
 
-    public PageManager PageManagerFactory()
+    private ILogger LoggerFactoryLogger()
     {
-        return new PageManager(this);
+        var factory = GetService<ILoggerFactory>();
+        return factory.CreateLogger("AHON_TRACK");
     }
-
+    
     private string ConnectionStringFactory()
     {
+        // TODO: Move to configuration file
         return "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
     }
 }

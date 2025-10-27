@@ -787,8 +787,10 @@ namespace AHON_TRACK.Services
                 .ShowError();
 
         // Database query helpers
-        private static bool IsCoachUsername(string username) =>
-            username?.IndexOf("coach", StringComparison.OrdinalIgnoreCase) >= 0;
+        private static bool IsCoachUsername(ReadOnlySpan<char> username)
+        {
+            return username.Contains("coach", StringComparison.OrdinalIgnoreCase);
+        }
 
         private static bool IsInvalidAdminUsername(ManageEmployeeModel employee) =>
             employee.Position?.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase) == true &&
