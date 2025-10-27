@@ -6,16 +6,18 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
-public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
+public abstract class ViewModelBase : ObservableValidator, INotifyDataErrorInfo, IAsyncDisposable
 {
     private readonly Dictionary<string, List<string>> _errors = new();
 
-    public bool HasErrors => _errors.Count != 0;
+    public new bool HasErrors => _errors.Count != 0;
 
-    public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
+    public new event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
 
     public IEnumerable GetErrors(string? propertyName)
     {
@@ -29,7 +31,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
             : Array.Empty<string>();
     }
 
-    protected void SetProperty<T>(ref T field, T value, bool validate = false,
+    protected new void SetProperty<T>(ref T field, T value, bool validate = false,
         [CallerMemberName] string propertyName = null!)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return;
@@ -74,7 +76,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
         OnErrorsChanged(propertyName);
     }
 
-    protected void ClearErrors(string propertyName)
+    protected new void ClearErrors(string propertyName)
     {
         if (_errors.Remove(propertyName)) OnErrorsChanged(propertyName);
     }
@@ -91,7 +93,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
         ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(propertyName));
     }
 
-    protected void ValidateAllProperties()
+    protected new void ValidateAllProperties()
     {
         var properties = GetType().GetProperties()
             .Where(prop => prop.GetCustomAttributes(typeof(ValidationAttribute), true).Length != 0);
@@ -101,5 +103,55 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
             var value = property.GetValue(this);
             ValidateProperty(value, property.Name);
         }
+    }
+    
+    private CancellationTokenSource? _lifecycleCts;
+    private bool _disposed;
+
+    /// <summary>
+    /// Lifecycle cancellation token - cancelled when ViewModel is disposed.
+    /// Use this for long-running operations that should stop on cleanup.
+    /// </summary>
+    protected CancellationToken LifecycleToken => 
+        (_lifecycleCts ??= new CancellationTokenSource()).Token;
+
+    /// <summary>
+    /// Override to perform async cleanup (unsubscribe events, dispose services, etc.)
+    /// </summary>
+    protected virtual ValueTask DisposeAsyncCore() => ValueTask.CompletedTask;
+
+    /// <summary>
+    /// Override to perform sync cleanup (dispose managed resources)
+    /// </summary>
+    protected virtual void Dispose(bool disposing) { }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        // Cancel any ongoing operations
+        _lifecycleCts?.Cancel();
+
+        // Async cleanup
+        await DisposeAsyncCore().ConfigureAwait(false);
+
+        // Sync cleanup
+        Dispose(disposing: true);
+        
+        // Cleanup CTS
+        _lifecycleCts?.Dispose();
+        _lifecycleCts = null;
+
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Helper to ensure ViewModel is not disposed
+    /// </summary>
+    protected void ThrowIfDisposed()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
     }
 }

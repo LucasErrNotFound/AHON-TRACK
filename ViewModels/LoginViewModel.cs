@@ -4,37 +4,43 @@ using AHON_TRACK.Views;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using ShadUI;
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
 
-public partial class LoginViewModel : ViewModelBase
+public sealed partial class LoginViewModel : ViewModelBase
 {
     public ToastManager ToastManager { get; }
     public DialogManager DialogManager { get; }
-    public PageManager PageManager { get; }
-
+    
     private readonly IEmployeeService _employeeService;
-    private bool _shouldShowSuccessLogInToast = false;
+    private readonly ILogger _logger;
+    private bool _shouldShowSuccessLogInToast;
 
-    public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IEmployeeService employeeService)
+    public LoginViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager, 
+        IEmployeeService employeeService,
+        ILogger logger)
     {
         ToastManager = toastManager;
         DialogManager = dialogManager;
-        PageManager = pageManager;
         _employeeService = employeeService;
+        _logger = logger;
     }
 
+    // Design-time constructor
     public LoginViewModel()
     {
         ToastManager = new ToastManager();
         DialogManager = new DialogManager();
-        PageManager = new PageManager(new ServiceProvider());
         _employeeService = null!;
+        _logger = null!;
     }
 
     private string _username = string.Empty;
@@ -67,8 +73,10 @@ public partial class LoginViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanSignIn))]
-    private async Task SignIn()
+    private async Task SignInAsync(CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
+    
         ClearAllErrors();
         ValidateAllProperties();
 
@@ -82,13 +90,18 @@ public partial class LoginViewModel : ViewModelBase
                 .ShowError();
             return;
         }
+
         try
         {
-            // Authenticate using the service
-            var (success, message, employeeId, role) = await _employeeService.AuthenticateUserAsync(Username, Password);
+            _logger.LogInformation("Attempting login for user: {Username}", Username);
+        
+            // ✅ Stay on UI thread
+            var (success, message, employeeId, role) = await _employeeService
+                .AuthenticateUserAsync(Username, Password);
 
             if (!success || employeeId == null || role == null)
             {
+                _logger.LogWarning("Login failed for user: {Username}. Reason: {Message}", Username, message);
                 _shouldShowSuccessLogInToast = false;
                 ToastManager.CreateToast("Login Failed")
                     .WithContent(message)
@@ -103,15 +116,27 @@ public partial class LoginViewModel : ViewModelBase
             CurrentUserModel.Username = Username;
             CurrentUserModel.Role = role;
             CurrentUserModel.LastLogin = DateTime.Now;
-            CurrentUserModel.AvatarBytes = await _employeeService.GetEmployeeProfilePictureAsync(employeeId.Value);
-            System.Diagnostics.Debug.WriteLine($"UserId: {CurrentUserModel.UserId}, Username: {CurrentUserModel.Username}, Role: {CurrentUserModel.Role}, LastLogin: {CurrentUserModel.LastLogin}");
+        
+            // ✅ Stay on UI thread
+            CurrentUserModel.AvatarBytes = await _employeeService
+                .GetEmployeeProfilePictureAsync(employeeId.Value);
 
+            _logger.LogInformation("Login successful for user: {Username}, Role: {Role}", Username, role);
             _shouldShowSuccessLogInToast = true;
             SwitchToMainWindow();
         }
-        catch (ArgumentOutOfRangeException ex)
+        catch (OperationCanceledException)
         {
-            Debug.WriteLine($"Toast error: {ex.Message}");
+            _logger.LogInformation("Login cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during login for user: {Username}", Username);
+            ToastManager.CreateToast("Login Error")
+                .WithContent("An unexpected error occurred during login")
+                .WithDelay(5)
+                .DismissOnClick()
+                .ShowError();
         }
     }
 
@@ -119,22 +144,29 @@ public partial class LoginViewModel : ViewModelBase
     {
         if (!showLogOutSuccess) return;
 
-        Task.Delay(350).ContinueWith(_ =>
+        _ = Task.Delay(350, LifecycleToken).ContinueWith(_ =>
         {
-            ToastManager.CreateToast("You have successfully logged out of your account!")
-                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
-                .WithDelay(5)
-                .DismissOnClick()
-                .ShowSuccess();
+            if (!LifecycleToken.IsCancellationRequested)
+            {
+                ToastManager.CreateToast("You have successfully logged out of your account!")
+                    .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                    .WithDelay(5)
+                    .DismissOnClick()
+                    .ShowSuccess();
+            }
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
-    private void SwitchToMainWindow()
+    private async void SwitchToMainWindow()
     {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             return;
 
         var currentWindow = desktop.MainWindow;
+    
+        // Dispose current login view - stay on UI thread
+        await DisposeAsync(); // ✅ Removed .ConfigureAwait(false)
+
         var provider = new ServiceProvider().RegisterDialogs();
         var viewModel = provider.GetService<MainWindowViewModel>();
         viewModel.Initialize();
@@ -144,5 +176,11 @@ public partial class LoginViewModel : ViewModelBase
         desktop.MainWindow = mainWindow;
         mainWindow.Show();
         currentWindow?.Close();
+    }
+
+    protected override ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing LoginViewModel");
+        return base.DisposeAsyncCore();
     }
 }

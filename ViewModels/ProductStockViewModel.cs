@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using AHON_TRACK.Components.ViewModels;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services;
@@ -20,84 +21,69 @@ using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Events;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("item-stock")]
-public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged, IDisposable
+public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty]
-    private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements", "Apparel"];
-
-    [ObservableProperty]
-    private string _selectedProductFilterItem = "All";
-
-    [ObservableProperty]
-    private ObservableCollection<ProductStock> _productItems = [];
-
-    [ObservableProperty]
-    private List<ProductStock> _originalProductData = [];
-
-    [ObservableProperty]
-    private List<ProductStock> _currentFilteredProductData = [];
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    [ObservableProperty]
-    private string _searchStringResult = string.Empty;
-
-    [ObservableProperty]
-    private bool _isSearchingProduct;
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private ProductStock? _selectedProduct;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
+    [ObservableProperty] private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements", "Apparel"];
+    [ObservableProperty] private string _selectedProductFilterItem = "All";
+    
+    [ObservableProperty] private ObservableCollection<ProductStock> _productItems = [];
+    [ObservableProperty] private List<ProductStock> _originalProductData = [];
+    [ObservableProperty] private List<ProductStock> _currentFilteredProductData = [];
+    [ObservableProperty] private ProductStock? _selectedProduct;
+    
+    [ObservableProperty] private bool _isInitialized;
+    [ObservableProperty] private string _searchStringResult = string.Empty;
+    [ObservableProperty] private bool _isSearchingProduct;
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private int _selectedCount;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private bool _isLoading;
+    
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly IProductService _productService;
+    private readonly INavigationService _navigationService;
+    private readonly ILogger _logger;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
     private bool _disposed = false;
 
-    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
-        SettingsService settingsService, IProductService productService)
+    public ProductStockViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager,
+        SettingsService settingsService, 
+        IProductService productService, 
+        INavigationService navigationService,
+        ILogger logger)
     {
-        _dialogManager = dialogManager;
-        _toastManager = toastManager;
-        _pageManager = pageManager;
-        _settingsService = settingsService;
-        _productService = productService;
+        _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        _productService = productService ?? throw new ArgumentNullException(nameof(productService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    
         SubscribeToEvent();
-        _ = LoadProductDataAsync(showAlerts: true);
-        UpdateProductCounts();
     }
 
     public ProductStockViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _settingsService = new SettingsService();
+        _navigationService = null!;
         _productService = null!;
+        _logger = null!;
 
-        SubscribeToEvent();
-        UpdateProductCounts();
+        LoadProductData();
     }
 
+    /*
     [AvaloniaHotReload]
     public async Task Initialize()
     {
@@ -108,6 +94,49 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
         UpdateProductCounts();
         IsInitialized = true;
+    }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("ProductStockViewModel already initialized");
+            return;
+        }
+
+        _logger?.LogInformation("Initializing ProductStockViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadSettingsAsync(linkedCts.Token).ConfigureAwait(false);
+            await LoadProductDataAsync(showAlerts: true, linkedCts.Token).ConfigureAwait(false);
+            await UpdateProductCounts(linkedCts.Token).ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger?.LogInformation("ProductStockViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("ProductStockViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing ProductStockViewModel");
+            LoadProductData(); // Fallback
+        }
+    }
+    
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from ProductStock");
+        return ValueTask.CompletedTask;
     }
 
     private void SubscribeToEvent()
@@ -130,31 +159,41 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         eventService.ProductPurchased -= OnProductPurchased;
     }
 
-    public void Dispose()
-    {
-        if (_disposed) return;
-
-        UnsubscribeFromEvents();
-        
-        foreach (var product in ProductItems)
-        {
-            product.PropertyChanged -= OnProductPropertyChanged;
-        }
-
-        _disposed = true;
-    }
-
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
-        await LoadProductDataAsync(showAlerts: false);
+        try
+        {
+            _logger?.LogDebug("Detected product data change — refreshing");
+            await LoadProductDataAsync(showAlerts: false, LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing products after change event");
+        }
     }
     
     private async void OnProductPurchased(object? sender, EventArgs e)
     {
-        await LoadProductDataAsync(showAlerts: true);
+        try
+        {
+            _logger?.LogDebug("Detected product purchase — refreshing with alerts");
+            await LoadProductDataAsync(showAlerts: true, LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing products after purchase event");
+        }
     }
 
-    private async Task LoadProductDataAsync(bool showAlerts = false)
+    private async Task LoadProductDataAsync(bool showAlerts = false, CancellationToken cancellationToken = default)
     {
         if (_productService == null)
         {
@@ -165,7 +204,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         IsLoading = true;
         try
         {
-            var result = await _productService.GetAllProductsAsync();
+            var result = await _productService.GetAllProductsAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (!result.Success || result.Products == null)
             {
@@ -174,6 +214,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                     .DismissOnClick()
                     .ShowError();
                 return;
+            }
+            
+            foreach (var product in OriginalProductData)
+            {
+                product.PropertyChanged -= OnProductPropertyChanged;
             }
 
             var productStocks = result.Products.Select(MapToProductStock).ToList();
@@ -194,19 +239,25 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 SelectedProduct = ProductItems[0];
             }
             ApplyProductFilter();
-            UpdateProductCounts();
+            await UpdateProductCounts(cancellationToken).ConfigureAwait(false);
 
             if (showAlerts)
             {
                 await _productService.ShowProductAlertsAsync();
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error loading products from database");
             _toastManager?.CreateToast("Error Loading Products")
                 .WithContent($"Failed to load products: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
+            LoadProductData(); // Fallback
         }
         finally
         {
@@ -277,19 +328,19 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     }
 
     [RelayCommand]
-    private void ShowAddProductView()
+    private async Task ShowAddProductView()
     {
-        _pageManager.Navigate<AddEditProductViewModel>(new Dictionary<string, object>
+        await _navigationService.NavigateAsync<AddEditProductViewModel>(new Dictionary<string, object>
         {
             ["Context"] = ProductViewContext.AddProduct
         });
     }
 
     [RelayCommand]
-    private void ShowEditProductView()
+    private async Task ShowEditProductView()
     {
         if (SelectedProduct == null) return;
-        _pageManager.Navigate<AddEditProductViewModel>(new Dictionary<string, object>
+        await _navigationService.NavigateAsync<AddEditProductViewModel>(new Dictionary<string, object>
         {
             ["Context"] = ProductViewContext.EditProduct,
             ["SelectedProduct"] = SelectedProduct
@@ -336,18 +387,26 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     {
         if (product == null || _productService == null) return;
 
-        var result = await _productService.DeleteProductAsync(product.ID);
-
-        if (result.Success)
+        try
         {
-            product.PropertyChanged -= OnProductPropertyChanged;
-            ProductItems.Remove(product);
-            OriginalProductData.Remove(product);
-            CurrentFilteredProductData.Remove(product);
-            UpdateProductCounts();
-            _ = LoadProductDataAsync();
+            var result = await _productService.DeleteProductAsync(product.ID)
+                .ConfigureAwait(false);
 
-            // Service already shows success toast
+            if (result.Success)
+            {
+                product.PropertyChanged -= OnProductPropertyChanged;
+                ProductItems.Remove(product);
+                OriginalProductData.Remove(product);
+                CurrentFilteredProductData.Remove(product);
+                await UpdateProductCounts(LifecycleToken).ConfigureAwait(false);
+                await LoadProductDataAsync(cancellationToken: LifecycleToken).ConfigureAwait(false);
+
+                _logger?.LogInformation("Deleted product {ProductId}", product.ID);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error deleting product {ProductId}", product.ID);
         }
     }
 
@@ -358,22 +417,31 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         var selectedProducts = ProductItems.Where(item => item.IsSelected).ToList();
         if (selectedProducts.Count == 0) return;
 
-        var productIds = selectedProducts.Select(p => p.ID).ToList();
-        var result = await _productService.DeleteMultipleProductsAsync(productIds);
-
-        if (result.Success)
+        try
         {
-            foreach (var product in selectedProducts)
-            {
-                product.PropertyChanged -= OnProductPropertyChanged;
-                ProductItems.Remove(product);
-                OriginalProductData.Remove(product);
-                CurrentFilteredProductData.Remove(product);
-            }
+            var productIds = selectedProducts.Select(p => p.ID).ToList();
+            var result = await _productService.DeleteMultipleProductsAsync(productIds)
+                .ConfigureAwait(false);
 
-            UpdateProductCounts();
-            _ = LoadProductDataAsync();
-            // Service already shows success toast
+            if (result.Success)
+            {
+                foreach (var product in selectedProducts)
+                {
+                    product.PropertyChanged -= OnProductPropertyChanged;
+                    ProductItems.Remove(product);
+                    OriginalProductData.Remove(product);
+                    CurrentFilteredProductData.Remove(product);
+                }
+
+                await UpdateProductCounts(LifecycleToken).ConfigureAwait(false);
+                await LoadProductDataAsync(cancellationToken: LifecycleToken).ConfigureAwait(false);
+            
+                _logger?.LogInformation("Deleted {Count} products", productIds.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error deleting multiple products");
         }
     }
 
@@ -386,11 +454,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         {
             productItem.IsSelected = shouldSelect;
         }
-        UpdateProductCounts();
+        _ = UpdateProductCounts(LifecycleToken);
     }
 
     [RelayCommand]
-    private async Task SearchProduct()
+    private async Task SearchProduct(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
@@ -400,7 +468,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 product.PropertyChanged += OnProductPropertyChanged;
                 ProductItems.Add(product);
             }
-            UpdateProductCounts();
+            _ = UpdateProductCounts(LifecycleToken);
             return;
         }
 
@@ -408,7 +476,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
         try
         {
-            await Task.Delay(300); // Debounce
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(LifecycleToken, cancellationToken);
+            await Task.Delay(300, linkedCts.Token).ConfigureAwait(false);
 
             var filteredProducts = CurrentFilteredProductData.Where(product =>
                     product is { Name: not null, Category: not null, Supplier: not null, Status: not null } &&
@@ -425,7 +494,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 product.PropertyChanged += OnProductPropertyChanged;
                 ProductItems.Add(product);
             }
-            UpdateProductCounts();
+            _ = UpdateProductCounts(linkedCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected
         }
         finally
         {
@@ -521,7 +594,18 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         }
     }
 
-    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
+    private async Task LoadSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _currentSettings = await _settingsService.LoadSettingsAsync()
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error loading settings");
+        }
+    }
 
     private void ApplyProductFilter()
     {
@@ -546,22 +630,29 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             product.PropertyChanged += OnProductPropertyChanged;
             ProductItems.Add(product);
         }
-        UpdateProductCounts();
+        _ = UpdateProductCounts(LifecycleToken);
     }
 
-    private void UpdateProductCounts()
+    private async Task UpdateProductCounts(CancellationToken cancellationToken = default)
     {
-        SelectedCount = ProductItems.Count(x => x.IsSelected);
-        TotalCount = ProductItems.Count;
-
-        SelectAll = ProductItems.Count > 0 && ProductItems.All(x => x.IsSelected);
+        try
+        {
+            await Task.Yield(); // Ensure async context
+            SelectedCount = ProductItems.Count(x => x.IsSelected);
+            TotalCount = ProductItems.Count;
+            SelectAll = ProductItems.Count > 0 && ProductItems.All(x => x.IsSelected);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error updating product counts");
+        }
     }
 
     private void OnProductPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ProductStock.IsSelected))
         {
-            UpdateProductCounts();
+            _ = UpdateProductCounts(LifecycleToken);
         }
     }
 
@@ -601,6 +692,31 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             DiscountInPercentage = model.IsPercentageDiscount,
             Poster = posterPath
         };
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing ProductStockViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Unsubscribe from product property changes
+        foreach (var product in ProductItems)
+        {
+            product.PropertyChanged -= OnProductPropertyChanged;
+        }
+        foreach (var product in OriginalProductData)
+        {
+            product.PropertyChanged -= OnProductPropertyChanged;
+        }
+
+        // Clear collections
+        ProductItems.Clear();
+        OriginalProductData.Clear();
+        CurrentFilteredProductData.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 }
 

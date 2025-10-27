@@ -1,5 +1,4 @@
 using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Models;
 using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
@@ -7,108 +6,80 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
-using Microsoft.IdentityModel.Tokens;
 using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Data;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using AHON_TRACK.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("training-schedules")]
 public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigable
 {
-    [ObservableProperty]
-    private string[] _packageFilterItems = ["All", "Boxing", "Muay Thai", "Crossfit"];
-
-    [ObservableProperty]
-    private string _selectedPackageFilterItem = "All";
-
-    [ObservableProperty]
-    private DateTime _selectedDate = DateTime.Today;
-
-    [ObservableProperty]
-    private List<ScheduledPerson> _originalScheduledPeople = [];
-
-    [ObservableProperty]
-    private List<ScheduledPerson> _currentScheduledPeople = [];
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private int _currentScheduleCount;
-
-    [ObservableProperty]
-    private int _upcomingScheduleCount;
-
-    [ObservableProperty]
-    private double _currentSchedulePercentageChange;
-
-    [ObservableProperty]
-    private double _upcomingSchedulePercentageChange;
-
-    [ObservableProperty]
-    private string _currentScheduleChangeText = string.Empty;
-
-    [ObservableProperty]
-    private string _upcomingScheduleChangeText = string.Empty;
-
-    [ObservableProperty]
-    private ObservableCollection<ScheduledPerson> _scheduledPeople = [];
+    [ObservableProperty] private string[] _packageFilterItems = ["All", "Boxing", "Muay Thai", "Crossfit"];
+    [ObservableProperty] private string _selectedPackageFilterItem = "All";
+    
+    [ObservableProperty] private ObservableCollection<ScheduledPerson> _scheduledPeople = [];
+    [ObservableProperty] private List<ScheduledPerson> _originalScheduledPeople = [];
+    [ObservableProperty] private List<ScheduledPerson> _currentScheduledPeople = [];
+    [ObservableProperty] private DateTime _selectedDate = DateTime.Today;
+    
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private bool _isInitialized;
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private int _selectedCount;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private int _currentScheduleCount;
+    [ObservableProperty] private int _upcomingScheduleCount;
+    [ObservableProperty] private double _currentSchedulePercentageChange;
+    [ObservableProperty] private double _upcomingSchedulePercentageChange;
+    [ObservableProperty] private string _currentScheduleChangeText = string.Empty;
+    [ObservableProperty] private string _upcomingScheduleChangeText = string.Empty;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly AddTrainingScheduleDialogCardViewModel _addTrainingScheduleDialogCardViewModel;
     private readonly ChangeScheduleDialogCardViewModel _changeScheduleDialogCardViewModel;
+    private readonly ILogger _logger;
     private readonly ITrainingService _trainingService;
 
-    public TrainingSchedulesViewModel(PageManager pageManager, DialogManager dialogManager, ToastManager toastManager,
-        AddTrainingScheduleDialogCardViewModel addTrainingScheduleDialogCardViewModel, ITrainingService trainingService, ChangeScheduleDialogCardViewModel changeScheduleDialogCardViewModel)
+    public TrainingSchedulesViewModel(DialogManager dialogManager, 
+        ToastManager toastManager,
+        ITrainingService trainingService, 
+        ILogger logger,
+        AddTrainingScheduleDialogCardViewModel addTrainingScheduleDialogCardViewModel, 
+        ChangeScheduleDialogCardViewModel changeScheduleDialogCardViewModel)
     {
         _dialogManager = dialogManager;
-        _pageManager = pageManager;
         _toastManager = toastManager;
+        _logger = logger;
         _addTrainingScheduleDialogCardViewModel = addTrainingScheduleDialogCardViewModel;
         _changeScheduleDialogCardViewModel = changeScheduleDialogCardViewModel;
         _trainingService = trainingService;
 
         SubscribeToEvents();
-        _ = LoadTrainingsAsync();
-        UpdateScheduledPeopleCounts();
     }
 
     public TrainingSchedulesViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _addTrainingScheduleDialogCardViewModel = new AddTrainingScheduleDialogCardViewModel();
         _changeScheduleDialogCardViewModel = new ChangeScheduleDialogCardViewModel();
+        _logger = null!;
         _trainingService = null!;
 
-        SubscribeToEvents();
-        UpdateScheduledPeopleCounts();
+        LoadSampleData();
     }
 
+    /*
     [AvaloniaHotReload]
     public void Initialize()
     {
@@ -118,6 +89,50 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         UpdateScheduledPeopleCounts();
         IsInitialized = true;
     }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("TrainingSchedulesViewModel already initialized");
+            return;
+        }
+
+        _logger?.LogInformation("Initializing TrainingSchedulesViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadTrainingsAsync(linkedCts.Token).ConfigureAwait(false);
+            UpdateScheduledPeopleCounts();
+            UpdateDashboardStatistics();
+
+            IsInitialized = true;
+            _logger?.LogInformation("TrainingSchedulesViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("TrainingSchedulesViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing TrainingSchedulesViewModel");
+            LoadSampleData(); // Fallback
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from TrainingSchedules");
+        return ValueTask.CompletedTask;
+    }
+
 
     private void SubscribeToEvents()
     {
@@ -127,10 +142,34 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         eventService.ScheduleUpdated += OnTrainingDataChanged;
         eventService.MemberUpdated += OnTrainingDataChanged;
     }
-
-    private void OnTrainingDataChanged(object? sender, EventArgs e)
+    
+    private void UnsubscribeFromEvents()
     {
-        _ = LoadTrainingsAsync();
+        var eventService = DashboardEventService.Instance;
+        
+        eventService.TrainingSessionsUpdated -= OnTrainingDataChanged;
+        eventService.ScheduleAdded -= OnTrainingDataChanged;
+        eventService.ScheduleUpdated -= OnTrainingDataChanged;
+        eventService.MemberUpdated -= OnTrainingDataChanged;
+    }
+
+    private async void OnTrainingDataChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            _logger?.LogDebug("Detected training data change — refreshing");
+            await LoadTrainingsAsync(LifecycleToken).ConfigureAwait(false);
+            UpdateScheduledPeopleCounts();
+            UpdateDashboardStatistics();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing trainings after change event");
+        }
     }
 
     private void UpdateDashboardStatistics()
@@ -189,47 +228,70 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         }
     }
 
-    public async Task LoadTrainingsAsync()
+    public async Task LoadTrainingsAsync(CancellationToken cancellationToken = default)
     {
         IsLoading = true;
-        var trainings = await _trainingService.GetTrainingSchedulesAsync();
-        var people = new List<ScheduledPerson>();
-
-        foreach (var t in trainings)
+    
+        try
         {
-            Bitmap? bitmap = null;
-            if (t.picture is { Length: > 0 })
+            var trainings = await _trainingService.GetTrainingSchedulesAsync()
+                .ConfigureAwait(false);
+            var people = new List<ScheduledPerson>(trainings.Count);
+
+            foreach (var t in trainings)
             {
-                using var ms = new MemoryStream(t.picture);
-                bitmap = new Bitmap(ms);
+                cancellationToken.ThrowIfCancellationRequested();
+            
+                Bitmap? bitmap = null;
+                if (t.picture is { Length: > 0 })
+                {
+                    using var ms = new MemoryStream(t.picture);
+                    bitmap = new Bitmap(ms);
+                }
+
+                var person = new ScheduledPerson
+                {
+                    TrainingID = t.trainingID,
+                    ID = t.customerID,
+                    FirstName = t.firstName,
+                    LastName = t.lastName,
+                    ContactNumber = t.contactNumber,
+                    PackageType = t.packageType,
+                    AssignedCoach = t.assignedCoach,
+                    ScheduledDate = t.scheduledDate.Date,
+                    ScheduledTimeStart = TimeOnly.FromDateTime(t.scheduledTimeStart),
+                    ScheduledTimeEnd = TimeOnly.FromDateTime(t.scheduledTimeEnd),
+                    Attendance = t.attendance,
+                    Picture = bitmap != null ? null : string.Empty
+                };
+            
+                person.PropertyChanged += OnScheduledChanged;
+                people.Add(person);
             }
 
-            people.Add(new ScheduledPerson
-            {
-                TrainingID = t.trainingID,
-                ID = t.customerID,
-                FirstName = t.firstName,
-                LastName = t.lastName,
-                ContactNumber = t.contactNumber,
-                PackageType = t.packageType,
-                AssignedCoach = t.assignedCoach,
-                ScheduledDate = t.scheduledDate.Date,
-                ScheduledTimeStart = TimeOnly.FromDateTime(t.scheduledTimeStart),
-                ScheduledTimeEnd = TimeOnly.FromDateTime(t.scheduledTimeEnd),
-                Attendance = t.attendance,
-                Picture = bitmap != null ? null : string.Empty // Set appropriately based on your needs
-            });
+            OriginalScheduledPeople = people;
+            FilterDataByPackageAndDate();
+            UpdateDashboardStatistics();
         }
-
-        // Store all data in OriginalScheduledPeople
-        OriginalScheduledPeople = people;
-
-        // Now filter based on current date and package selection
-        FilterDataByPackageAndDate();
-        UpdateDashboardStatistics();
-        IsLoading = false;
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("LoadTrainingsAsync cancelled");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error loading trainings from database");
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to load trainings: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+            LoadSampleData();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
-
 
     private void LoadSampleData()
     {
@@ -237,7 +299,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         OriginalScheduledPeople = scheduledClients;
         FilterDataByPackageAndDate();
     }
-
 
     private List<ScheduledPerson> CreateSampleData()
     {
@@ -314,14 +375,13 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     }
 
     [RelayCommand]
-    private void OpenAddScheduleDialog()
+    private async Task OpenAddScheduleDialog()
     {
-        _addTrainingScheduleDialogCardViewModel.Initialize();
+        await _addTrainingScheduleDialogCardViewModel.InitializeAsync();
         _dialogManager.CreateDialog(_addTrainingScheduleDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
-                // Reload the data after successfully adding a schedule
-                await LoadTrainingsAsync();
+                await LoadTrainingsAsync(LifecycleToken).ConfigureAwait(false);
 
                 _toastManager.CreateToast("Added new training schedule")
                     .WithContent($"You have added a new training schedule!")
@@ -332,7 +392,8 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
                 _toastManager.CreateToast("Adding new training schedule cancelled")
                     .WithContent("Add a new training schedule to continue")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(1465)
+                    .ShowWarning())
+            .WithMaxWidth(1465)
             .Show();
     }
 
@@ -390,7 +451,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     {
         if (scheduledPerson is null) return;
 
-        _changeScheduleDialogCardViewModel.Initialize(scheduledPerson);
+        _ = _changeScheduleDialogCardViewModel.Initialize(scheduledPerson);
         _dialogManager.CreateDialog(_changeScheduleDialogCardViewModel)
             .WithSuccessCallback(_ =>
                 _toastManager.CreateToast("Changed training schedule")
@@ -455,6 +516,27 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         TotalCount = ScheduledPeople.Count;
 
         SelectAll = ScheduledPeople.Count > 0 && ScheduledPeople.All(x => x.IsSelected);
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing TrainingSchedulesViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Unsubscribe from item property changes
+        foreach (var item in ScheduledPeople)
+        {
+            item.PropertyChanged -= OnScheduledChanged;
+        }
+
+        // Clear collections
+        ScheduledPeople.Clear();
+        OriginalScheduledPeople.Clear();
+        CurrentScheduledPeople.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 }
 

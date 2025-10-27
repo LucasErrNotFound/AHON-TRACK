@@ -14,144 +14,85 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using AHON_TRACK.Services;
 using AHON_TRACK.Services.Events;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("product-purchase")]
 public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty]
-    private string[] _productFilterItems = [CategoryConstants.Supplements, CategoryConstants.Drinks, CategoryConstants.Equipment, CategoryConstants.GymPackage];
-
-    [ObservableProperty]
-    private string _selectedProductFilterItem = CategoryConstants.Supplements;
-
-    [ObservableProperty]
-    private string[] _customerTypeFilterItems = ["All", "Walk-in", "Gym Member"];
-
-    [ObservableProperty]
-    private string _selectedCustomerTypeFilterItem = "All";
-
-    [ObservableProperty]
-    private ObservableCollection<Customer> _customerList = [];
-
-    [ObservableProperty]
-    private ObservableCollection<Product> _productList = [];
-
-    [ObservableProperty]
-    private List<Customer> _originalCustomerList = [];
-
-    [ObservableProperty]
-    private List<Customer> _currentCustomerList = [];
-
-    [ObservableProperty]
-    private List<Product> _originalProductList = [];
-
-    [ObservableProperty]
-    private List<Product> _currentProductList = [];
-
-    [ObservableProperty]
-    private ObservableCollection<Package> _packageList = [];
-
-    [ObservableProperty]
-    private List<Package> _originalPackageList = [];
-
-    [ObservableProperty]
-    private string _customerSearchStringResult = string.Empty;
-
-    [ObservableProperty]
-    private string _productSearchStringResult = string.Empty;
-
-    [ObservableProperty]
-    private bool _isSearchingCustomer;
-
-    [ObservableProperty]
-    private bool _isSearchingProduct;
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private Customer? _selectedCustomer;
-
-    [ObservableProperty]
-    private string _customerFullName = "Customer Name";
-
-    [ObservableProperty]
-    private ObservableCollection<CartItem> _cartItems = [];
-
-    [ObservableProperty]
-    private decimal _totalPrice;
-
-    [ObservableProperty]
-    private string _formattedTotalPrice = "₱0.00";
-
-    [ObservableProperty]
-    private bool _isCartEmpty = true;
-
-    [ObservableProperty]
-    private string _emptyCartMessage = "Customer Name's cart is currently empty";
-
-    [ObservableProperty]
-    private bool _isCashSelected;
-
-    [ObservableProperty]
-    private bool _isGCashSelected;
-
-    [ObservableProperty]
-    private bool _isMayaSelected;
-
-    [ObservableProperty]
-    private string _currentTransactionId = "GM-2025-001234";
-
+    [ObservableProperty] private string[] _productFilterItems = [
+        CategoryConstants.Supplements, CategoryConstants.Drinks, 
+        CategoryConstants.Equipment, CategoryConstants.GymPackage];
+    
+    [ObservableProperty] private string _selectedProductFilterItem = CategoryConstants.Supplements;
+    [ObservableProperty] private string[] _customerTypeFilterItems = ["All", "Walk-in", "Gym Member"];
+    [ObservableProperty] private string _selectedCustomerTypeFilterItem = "All";
+    
+    [ObservableProperty] private ObservableCollection<Customer> _customerList = [];
+    [ObservableProperty] private ObservableCollection<Product> _productList = [];
+    [ObservableProperty] private List<Product> _originalProductList = [];
+    [ObservableProperty] private List<Product> _currentProductList = [];
+    
+    [ObservableProperty] private ObservableCollection<Package> _packageList = [];
+    [ObservableProperty] private List<Package> _originalPackageList = [];
+    [ObservableProperty] private string _customerSearchStringResult = string.Empty;
+    [ObservableProperty] private string _productSearchStringResult = string.Empty;
+    [ObservableProperty] private bool _isSearchingCustomer;
+    [ObservableProperty] private bool _isSearchingProduct;
+    [ObservableProperty] private bool _isInitialized;
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private int _selectedCount;
+    [ObservableProperty] private int _totalCount;
+    
+    // RECEIPT PANEL
+    [ObservableProperty] private ObservableCollection<CartItem> _cartItems = [];
+    [ObservableProperty] private List<Customer> _originalCustomerList = [];
+    [ObservableProperty] private List<Customer> _currentCustomerList = [];
+    [ObservableProperty] private Customer? _selectedCustomer;
+    [ObservableProperty] private string _customerFullName = "Customer Name";
+    [ObservableProperty] private string _emptyCartMessage = "Customer Name's cart is currently empty";
+    [ObservableProperty] private string _currentTransactionId = "GM-2025-001234";
+    [ObservableProperty] private string _formattedTotalPrice = "₱0.00";
+    [ObservableProperty] private decimal _totalPrice;
+    [ObservableProperty] private bool _isCartEmpty = true;
+    [ObservableProperty] private bool _isCashSelected;
+    [ObservableProperty] private bool _isGCashSelected;
+    [ObservableProperty] private bool _isMayaSelected;
+    
     private int _lastIdNumber = 1234;
 
     private readonly Dictionary<string, Bitmap> _imageCache = new();
-
-    private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
+    private readonly ILogger _logger;
     private readonly IProductPurchaseService _productPurchaseService;
 
     public ProductPurchaseViewModel(
-        DialogManager dialogManager,
         ToastManager toastManager,
-        PageManager pageManager,
-        IProductPurchaseService productPurchaseService)
+        IProductPurchaseService productPurchaseService,
+        ILogger logger)
     {
-        _dialogManager = dialogManager;
-        _toastManager = toastManager;
-        _pageManager = pageManager;
-        _productPurchaseService = productPurchaseService;
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
+        _productPurchaseService = productPurchaseService ?? throw new ArgumentNullException(nameof(productPurchaseService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    
         SubscribeToEvent();
-        _ = LoadCustomerListFromDatabaseAsync();
-        _ = LoadProductsFromDatabaseAsync();
-        _ = LoadPackagesFromDatabaseAsync();
     }
 
     public ProductPurchaseViewModel()
     {
-        _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _productPurchaseService = null!;
-        SubscribeToEvent();
-        _ = LoadCustomerListFromDatabaseAsync();
-        _ = LoadProductsFromDatabaseAsync();
-        _ = LoadPackagesFromDatabaseAsync();
+        _logger = null!;
+    
+        LoadSampleData();
     }
 
+    /*
     [AvaloniaHotReload]
     public void Initialize()
     {
@@ -171,6 +112,56 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         IsInitialized = true;
     }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("ProductPurchaseViewModel already initialized");
+            return;
+        }
+
+        _logger?.LogInformation("Initializing ProductPurchaseViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadCustomerListFromDatabaseAsync(linkedCts.Token).ConfigureAwait(false);
+            await LoadProductsFromDatabaseAsync(linkedCts.Token).ConfigureAwait(false);
+            await LoadPackagesFromDatabaseAsync(linkedCts.Token).ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger?.LogInformation("ProductPurchaseViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("ProductPurchaseViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing ProductPurchaseViewModel");
+            LoadSampleData(); // Fallback
+        }
+    }
+    
+    private void LoadSampleData()
+    {
+        LoadCustomerList();
+        LoadProductOptions();
+        LoadPackageOptions();
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from ProductPurchase");
+        return ValueTask.CompletedTask;
+    }
 
     private void SubscribeToEvent()
     {
@@ -185,20 +176,70 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         eventService.PackageUpdated += OnPackageDataChanged;
         eventService.PackageDeleted += OnPackageDataChanged;
     }
+    
+    private void UnsubscribeFromEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+        
+        eventService.CheckinAdded -= OnCheckInOutDataChanged;
+        eventService.CheckoutAdded -= OnCheckInOutDataChanged;
+        eventService.ProductAdded -= OnProductDataChanged;
+        eventService.ProductUpdated -= OnProductDataChanged;
+        eventService.ProductDeleted -= OnProductDataChanged;
+        eventService.PackageAdded -= OnPackageDataChanged;
+        eventService.PackageUpdated -= OnPackageDataChanged;
+        eventService.PackageDeleted -= OnPackageDataChanged;
+    }
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
-        await LoadCustomerListFromDatabaseAsync();
+        try
+        {
+            _logger?.LogDebug("Detected check-in/out change — refreshing customers");
+            await LoadCustomerListFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing customers after check-in/out event");
+        }
     }
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
-        await LoadProductsFromDatabaseAsync();
+        try
+        {
+            _logger?.LogDebug("Detected product change — refreshing products");
+            await LoadProductsFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing products after change event");
+        }
     }
 
     private async void OnPackageDataChanged(object? sender, EventArgs e)
     {
-        await LoadPackagesFromDatabaseAsync();
+        try
+        {
+            _logger?.LogDebug("Detected package change — refreshing packages");
+            await LoadPackagesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing packages after change event");
+        }
     }
 
     private void LoadCustomerList()
@@ -218,11 +259,17 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         UpdateCustomerCounts();
     }
 
-    private async Task LoadCustomerListFromDatabaseAsync()
+    private async Task LoadCustomerListFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var customers = await _productPurchaseService.GetAllCustomersAsync();
+            var customers = await _productPurchaseService.GetAllCustomersAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            foreach (var customer in OriginalCustomerList)
+            {
+                customer.PropertyChanged -= OnCustomerPropertyChanged;
+            }
 
             OriginalCustomerList = customers.Select(c => new Customer
             {
@@ -244,12 +291,20 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             ApplyCustomerFilter();
             UpdateCustomerCounts();
             OnSelectedCustomerTypeFilterItemChanged(SelectedCustomerTypeFilterItem);
+
+            _logger?.LogDebug("Loaded {Count} customers from database", customers.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error loading customers from database");
             _toastManager.CreateToast("Load Error")
                 .WithContent($"Failed to load customers: {ex.Message}")
                 .ShowError();
+            LoadCustomerList();
         }
     }
 
@@ -280,11 +335,13 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         };
     }
 
-    private async Task LoadProductsFromDatabaseAsync()
+    private async Task LoadProductsFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var products = await _productPurchaseService.GetAllProductsAsync();
+            var products = await _productPurchaseService.GetAllProductsAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            
             var productModels = products.Select(ConvertToProduct).ToList();
 
             OriginalProductList = productModels;
@@ -295,32 +352,51 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 ProductList.Add(product);
 
             ApplyProductFilter();
+            _logger?.LogDebug("Loaded {Count} products from database", products.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error loading products from database");
             _toastManager.CreateToast("Load Error")
                 .WithContent($"Failed to load products: {ex.Message}")
                 .ShowError();
+            LoadProductOptions(); // Fallback
         }
     }
 
-    private async Task LoadPackagesFromDatabaseAsync()
+    private async Task LoadPackagesFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var packages = await _productPurchaseService.GetAllGymPackagesAsync();
+            var packages = await _productPurchaseService.GetAllGymPackagesAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested(); 
+            
             var packageModels = packages.Select(ConvertToPackage).ToList();
+            
             OriginalPackageList = packageModels;
             PackageList.Clear();
+            
             foreach (var package in packageModels)
                 PackageList.Add(package);
+            
             ApplyProductFilter();
+            _logger?.LogDebug("Loaded {Count} packages from database", packages.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error loading packages from database");
             _toastManager.CreateToast("Load Error")
                 .WithContent($"Failed to load packages: {ex.Message}")
                 .ShowError();
+            LoadPackageOptions(); // Fallback
         }
     }
 
@@ -521,7 +597,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private async Task SearchCustomers()
+    private async Task SearchCustomers(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(CustomerSearchStringResult))
         {
@@ -539,7 +615,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         try
         {
-            await Task.Delay(500);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(LifecycleToken, cancellationToken);
+            await Task.Delay(500, linkedCts.Token).ConfigureAwait(false);
 
             var filteredCustomers = CurrentCustomerList.Where(customer =>
                 customer.FirstName.Contains(CustomerSearchStringResult, StringComparison.OrdinalIgnoreCase) ||
@@ -555,6 +632,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             }
             UpdateCustomerCounts();
         }
+        catch (OperationCanceledException)
+        {
+            // Expected
+        }
         finally
         {
             IsSearchingCustomer = false;
@@ -562,7 +643,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private async Task SearchProducts()
+    private async Task SearchProducts(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(ProductSearchStringResult))
         {
@@ -574,7 +655,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         try
         {
-            await Task.Delay(300);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(LifecycleToken, cancellationToken);
+            await Task.Delay(300, linkedCts.Token).ConfigureAwait(false);
 
             ProductList.Clear();
             PackageList.Clear();
@@ -599,6 +681,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 foreach (var product in filteredProducts)
                     ProductList.Add(product);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected
         }
         finally
         {
@@ -886,18 +972,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         OnPropertyChanged(nameof(IsPaymentPossible));
     }
 
-    public void Dispose()
-    {
-        foreach (var customer in CustomerList)
-            customer.PropertyChanged -= OnCustomerPropertyChanged;
-
-        foreach (var cartItem in CartItems)
-            cartItem.PropertyChanged -= OnCartItemPropertyChanged;
-        DashboardEventService.Instance.PackageAdded -= (s, e) => OnPackagesChanged();
-        DashboardEventService.Instance.PackageUpdated -= (s, e) => OnPackagesChanged();
-        DashboardEventService.Instance.PackageDeleted -= (s, e) => OnPackagesChanged();
-    }
-
     private string GenerateNewTransactionId()
     {
         _lastIdNumber++;
@@ -939,6 +1013,50 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         SelectedCustomer != null &&
         !IsCartEmpty &&
         (IsCashSelected || IsGCashSelected || IsMayaSelected);
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing ProductPurchaseViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Unsubscribe from customer property changes
+        foreach (var customer in CustomerList)
+        {
+            customer.PropertyChanged -= OnCustomerPropertyChanged;
+        }
+        foreach (var customer in OriginalCustomerList)
+        {
+            customer.PropertyChanged -= OnCustomerPropertyChanged;
+        }
+
+        // Unsubscribe from cart item property changes
+        foreach (var cartItem in CartItems)
+        {
+            cartItem.PropertyChanged -= OnCartItemPropertyChanged;
+        }
+
+        // Clear collections
+        CustomerList.Clear();
+        ProductList.Clear();
+        PackageList.Clear();
+        CartItems.Clear();
+        OriginalCustomerList.Clear();
+        CurrentCustomerList.Clear();
+        OriginalProductList.Clear();
+        CurrentProductList.Clear();
+        OriginalPackageList.Clear();
+
+        // Clear image cache
+        _imageCache.Clear();
+        
+        DashboardEventService.Instance.PackageAdded -= (s, e) => OnPackagesChanged();
+        DashboardEventService.Instance.PackageUpdated -= (s, e) => OnPackagesChanged();
+        DashboardEventService.Instance.PackageDeleted -= (s, e) => OnPackagesChanged();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
 }
 
 public partial class Customer : ObservableObject

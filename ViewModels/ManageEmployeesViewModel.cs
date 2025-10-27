@@ -11,163 +11,249 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using Microsoft.Extensions.Logging;
 using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using AHON_TRACK.Services;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("manageEmployees")]
-public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
+public sealed partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 {
-    [ObservableProperty]
-    private List<ManageEmployeesItem> _originalEmployeeData = [];
+    #region Private Fields
 
-    [ObservableProperty]
-    private ObservableCollection<ManageEmployeesItem> _employeeItems = [];
-
-    [ObservableProperty]
-    private List<ManageEmployeesItem> _currentFilteredData = [];
-
-    [ObservableProperty]
-    private string _searchStringResult = string.Empty;
-
-    [ObservableProperty]
-    private bool _isSearchingEmployee;
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private bool _showIdColumn = true;
-
-    [ObservableProperty]
-    private bool _showPictureColumn = true;
-
-    [ObservableProperty]
-    private bool _showNameColumn = true;
-
-    [ObservableProperty]
-    private bool _showUsernameColumn = true;
-
-    [ObservableProperty]
-    private bool _showContactNumberColumn = true;
-
-    [ObservableProperty]
-    private bool _showPositionColumn = true;
-
-    [ObservableProperty]
-    private bool _showStatusColumn = true;
-
-    [ObservableProperty]
-    private bool _showDateJoined = true;
-
-    [ObservableProperty]
-    private int _selectedSortIndex = -1;
-
-    [ObservableProperty]
-    private int _selectedFilterIndex = -1;
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
-
-    private readonly PageManager _pageManager;
+    private readonly INavigationService _navigationService;
     private readonly IEmployeeService _employeeService;
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
-    private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
+    private readonly ILogger _logger;
 
+    [ObservableProperty] private List<ManageEmployeesItem> _originalEmployeeData = [];
+    [ObservableProperty] private ObservableCollection<ManageEmployeesItem> _employeeItems = [];
+    [ObservableProperty] private List<ManageEmployeesItem> _currentFilteredData = [];
+    [ObservableProperty] private string _searchStringResult = string.Empty;
+    [ObservableProperty] private bool _isSearchingEmployee;
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private int _selectedCount;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private bool _showIdColumn = true;
+    [ObservableProperty] private bool _showPictureColumn = true;
+    [ObservableProperty] private bool _showNameColumn = true;
+    [ObservableProperty] private bool _showUsernameColumn = true;
+    [ObservableProperty] private bool _showContactNumberColumn = true;
+    [ObservableProperty] private bool _showPositionColumn = true;
+    [ObservableProperty] private bool _showStatusColumn = true;
+    [ObservableProperty] private bool _showDateJoined = true;
+    [ObservableProperty] private int _selectedSortIndex = -1;
+    [ObservableProperty] private int _selectedFilterIndex = -1;
+    [ObservableProperty] private bool _isInitialized;
 
-    public ObservableCollection<ManageEmployeeModel> Employees { get; } = new ObservableCollection<ManageEmployeeModel>();
+    #endregion
+
+    #region Constructor
 
     public ManageEmployeesViewModel(
         DialogManager dialogManager,
         ToastManager toastManager,
-        PageManager pageManager,
-        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, EmployeeProfileInformationViewModel employeeProfileInformationViewModel, IEmployeeService employeeService)
+        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel,
+        INavigationService navigationService,
+        IEmployeeService employeeService,
+        ILogger logger)
     {
-        _pageManager = pageManager;
-        _dialogManager = dialogManager;
-        _toastManager = toastManager;
-        _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
-        _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
-        _employeeService = employeeService;
-        SubscribToEvent();
-        _ = LoadEmployeesFromDatabaseAsync(); ;
-        _ = UpdateCounts();
+        _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
+        _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel ?? throw new ArgumentNullException(nameof(addNewEmployeeDialogCardViewModel));
+        _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        _employeeService = employeeService ?? throw new ArgumentNullException(nameof(employeeService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
+        SubscribeToEvents();
     }
 
+    // Design-time constructor
     public ManageEmployeesViewModel()
     {
         _toastManager = new ToastManager();
         _dialogManager = new DialogManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _addNewEmployeeDialogCardViewModel = new AddNewEmployeeDialogCardViewModel();
-        _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
+        _navigationService = null!;
         _employeeService = null!;
-        SubscribToEvent();
-        _ = LoadEmployeesFromDatabaseAsync();
+        _logger = null!;
 
+        LoadSampleData();
     }
 
+    #endregion
+
+    #region INavigable Implementation
 
     [AvaloniaHotReload]
-    public async Task Initialize()
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (IsInitialized) return;
-
-        SubscribToEvent();
-
-        if (_employeeService != null)
+        ThrowIfDisposed();
+        
+        if (IsInitialized)
         {
-            await LoadEmployeesFromDatabaseAsync();
+            _logger.LogDebug("ManageEmployeesViewModel already initialized");
+            return;
         }
-        else
+
+        _logger.LogInformation("Initializing ManageEmployeesViewModel");
+
+        try
         {
-            LoadSampleData();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadEmployeesFromDatabaseAsync(linkedCts.Token).ConfigureAwait(false);
+            await UpdateCounts(linkedCts.Token).ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger.LogInformation("ManageEmployeesViewModel initialized successfully");
         }
-        IsInitialized = true;
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("ManageEmployeesViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing ManageEmployeesViewModel");
+            LoadSampleData(); // Fallback
+        }
     }
 
-    private void SubscribToEvent()
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from ManageEmployees");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
+
+    #region Event Management
+
+    private void SubscribeToEvents()
     {
         var eventService = DashboardEventService.Instance;
-
         eventService.EmployeeAdded += OnEmployeeChanged;
         eventService.EmployeeUpdated += OnEmployeeChanged;
-        eventService.EmployeeUpdated += OnEmployeeChanged;
+        eventService.EmployeeDeleted += OnEmployeeChanged;
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+        eventService.EmployeeAdded -= OnEmployeeChanged;
+        eventService.EmployeeUpdated -= OnEmployeeChanged;
+        eventService.EmployeeDeleted -= OnEmployeeChanged;
     }
 
     private async void OnEmployeeChanged(object? sender, EventArgs e)
     {
-        Debug.WriteLine("🔁 Detected employee data change — refreshing...");
-        await LoadEmployeesFromDatabaseAsync();
-        await UpdateCounts();
+        try
+        {
+            _logger.LogDebug("Detected employee data change — refreshing");
+            await LoadEmployeesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+            await UpdateCounts(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing employees after change event");
+        }
+    }
+
+    private void OnEmployeePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ManageEmployeesItem.IsSelected))
+        {
+            _ = UpdateCounts(LifecycleToken);
+        }
+    }
+
+    #endregion
+
+    #region Data Loading
+
+    private async Task LoadEmployeesFromDatabaseAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var (success, message, employees) = await _employeeService.GetEmployeesAsync()
+                .ConfigureAwait(false);
+
+            if (!success || employees == null)
+            {
+                _logger.LogWarning("Failed to load employees: {Message}", message);
+                _toastManager.CreateToast("Database Error")
+                    .WithContent($"Failed to load employees: {message}")
+                    .DismissOnClick()
+                    .ShowError();
+                LoadSampleData();
+                return;
+            }
+
+            // Use Span<T> for efficient transformation
+            var employeeItems = new List<ManageEmployeesItem>(employees.Count);
+            foreach (var emp in employees)
+            {
+                var item = new ManageEmployeesItem
+                {
+                    ID = emp.ID,
+                    AvatarSource = emp.AvatarBytes != null
+                        ? ImageHelper.BytesToBitmap(emp.AvatarBytes)
+                        : ManageEmployeeModel.DefaultAvatarSource,
+                    Name = emp.Name,
+                    Username = emp.Username,
+                    ContactNumber = emp.ContactNumber,
+                    Position = emp.Position,
+                    Status = emp.Status,
+                    DateJoined = emp.DateJoined
+                };
+                item.PropertyChanged += OnEmployeePropertyChanged;
+                employeeItems.Add(item);
+            }
+
+            OriginalEmployeeData = employeeItems;
+            CurrentFilteredData = new List<ManageEmployeesItem>(employeeItems);
+
+            EmployeeItems.Clear();
+            foreach (var item in employeeItems)
+            {
+                EmployeeItems.Add(item);
+            }
+
+            TotalCount = EmployeeItems.Count;
+            _logger.LogDebug("Loaded {Count} employees from database", employees.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading employees from database");
+            _toastManager.CreateToast("Error")
+                .WithContent($"Unexpected error: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+            LoadSampleData();
+        }
     }
 
     private void LoadSampleData()
     {
         var sampleEmployees = GetSampleEmployeesData();
-
-        // Store original data for filtering/sorting operations
         OriginalEmployeeData = sampleEmployees;
-        CurrentFilteredData = [.. sampleEmployees]; // Initialize current state
+        CurrentFilteredData = new List<ManageEmployeesItem>(sampleEmployees);
 
         EmployeeItems.Clear();
         foreach (var employee in sampleEmployees)
@@ -181,219 +267,47 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
     private List<ManageEmployeesItem> GetSampleEmployeesData()
     {
-        return
-        [
-            new ManageEmployeesItem
-            {
-                ID = 1001,
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "Jedd Calubayan",
-                Username = "Kuya Rome",
-                ContactNumber = "0975 994 3010",
-                Position = "Gym Staff",
-                Status = "Active",
-                DateJoined = new DateTime(2025, 6, 16)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = 1002,
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "JC Casidore",
-                Username = "Jaycee",
-                ContactNumber = "0989 445 0949",
-                Position = "Gym Staff",
-                Status = "Active",
-                DateJoined = new DateTime(2025, 6, 16)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = 1003,
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "Mardie Dela Cruz",
-                Username = "Figora",
-                ContactNumber = "0901 990 9921",
-                Position = "Gym Staff",
-                Status = "Inactive",
-                DateJoined = new DateTime(2025, 6, 17)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = 1004,
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "JL Taberdo",
-                Username = "JeyEL",
-                ContactNumber = "0957 889 3724",
-                Position = "Gym Staff",
-                Status = "Terminated",
-                DateJoined = new DateTime(2025, 6, 19)
-            },
-
-            new ManageEmployeesItem
-            {
-                ID = 1005,
-                AvatarSource = ManageEmployeeModel.DefaultAvatarSource,
-                Name = "Jav Agustin",
-                Username = "Mr. Javitos",
-                ContactNumber = "0923 354 4866",
-                Position = "Gym Staff",
-                Status = "Inactive",
-                DateJoined = new DateTime(2025, 6, 21)
-            }
-        ];
+        return new List<ManageEmployeesItem>
+        {
+            new() { ID = 1001, AvatarSource = ManageEmployeeModel.DefaultAvatarSource, Name = "Jedd Calubayan", 
+                    Username = "Kuya Rome", ContactNumber = "0975 994 3010", Position = "Gym Staff", 
+                    Status = "Active", DateJoined = new DateTime(2025, 6, 16) },
+            new() { ID = 1002, AvatarSource = ManageEmployeeModel.DefaultAvatarSource, Name = "JC Casidore", 
+                    Username = "Jaycee", ContactNumber = "0989 445 0949", Position = "Gym Staff", 
+                    Status = "Active", DateJoined = new DateTime(2025, 6, 16) },
+            new() { ID = 1003, AvatarSource = ManageEmployeeModel.DefaultAvatarSource, Name = "Mardie Dela Cruz", 
+                    Username = "Figora", ContactNumber = "0901 990 9921", Position = "Gym Staff", 
+                    Status = "Inactive", DateJoined = new DateTime(2025, 6, 17) },
+            new() { ID = 1004, AvatarSource = ManageEmployeeModel.DefaultAvatarSource, Name = "JL Taberdo", 
+                    Username = "JeyEL", ContactNumber = "0957 889 3724", Position = "Gym Staff", 
+                    Status = "Terminated", DateJoined = new DateTime(2025, 6, 19) },
+            new() { ID = 1005, AvatarSource = ManageEmployeeModel.DefaultAvatarSource, Name = "Jav Agustin", 
+                    Username = "Mr. Javitos", ContactNumber = "0923 354 4866", Position = "Gym Staff", 
+                    Status = "Inactive", DateJoined = new DateTime(2025, 6, 21) }
+        };
     }
 
-    // Method to load employees from a database (for future implementation) new
-    public const string connectionString =
-    "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
-
-    private async Task LoadEmployeesFromDatabaseAsync()
-    {
-        try
-        {
-            var (success, message, employees) = await _employeeService.GetEmployeesAsync();
-
-            if (!success || employees == null)
-            {
-                _toastManager.CreateToast("Database Error")
-                    .WithContent($"Failed to load employees: {message}")
-                    .DismissOnClick()
-                    .ShowError();
-
-                LoadSampleData(); // Fallback
-                return;
-            }
-
-            var employeeItems = employees.Select(emp => new ManageEmployeesItem
-            {
-                ID = emp.ID, // ✅ Convert int to string for UI
-                AvatarSource = emp.AvatarBytes != null
-                    ? ImageHelper.BytesToBitmap(emp.AvatarBytes)
-                    : ManageEmployeeModel.DefaultAvatarSource,
-                Name = emp.Name,
-                Username = emp.Username,
-                ContactNumber = emp.ContactNumber,
-                Position = emp.Position,
-                Status = emp.Status,
-                DateJoined = emp.DateJoined
-            }).ToList();
-
-            OriginalEmployeeData = employeeItems;
-            CurrentFilteredData = [.. employeeItems];
-
-            EmployeeItems.Clear();
-            foreach (var employee in employeeItems)
-            {
-                employee.PropertyChanged += OnEmployeePropertyChanged;
-                EmployeeItems.Add(employee);
-            }
-
-            TotalCount = EmployeeItems.Count;
-            _ = UpdateCounts();
-        }
-        catch (Exception ex)
-        {
-            _toastManager.CreateToast("Error")
-                .WithContent($"Unexpected error: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-
-            LoadSampleData();
-        }
-    }
-
-    public List<ManageEmployeesItem> Items { get; set; } = new();
-    public string GenerateEmployeesSummary() // new
-    {
-        int totalCount = Items?.Count ?? 0;
-
-        int activeCount = Items?.Count(x => string.Equals(x.Status, "active", StringComparison.OrdinalIgnoreCase)) ?? 0;
-        int inactiveCount = Items?.Count(x => string.Equals(x.Status, "inactive", StringComparison.OrdinalIgnoreCase)) ?? 0;
-        int terminatedCount = Items?.Count(x => string.Equals(x.Status, "terminated", StringComparison.OrdinalIgnoreCase)) ?? 0;
-
-        return $"Total: {totalCount} employees (Active: {activeCount}, Inactive: {inactiveCount}, Terminated: {terminatedCount})";
-    }
-
-    public async Task<string> GenerateEmployeesSummaryAsync()
-    {
-        try
-        {
-            int totalCount = await _employeeService.GetTotalEmployeeCountAsync();
-            int activeCount = await _employeeService.GetEmployeeCountByStatusAsync("Active");
-            int inactiveCount = await _employeeService.GetEmployeeCountByStatusAsync("Inactive");
-            int terminatedCount = await _employeeService.GetEmployeeCountByStatusAsync("Terminated");
-
-            return $"Total: {totalCount} employees (Active: {activeCount}, Inactive: {inactiveCount}, Terminated: {terminatedCount})";
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error generating summary: {ex.Message}");
-
-            // Fallback to current method
-            return GenerateEmployeesSummary();
-        }
-    }
-
-
-    private void OnEmployeePropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ManageEmployeesItem.IsSelected))
-        {
-            _ = UpdateCounts();
-        }
-    }
-
-    private async Task UpdateEmployeeItemsFromService(List<ManageEmployeeModel> employees)
-    {
-        var employeeItems = employees.Select(emp => new ManageEmployeesItem
-        {
-            ID = emp.ID,
-            AvatarSource = emp.AvatarBytes != null
-                ? ImageHelper.BytesToBitmap(emp.AvatarBytes)
-                : ManageEmployeeModel.DefaultAvatarSource,
-            Name = emp.Name,
-            Username = emp.Username,
-            ContactNumber = emp.ContactNumber,
-            Position = emp.Position,
-            Status = emp.Status,
-            DateJoined = emp.DateJoined
-        }).ToList();
-
-        // Update collections
-        OriginalEmployeeData = employeeItems; // Keep original data updated
-        CurrentFilteredData = [.. employeeItems];
-
-        EmployeeItems.Clear();
-        foreach (var employee in employeeItems)
-        {
-            employee.PropertyChanged += OnEmployeePropertyChanged;
-            EmployeeItems.Add(employee);
-        }
-
-        await UpdateCounts();
-    }
-
-    private async Task UpdateCounts()
+    private async Task UpdateCounts(CancellationToken cancellationToken = default)
     {
         try
         {
             SelectedCount = EmployeeItems.Count(x => x.IsSelected);
-            TotalCount = await _employeeService.GetTotalEmployeeCountAsync();
-
+            TotalCount = await _employeeService.GetTotalEmployeeCountAsync()
+                .ConfigureAwait(false);
             SelectAll = EmployeeItems.Count > 0 && EmployeeItems.All(x => x.IsSelected);
         }
         catch (Exception ex)
         {
-            // Fallback to current method if service fails
+            _logger.LogWarning(ex, "Error updating counts from service, using local count");
             SelectedCount = EmployeeItems.Count(x => x.IsSelected);
             TotalCount = EmployeeItems.Count;
             SelectAll = EmployeeItems.Count > 0 && EmployeeItems.All(x => x.IsSelected);
-
-            System.Diagnostics.Debug.WriteLine($"Error updating counts: {ex.Message}");
         }
     }
+
+    #endregion
+
+    #region Dialog Commands
 
     [RelayCommand]
     private void ShowAddNewEmployeeDialog()
@@ -403,7 +317,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
-                await LoadEmployeesFromDatabaseAsync();
+                await LoadEmployeesFromDatabaseAsync(LifecycleToken);
                 _toastManager.CreateToast("Added a new employee")
                     .WithContent("Welcome, new employee!")
                     .DismissOnClick()
@@ -418,9 +332,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             .Show();
     }
 
-
     [RelayCommand]
-    private async Task ShowModifyEmployeeDialog(ManageEmployeesItem? employee)
+    private async Task ShowModifyEmployeeDialogAsync(ManageEmployeesItem? employee)
     {
         if (employee is null)
         {
@@ -436,7 +349,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
-                await LoadEmployeesFromDatabaseAsync();
+                await LoadEmployeesFromDatabaseAsync(LifecycleToken);
                 _toastManager.CreateToast("Modified Employee Details")
                     .WithContent($"You have successfully modified {employee.Name}'s details")
                     .DismissOnClick()
@@ -451,13 +364,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             .Show();
     }
 
-
     [RelayCommand]
-    private void OpenViewEmployeeProfile(ManageEmployeesItem? employee)
+    private async Task OpenViewEmployeeProfileAsync(ManageEmployeesItem? employee)
     {
         if (employee == null)
         {
-            // Write a debugger message on why employee variable is null
             _toastManager.CreateToast("Error")
                 .WithContent("No employee selected to view profile.")
                 .DismissOnClick()
@@ -470,8 +381,14 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             { "IsCurrentUser", false },
             { "EmployeeData", employee }
         };
-        _pageManager.Navigate<EmployeeProfileInformationViewModel>(parameters);
+        
+        await _navigationService.NavigateAsync<EmployeeProfileInformationViewModel>(
+            parameters, LifecycleToken).ConfigureAwait(false);
     }
+
+    #endregion
+
+    #region Sort Commands
 
     [RelayCommand]
     private void SortReset()
@@ -483,9 +400,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             EmployeeItems.Add(employee);
         }
 
-        CurrentFilteredData = [.. OriginalEmployeeData];
-        _ = UpdateCounts();
-
+        CurrentFilteredData = new List<ManageEmployeesItem>(OriginalEmployeeData);
+        _ = UpdateCounts(LifecycleToken);
         SelectedSortIndex = -1;
         SelectedFilterIndex = -1;
     }
@@ -493,191 +409,148 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private void SortById()
     {
-        var sortedById = EmployeeItems.OrderBy(employee => employee.ID).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employees in sortedById)
-        {
-            EmployeeItems.Add(employees);
-        }
-        // Update current filtered data to match sorted state
-        CurrentFilteredData = [.. sortedById];
+        var sorted = EmployeeItems.OrderBy(e => e.ID).ToList();
+        UpdateEmployeeItems(sorted);
     }
 
     [RelayCommand]
     private void SortNamesByAlphabetical()
     {
-        var sortedNamesInAlphabetical = EmployeeItems.OrderBy(employee => employee.Name).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employees in sortedNamesInAlphabetical)
-        {
-            EmployeeItems.Add(employees);
-        }
-        CurrentFilteredData = [.. sortedNamesInAlphabetical];
+        var sorted = EmployeeItems.OrderBy(e => e.Name).ToList();
+        UpdateEmployeeItems(sorted);
     }
 
     [RelayCommand]
     private void SortNamesByReverseAlphabetical()
     {
-        var sortedReverseNamesInAlphabetical = EmployeeItems.OrderByDescending(employee => employee.Name).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employees in sortedReverseNamesInAlphabetical)
-        {
-            EmployeeItems.Add(employees);
-        }
-        CurrentFilteredData = [.. sortedReverseNamesInAlphabetical];
+        var sorted = EmployeeItems.OrderByDescending(e => e.Name).ToList();
+        UpdateEmployeeItems(sorted);
     }
 
     [RelayCommand]
     private void SortUsernamesByAlphabetical()
     {
-        var sortedUsernamesInAlphabetical = EmployeeItems.OrderBy(employee => employee.Username).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employees in sortedUsernamesInAlphabetical)
-        {
-            EmployeeItems.Add(employees);
-        }
-        CurrentFilteredData = [.. sortedUsernamesInAlphabetical];
+        var sorted = EmployeeItems.OrderBy(e => e.Username).ToList();
+        UpdateEmployeeItems(sorted);
     }
 
     [RelayCommand]
     private void SortUsernamesByReverseAlphabetical()
     {
-        var sortedUsernamesInReverseAlphabetical = EmployeeItems.OrderByDescending(employee => employee.Username).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employees in sortedUsernamesInReverseAlphabetical)
-        {
-            EmployeeItems.Add(employees);
-        }
-        CurrentFilteredData = [.. sortedUsernamesInReverseAlphabetical];
+        var sorted = EmployeeItems.OrderByDescending(e => e.Username).ToList();
+        UpdateEmployeeItems(sorted);
     }
 
     [RelayCommand]
     private void SortDateByNewestToOldest()
     {
-        var sortedDates = EmployeeItems.OrderByDescending(log => log.DateJoined).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var logs in sortedDates)
-        {
-            EmployeeItems.Add(logs);
-        }
-        CurrentFilteredData = [.. sortedDates];
+        var sorted = EmployeeItems.OrderByDescending(e => e.DateJoined).ToList();
+        UpdateEmployeeItems(sorted);
     }
 
     [RelayCommand]
     private void SortDateByOldestToNewest()
     {
-        var sortedDates = EmployeeItems.OrderBy(log => log.DateJoined).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var logs in sortedDates)
-        {
-            EmployeeItems.Add(logs);
-        }
-        CurrentFilteredData = [.. sortedDates];
+        var sorted = EmployeeItems.OrderBy(e => e.DateJoined).ToList();
+        UpdateEmployeeItems(sorted);
     }
+
+    private void UpdateEmployeeItems(List<ManageEmployeesItem> sorted)
+    {
+        EmployeeItems.Clear();
+        foreach (var item in sorted)
+        {
+            EmployeeItems.Add(item);
+        }
+        CurrentFilteredData = new List<ManageEmployeesItem>(sorted);
+    }
+
+    #endregion
+
+    #region Filter Commands
 
     [RelayCommand]
     private void FilterActiveStatus()
     {
-        var filterActiveStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("active", StringComparison.OrdinalIgnoreCase)).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employee in filterActiveStatus)
-        {
-            employee.PropertyChanged += OnEmployeePropertyChanged;
-            EmployeeItems.Add(employee);
-        }
-        CurrentFilteredData = [.. filterActiveStatus];
-        _ = UpdateCounts();
+        FilterByStatus("active");
     }
 
     [RelayCommand]
     private void FilterInactiveStatus()
     {
-        var filterInactiveStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase)).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employee in filterInactiveStatus)
-        {
-            employee.PropertyChanged += OnEmployeePropertyChanged;
-            EmployeeItems.Add(employee);
-        }
-        CurrentFilteredData = [.. filterInactiveStatus];
-        _ = UpdateCounts();
-    }
-
-    [RelayCommand]
-    private void ToggleSelection(bool? isChecked)
-    {
-        var shouldSelect = isChecked ?? false;
-
-        foreach (var item in EmployeeItems)
-        {
-            item.IsSelected = shouldSelect;
-        }
-        _ = UpdateCounts();
+        FilterByStatus("inactive");
     }
 
     [RelayCommand]
     private void FilterTerminatedStatus()
     {
-        var filterTerminatedStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase)).ToList();
-        EmployeeItems.Clear();
+        FilterByStatus("terminated");
+    }
 
-        foreach (var employee in filterTerminatedStatus)
+    private void FilterByStatus(string status)
+    {
+        var filtered = OriginalEmployeeData
+            .Where(e => e.Status.Equals(status, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        EmployeeItems.Clear();
+        foreach (var employee in filtered)
         {
             employee.PropertyChanged += OnEmployeePropertyChanged;
             EmployeeItems.Add(employee);
         }
-        CurrentFilteredData = [.. filterTerminatedStatus];
-        _ = UpdateCounts();
+        
+        CurrentFilteredData = new List<ManageEmployeesItem>(filtered);
+        _ = UpdateCounts(LifecycleToken);
     }
 
+    #endregion
+
+    #region Search Command
+
     [RelayCommand]
-    private async Task SearchEmployees()
+    private async Task SearchEmployeesAsync(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
-            // Reset to current filtered data instead of original data
             EmployeeItems.Clear();
             foreach (var employee in CurrentFilteredData)
             {
                 employee.PropertyChanged += OnEmployeePropertyChanged;
                 EmployeeItems.Add(employee);
             }
-            _ = UpdateCounts();
+            _ = UpdateCounts(cancellationToken);
             return;
         }
+
         IsSearchingEmployee = true;
 
         try
         {
-            await Task.Delay(500);
+            await Task.Delay(500, cancellationToken).ConfigureAwait(false);
 
-            // Search within the current filtered data instead of original data
-            var filteredEmployees = CurrentFilteredData.Where(emp =>
-                emp.ID.ToString().Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                emp.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                emp.Username.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                emp.ContactNumber.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                emp.Position.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                emp.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                emp.DateJoined.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)
+            var searchTerm = SearchStringResult;
+            var filtered = CurrentFilteredData.Where(emp =>
+                emp.ID.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                emp.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                emp.Username.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                emp.ContactNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                emp.Position.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                emp.Status.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                emp.DateJoined.ToString("MMMM d, yyyy").Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
             ).ToList();
 
             EmployeeItems.Clear();
-            foreach (var employees in filteredEmployees)
+            foreach (var employee in filtered)
             {
-                employees.PropertyChanged += OnEmployeePropertyChanged;
-                EmployeeItems.Add(employees);
+                employee.PropertyChanged += OnEmployeePropertyChanged;
+                EmployeeItems.Add(employee);
             }
-            _ = UpdateCounts();
+            _ = UpdateCounts(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected
         }
         finally
         {
@@ -685,346 +558,219 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
     }
 
+    #endregion
+
+    #region Selection Commands
 
     [RelayCommand]
-    private async Task ShowCopySingleEmployeeName(ManageEmployeesItem? employee)
+    private void ToggleSelection(bool? isChecked)
+    {
+        var shouldSelect = isChecked ?? false;
+        foreach (var item in EmployeeItems)
+        {
+            item.IsSelected = shouldSelect;
+        }
+        _ = UpdateCounts(LifecycleToken);
+    }
+
+    #endregion
+
+    #region Clipboard Commands
+
+    [RelayCommand]
+    private async Task CopySingleEmployeeNameAsync(ManageEmployeesItem? employee)
     {
         if (employee == null) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            await clipboard.SetTextAsync(employee.Name);
-        }
-
-        _toastManager.CreateToast("Copy Employee Name")
-            .WithContent($"Copied {employee.Name}'s name successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowInfo();
+        await CopyToClipboardAsync(employee.Name, $"Copied {employee.Name}'s name successfully!");
     }
 
     [RelayCommand]
-    private async Task ShowCopyMultipleEmployeeName(ManageEmployeesItem? employee)
+    private async Task CopyMultipleEmployeeNameAsync()
     {
-        var selectedEmployees = EmployeeItems.Where(item => item.IsSelected).ToList();
-        if (employee == null) return;
-        if (selectedEmployees.Count == 0) return;
+        var selected = EmployeeItems.Where(x => x.IsSelected).ToList();
+        if (selected.Count == 0) return;
+        
+        var names = string.Join(", ", selected.Select(e => e.Name));
+        await CopyToClipboardAsync(names, "Copied multiple employee names successfully!");
+    }
 
+    [RelayCommand]
+    private async Task CopySingleEmployeeIdAsync(ManageEmployeesItem? employee)
+    {
+        if (employee == null) return;
+        await CopyToClipboardAsync(employee.ID.ToString(), $"Copied {employee.Name}'s ID successfully!");
+    }
+
+    [RelayCommand]
+    private async Task CopyMultipleEmployeeIdAsync()
+    {
+        var selected = EmployeeItems.Where(x => x.IsSelected).ToList();
+        if (selected.Count == 0) return;
+        
+        var ids = string.Join(", ", selected.Select(e => e.ID));
+        await CopyToClipboardAsync(ids, "Copied multiple IDs successfully!");
+    }
+
+    [RelayCommand]
+    private async Task CopySingleEmployeeUsernameAsync(ManageEmployeesItem? employee)
+    {
+        if (employee == null) return;
+        await CopyToClipboardAsync(employee.Username, $"Copied {employee.Username}'s username successfully!");
+    }
+
+    [RelayCommand]
+    private async Task CopyMultipleEmployeeUsernameAsync()
+    {
+        var selected = EmployeeItems.Where(x => x.IsSelected).ToList();
+        if (selected.Count == 0) return;
+        
+        var usernames = string.Join(", ", selected.Select(e => e.Username));
+        await CopyToClipboardAsync(usernames, "Copied multiple usernames successfully!");
+    }
+
+    [RelayCommand]
+    private async Task CopySingleEmployeeContactNumberAsync(ManageEmployeesItem? employee)
+    {
+        if (employee == null) return;
+        await CopyToClipboardAsync(employee.ContactNumber, $"Copied {employee.Name}'s contact number successfully!");
+    }
+
+    [RelayCommand]
+    private async Task CopyMultipleEmployeeContactNumberAsync()
+    {
+        var selected = EmployeeItems.Where(x => x.IsSelected).ToList();
+        if (selected.Count == 0) return;
+        
+        var numbers = string.Join(", ", selected.Select(e => e.ContactNumber));
+        await CopyToClipboardAsync(numbers, "Copied multiple contact numbers successfully!");
+    }
+
+    [RelayCommand]
+    private async Task CopySingleEmployeePositionAsync(ManageEmployeesItem? employee)
+    {
+        if (employee == null) return;
+        await CopyToClipboardAsync(employee.Position, $"Copied {employee.Name}'s position successfully!");
+    }
+
+    [RelayCommand]
+    private async Task CopySingleEmployeeStatusAsync(ManageEmployeesItem? employee)
+    {
+        if (employee == null) return;
+        await CopyToClipboardAsync(employee.Status, $"Copied {employee.Name}'s status successfully!");
+    }
+
+    [RelayCommand]
+    private async Task CopySingleEmployeeDateJoinedAsync(ManageEmployeesItem? employee)
+    {
+        if (employee == null) return;
+        await CopyToClipboardAsync(
+            employee.DateJoined.ToString(CultureInfo.InvariantCulture), 
+            $"Copied {employee.Name}'s date joined successfully!");
+    }
+
+    private async Task CopyToClipboardAsync(string text, string successMessage)
+    {
         var clipboard = Clipboard.Get();
         if (clipboard != null)
         {
-            var employeeNames = string.Join(", ", selectedEmployees.Select(emp => emp.Name));
-            await clipboard.SetTextAsync(employeeNames);
-
-            _toastManager.CreateToast("Copy Employee Names")
-                .WithContent($"Copied multiple employee names successfully!")
+            await clipboard.SetTextAsync(text);
+            _toastManager.CreateToast("Copied!")
+                .WithContent(successMessage)
                 .DismissOnClick()
                 .WithDelay(6)
                 .ShowInfo();
         }
     }
 
-    [RelayCommand]
-    private async Task ShowCopySingleEmployeeId(ManageEmployeesItem? employee)
-    {
-        if (employee == null) return;
+    #endregion
 
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            await clipboard.SetTextAsync(employee.ID.ToString());
-        }
-
-        _toastManager.CreateToast("Copy Employee ID")
-            .WithContent($"Copied {employee.Name}'s ID successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowInfo();
-    }
-
-    [RelayCommand]
-    private async Task ShowCopyMultipleEmployeeId(ManageEmployeesItem? employee)
-    {
-        var selectedEmployees = EmployeeItems.Where(item => item.IsSelected).ToList();
-        if (employee == null) return;
-        if (selectedEmployees.Count == 0) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            var employeeIDs = string.Join(", ", selectedEmployees.Select(emp => emp.ID));
-            await clipboard.SetTextAsync(employeeIDs);
-
-            _toastManager.CreateToast("Copy Employee ID")
-                .WithContent($"Copied multiple ID successfully!")
-                .DismissOnClick()
-                .WithDelay(6)
-                .ShowInfo();
-        }
-    }
-
-    [RelayCommand]
-    private async Task ShowCopySingleEmployeeUsername(ManageEmployeesItem? employee)
-    {
-        if (employee == null) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            await clipboard.SetTextAsync(employee.Username);
-        }
-
-        _toastManager.CreateToast("Copy Employee Username")
-            .WithContent($"Copied {employee.Username}'s username successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowInfo();
-    }
-
-    [RelayCommand]
-    private async Task ShowCopyMultipleEmployeeUsername(ManageEmployeesItem? employee)
-    {
-        var selectedEmployees = EmployeeItems.Where(item => item.IsSelected).ToList();
-        if (employee == null) return;
-        if (selectedEmployees.Count == 0) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            var employeeUsernames = string.Join(", ", selectedEmployees.Select(emp => emp.Username));
-            await clipboard.SetTextAsync(employeeUsernames);
-
-            _toastManager.CreateToast("Copy Employee Usernames")
-                .WithContent($"Copied multiple employee usernames successfully!")
-                .DismissOnClick()
-                .WithDelay(6)
-                .ShowInfo();
-        }
-    }
-
-    [RelayCommand]
-    private async Task ShowCopySingleEmployeeContactNumber(ManageEmployeesItem? employee)
-    {
-        if (employee == null) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            await clipboard.SetTextAsync(employee.ContactNumber);
-        }
-
-        _toastManager.CreateToast("Copy Employee Contact No.")
-            .WithContent($"Copied {employee.Name}'s contact number successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowInfo();
-    }
-
-    [RelayCommand]
-    private async Task ShowCopyMultipleEmployeeContactNumber(ManageEmployeesItem? employee)
-    {
-        var selectedEmployees = EmployeeItems.Where(item => item.IsSelected).ToList();
-        if (employee == null) return;
-        if (selectedEmployees.Count == 0) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            var employeeContactNumbers = string.Join(", ", selectedEmployees.Select(emp => emp.ContactNumber));
-            await clipboard.SetTextAsync(employeeContactNumbers);
-
-            _toastManager.CreateToast("Copy Employee Contact No.")
-                .WithContent($"Copied multiple employee contact numbers successfully!")
-                .DismissOnClick()
-                .WithDelay(6)
-                .ShowInfo();
-        }
-    }
-
-    [RelayCommand]
-    private async Task ShowCopySingleEmployeePosition(ManageEmployeesItem? employee)
-    {
-        if (employee == null) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            await clipboard.SetTextAsync(employee.Position);
-        }
-
-        _toastManager.CreateToast("Copy Employee Position")
-            .WithContent($"Copied {employee.Name}'s position successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowInfo();
-    }
-
-    [RelayCommand]
-    private async Task ShowCopySingleEmployeeStatus(ManageEmployeesItem? employee)
-    {
-        if (employee == null) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            await clipboard.SetTextAsync(employee.Status);
-        }
-
-        _toastManager.CreateToast("Copy Employee Status")
-            .WithContent($"Copied {employee.Name}'s status successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowInfo();
-    }
-
-    [RelayCommand]
-    private async Task ShowCopySingleEmployeeDateJoined(ManageEmployeesItem? employee)
-    {
-        if (employee == null) return;
-
-        var clipboard = Clipboard.Get();
-        if (clipboard != null)
-        {
-            await clipboard.SetTextAsync(employee.DateJoined.ToString(CultureInfo.InvariantCulture));
-        }
-
-        _toastManager.CreateToast("Copy Employee Date Joined")
-            .WithContent($"Copied {employee.Name}'s date joined successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowInfo();
-    }
+    #region Delete Commands
 
     [RelayCommand]
     private void ShowSingleItemDeletionDialog(ManageEmployeesItem? employee)
     {
         if (employee == null) return;
 
-        try
-        {
-            Debug.WriteLine($"Showing deletion dialog for employee: {employee.Name}");
-            _dialogManager.CreateDialog("" +
-                "Are you absolutely sure?",
-                $"This action cannot be undone. This will permanently delete {employee.Name} and remove the data from your database.")
-                .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(employee), DialogButtonStyle.Destructive)
-                .WithCancelButton("Cancel")
-                .WithMaxWidth(512)
-                .Dismissible()
-                .Show();
-            Debug.WriteLine("Deletion dialog shown successfully.");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error showing deletion dialog: {ex.Message}");
-        }
-    }
-
-    [RelayCommand]
-    private void ShowMultipleItemDeletionDialog(ManageEmployeesItem? employee)
-    {
-        if (employee == null) return;
-
-        _dialogManager.CreateDialog("" +
+        _dialogManager.CreateDialog(
             "Are you absolutely sure?",
-            $"This action cannot be undone. This will permanently delete multiple accounts and remove their data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteMultipleItems(employee), DialogButtonStyle.Destructive)
+            $"This action cannot be undone. This will permanently delete {employee.Name} and remove the data from your database.")
+            .WithPrimaryButton("Continue", () => _ = OnSubmitDeleteSingleItemAsync(employee), DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
     }
 
-    private async Task OnSubmitDeleteSingleItem(ManageEmployeesItem employee)
+    [RelayCommand]
+    private void ShowMultipleItemDeletionDialog()
     {
-        var (success, message) = await _employeeService.DeleteEmployeeAsync(employee.ID);
+        var selected = EmployeeItems.Where(x => x.IsSelected).ToList();
+        if (selected.Count == 0) return;
 
-        if (success)
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            "This action cannot be undone. This will permanently delete multiple accounts and remove their data from your database.")
+            .WithPrimaryButton("Continue", () => _ = OnSubmitDeleteMultipleItemsAsync(), DialogButtonStyle.Destructive)
+            .WithCancelButton("Cancel")
+            .WithMaxWidth(512)
+            .Dismissible()
+            .Show();
+    }
+
+    private async Task OnSubmitDeleteSingleItemAsync(ManageEmployeesItem employee)
+    {
+        try
         {
-            await LoadEmployeesFromDatabaseAsync();
+            var (success, message) = await _employeeService.DeleteEmployeeAsync(employee.ID)
+                .ConfigureAwait(false);
+
+            if (success)
+            {
+                await LoadEmployeesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+            }
+            else
+            {
+                _toastManager.CreateToast("Delete Failed")
+                    .WithContent($"Failed to delete: {message}")
+                    .DismissOnClick()
+                    .ShowError();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _toastManager.CreateToast("Delete Failed")
-                .WithContent($"Failed to delete: {message}")
-                .DismissOnClick()
-                .ShowError();
+            _logger.LogError(ex, "Error deleting employee {ID}", employee.ID);
         }
     }
 
-
-    private async Task OnSubmitDeleteMultipleItems(ManageEmployeesItem employee)
+    private async Task OnSubmitDeleteMultipleItemsAsync()
     {
         var selectedEmployees = EmployeeItems.Where(item => item.IsSelected).ToList();
         if (!selectedEmployees.Any()) return;
 
-        foreach (var emp in selectedEmployees)
+        try
         {
-            await DeleteEmployeeFromDatabase(emp);
+            foreach (var emp in selectedEmployees)
+            {
+                await _employeeService.DeleteEmployeeAsync(emp.ID).ConfigureAwait(false);
+            }
+
+            await LoadEmployeesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+            
+            _toastManager.CreateToast("Delete Selected Accounts")
+                .WithContent("Multiple accounts deleted successfully!")
+                .DismissOnClick()
+                .WithDelay(6)
+                .ShowSuccess();
         }
-
-        // ✅ Instead of removing from UI, reload from database
-        await LoadEmployeesFromDatabaseAsync();
-        DashboardEventService.Instance.NotifyEmployeeDeleted();
-
-        _toastManager.CreateToast($"Delete Selected Accounts")
-            .WithContent($"Multiple accounts deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
-    }
-
-    // Helper method to delete from database
-    private async Task DeleteEmployeeFromDatabase(ManageEmployeesItem employee)
-    {
-        // using var connection = new SqlConnection(connectionString);
-        // await connection.ExecuteAsync("DELETE FROM Employees WHERE ID = @ID", new { IDI = employee.ID });
-        await _employeeService.DeleteEmployeeAsync(employee.ID);
-        DashboardEventService.Instance.NotifyEmployeeDeleted();
-
-        await Task.Delay(100); // Just an animation/simulation of async operation
-    }
-
-    private void ExecuteSortCommand(int selectedIndex)
-    {
-        switch (selectedIndex)
+        catch (Exception ex)
         {
-            case 0:
-                SortByIdCommand.Execute(null);
-                break;
-            case 1:
-                SortNamesByAlphabeticalCommand.Execute(null);
-                break;
-            case 2:
-                SortNamesByReverseAlphabeticalCommand.Execute(null);
-                break;
-            case 3:
-                SortUsernamesByAlphabeticalCommand.Execute(null);
-                break;
-            case 4:
-                SortUsernamesByReverseAlphabeticalCommand.Execute(null);
-                break;
-            case 5:
-                SortDateByNewestToOldestCommand.Execute(null);
-                break;
-            case 6:
-                SortDateByOldestToNewestCommand.Execute(null);
-                break;
-            case 7:
-                SortResetCommand.Execute(null);
-                break;
+            _logger.LogError(ex, "Error deleting multiple employees");
         }
     }
 
-    private void ExecuteFilterCommand(int selectedIndex)
-    {
-        switch (selectedIndex)
-        {
-            case 0: FilterActiveStatusCommand.Execute(null); break;
-            case 1: FilterInactiveStatusCommand.Execute(null); break;
-            case 2: FilterTerminatedStatusCommand.Execute(null); break;
-        }
-    }
+    #endregion
+
+    #region Property Changed Handlers
 
     partial void OnSelectedSortIndexChanged(int value)
     {
@@ -1044,8 +790,70 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
     partial void OnSearchStringResultChanged(string value)
     {
-        SearchEmployeesCommand.Execute(null);
+        _ = SearchEmployeesAsync(LifecycleToken);
     }
+
+    private void ExecuteSortCommand(int selectedIndex)
+    {
+        switch (selectedIndex)
+        {
+            case 0: SortByIdCommand.Execute(null); break;
+            case 1: SortNamesByAlphabeticalCommand.Execute(null); break;
+            case 2: SortNamesByReverseAlphabeticalCommand.Execute(null); break;
+            case 3: SortUsernamesByAlphabeticalCommand.Execute(null); break;
+            case 4: SortUsernamesByReverseAlphabeticalCommand.Execute(null); break;
+            case 5: SortDateByNewestToOldestCommand.Execute(null); break;
+            case 6: SortDateByOldestToNewestCommand.Execute(null); break;
+            case 7: SortResetCommand.Execute(null); break;
+        }
+    }
+
+    private void ExecuteFilterCommand(int selectedIndex)
+    {
+        switch (selectedIndex)
+        {
+            case 0: FilterActiveStatusCommand.Execute(null); break;
+            case 1: FilterInactiveStatusCommand.Execute(null); break;
+            case 2: FilterTerminatedStatusCommand.Execute(null); break;
+        }
+    }
+
+    #endregion
+
+    #region HotAvalonia
+
+    [AvaloniaHotReload]
+    public void Initialize()
+    {
+        // Hot reload support
+    }
+
+    #endregion
+
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing ManageEmployeesViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Unsubscribe from item property changes
+        foreach (var item in EmployeeItems)
+        {
+            item.PropertyChanged -= OnEmployeePropertyChanged;
+        }
+
+        // Clear collections
+        EmployeeItems.Clear();
+        OriginalEmployeeData.Clear();
+        CurrentFilteredData.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }
 
 public partial class ManageEmployeesItem : ObservableObject

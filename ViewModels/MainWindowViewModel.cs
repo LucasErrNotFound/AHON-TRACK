@@ -1,89 +1,101 @@
 ﻿using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Services;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using ShadUI;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
 using System.Threading.Tasks;
 using AHON_TRACK.Converters;
-using AHON_TRACK.Models;
-using AHON_TRACK.Services.Events;
-using Avalonia.Media.Imaging;
+using Serilog;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace AHON_TRACK.ViewModels;
 
 public sealed partial class MainWindowViewModel : ViewModelBase
 {
-    private readonly PageManager _pageManager;
+    private readonly INavigationService _navigationService;
+    private readonly ILogger _logger;
     private readonly DashboardViewModel _dashboardViewModel;
-    private readonly ManageEmployeesViewModel _manageEmployeesViewModel;
-    private readonly CheckInOutViewModel _checkInOutViewModel;
-    private readonly ManageMembershipViewModel _manageMembershipViewModel;
-    private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
-    private readonly ManageBillingViewModel _manageBillingViewModel;
-    private readonly ProductPurchaseViewModel _productPurchaseViewModel;
-    private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
-    private readonly ProductStockViewModel _productStockViewModel;
-    private readonly SupplierManagementViewModel _supplierManagementViewModel;
-    private readonly FinancialReportsViewModel _financialReportsViewModel;
-    private readonly GymDemographicsViewModel _gymDemographicsViewModel;
-    private readonly GymAttendanceViewModel _gymAttendanceViewModel;
-    private readonly AuditLogsViewModel _auditLogsViewModel;
-
-    private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
     private readonly SettingsDialogCardViewModel _settingsDialogCardViewModel;
+    
+    // Lazy-loaded ViewModels for memory efficiency
+    private readonly Lazy<ManageEmployeesViewModel> _manageEmployeesViewModel;
+    private readonly Lazy<CheckInOutViewModel> _checkInOutViewModel;
+    private readonly Lazy<ManageMembershipViewModel> _manageMembershipViewModel;
+    private readonly Lazy<TrainingSchedulesViewModel> _trainingSchedulesViewModel;
+    private readonly Lazy<ManageBillingViewModel> _manageBillingViewModel;
+    private readonly Lazy<ProductPurchaseViewModel> _productPurchaseViewModel;
+    private readonly Lazy<EquipmentInventoryViewModel> _equipmentInventoryViewModel;
+    private readonly Lazy<ProductStockViewModel> _productStockViewModel;
+    private readonly Lazy<SupplierManagementViewModel> _supplierManagementViewModel;
+    private readonly Lazy<FinancialReportsViewModel> _financialReportsViewModel;
+    private readonly Lazy<GymDemographicsViewModel> _gymDemographicsViewModel;
+    private readonly Lazy<GymAttendanceViewModel> _gymAttendanceViewModel;
+    private readonly Lazy<AuditLogsViewModel> _auditLogsViewModel;
+    private readonly Lazy<EmployeeProfileInformationViewModel> _employeeProfileInformationViewModel;
 
-    // Primary constructor for DI
+    [ObservableProperty] private DialogManager _dialogManager;
+    [ObservableProperty] private ToastManager _toastManager;
+    [ObservableProperty] private object? _selectedPage;
+    [ObservableProperty] private string _currentRoute = "dashboard";
+    [ObservableProperty] private Bitmap? _avatarSource;
+    [ObservableProperty] private string? _role = CurrentUserModel.Role;
+    [ObservableProperty] private string? _username = CurrentUserModel.Username;
+    [ObservableProperty] private bool _canManageEmployees;
+    [ObservableProperty] private bool _canAccessCheckInOut;
+    [ObservableProperty] private bool _canAccessMemberManagement;
+    [ObservableProperty] private bool _canAccessBilling;
+    [ObservableProperty] private bool _canAccessProductPurchase;
+    [ObservableProperty] private bool _canViewFinancialReports;
+    [ObservableProperty] private bool _canViewAnalytics;
+    [ObservableProperty] private bool _canViewAuditLogs;
+    [ObservableProperty] private bool _canAccessTraining;
+
+    private bool _shouldShowSuccessLogInToast;
+
     public MainWindowViewModel(
-        PageManager pageManager,
+        INavigationService navigationService,
+        ILogger logger,
         DialogManager dialogManager,
         ToastManager toastManager,
         DashboardViewModel dashboardViewModel,
-        ManageEmployeesViewModel manageEmployeesViewModel,
-        CheckInOutViewModel checkInOutViewModel,
-        ManageMembershipViewModel manageMembershipViewModel,
-        TrainingSchedulesViewModel trainingSchedulesViewModel,
-        ManageBillingViewModel billingViewModel,
-        ProductPurchaseViewModel productPurchaseViewModel,
-        EquipmentInventoryViewModel equipmentInventoryViewModel,
-        ProductStockViewModel productStockViewModel,
-        SupplierManagementViewModel supplierManagementViewModel,
-        FinancialReportsViewModel financialReportsViewModel,
-        GymDemographicsViewModel gymDemographicsViewModel,
-        GymAttendanceViewModel gymAttendanceViewModel,
-        AuditLogsViewModel auditLogsViewModel,
-        EmployeeProfileInformationViewModel employeeProfileInformationViewModel,
-        SettingsDialogCardViewModel settingsDialogCardViewModel)
+        SettingsDialogCardViewModel settingsDialogCardViewModel,
+        ServiceProvider serviceProvider)
     {
-        _pageManager = pageManager;
+        _navigationService = navigationService;
+        _logger = logger;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _dashboardViewModel = dashboardViewModel;
-        _checkInOutViewModel = checkInOutViewModel;
-        _manageMembershipViewModel = manageMembershipViewModel;
-        _trainingSchedulesViewModel = trainingSchedulesViewModel;
-        _manageBillingViewModel = billingViewModel;
-        _productPurchaseViewModel = productPurchaseViewModel;
-        _equipmentInventoryViewModel = equipmentInventoryViewModel;
-        _productStockViewModel = productStockViewModel;
-        _supplierManagementViewModel = supplierManagementViewModel;
-        _financialReportsViewModel = financialReportsViewModel;
-        _gymDemographicsViewModel = gymDemographicsViewModel;
-        _gymAttendanceViewModel = gymAttendanceViewModel;
-        _auditLogsViewModel = auditLogsViewModel;
-
-        // Set up page navigation callback
-        _pageManager.OnNavigate = SwitchPage;
-        _manageEmployeesViewModel = manageEmployeesViewModel;
-        _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _settingsDialogCardViewModel = settingsDialogCardViewModel;
+
+        // Lazy initialization for better startup performance
+        _manageEmployeesViewModel = new Lazy<ManageEmployeesViewModel>(serviceProvider.GetService<ManageEmployeesViewModel>);
+        _checkInOutViewModel = new Lazy<CheckInOutViewModel>(serviceProvider.GetService<CheckInOutViewModel>);
+        _manageMembershipViewModel = new Lazy<ManageMembershipViewModel>(serviceProvider.GetService<ManageMembershipViewModel>);
+        _trainingSchedulesViewModel = new Lazy<TrainingSchedulesViewModel>(serviceProvider.GetService<TrainingSchedulesViewModel>);
+        _manageBillingViewModel = new Lazy<ManageBillingViewModel>(serviceProvider.GetService<ManageBillingViewModel>);
+        _productPurchaseViewModel = new Lazy<ProductPurchaseViewModel>(serviceProvider.GetService<ProductPurchaseViewModel>);
+        _equipmentInventoryViewModel = new Lazy<EquipmentInventoryViewModel>(serviceProvider.GetService<EquipmentInventoryViewModel>);
+        _productStockViewModel = new Lazy<ProductStockViewModel>(serviceProvider.GetService<ProductStockViewModel>);
+        _supplierManagementViewModel = new Lazy<SupplierManagementViewModel>(serviceProvider.GetService<SupplierManagementViewModel>);
+        _financialReportsViewModel = new Lazy<FinancialReportsViewModel>(serviceProvider.GetService<FinancialReportsViewModel>);
+        _gymDemographicsViewModel = new Lazy<GymDemographicsViewModel>(serviceProvider.GetService<GymDemographicsViewModel>);
+        _gymAttendanceViewModel = new Lazy<GymAttendanceViewModel>(serviceProvider.GetService<GymAttendanceViewModel>);
+        _auditLogsViewModel = new Lazy<AuditLogsViewModel>(serviceProvider.GetService<AuditLogsViewModel>);
+        _employeeProfileInformationViewModel = new Lazy<EmployeeProfileInformationViewModel>(serviceProvider.GetService<EmployeeProfileInformationViewModel>);
+
+        // Subscribe to navigation events
+        _navigationService.NavigationCompleted += OnNavigationCompleted;
         
+        // Subscribe to profile updates
         UserProfileEventService.Instance.ProfilePictureUpdated += OnProfilePictureUpdated;
     }
 
@@ -92,113 +104,71 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
-
-        // Create a design-time dashboard service with a dummy connection string
-        var designTimeDashboardService = new DashboardService("Server=localhost;Database=AHON_TRACK;Integrated Security=true;TrustServerCertificate=true;");
-
-        _dashboardViewModel = new DashboardViewModel(_pageManager, designTimeDashboardService);
-        _manageEmployeesViewModel = new ManageEmployeesViewModel();
-        _checkInOutViewModel = new CheckInOutViewModel();
-        _manageMembershipViewModel = new ManageMembershipViewModel();
-        _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
-        _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
-        _manageBillingViewModel = new ManageBillingViewModel();
-        _productPurchaseViewModel = new ProductPurchaseViewModel();
-        _equipmentInventoryViewModel = new EquipmentInventoryViewModel();
-        _productStockViewModel = new ProductStockViewModel();
-        _supplierManagementViewModel = new SupplierManagementViewModel();
-        _financialReportsViewModel = new FinancialReportsViewModel();
-        _gymDemographicsViewModel = new GymDemographicsViewModel();
-        _gymAttendanceViewModel = new GymAttendanceViewModel();
-        _auditLogsViewModel = new AuditLogsViewModel();
+        _logger = null!;
+        _navigationService = null!;
+        
+        _dashboardViewModel = new DashboardViewModel();
+        _settingsDialogCardViewModel = new SettingsDialogCardViewModel();
+        _manageEmployeesViewModel = new Lazy<ManageEmployeesViewModel>(() => new ManageEmployeesViewModel());
+        _checkInOutViewModel = new Lazy<CheckInOutViewModel>(() => new CheckInOutViewModel());
+        _manageMembershipViewModel = new Lazy<ManageMembershipViewModel>(() => new ManageMembershipViewModel());
+        _trainingSchedulesViewModel = new Lazy<TrainingSchedulesViewModel>(() => new TrainingSchedulesViewModel());
+        _manageBillingViewModel = new Lazy<ManageBillingViewModel>(() => new ManageBillingViewModel());
+        _productPurchaseViewModel = new Lazy<ProductPurchaseViewModel>(() => new ProductPurchaseViewModel());
+        _equipmentInventoryViewModel = new Lazy<EquipmentInventoryViewModel>(() => new EquipmentInventoryViewModel());
+        _productStockViewModel = new Lazy<ProductStockViewModel>(() => new ProductStockViewModel());
+        _supplierManagementViewModel = new Lazy<SupplierManagementViewModel>(() => new SupplierManagementViewModel());
+        _financialReportsViewModel = new Lazy<FinancialReportsViewModel>(() => new FinancialReportsViewModel());
+        _gymDemographicsViewModel = new Lazy<GymDemographicsViewModel>(() => new GymDemographicsViewModel());
+        _gymAttendanceViewModel = new Lazy<GymAttendanceViewModel>(() => new GymAttendanceViewModel());
+        _auditLogsViewModel = new Lazy<AuditLogsViewModel>(() => new AuditLogsViewModel());
+        _employeeProfileInformationViewModel = new Lazy<EmployeeProfileInformationViewModel>(() => new EmployeeProfileInformationViewModel());
     }
 
-    [ObservableProperty]
-    private DialogManager _dialogManager;
-
-    [ObservableProperty]
-    private ToastManager _toastManager;
-
-    [ObservableProperty]
-    private object? _selectedPage;
-
-    [ObservableProperty]
-    private string _currentRoute = "dashboard";
-
-    [ObservableProperty] 
-    private Bitmap? _avatarSource;
-
-    [ObservableProperty] 
-    private string? _role = CurrentUserModel.Role;
-    
-    [ObservableProperty] 
-    private string? _username = CurrentUserModel.Username;
-    
-    [ObservableProperty]
-    private bool _isAdmin;
-    
-    [ObservableProperty]
-    private bool _isStaff;
-    
-    [ObservableProperty]
-    private bool _isCoach;
-
-    [ObservableProperty]
-    private bool _canManageEmployees;
-    
-    [ObservableProperty]
-    private bool _canAccessCheckInOut;
-
-    [ObservableProperty]
-    private bool _canAccessMemberManagement;
-
-    [ObservableProperty]
-    private bool _canAccessBilling;
-    
-    [ObservableProperty] 
-    private bool _canAccessProductPurchase;
-
-    [ObservableProperty]
-    private bool _canManageInventory;
-
-    [ObservableProperty]
-    private bool _canViewFinancialReports;
-
-    [ObservableProperty]
-    private bool _canViewAnalytics;
-
-    [ObservableProperty] 
-    private bool _canViewAuditLogs;
-
-    [ObservableProperty]
-    private bool _canAccessTraining;
-
-    private bool _shouldShowSuccessLogOutToast = false;
-
-    private void SwitchPage(INavigable page, string route = "")
+    private void OnNavigationCompleted(INavigable page, string route)
     {
-        try
-        {
-            var pageType = page.GetType();
-            if (string.IsNullOrEmpty(route)) route = pageType.GetCustomAttribute<PageAttribute>()?.Route ?? "dashboard";
-            CurrentRoute = route;
+        CurrentRoute = route;
+        SelectedPage = page;
+        _logger.LogDebug("Navigation completed to {Route}", route);
+    }
 
-            if (SelectedPage == page) return;
-            SelectedPage = page;
-            CurrentRoute = route;
-            page.Initialize();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error switching page: {ex.Message}");
-        }
+    public async void Initialize()
+    {
+        ThrowIfDisposed();
+        
+        _shouldShowSuccessLogInToast = false;
+        AvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
+        
+        UpdateRoleBasedPermissions();
+        
+        // Navigate to dashboard
+        await _navigationService.NavigateAsync<DashboardViewModel>(cancellationToken: LifecycleToken)
+            .ConfigureAwait(false);
+    }
+
+    private void UpdateRoleBasedPermissions()
+    {
+        var userRole = CurrentUserModel.Role ?? string.Empty;
+        var isAdmin = userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+        var isStaff = userRole.Equals("Staff", StringComparison.OrdinalIgnoreCase);
+        var isCoach = userRole.Equals("Coach", StringComparison.OrdinalIgnoreCase);
+
+        CanManageEmployees = isAdmin;
+        CanViewFinancialReports = isAdmin;
+        CanViewAuditLogs = isAdmin;
+        CanAccessCheckInOut = isAdmin || isStaff || isCoach;
+        CanAccessMemberManagement = isAdmin || isStaff || isCoach;
+        CanAccessBilling = isAdmin || isStaff || isCoach;
+        CanAccessProductPurchase = isAdmin || isStaff || isCoach;
+        CanViewAnalytics = isAdmin || isStaff || isCoach;
+        CanAccessTraining = true;
     }
 
     [RelayCommand]
     private void TryClose()
     {
-        DialogManager.CreateDialog("Close Application", "Are you sure you want to exit the application \n rather than logging out?")
+        DialogManager.CreateDialog("Close Application", 
+            "Are you sure you want to exit the application \n rather than logging out?")
             .WithPrimaryButton("Yes", OnAcceptExit, DialogButtonStyle.Destructive)
             .WithCancelButton("No")
             .WithMinWidth(300)
@@ -215,62 +185,75 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             .Show();
     }
 
+    // Navigation Commands - now async
     [RelayCommand]
-    private void OpenDashboard() => SwitchPage(_dashboardViewModel);
+    private Task OpenDashboardAsync() => 
+        _navigationService.NavigateAsync<DashboardViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenManageEmployees() => SwitchPage(_manageEmployeesViewModel);
+    private Task OpenManageEmployeesAsync() => 
+        _navigationService.NavigateAsync<ManageEmployeesViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenCheckInOut() => SwitchPage(_checkInOutViewModel);
+    private Task OpenCheckInOutAsync() => 
+        _navigationService.NavigateAsync<CheckInOutViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenManageMembership() => SwitchPage(_manageMembershipViewModel);
+    private Task OpenManageMembershipAsync() => 
+        _navigationService.NavigateAsync<ManageMembershipViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenTrainingSchedules() => SwitchPage(_trainingSchedulesViewModel);
+    private Task OpenTrainingSchedulesAsync() => 
+        _navigationService.NavigateAsync<TrainingSchedulesViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
+    private Task OpenManageBillingAsync() => 
+        _navigationService.NavigateAsync<ManageBillingViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenProductPurchase() => SwitchPage(_productPurchaseViewModel);
+    private Task OpenProductPurchaseAsync() => 
+        _navigationService.NavigateAsync<ProductPurchaseViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
+    private Task OpenEquipmentInventoryAsync() => 
+        _navigationService.NavigateAsync<EquipmentInventoryViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenProductStockViewModel() => SwitchPage(_productStockViewModel);
+    private Task OpenProductStockViewModelAsync() => 
+        _navigationService.NavigateAsync<ProductStockViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenSupplierManagement() => SwitchPage(_supplierManagementViewModel);
+    private Task OpenSupplierManagementAsync() => 
+        _navigationService.NavigateAsync<SupplierManagementViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenFinancialReports() => SwitchPage(_financialReportsViewModel);
+    private Task OpenFinancialReportsAsync() => 
+        _navigationService.NavigateAsync<FinancialReportsViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenGymDemographics() => SwitchPage(_gymDemographicsViewModel);
+    private Task OpenGymDemographicsAsync() => 
+        _navigationService.NavigateAsync<GymDemographicsViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenGymAttendanceReports() => SwitchPage(_gymAttendanceViewModel);
+    private Task OpenGymAttendanceReportsAsync() => 
+        _navigationService.NavigateAsync<GymAttendanceViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenAuditLogs() => SwitchPage(_auditLogsViewModel);
+    private Task OpenAuditLogsAsync() => 
+        _navigationService.NavigateAsync<AuditLogsViewModel>(cancellationToken: LifecycleToken).AsTask();
 
     [RelayCommand]
-    private void OpenViewProfile()
+    private Task OpenViewProfileAsync()
     {
-        var parameters = new Dictionary<string, object>
-        {
-            { "IsCurrentUser", true }
-        };
-        _pageManager.Navigate<EmployeeProfileInformationViewModel>(parameters);
+        var parameters = new Dictionary<string, object> { { "IsCurrentUser", true } };
+        return _navigationService.NavigateAsync<EmployeeProfileInformationViewModel>(
+            parameters, LifecycleToken).AsTask();
     }
 
     [RelayCommand]
-    private void OpenSettingsDialog()
+    private async Task OpenSettingsDialogAsync()
     {
-        _ = _settingsDialogCardViewModel.Initialize();
+        await _settingsDialogCardViewModel.InitializeAsync().ConfigureAwait(false);
         DialogManager.CreateDialog(_settingsDialogCardViewModel)
             .WithSuccessCallback(_ =>
                 ToastManager.CreateToast("Settings Saved!")
@@ -281,92 +264,109 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 ToastManager.CreateToast("Changes Discarded!")
                     .WithContent("No settings were modified")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(670)
+                    .ShowWarning())
+            .WithMaxWidth(670)
             .Show();
     }
 
-    private void OnAcceptExit() => Environment.Exit(0);
-
-    public void Initialize()
+    private async void OnAcceptExit()
     {
-        _shouldShowSuccessLogOutToast = false;
-        AvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
-        
-        UpdateRoleBasedPermissions();
-        SwitchPage(_dashboardViewModel);
-    }
-    
-    private void UpdateRoleBasedPermissions()
-    {
-        string userRole = CurrentUserModel.Role ?? string.Empty;
-    
-        // Determine if user is Admin
-        IsAdmin = userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
-                      userRole.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase);
-    
-        IsStaff = userRole.Equals("Staff", StringComparison.OrdinalIgnoreCase) ||
-                       userRole.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase);
-    
-        IsCoach = userRole.Equals("Coach", StringComparison.OrdinalIgnoreCase) ||
-                       userRole.Equals("Gym Coach", StringComparison.OrdinalIgnoreCase);
-    
-        // Admin-only features
-        CanManageEmployees = IsAdmin;
-        CanManageInventory = IsAdmin;
-        CanViewFinancialReports = IsAdmin;
-        CanViewAuditLogs = IsAdmin;
-    
-        // Admin + Staff features
-        CanAccessCheckInOut = IsAdmin || IsStaff || IsCoach;
-        CanAccessMemberManagement = IsAdmin || IsStaff || IsCoach;
-        CanAccessBilling = IsAdmin || IsStaff || IsCoach;
-        CanAccessProductPurchase = IsAdmin || IsStaff || IsCoach;
-        CanViewAnalytics = IsAdmin || IsStaff || IsCoach;
-    
-        // All roles
-        CanAccessTraining = true;
+        // Flush logs before exit
+        await Log.CloseAndFlushAsync().ConfigureAwait(false);
+        Environment.Exit(0);
     }
 
     public void SetInitialLogInToastState(bool showLogInSuccess)
     {
         if (!showLogInSuccess) return;
 
-        Task.Delay(900).ContinueWith(_ =>
+        _ = Task.Delay(900, LifecycleToken).ContinueWith(_ =>
         {
+            if (!LifecycleToken.IsCancellationRequested)
+            {
                 ToastManager.CreateToast("You have signed in! Welcome back!")
-                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                    .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                     .WithDelay(8)
                     .DismissOnClick()
                     .ShowSuccess();
+            }
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
-    private void SwitchToLoginWindow()
+    private async void SwitchToLoginWindow()
     {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
-        var currentWindow = desktop.MainWindow; // Keep reference to MainWindow
-        _shouldShowSuccessLogOutToast = true;
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) 
+            return;
+
+        var currentWindow = desktop.MainWindow;
+        _shouldShowSuccessLogInToast = true;
+
+        // Dispose current MainWindow resources - stay on UI thread
+        await DisposeAsync(); // ✅ Removed .ConfigureAwait(false)
 
         var provider = new ServiceProvider();
         var viewModel = provider.GetService<LoginViewModel>();
         viewModel.Initialize();
 
         var loginWindow = new Views.LoginView { DataContext = viewModel };
-        viewModel.SetInitialLogOutToastState(_shouldShowSuccessLogOutToast);
+        viewModel.SetInitialLogOutToastState(_shouldShowSuccessLogInToast);
         desktop.MainWindow = loginWindow;
         loginWindow.Show();
         currentWindow?.Close();
     }
-    
+
     private void OnProfilePictureUpdated()
     {
-        // Refresh the avatar from CurrentUserModel
         AvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
     }
 
-    // Optional: Unsubscribe when disposing (add if you implement IDisposable)
-    public void Dispose()
+    protected override async ValueTask DisposeAsyncCore()
     {
+        _logger.LogInformation("Disposing MainWindowViewModel");
+        
+        // Unsubscribe from events
         UserProfileEventService.Instance.ProfilePictureUpdated -= OnProfilePictureUpdated;
+        if (_navigationService != null)
+        {
+            _navigationService.NavigationCompleted -= OnNavigationCompleted;
+        }
+
+        // Dispose navigation service (will dispose current page)
+        if (_navigationService is IAsyncDisposable asyncDisposable)
+        {
+            await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+        }
+
+        // Dispose any instantiated lazy ViewModels
+        DisposeIfCreated(_manageEmployeesViewModel);
+        DisposeIfCreated(_checkInOutViewModel);
+        DisposeIfCreated(_manageMembershipViewModel);
+        DisposeIfCreated(_trainingSchedulesViewModel);
+        DisposeIfCreated(_manageBillingViewModel);
+        DisposeIfCreated(_productPurchaseViewModel);
+        DisposeIfCreated(_equipmentInventoryViewModel);
+        DisposeIfCreated(_productStockViewModel);
+        DisposeIfCreated(_supplierManagementViewModel);
+        DisposeIfCreated(_financialReportsViewModel);
+        DisposeIfCreated(_gymDemographicsViewModel);
+        DisposeIfCreated(_gymAttendanceViewModel);
+        DisposeIfCreated(_auditLogsViewModel);
+        DisposeIfCreated(_employeeProfileInformationViewModel);
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    private static async void DisposeIfCreated<T>(Lazy<T> lazy) where T : class
+    {
+        if (!lazy.IsValueCreated) return;
+        
+        if (lazy.Value is IAsyncDisposable asyncDisposable)
+        {
+            await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+        }
+        else if (lazy.Value is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
     }
 }

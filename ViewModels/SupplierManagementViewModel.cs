@@ -12,10 +12,12 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using AHON_TRACK.Services;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using Microsoft.Extensions.Logging;
 using QuestPDF.Companion;
 using QuestPDF.Fluent;
 
@@ -24,80 +26,59 @@ namespace AHON_TRACK.ViewModels;
 [Page("supplier-management")]
 public sealed partial class SupplierManagementViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty]
-    private string[] _supplierFilterItems = ["All", "Products", "Drinks", "Supplements"];
-
-    [ObservableProperty]
-    private string _selectedSupplierFilterItem = "All";
-
-    [ObservableProperty]
-    private ObservableCollection<Supplier> _supplierItems = [];
-
-    [ObservableProperty]
-    private List<Supplier> _originalSupplierData = [];
-
-    [ObservableProperty]
-    private List<Supplier> _currentFilteredSupplierData = [];
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    [ObservableProperty]
-    private string _searchStringResult = string.Empty;
-
-    [ObservableProperty]
-    private bool _isSearchingSupplier;
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private Supplier? _selectedSupplier;
+    [ObservableProperty] private string[] _supplierFilterItems = ["All", "Products", "Drinks", "Supplements"];
+    [ObservableProperty] private string _selectedSupplierFilterItem = "All";
+    
+    [ObservableProperty] private ObservableCollection<Supplier> _supplierItems = [];
+    [ObservableProperty] private List<Supplier> _originalSupplierData = [];
+    [ObservableProperty] private List<Supplier> _currentFilteredSupplierData = [];
+    [ObservableProperty] private Supplier? _selectedSupplier;
+    
+    [ObservableProperty] private string _searchStringResult = string.Empty; 
+    [ObservableProperty] private bool _isInitialized;
+    [ObservableProperty] private bool _isSearchingSupplier;
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private int _selectedCount; 
+    [ObservableProperty] private int _totalCount;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly SupplierDialogCardViewModel _supplierDialogCardViewModel;
     private readonly ISupplierService _supplierService;
+    private readonly ILogger _logger;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
-    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
-        SupplierDialogCardViewModel supplierDialogCardViewModel, SettingsService settingsService, ISupplierService supplierService)
+    public SupplierManagementViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager,
+        SupplierDialogCardViewModel supplierDialogCardViewModel, 
+        SettingsService settingsService, 
+        ISupplierService supplierService,
+        ILogger logger)
     {
-        _dialogManager = dialogManager;
-        _toastManager = toastManager;
-        _pageManager = pageManager;
-        _supplierDialogCardViewModel = supplierDialogCardViewModel;
-        _supplierService = supplierService;
-        _settingsService = settingsService;
-
-        _ = LoadSupplierDataFromDatabaseAsync();
-        UpdateSupplierCounts();
+        _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
+        _supplierDialogCardViewModel = supplierDialogCardViewModel ?? throw new ArgumentNullException(nameof(supplierDialogCardViewModel));
+        _supplierService = supplierService ?? throw new ArgumentNullException(nameof(supplierService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public SupplierManagementViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
         _settingsService = new SettingsService();
-        _supplierService = null!; // This should be injected in real scenario
+        _supplierService = null!;
+        _logger = null!;
 
-        _ = LoadSupplierDataFromDatabaseAsync();
-        UpdateSupplierCounts();
+        LoadSupplierData();
     }
 
+    /*
     [AvaloniaHotReload]
     public async Task Initialize()
     {
@@ -115,17 +96,66 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         UpdateSupplierCounts();
         IsInitialized = true;
     }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("SupplierManagementViewModel already initialized");
+            return;
+        }
 
-    private async Task LoadSupplierDataFromDatabaseAsync()
+        _logger?.LogInformation("Initializing SupplierManagementViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadSettingsAsync(linkedCts.Token).ConfigureAwait(false);
+            await LoadSupplierDataFromDatabaseAsync(linkedCts.Token).ConfigureAwait(false);
+            await UpdateSupplierCounts(linkedCts.Token).ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger?.LogInformation("SupplierManagementViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("SupplierManagementViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing SupplierManagementViewModel");
+            LoadSupplierData(); // Fallback
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from SupplierManagement");
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task LoadSupplierDataFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         IsLoading = true;
 
         try
         {
-            var result = await _supplierService.GetAllSuppliersAsync();
+            var result = await _supplierService.GetAllSuppliersAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (result.Success && result.Suppliers != null)
             {
+                foreach (var supplier in OriginalSupplierData)
+                {
+                    supplier.PropertyChanged -= OnSupplierPropertyChanged;
+                }
+                
                 var suppliers = result.Suppliers.Select(s => new Supplier
                 {
                     ID = s.SupplierID,
@@ -156,21 +186,30 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 {
                     SelectedSupplier = SupplierItems[0];
                 }
+                
+                _logger?.LogDebug("Loaded {Count} suppliers from database", result.Suppliers.Count);
             }
             else
             {
+                _logger?.LogWarning("Failed to load suppliers: {Message}", result.Message);
                 _toastManager.CreateToast("Data Load Failed")
                     .WithContent(result.Message)
                     .DismissOnClick()
                     .ShowWarning();
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error loading suppliers from database");
             _toastManager.CreateToast("Error Loading Data")
                 .WithContent($"Failed to load suppliers: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
+            LoadSupplierData(); // Fallback
         }
         finally
         {
@@ -256,9 +295,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private void ShowAddSupplierDialog()
+    private async Task ShowAddSupplierDialog()
     {
-        _supplierDialogCardViewModel.Initialize();
+        await _supplierDialogCardViewModel.InitializeAsync().ConfigureAwait(false);
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
@@ -280,7 +319,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
                 if (result.Success)
                 {
-                    await LoadSupplierDataFromDatabaseAsync();
+                    await LoadSupplierDataFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
 
                     _toastManager.CreateToast("Supplier Added Successfully")
                         .WithContent($"Successfully added '{newSupplier.SupplierName}' to the database!")
@@ -326,7 +365,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
                 if (result.Success)
                 {
-                    await LoadSupplierDataFromDatabaseAsync();
+                    await LoadSupplierDataFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
 
                     _toastManager.CreateToast("Supplier Updated")
                         .WithContent($"Successfully updated '{updatedSupplier.SupplierName}'!")
@@ -384,7 +423,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private async Task SearchSupplier()
+    private async Task SearchSupplier(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
@@ -394,7 +433,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 equipment.PropertyChanged += OnSupplierPropertyChanged;
                 SupplierItems.Add(equipment);
             }
-            UpdateSupplierCounts();
+            _ = UpdateSupplierCounts(LifecycleToken);
             return;
         }
 
@@ -402,7 +441,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         try
         {
-            await Task.Delay(500);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(LifecycleToken, cancellationToken);
+
+            await Task.Delay(500, linkedCts.Token).ConfigureAwait(false);
 
             var filteredSuppliers = CurrentFilteredSupplierData.Where(supplier =>
                     supplier is
@@ -423,7 +464,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 supplier.PropertyChanged += OnSupplierPropertyChanged;
                 SupplierItems.Add(supplier);
             }
-            UpdateSupplierCounts();
+
+            _ = UpdateSupplierCounts(linkedCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected
         }
         finally
         {
@@ -519,7 +565,18 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         }
     }
 
-    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
+    private async Task LoadSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _currentSettings = await _settingsService.LoadSettingsAsync()
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error loading settings");
+        }
+    }
 
     private void ApplySupplierFilter()
     {
@@ -544,7 +601,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             supplier.PropertyChanged += OnSupplierPropertyChanged;
             SupplierItems.Add(supplier);
         }
-        UpdateSupplierCounts();
+        _ = UpdateSupplierCounts(LifecycleToken);
     }
 
     [RelayCommand]
@@ -556,30 +613,37 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         {
             equipmentItem.IsSelected = shouldSelect;
         }
-        UpdateSupplierCounts();
+        _ = UpdateSupplierCounts(LifecycleToken);
     }
 
     private async Task OnSubmitDeleteSingleItem(Supplier supplier)
     {
         if (supplier.ID == null) return;
 
-        // Call service to delete from database
-        var result = await _supplierService.DeleteSupplierAsync(supplier.ID.Value);
-
-        if (result.Success)
+        try
         {
-            // Remove from UI
-            supplier.PropertyChanged -= OnSupplierPropertyChanged;
-            SupplierItems.Remove(supplier);
-            OriginalSupplierData.Remove(supplier);
-            CurrentFilteredSupplierData.Remove(supplier);
-            UpdateSupplierCounts();
+            var result = await _supplierService.DeleteSupplierAsync(supplier.ID.Value).ConfigureAwait(false);
 
-            _toastManager.CreateToast("Supplier Deleted")
-                .WithContent($"{supplier.Name} has been deleted successfully!")
-                .DismissOnClick()
-                .WithDelay(6)
-                .ShowSuccess();
+            if (result.Success)
+            {
+                supplier.PropertyChanged -= OnSupplierPropertyChanged;
+                SupplierItems.Remove(supplier);
+                OriginalSupplierData.Remove(supplier);
+                CurrentFilteredSupplierData.Remove(supplier);
+                await UpdateSupplierCounts(LifecycleToken).ConfigureAwait(false);
+
+                _toastManager.CreateToast("Supplier Deleted")
+                    .WithContent($"{supplier.Name} has been deleted successfully!")
+                    .DismissOnClick()
+                    .WithDelay(6)
+                    .ShowSuccess();
+                
+                _logger?.LogInformation("Deleted supplier {SupplierId}", supplier.ID.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error deleting supplier {SupplierId}", supplier.ID);
         }
     }
 
@@ -588,47 +652,62 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         var selectedSuppliers = SupplierItems.Where(item => item.IsSelected).ToList();
         if (selectedSuppliers.Count == 0) return;
 
-        // Prepare list of IDs
-        var supplierIds = selectedSuppliers
-            .Where(s => s.ID.HasValue)
-            .Select(s => s.ID!.Value)
-            .ToList();
-
-        // Call service to delete multiple from database
-        var result = await _supplierService.DeleteMultipleSuppliersAsync(supplierIds);
-
-        if (result.Success)
+        try
         {
-            // Remove from UI
-            foreach (var supplier in selectedSuppliers)
-            {
-                supplier.PropertyChanged -= OnSupplierPropertyChanged;
-                SupplierItems.Remove(supplier);
-                OriginalSupplierData.Remove(supplier);
-                CurrentFilteredSupplierData.Remove(supplier);
-            }
-            UpdateSupplierCounts();
+            var supplierIds = selectedSuppliers
+                .Where(s => s.ID.HasValue)
+                .Select(s => s.ID!.Value)
+                .ToList();
 
-            _toastManager.CreateToast("Suppliers Deleted")
-                .WithContent($"{result.DeletedCount} supplier(s) deleted successfully!")
-                .DismissOnClick()
-                .WithDelay(6)
-                .ShowSuccess();
+            var result = await _supplierService.DeleteMultipleSuppliersAsync(supplierIds)
+                .ConfigureAwait(false);
+
+            if (result.Success)
+            {
+                foreach (var supplier in selectedSuppliers)
+                {
+                    supplier.PropertyChanged -= OnSupplierPropertyChanged;
+                    SupplierItems.Remove(supplier);
+                    OriginalSupplierData.Remove(supplier);
+                    CurrentFilteredSupplierData.Remove(supplier);
+                }
+                await UpdateSupplierCounts(LifecycleToken).ConfigureAwait(false);
+
+                _toastManager.CreateToast("Suppliers Deleted")
+                    .WithContent($"{result.DeletedCount} supplier(s) deleted successfully!")
+                    .DismissOnClick()
+                    .WithDelay(6)
+                    .ShowSuccess();
+                
+                _logger?.LogInformation("Deleted {Count} suppliers", supplierIds.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error deleting multiple suppliers");
         }
     }
 
-    private void UpdateSupplierCounts()
+    private async Task UpdateSupplierCounts(CancellationToken cancellationToken = default)
     {
-        SelectedCount = SupplierItems.Count(x => x.IsSelected);
-        TotalCount = SupplierItems.Count;
-        SelectAll = SupplierItems.Count > 0 && SupplierItems.All(x => x.IsSelected);
+        try
+        {
+            await Task.Yield(); // Ensure async context
+            SelectedCount = SupplierItems.Count(x => x.IsSelected);
+            TotalCount = SupplierItems.Count;
+            SelectAll = SupplierItems.Count > 0 && SupplierItems.All(x => x.IsSelected);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error updating supplier counts");
+        }
     }
 
     private void OnSupplierPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Supplier.IsSelected))
         {
-            UpdateSupplierCounts();
+            _ = UpdateSupplierCounts(LifecycleToken);
         }
     }
 
@@ -640,6 +719,28 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     partial void OnSelectedSupplierFilterItemChanged(string value)
     {
         ApplySupplierFilter();
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing SupplierManagementViewModel");
+
+        // Unsubscribe from supplier property changes
+        foreach (var supplier in SupplierItems)
+        {
+            supplier.PropertyChanged -= OnSupplierPropertyChanged;
+        }
+        foreach (var supplier in OriginalSupplierData)
+        {
+            supplier.PropertyChanged -= OnSupplierPropertyChanged;
+        }
+
+        // Clear collections
+        SupplierItems.Clear();
+        OriginalSupplierData.Clear();
+        CurrentFilteredSupplierData.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 }
 

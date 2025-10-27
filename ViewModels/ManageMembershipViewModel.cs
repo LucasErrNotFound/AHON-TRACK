@@ -16,77 +16,40 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using AHON_TRACK.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("manage-membership")]
 public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty]
-    private string[] _sortFilterItems = [
+    [ObservableProperty] private string[] _sortFilterItems = [
         "By ID", "Names by A-Z", "Names by Z-A", "By newest to oldest", "By oldest to newest", "Reset Data"
     ];
 
-    [ObservableProperty]
-    private string _selectedSortFilterItem = "By ID";
-
-    [ObservableProperty]
-    private string[] _statusFilterItems = ["All", "Active", "Expired"];
-
-    [ObservableProperty]
-    private string _selectedStatusFilterItem = "All";
-
-    [ObservableProperty]
-    private List<ManageMembersItem> _originalMemberData = [];
-
-    [ObservableProperty]
-    private ObservableCollection<ManageMembersItem> _memberItems = [];
-
-    [ObservableProperty]
-    private List<ManageMembersItem> _currentFilteredData = [];
-
-    [ObservableProperty]
-    private string _searchStringResult = string.Empty;
-
-    [ObservableProperty]
-    private bool _isSearchingMember;
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private bool _showIdColumn = true;
-
-    [ObservableProperty]
-    private bool _showPictureColumn = true;
-
-    [ObservableProperty]
-    private bool _showNameColumn = true;
-
-    [ObservableProperty]
-    private bool _showContactNumberColumn = true;
-
-    [ObservableProperty]
-    private bool _showAvailedPackagesColumn = true;
-
-    [ObservableProperty]
-    private bool _showStatusColumn = true;
-
-    [ObservableProperty]
-    private bool _showValidity = true;
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    [ObservableProperty]
-    private ManageMembersItem? _selectedMember;
+    [ObservableProperty] private string _selectedSortFilterItem = "By ID";
+    [ObservableProperty] private string[] _statusFilterItems = ["All", "Active", "Expired"];
+    [ObservableProperty] private string _selectedStatusFilterItem = "All";
+    [ObservableProperty] private ObservableCollection<ManageMembersItem> _memberItems = [];
+    [ObservableProperty] private List<ManageMembersItem> _originalMemberData = [];
+    [ObservableProperty] private List<ManageMembersItem> _currentFilteredData = [];
+    [ObservableProperty] private ManageMembersItem? _selectedMember;
+    [ObservableProperty] private string _searchStringResult = string.Empty;
+    [ObservableProperty] private bool _isSearchingMember;
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private int _selectedCount;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private bool _showIdColumn = true;
+    [ObservableProperty] private bool _showPictureColumn = true;
+    [ObservableProperty] private bool _showNameColumn = true;
+    [ObservableProperty] private bool _showContactNumberColumn = true;
+    [ObservableProperty] private bool _showAvailedPackagesColumn = true;
+    [ObservableProperty] private bool _showStatusColumn = true;
+    [ObservableProperty] private bool _showValidity = true;
+    [ObservableProperty] private bool _isInitialized;
 
     public bool CanDeleteSelectedMembers
     {
@@ -130,45 +93,48 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
+    private readonly INavigationService _navigationService;
     private readonly MemberDialogCardViewModel _memberDialogCardViewModel;
     private readonly AddNewMemberViewModel _addNewMemberViewModel;
     private readonly IMemberService? _memberService;
+    private readonly ILogger _logger;
 
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
-    public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
-        MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel,
-        IMemberService memberService)
+    public ManageMembershipViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager,
+        MemberDialogCardViewModel memberDialogCardViewModel, 
+        AddNewMemberViewModel addNewMemberViewModel,
+        IMemberService memberService, 
+        INavigationService navigationService,
+        ILogger logger)
     {
-        _dialogManager = dialogManager;
-        _toastManager = toastManager;
-        _pageManager = pageManager;
-        _memberDialogCardViewModel = memberDialogCardViewModel;
-        _addNewMemberViewModel = addNewMemberViewModel;
-        _memberService = memberService;
+        _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
+        _memberDialogCardViewModel = memberDialogCardViewModel ?? throw new ArgumentNullException(nameof(memberDialogCardViewModel));
+        _addNewMemberViewModel = addNewMemberViewModel ?? throw new ArgumentNullException(nameof(addNewMemberViewModel));
+        _memberService = memberService ?? throw new ArgumentNullException(nameof(memberService));
+        _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        _ = LoadMemberDataAsync();
         SubscribeToEvents();
-        UpdateCounts();
-
     }
 
-    // Default constructor (for design-time/testing)
     public ManageMembershipViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _memberDialogCardViewModel = new MemberDialogCardViewModel();
+        _navigationService = null!;
         _addNewMemberViewModel = new AddNewMemberViewModel();
+        _memberService = null!;
+        _logger = null!;
 
-        _ = LoadMemberDataAsync();
-        SubscribeToEvents();
-        UpdateCounts();
-
+        LoadSampleData();
     }
 
+    /*
     [AvaloniaHotReload]
     public async Task Initialize()
     {
@@ -178,6 +144,42 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         await LoadMemberDataAsync();
 
         IsInitialized = true;
+    }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("ManageMembershipViewModel already initialized");
+            return;
+        }
+
+        _logger?.LogInformation("Initializing ManageMembershipViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadMemberDataAsync(linkedCts.Token).ConfigureAwait(false);
+            await UpdateCounts(linkedCts.Token).ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger?.LogInformation("ManageMembershipViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("ManageMembershipViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing ManageMembershipViewModel");
+            LoadSampleData();
+        }
     }
 
     private void SubscribeToEvents()
@@ -190,6 +192,17 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         eventService.CheckinAdded += OnMemberChanged;
         eventService.CheckoutAdded += OnMemberChanged;
         eventService.ProductPurchased += OnMemberChanged;
+    }
+    
+    private void UnsubscribeFromEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+        
+        eventService.MemberAdded -= OnMemberChanged;
+        eventService.MemberUpdated -= OnMemberChanged;
+        eventService.CheckinAdded -= OnMemberChanged;
+        eventService.CheckoutAdded -= OnMemberChanged;
+        eventService.ProductPurchased -= OnMemberChanged;
     }
     
     partial void OnSelectedMemberChanged(ManageMembersItem? value)
@@ -205,20 +218,40 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     private async void OnMemberChanged(object? sender, EventArgs e)
     {
-        await LoadMemberDataAsync();
+        try
+        {
+            _logger?.LogDebug("Detected member data change — refreshing");
+            await LoadMemberDataAsync(LifecycleToken).ConfigureAwait(false);
+            await UpdateCounts(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing members after change event");
+        }
     }
 
-    public async Task LoadMemberDataAsync()
+    public async Task LoadMemberDataAsync(CancellationToken cancellationToken = default)
     {
         if (_memberService == null) return;
 
         try
         {
             // Use the new tuple-based service method
-            var result = await _memberService.GetMembersAsync();
+            var result = await _memberService.GetMembersAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (result.Success && result.Members is { Count: > 0 })
             {
+                // Unsubscribe from old items first
+                foreach (var member in OriginalMemberData)
+                {
+                    member.PropertyChanged -= OnMemberPropertyChanged;
+                }
+
                 // Map ManageMemberModel → ManageMemberItems
                 var memberItems = result.Members.Select(m => new ManageMembersItem
                 {
@@ -256,16 +289,24 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
                 ApplyMemberStatusFilter();
                 ApplyMemberSort();
+
+                _logger?.LogDebug("Loaded {Count} members from database", result.Members.Count);
                 return; // Successfully loaded from database
             }
-            else if (!result.Success)
+
+            if (!result.Success)
             {
+                _logger?.LogWarning("Failed to load members: {Message}", result.Message);
                 Debug.WriteLine($"[ManageMembership] Failed to load members: {result.Message}");
                 _toastManager?.CreateToast("Database Error")
                     .WithContent(result.Message)
                     .DismissOnClick()
                     .ShowError();
             }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -399,27 +440,29 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     }
 
     [RelayCommand]
-    private async Task SearchMembers()
+    private async Task SearchMembers(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
-            // Reset to current filtered data instead of original data
             MemberItems.Clear();
             foreach (var member in CurrentFilteredData)
             {
                 member.PropertyChanged += OnMemberPropertyChanged;
                 MemberItems.Add(member);
             }
-            UpdateCounts();
+            _ = UpdateCounts(LifecycleToken);
             return;
         }
+    
         IsSearchingMember = true;
 
         try
         {
-            await Task.Delay(500);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+            
+            await Task.Delay(500, linkedCts.Token).ConfigureAwait(false);
 
-            // Search within the current filtered data instead of original data
             var filteredMembers = CurrentFilteredData.Where(emp =>
                 emp.ID.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                 emp.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
@@ -435,7 +478,11 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 members.PropertyChanged += OnMemberPropertyChanged;
                 MemberItems.Add(members);
             }
-            UpdateCounts();
+            _ = UpdateCounts(linkedCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected
         }
         finally
         {
@@ -588,12 +635,19 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         }
     }
 
-    private void UpdateCounts()
+    private async Task UpdateCounts(CancellationToken cancellationToken = default)
     {
-        SelectedCount = MemberItems.Count(x => x.IsSelected);
-        TotalCount = MemberItems.Count;
-
-        SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
+        try
+        {
+            await Task.Yield(); // Ensure async context
+            SelectedCount = MemberItems.Count(x => x.IsSelected);
+            TotalCount = MemberItems.Count;
+            SelectAll = MemberItems.Count > 0 && MemberItems.All(x => x.IsSelected);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error updating member counts");
+        }
     }
 
     [RelayCommand]
@@ -787,7 +841,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             OriginalMemberData = OriginalMemberData.Where(m => m.ID != member.ID).ToList();
             CurrentFilteredData = CurrentFilteredData.Where(m => m.ID != member.ID).ToList();
 
-            UpdateCounts();
+            _ = UpdateCounts(LifecycleToken);
 
             // Don't show toast here - service already handles it
         }
@@ -821,7 +875,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             OriginalMemberData = OriginalMemberData.Where(m => !idsToRemove.Contains(m.ID)).ToList();
             CurrentFilteredData = CurrentFilteredData.Where(m => !idsToRemove.Contains(m.ID)).ToList();
 
-            UpdateCounts();
+            _ = UpdateCounts(LifecycleToken);
 
             // Don't show toast here - service already handles it
         }
@@ -942,7 +996,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [RelayCommand]
     private void OpenAddNewMemberView()
     {
-        _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+        _ = _navigationService.NavigateAsync<AddNewMemberViewModel>(new Dictionary<string, object>
         {
             ["Context"] = MemberViewContext.AddNew
         });
@@ -983,7 +1037,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity
                 };
 
-                _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+                _ = _navigationService.NavigateAsync<AddNewMemberViewModel>(new Dictionary<string, object>
                 {
                     ["Context"] = MemberViewContext.Upgrade,
                     ["SelectedMember"] = fullMemberData
@@ -1000,7 +1054,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         else
         {
             // Fallback: use existing data if service is unavailable
-            _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+            _ = _navigationService.NavigateAsync<AddNewMemberViewModel>(new Dictionary<string, object>
             {
                 ["Context"] = MemberViewContext.Upgrade,
                 ["SelectedMember"] = SelectedMember
@@ -1044,7 +1098,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
                 };
 
-                _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+                await _navigationService.NavigateAsync<AddNewMemberViewModel>(new Dictionary<string, object>
                 {
                     ["Context"] = MemberViewContext.Renew,
                     ["SelectedMember"] = fullMemberData
@@ -1061,7 +1115,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         else
         {
             // Fallback: use existing data if service is unavailable
-            _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
+            await _navigationService.NavigateAsync<AddNewMemberViewModel>(new Dictionary<string, object>
             {
                 ["Context"] = MemberViewContext.Renew,
                 ["SelectedMember"] = SelectedMember
@@ -1091,10 +1145,10 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [RelayCommand]
     private async Task ShowModifyMemberDialog(ManageMembersItem member)
     {
-        _memberDialogCardViewModel.Initialize();
+        await _memberDialogCardViewModel.InitializeAsync();
 
         // Populate the dialog with member data from database
-        await _memberDialogCardViewModel.PopulateWithMemberDataAsync(member.ID);
+        await _memberDialogCardViewModel.PopulateWithMemberDataAsync(member.ID, CancellationToken.None);
 
         _dialogManager.CreateDialog(_memberDialogCardViewModel)
             .WithSuccessCallback(async _ =>
@@ -1144,6 +1198,37 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
+    }
+    
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from ManageMembership");
+        return ValueTask.CompletedTask;
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing ManageMembershipViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Unsubscribe from item property changes
+        foreach (var member in MemberItems)
+        {
+            member.PropertyChanged -= OnMemberPropertyChanged;
+        }
+        foreach (var member in OriginalMemberData)
+        {
+            member.PropertyChanged -= OnMemberPropertyChanged;
+        }
+
+        // Clear collections
+        MemberItems.Clear();
+        OriginalMemberData.Clear();
+        CurrentFilteredData.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 }
 

@@ -2,166 +2,173 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
-using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
-using QuestPDF.Companion;
 using QuestPDF.Fluent;
 using ShadUI;
 using AHON_TRACK.Services.Events;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("manage-billing")]
 public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 {
-    [ObservableProperty]
-    private DateTime _selectedDate = DateTime.Today;
-
-    [ObservableProperty]
-    private List<Invoices> _originalInvoiceData = [];
-
-    [ObservableProperty]
-    private List<Invoices> _currentInvoiceData = [];
-
-    [ObservableProperty]
-    private ObservableCollection<Package> _packageOptions = [];
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private ObservableCollection<Invoices> _invoiceList = [];
-
-    [ObservableProperty]
-    private ObservableCollection<RecentActivity> _recentActivities = [];
-
-    [ObservableProperty]
-    private bool _isLoadingRecentActivity;
-
-    [ObservableProperty]
-    private bool _isLoadingInvoices;
+    #region Private Fields
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly AddNewPackageDialogCardViewModel _addNewPackageDialogCardViewModel;
     private readonly EditPackageDialogCardViewModel _editPackageDialogCardViewModel;
     private readonly IPackageService _packageService;
     private readonly IProductPurchaseService _productPurchaseService;
     private readonly SettingsService _settingsService;
+    private readonly ILogger _logger;
     private AppSettings? _currentSettings;
 
-    public ManageBillingViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
-        AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel, EditPackageDialogCardViewModel editPackageDialogCardViewModel,
-        SettingsService settingsService, IPackageService packageService, IProductPurchaseService productPurchaseService)
+    [ObservableProperty] private ObservableCollection<Invoices> _invoiceList = [];
+    [ObservableProperty] private ObservableCollection<RecentActivity> _recentActivities = [];
+    [ObservableProperty] private ObservableCollection<Package> _packageOptions = [];
+    [ObservableProperty] private List<Invoices> _originalInvoiceData = [];
+    [ObservableProperty] private List<Invoices> _currentInvoiceData = [];
+    [ObservableProperty] private DateTime _selectedDate = DateTime.Today;
+    [ObservableProperty] private bool _isInitialized;
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private int _selectedCount;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private bool _isLoadingRecentActivity;
+    [ObservableProperty] private bool _isLoadingInvoices;
+
+    #endregion
+
+    #region Constructors
+
+    public ManageBillingViewModel(
+        DialogManager dialogManager,
+        ToastManager toastManager,
+        AddNewPackageDialogCardViewModel addNewPackageDialogCardViewModel,
+        EditPackageDialogCardViewModel editPackageDialogCardViewModel,
+        SettingsService settingsService,
+        IPackageService packageService,
+        IProductPurchaseService productPurchaseService,
+        ILogger logger)
     {
-        _dialogManager = dialogManager;
-        _toastManager = toastManager;
-        _pageManager = pageManager;
-        _addNewPackageDialogCardViewModel = addNewPackageDialogCardViewModel;
-        _editPackageDialogCardViewModel = editPackageDialogCardViewModel;
-        _packageService = packageService;
-        _productPurchaseService = productPurchaseService;
-        _settingsService = settingsService;
+        _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
+        _addNewPackageDialogCardViewModel = addNewPackageDialogCardViewModel ?? throw new ArgumentNullException(nameof(addNewPackageDialogCardViewModel));
+        _editPackageDialogCardViewModel = editPackageDialogCardViewModel ?? throw new ArgumentNullException(nameof(editPackageDialogCardViewModel));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _packageService = packageService ?? throw new ArgumentNullException(nameof(packageService));
+        _productPurchaseService = productPurchaseService ?? throw new ArgumentNullException(nameof(productPurchaseService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        LoadPackageOptionsAsync();
-        _ = LoadRecentPurchasesFromDatabaseAsync();
-        _ = LoadInvoicesFromDatabaseAsync();
         SubscribeToEvents();
-
-        UpdateInvoiceDataCounts();
     }
 
+    // Design-time constructor
     public ManageBillingViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _addNewPackageDialogCardViewModel = new AddNewPackageDialogCardViewModel();
         _editPackageDialogCardViewModel = new EditPackageDialogCardViewModel();
         _settingsService = new SettingsService();
         _packageService = null!;
         _productPurchaseService = null!;
+        _logger = null!;
 
-        _ = LoadRecentPurchasesFromDatabaseAsync();
-        _ = LoadInvoicesFromDatabaseAsync();
-        SubscribeToEvents();
-        UpdateInvoiceDataCounts();
+        LoadSampleData();
     }
+
+    #endregion
+
+    #region INavigable Implementation
 
     [AvaloniaHotReload]
-    public async Task Initialize()
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (IsInitialized) return;
-        await LoadSettingsAsync();
+        ThrowIfDisposed();
 
-        if (_productPurchaseService != null)
+        if (IsInitialized)
         {
-            await LoadInvoicesFromDatabaseAsync();
-            await LoadRecentPurchasesFromDatabaseAsync();
+            _logger?.LogDebug("ManageBillingViewModel already initialized");
+            return;
         }
-        else
+
+        _logger?.LogInformation("Initializing ManageBillingViewModel");
+
+        try
         {
-            LoadSampleSalesData();
-            LoadInvoiceData();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadSettingsAsync(linkedCts.Token).ConfigureAwait(false);
+            await LoadPackageOptionsAsync(linkedCts.Token).ConfigureAwait(false);
+            await LoadInvoicesFromDatabaseAsync(linkedCts.Token).ConfigureAwait(false);
+            await LoadRecentPurchasesFromDatabaseAsync(linkedCts.Token).ConfigureAwait(false);
+            await UpdateInvoiceDataCounts(linkedCts.Token).ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger?.LogInformation("ManageBillingViewModel initialized successfully");
         }
-        LoadPackageOptionsAsync();
-        UpdateInvoiceDataCounts();
-        IsInitialized = true;
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("ManageBillingViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing ManageBillingViewModel");
+            LoadSampleData(); // Fallback
+        }
     }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from ManageBilling");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
+
+    #region Subscription Management
 
     private void SubscribeToEvents()
     {
         var eventService = DashboardEventService.Instance;
-
         eventService.SalesUpdated += OnBillingDataChanged;
         eventService.ProductPurchased += OnBillingDataChanged;
         eventService.ChartDataUpdated += OnBillingDataChanged;
         eventService.MemberAdded += OnBillingDataChanged;
         eventService.MemberUpdated += OnBillingDataChanged;
-
     }
 
-    private async void OnBillingDataChanged(object? sender, EventArgs e)
+    private void UnsubscribeFromEvents()
     {
-        await LoadInvoicesFromDatabaseAsync();
-        await LoadRecentPurchasesFromDatabaseAsync();
+        var eventService = DashboardEventService.Instance;
+        eventService.SalesUpdated -= OnBillingDataChanged;
+        eventService.ProductPurchased -= OnBillingDataChanged;
+        eventService.ChartDataUpdated -= OnBillingDataChanged;
+        eventService.MemberAdded -= OnBillingDataChanged;
+        eventService.MemberUpdated -= OnBillingDataChanged;
     }
 
+    #endregion
 
-    public ObservableCollection<RecentActivity> RecentActivity
-    {
-        get => RecentActivities;
-        set
-        {
-            RecentActivities = value;
-            OnPropertyChanged();
-        }
-    }
+    #region Data Loading
 
-    private async Task LoadRecentPurchasesFromDatabaseAsync()
+    private async Task LoadRecentPurchasesFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         if (_productPurchaseService == null)
         {
@@ -173,7 +180,10 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
         try
         {
-            var purchases = await _productPurchaseService.GetRecentPurchasesAsync(50);
+            var purchases = await _productPurchaseService.GetRecentPurchasesAsync(50)
+                .ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             RecentActivities.Clear();
             foreach (var purchase in purchases)
@@ -191,13 +201,20 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                         : "avares://AHON_TRACK/Assets/MainWindowView/user.png"
                 });
             }
+
+            _logger?.LogDebug("Loaded {Count} recent purchases", purchases.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast("Load Error")
+            _logger?.LogError(ex, "Error loading recent purchases");
+            _toastManager?.CreateToast("Load Error")
                 .WithContent($"Failed to load recent purchases: {ex.Message}")
                 .ShowError();
-            LoadSampleSalesData(); // Fallback to sample data
+            LoadSampleSalesData();
         }
         finally
         {
@@ -205,7 +222,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         }
     }
 
-    private async Task LoadInvoicesFromDatabaseAsync()
+    private async Task LoadInvoicesFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         if (_productPurchaseService == null)
         {
@@ -217,31 +234,118 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
         try
         {
-            var invoices = await _productPurchaseService.GetInvoicesByDateAsync(SelectedDate);
+            var invoices = await _productPurchaseService.GetInvoicesByDateAsync(SelectedDate)
+                .ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Unsubscribe from old items
+            foreach (var invoice in OriginalInvoiceData)
+            {
+                invoice.PropertyChanged -= OnInvoicePropertyChanged;
+            }
 
             OriginalInvoiceData = invoices.Select(i => new Invoices
             {
-                ID = i.ID,  // Already int from InvoiceModel
+                ID = i.ID,
                 CustomerName = i.CustomerName,
                 PurchasedItem = i.PurchasedItem,
-                Quantity = i.Quantity,  // Already int from InvoiceModel
-                Amount = (int)Math.Round(i.Amount),  // Round decimal to int
+                Quantity = i.Quantity,
+                Amount = (int)Math.Round(i.Amount),
                 DatePurchased = i.DatePurchased
             }).ToList();
 
             FilterInvoiceDataByPackageAndDate();
+            _logger?.LogDebug("Loaded {Count} invoices for {Date}", invoices.Count, SelectedDate.ToShortDateString());
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast("Load Error")
+            _logger?.LogError(ex, "Error loading invoices");
+            _toastManager?.CreateToast("Load Error")
                 .WithContent($"Failed to load invoices: {ex.Message}")
                 .ShowError();
-            LoadInvoiceData(); // Fallback to sample data
+            LoadInvoiceData();
         }
         finally
         {
             IsLoadingInvoices = false;
         }
+    }
+
+    private async Task LoadPackageOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        if (_packageService == null) return;
+
+        try
+        {
+            var packages = await _packageService.GetPackagesAsync()
+                .ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            PackageOptions.Clear();
+            foreach (var package in packages)
+            {
+                PackageOptions.Add(package);
+            }
+
+            _logger?.LogDebug("Loaded {Count} packages", packages.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error loading packages");
+        }
+    }
+
+    private async Task LoadSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _currentSettings = await _settingsService.LoadSettingsAsync()
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error loading settings");
+        }
+    }
+
+    private void LoadSampleData()
+    {
+        LoadSampleSalesData();
+        LoadInvoiceData();
+    }
+
+    private void LoadSampleSalesData()
+    {
+        var sampleData = GetSampleSalesData();
+        RecentActivities.Clear();
+        foreach (var activity in sampleData)
+        {
+            RecentActivities.Add(activity);
+        }
+    }
+
+    private void LoadInvoiceData()
+    {
+        var sampleData = GetInvoiceData();
+        
+        // Unsubscribe from old items
+        foreach (var invoice in OriginalInvoiceData)
+        {
+            invoice.PropertyChanged -= OnInvoicePropertyChanged;
+        }
+
+        OriginalInvoiceData = sampleData;
+        FilterInvoiceDataByPackageAndDate();
     }
 
     private string ConvertByteArrayToImagePath(byte[] imageBytes)
@@ -250,36 +354,11 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         {
             using var ms = new MemoryStream(imageBytes);
             var bitmap = new Bitmap(ms);
-            // For Avalonia, we need to return the byte array or create a temporary file
-            // Since Avalonia can't directly use byte[] for Image.Source, 
-            // you might want to save it temporarily or use a different approach
-            return "avares://AHON_TRACK/Assets/MainWindowView/user.png"; // Fallback for now
+            return "avares://AHON_TRACK/Assets/MainWindowView/user.png";
         }
         catch
         {
             return "avares://AHON_TRACK/Assets/MainWindowView/user.png";
-        }
-    }
-
-    private void LoadSampleSalesData()
-    {
-        var sampleData = GetSampleSalesData();
-        RecentActivity = new ObservableCollection<RecentActivity>(sampleData);
-    }
-
-    private void LoadInvoiceData()
-    {
-        var sampleData = GetInvoiceData();
-        OriginalInvoiceData = sampleData;
-        FilterInvoiceDataByPackageAndDate();
-    }
-
-    private async void LoadPackageOptionsAsync()
-    {
-        if (_packageService != null)
-        {
-            var packages = await _packageService.GetPackagesAsync();
-            PackageOptions = new ObservableCollection<Package>(packages);
         }
     }
 
@@ -314,38 +393,63 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             new Invoices { ID = 1009, CustomerName = "John Maverick Lim", PurchasedItem = "Red Bull", Quantity = 7, Amount = 880, DatePurchased = today.AddHours(19) },
             new Invoices { ID = 1010, CustomerName = "Raymart Soneja", PurchasedItem = "Protein Powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddDays(-1).AddHours(17) },
             new Invoices { ID = 1011, CustomerName = "Vince Abellada", PurchasedItem = "Protein Powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddDays(-1).AddHours(18) },
-            // Test Test Test
-            new Invoices { ID = 1012, CustomerName = "Mardie Dela Cruz", PurchasedItem = "Red Horse Mucho", Quantity = 2, Amount = 280, DatePurchased = today.AddHours(15) },
-            new Invoices { ID = 1013, CustomerName = "JL Taberdo", PurchasedItem = "Cobra yellow", Quantity = 3, Amount = 80, DatePurchased = today.AddHours(16) },
-            new Invoices { ID = 1014, CustomerName = "Marion James Dela Roca", PurchasedItem = "Protein Shake", Quantity = 1, Amount = 180, DatePurchased = today.AddHours(17) },
-            new Invoices { ID = 1004, CustomerName = "Sianrey Flora", PurchasedItem = "AHON T-Shirt", Quantity = 1, Amount = 580, DatePurchased = today.AddHours(17) },
-            new Invoices { ID = 1015, CustomerName = "Rome Jedd Calubayan", PurchasedItem = "Sting Red", Quantity = 5, Amount = 280, DatePurchased = today.AddHours(17) },
-            new Invoices { ID = 1016, CustomerName = "Marc Torres", PurchasedItem = "Pre-workout powder", Quantity = 1, Amount = 1280, DatePurchased = today.AddHours(17) },
-            new Invoices { ID = 1017, CustomerName = "Nash Floralde", PurchasedItem = "Pre-workout powder", Quantity = 3, Amount = 4480, DatePurchased = today.AddHours(18) },
-            new Invoices { ID = 1018, CustomerName = "Ry Christian", PurchasedItem = "Abalos T-Shirt", Quantity = 1, Amount = 180, DatePurchased = today.AddHours(18) },
-            new Invoices { ID = 1019, CustomerName = "John Maverick Lim", PurchasedItem = "Red Bull", Quantity = 7, Amount = 880, DatePurchased = today.AddHours(19) },
-            // Ends Here
         ];
     }
 
-    [RelayCommand]
-    private async Task RefreshRecentActivity()
+    private void FilterInvoiceDataByPackageAndDate()
     {
-        await LoadRecentPurchasesFromDatabaseAsync();
+        var filteredInvoiceData = OriginalInvoiceData
+            .Where(w => w.DatePurchased.HasValue && w.DatePurchased.Value.Date == SelectedDate.Date)
+            .ToList();
+
+        CurrentInvoiceData = filteredInvoiceData;
+        InvoiceList.Clear();
+
+        foreach (var invoice in filteredInvoiceData)
+        {
+            invoice.PropertyChanged -= OnInvoicePropertyChanged;
+            invoice.PropertyChanged += OnInvoicePropertyChanged;
+            InvoiceList.Add(invoice);
+        }
+        _ = UpdateInvoiceDataCounts(LifecycleToken);
     }
 
-    [RelayCommand]
-    private async Task RefreshInvoices()
-    {
-        await LoadInvoicesFromDatabaseAsync();
-    }
-
-    [RelayCommand]
-    private async Task DownloadInvoices()
+    private async Task UpdateInvoiceDataCounts(CancellationToken cancellationToken = default)
     {
         try
         {
-            // Check if there are any invoices to export
+            await Task.Yield(); // Ensure async context
+            SelectedCount = InvoiceList.Count(x => x.IsSelected);
+            TotalCount = InvoiceList.Count;
+            SelectAll = InvoiceList.Count > 0 && InvoiceList.All(x => x.IsSelected);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error updating invoice counts");
+        }
+    }
+
+    #endregion
+
+    #region Commands
+
+    [RelayCommand]
+    private async Task RefreshRecentActivityAsync()
+    {
+        await LoadRecentPurchasesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+    }
+
+    [RelayCommand]
+    private async Task RefreshInvoicesAsync()
+    {
+        await LoadInvoicesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+    }
+
+    [RelayCommand]
+    private async Task DownloadInvoicesAsync()
+    {
+        try
+        {
             if (InvoiceList.Count == 0)
             {
                 _toastManager.CreateToast("No invoices to export")
@@ -406,10 +510,10 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             var document = new InvoiceDocument(invoiceModel);
 
             await using var stream = await pdfFile.OpenWriteAsync();
-
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
-                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+
 
             _toastManager.CreateToast("Invoice exported successfully")
                 .WithContent($"Invoice has been saved to {pdfFile.Name}")
@@ -418,6 +522,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error exporting invoice");
             _toastManager.CreateToast("Export failed")
                 .WithContent($"Failed to export invoice: {ex.Message}")
                 .DismissOnClick()
@@ -426,26 +531,23 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private void OpenAddNewPackage()
+    private async Task OpenAddNewPackage()
     {
-        _addNewPackageDialogCardViewModel.Initialize();
+        await _addNewPackageDialogCardViewModel.InitializeAsync().ConfigureAwait(false);
         _dialogManager.CreateDialog(_addNewPackageDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
                 try
                 {
-                    // Get the package data for database
                     var packageData = _addNewPackageDialogCardViewModel.GetPackageData();
                     if (packageData != null && _packageService != null)
                     {
-                        // Save to database using SystemService
                         var result = await _packageService.AddPackageAsync(packageData);
 
                         if (result.Success)
                         {
-                            LoadPackageOptionsAsync();
+                            await LoadPackageOptionsAsync(LifecycleToken).ConfigureAwait(false);
 
-                            // Show success message
                             _toastManager.CreateToast("Package Created Successfully")
                                 .WithContent($"Package '{packageData.packageName}' has been added to the database!")
                                 .DismissOnClick()
@@ -469,6 +571,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 }
                 catch (Exception ex)
                 {
+                    _logger?.LogError(ex, "Error adding package");
                     _toastManager.CreateToast("Database Error")
                         .WithContent($"Failed to save package: {ex.Message}")
                         .DismissOnClick()
@@ -486,9 +589,9 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     }
 
     [RelayCommand]
-    private async void OpenEditPackage(Package package)
+    private async Task OpenEditPackage(Package package)
     {
-        _editPackageDialogCardViewModel.Initialize();
+        await _editPackageDialogCardViewModel.InitializeAsync();
         _editPackageDialogCardViewModel.PopulateFromPackage(package);
         _dialogManager.CreateDialog(_editPackageDialogCardViewModel)
             .WithSuccessCallback(async _ =>
@@ -519,7 +622,6 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 {
                     if (_packageService != null)
                     {
-                        // Convert updated VM data into PackageModel
                         var updatedModel = _editPackageDialogCardViewModel.ToPackageModel(package.PackageId);
 
                         try
@@ -527,10 +629,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                             var success = await _packageService.UpdatePackageAsync(updatedModel);
                             if (success)
                             {
-                                // Convert back to display Package
                                 var updatedPackage = ConvertToDisplayPackage(updatedModel);
 
-                                // Update local collection
                                 var index = PackageOptions.IndexOf(package);
                                 if (index >= 0)
                                     PackageOptions[index] = updatedPackage;
@@ -550,6 +650,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                         }
                         catch (Exception ex)
                         {
+                            _logger?.LogError(ex, "Error updating package");
                             _toastManager.CreateToast("Database Error")
                                 .WithContent($"Failed to update package: {ex.Message}")
                                 .DismissOnClick()
@@ -579,7 +680,6 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         var features = new List<string>();
 
-        // Add non-empty features to the list
         if (!string.IsNullOrWhiteSpace(packageModel.features1)) features.Add(packageModel.features1.Trim());
         if (!string.IsNullOrWhiteSpace(packageModel.features2)) features.Add(packageModel.features2.Trim());
         if (!string.IsNullOrWhiteSpace(packageModel.features3)) features.Add(packageModel.features3.Trim());
@@ -591,8 +691,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             PackageId = packageModel.packageID,
             Title = packageModel.packageName,
             Description = packageModel.description,
-            Price = (int)packageModel.price, // Convert decimal to int
-            DiscountedPrice = (int)packageModel.discountedPrice, // Convert decimal to int
+            Price = (int)packageModel.price,
+            DiscountedPrice = (int)packageModel.discountedPrice,
             Duration = packageModel.duration,
             Features = features,
             IsDiscountChecked = packageModel.discount > 0,
@@ -604,64 +704,83 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         };
     }
 
+    #endregion
 
-    private void FilterInvoiceDataByPackageAndDate()
+    #region Property Changed Handlers
+
+    private async void OnBillingDataChanged(object? sender, EventArgs e)
     {
-        var filteredInvoiceData = OriginalInvoiceData
-            .Where(w => w.DatePurchased.HasValue && w.DatePurchased.Value.Date == SelectedDate.Date)
-            .ToList();
-
-        CurrentInvoiceData = filteredInvoiceData;
-        InvoiceList.Clear();
-
-        foreach (var invoice in filteredInvoiceData)
+        try
         {
-            invoice.PropertyChanged -= OnInvoicePropertyChanged;
-            invoice.PropertyChanged += OnInvoicePropertyChanged;
-            InvoiceList.Add(invoice);
+            _logger?.LogDebug("Detected billing data change — refreshing");
+            await LoadInvoicesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+            await LoadRecentPurchasesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+            await UpdateInvoiceDataCounts(LifecycleToken).ConfigureAwait(false);
         }
-        UpdateInvoiceDataCounts();
-    }
-
-    private void UpdateInvoiceDataCounts()
-    {
-        SelectedCount = InvoiceList.Count(x => x.IsSelected);
-        TotalCount = InvoiceList.Count;
-
-        SelectAll = InvoiceList.Count > 0 && InvoiceList.All(x => x.IsSelected);
-    }
-
-    partial void OnSelectAllChanged(bool value)
-    {
-        foreach (var invoice in InvoiceList)
+        catch (OperationCanceledException)
         {
-            invoice.IsSelected = value;
+            // Expected during disposal
         }
-        UpdateInvoiceDataCounts();
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing billing data after change event");
+        }
     }
 
     private void OnInvoicePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Invoices.IsSelected))
         {
-            UpdateInvoiceDataCounts();
+            _ = UpdateInvoiceDataCounts(LifecycleToken);
         }
     }
-
-    private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
-
-    private void OnDatePurchasedChanged(object? sender, PropertyChangedEventArgs e)
+    
+    partial void OnSelectAllChanged(bool value)
     {
-        if (e.PropertyName == nameof(Invoices.IsSelected))
+        foreach (var invoice in InvoiceList)
         {
-            UpdateInvoiceDataCounts();
+            invoice.IsSelected = value;
         }
+        _ = UpdateInvoiceDataCounts(LifecycleToken);
     }
 
     partial void OnSelectedDateChanged(DateTime value)
     {
-        _ = LoadInvoicesFromDatabaseAsync();
+        _ = LoadInvoicesFromDatabaseAsync(LifecycleToken);
     }
+
+    #endregion
+
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing ManageBillingViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Unsubscribe from invoice property changes
+        foreach (var invoice in InvoiceList)
+        {
+            invoice.PropertyChanged -= OnInvoicePropertyChanged;
+        }
+        foreach (var invoice in OriginalInvoiceData)
+        {
+            invoice.PropertyChanged -= OnInvoicePropertyChanged;
+        }
+
+        // Clear collections
+        InvoiceList.Clear();
+        RecentActivities.Clear();
+        PackageOptions.Clear();
+        OriginalInvoiceData.Clear();
+        CurrentInvoiceData.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }
 
 public class RecentActivity
@@ -714,10 +833,10 @@ public partial class Package : ObservableObject
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public int Price { get; set; }
-    public int DiscountedPrice { get; set; } // Add this
+    public int DiscountedPrice { get; set; }
     public string FormattedPrice => IsDiscountChecked
         ? $"₱{DiscountedPrice:N2}"
-        : $"₱{Price:N2}"; // Show discounted price when discount is active
+        : $"₱{Price:N2}";
     public string Duration { get; set; } = string.Empty;
     public List<string> Features { get; set; } = [];
     public bool IsDiscountChecked { get; set; }

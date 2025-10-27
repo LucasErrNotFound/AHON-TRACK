@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services;
@@ -25,78 +26,48 @@ using QuestPDF.Fluent;
 using ShadUI;
 using NotificationType = Avalonia.Controls.Notifications.NotificationType;
 using AHON_TRACK.Services.Events;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("audit-logs")]
 public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty]
-    private string[] _sortFilterItems = ["By ID", "Names by A-Z", "Names by Z-A", "By newest to oldest", "By oldest to newest", "Reset Data"];
-
-    [ObservableProperty]
-    private string _selectedSortFilterItem = "By newest to oldest";
-
-    [ObservableProperty]
-    private string[] _sortPositionItems = ["All", "Administrator", "Gym Staff"];
-
-    [ObservableProperty]
-    private string _selectedSortPositionItem = "All";
-
-    [ObservableProperty]
-    private DateTime _selectedDate = DateTime.Today;
-
-    [ObservableProperty]
-    private ObservableCollection<AuditLogItems> _auditLogs = [];
-
-    [ObservableProperty]
-    private List<AuditLogItems> _originalAuditLogData = [];
-
-    [ObservableProperty]
-    private List<AuditLogItems> _currentFilteredAuditLogData = [];
-
-    [ObservableProperty]
-    private string _searchStringResult = string.Empty;
-
-    [ObservableProperty]
-    private bool _isSearchingAuditLogs;
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    [ObservableProperty]
-    private AuditLogItems? _selectedAuditLogItem;
-
-    [ObservableProperty]
-    private double _value = 0;
-
-    [ObservableProperty]
-    private bool _isLoading;
+    [ObservableProperty] private string[] _sortFilterItems = [
+        "By ID", "Names by A-Z", "Names by Z-A", "By newest to oldest", "By oldest to newest", "Reset Data"];
+    
+    [ObservableProperty] private string _selectedSortFilterItem = "By newest to oldest";
+    [ObservableProperty] private string[] _sortPositionItems = ["All", "Administrator", "Gym Staff"];
+    [ObservableProperty] private string _selectedSortPositionItem = "All";
+    [ObservableProperty] private ObservableCollection<AuditLogItems> _auditLogs = [];
+    [ObservableProperty] private List<AuditLogItems> _originalAuditLogData = [];
+    [ObservableProperty] private List<AuditLogItems> _currentFilteredAuditLogData = [];
+    [ObservableProperty] private AuditLogItems? _selectedAuditLogItem;
+    [ObservableProperty] private DateTime _selectedDate = DateTime.Today;
+    [ObservableProperty] private string _searchStringResult = string.Empty;
+    [ObservableProperty] private bool _isSearchingAuditLogs;
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private int _selectedCount;
+    [ObservableProperty] private int _totalCount;
+    [ObservableProperty] private bool _isInitialized;
+    [ObservableProperty] private double _value = 0;
+    [ObservableProperty] private bool _isLoading;
 
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly IDashboardService _dashboardService;
+    private readonly ILogger _logger;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
-    public AuditLogsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
-        SettingsService settingsService, IDashboardService dashboardService)
+    public AuditLogsViewModel(DialogManager dialogManager, ToastManager toastManager, 
+        SettingsService settingsService, IDashboardService dashboardService, ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
+        _logger = logger;
         _dashboardService = dashboardService;
         _settingsService = settingsService;
 
@@ -109,12 +80,13 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _settingsService = new SettingsService();
+        _logger = null!;
         _dashboardService = null!;
 
     }
 
+    /*
     [AvaloniaHotReload]
     public async void Initialize()
     {
@@ -133,16 +105,93 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         UpdateCounts();
         IsInitialized = true;
     }
+    */
+    
+    #region INavigable Implementation
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger.LogDebug("AuditLogsViewModel already initialized");
+            return;
+        }
+
+        _logger.LogInformation("Initializing AuditLogsViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadSettingsAsync().ConfigureAwait(false);
+        
+            if (_dashboardService != null)
+            {
+                await LoadDataFromDatabaseAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                LoadSampleData();
+            }
+
+            UpdateCounts();
+            UpdateGaugeValue();
+
+            IsInitialized = true;
+            _logger.LogInformation("AuditLogsViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("AuditLogsViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing AuditLogsViewModel");
+            LoadSampleData(); // Fallback
+            UpdateCounts();
+            UpdateGaugeValue();
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from AuditLogs");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
 
     private void SubscribeToEvents()
     {
         var eventService = DashboardEventService.Instance;
         eventService.RecentLogsUpdated += OnAuditDataChanged;
     }
+    
+    private void UnsubscribeFromEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+        eventService.RecentLogsUpdated -= OnAuditDataChanged;
+    }
 
     private async void OnAuditDataChanged(object? sender, EventArgs e)
     {
-        await LoadDataFromDatabaseAsync();
+        try
+        {
+            _logger.LogDebug("Detected audit log data change — refreshing");
+            await LoadDataFromDatabaseAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing audit logs after change event");
+        }
     }
 
     private async Task LoadDataFromDatabaseAsync()
@@ -181,10 +230,22 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     [RelayCommand]
     private async Task RefreshDataAsync()
     {
-        if (_dashboardService != null)
+        try
         {
-            await LoadDataFromDatabaseAsync();
-            _toastManager.CreateToast($"Success. Audit logs refreshed {NotificationType.Success}");
+            if (_dashboardService != null)
+            {
+                _logger.LogInformation("Manually refreshing audit logs");
+                await LoadDataFromDatabaseAsync();
+            
+                _toastManager.CreateToast("Refreshed")
+                    .WithContent("Audit logs refreshed successfully")
+                    .DismissOnClick()
+                    .ShowSuccess();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during manual refresh");
         }
     }
 
@@ -274,7 +335,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     }
 
     [RelayCommand]
-    private async Task SearchAuditLogs()
+    private async Task SearchAuditLogs(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
@@ -294,7 +355,10 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 
         try
         {
-            await Task.Delay(500);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+            
+            await Task.Delay(500, linkedCts.Token).ConfigureAwait(false);
 
             // Search within the current filtered data
             var filteredAuditLogs = CurrentFilteredAuditLogData.Where(log =>
@@ -316,6 +380,10 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             }
             UpdateCounts();
             UpdateGaugeValue();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
         }
         finally
         {
@@ -563,13 +631,49 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 
     partial void OnSelectedDateChanged(DateTime value)
     {
-        FilterDataByDate();
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                FilterDataByDate();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error filtering data by date");
+            }
+        }, LifecycleToken);
     }
 
     partial void OnSearchStringResultChanged(string value)
     {
-        SearchAuditLogsCommand.Execute(null);
+        _ = SearchAuditLogs(LifecycleToken);
     }
+    
+    // ADD this new section at the end of the class, before the closing brace
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing AuditLogsViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Unsubscribe from item property changes
+        foreach (var item in AuditLogs)
+        {
+            item.PropertyChanged -= OnAuditLogPropertyChanged;
+        }
+
+        // Clear collections
+        AuditLogs.Clear();
+        OriginalAuditLogData.Clear();
+        CurrentFilteredAuditLogData.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }
 
 public partial class AuditLogItems : ObservableObject

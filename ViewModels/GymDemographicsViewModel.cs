@@ -16,39 +16,38 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using AHON_TRACK.Services.Interface;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty]
-    private DateTime _demographicsGroupSelectedFromDate = DateTime.Today.AddMonths(-1);
-
-    [ObservableProperty]
-    private DateTime _demographicsGroupSelectedToDate = DateTime.Today;
-
-    [ObservableProperty]
-    private ISeries[] _populationSeriesCollection;
-
-    [ObservableProperty]
-    private Axis[] _populationLineChartXAxes;
-
-    [ObservableProperty]
-    private PieData[] _genderPieDataCollection;
+    [ObservableProperty] private DateTime _demographicsGroupSelectedFromDate = DateTime.Today.AddMonths(-1);
+    [ObservableProperty] private DateTime _demographicsGroupSelectedToDate = DateTime.Today;
+    [ObservableProperty] private ISeries[] _populationSeriesCollection;
+    [ObservableProperty] private Axis[] _populationLineChartXAxes;
+    [ObservableProperty] private PieData[] _genderPieDataCollection;
+    [ObservableProperty] private bool _isInitialized;
 
     public Axis[] XAxes { get; set; }
     public Axis[] YAxes { get; set; }
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly DataCountingService _dataCountingService;
-    public GymDemographicsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, DataCountingService dataCountingService)
+    private readonly ILogger _logger;
+    
+    public GymDemographicsViewModel(DialogManager dialogManager, 
+        ToastManager toastManager, 
+        DataCountingService dataCountingService,
+        ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
+        _logger = logger;
         _dataCountingService = dataCountingService;
 
         /*UpdateSeriesFill(Color.DodgerBlue);
@@ -87,64 +86,114 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
             }
         ];
 
-        _ = LoadDemographicsAsync();
-        DashboardEventService.Instance.OnPopulationDataChanged += async () =>
-        {
-            await LoadDemographicsAsync();
-        };
+        SubscribeToEvents();
     }
-
+    
     public GymDemographicsViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _dataCountingService = null!;
+        _logger = null!;
     }
+    
+    #region INavigable Implementation
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
     {
-        ((ColumnSeries<double>)AgeSeries[0]).Values = GenerateRandomValues();
-        _ = LoadDemographicsAsync();
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger.LogDebug("GymDemographicsViewModel already initialized");
+            return;
+        }
+
+        _logger.LogInformation("Initializing GymDemographicsViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            // Initialize with random values for the age series
+            ((ColumnSeries<double>)AgeSeries[0]).Values = GenerateRandomValues();
+        
+            await LoadDemographicsAsync().ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger.LogInformation("GymDemographicsViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("GymDemographicsViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing GymDemographicsViewModel");
+        }
     }
 
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from GymDemographics");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
+    
+    private void SubscribeToEvents()
+    {
+        DashboardEventService.Instance.OnPopulationDataChanged += OnPopulationDataChanged;
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        DashboardEventService.Instance.OnPopulationDataChanged -= OnPopulationDataChanged;
+    }
+
+    // Update LoadDemographicsAsync with better logging
     private async Task LoadDemographicsAsync()
     {
         try
         {
+            _logger.LogDebug("Loading demographics data for date range {From} to {To}", 
+                DemographicsGroupSelectedFromDate, DemographicsGroupSelectedToDate);
+            
             var from = DemographicsGroupSelectedFromDate;
             var to = DemographicsGroupSelectedToDate;
 
             var (ageGroups, genderCounts, populationCounts) =
                 await _dataCountingService.GetGymDemographicsAsync(from, to);
 
-            _toastManager.CreateToast($"Loaded demographics: {ageGroups.Count} age groups, {genderCounts.Count} genders, {populationCounts.Count} population points");
+            _logger.LogDebug("Loaded demographics: {AgeGroups} age groups, {Genders} genders, {Population} population points",
+                ageGroups.Count, genderCounts.Count, populationCounts.Count);
 
             // --- AGE GROUP CHART ---
             var ageLabels = new[] { "18-29", "30-39", "40-54", "55+" };
             var ageValues = ageLabels.Select(label =>
                 ageGroups.TryGetValue(label, out var count) ? (double)count : 0).ToArray();
 
-            AgeSeries = new ISeries[]
-            {
-            new ColumnSeries<double>
-            {
-                Values = ageValues,
-                Fill = new SolidColorPaint(SKColors.DodgerBlue)
-            }
-            };
+            AgeSeries =
+            [
+                new ColumnSeries<double>
+                {
+                    Values = ageValues,
+                    Fill = new SolidColorPaint(SKColors.DodgerBlue)
+                }
+            ];
 
             // --- GENDER PIE DATA ---
             var maleCount = genderCounts.ContainsKey("Male") ? genderCounts["Male"] : 0;
             var femaleCount = genderCounts.ContainsKey("Female") ? genderCounts["Female"] : 0;
             var total = Math.Max(1, maleCount + femaleCount); // prevent divide by zero
 
-            GenderPieDataCollection = new[]
-            {
-            new PieData("Male", new double?[]{ maleCount }, "#1976D2"),
-            new PieData("Female", new double?[]{ femaleCount }, "#D32F2F")
-        };
+            GenderPieDataCollection =
+            [
+                new PieData("Male", [maleCount], "#1976D2"),
+                new PieData("Female", [femaleCount], "#D32F2F")
+            ];
 
             // --- POPULATION LINE CHART ---
             var orderedPop = populationCounts.OrderBy(x => x.Key).ToList();
@@ -153,44 +202,53 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
 
             if (populationCounts.Count == 0)
             {
-                _toastManager.CreateToast("No population data found in the selected date range.");
+                _logger.LogInformation("No population data found in the selected date range");
+                _toastManager.CreateToast("No Population Data")
+                    .WithContent("No population data found in the selected date range")
+                    .DismissOnClick()
+                    .ShowInfo();
             }
 
-            PopulationSeriesCollection = new ISeries[]
-            {
-            new LineSeries<double>
-            {
-                Values = populations,
-                ShowDataLabels = false,
-                Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(100)),
-                Stroke = new SolidColorPaint(SKColors.Red) { StrokeThickness = 2 },
-                GeometryFill = new SolidColorPaint(SKColors.Red),
-                GeometryStroke = new SolidColorPaint(SKColors.Black) { StrokeThickness = 2 },
-                LineSmoothness = 0.3
-            }
-            };
+            PopulationSeriesCollection =
+            [
+                new LineSeries<double>
+                {
+                    Values = populations,
+                    ShowDataLabels = false,
+                    Fill = new SolidColorPaint(SKColors.DodgerBlue.WithAlpha(100)),
+                    Stroke = new SolidColorPaint(SKColors.Red) { StrokeThickness = 2 },
+                    GeometryFill = new SolidColorPaint(SKColors.Red),
+                    GeometryStroke = new SolidColorPaint(SKColors.Black) { StrokeThickness = 2 },
+                    LineSmoothness = 0.3
+                }
+            ];
 
-            PopulationLineChartXAxes = new Axis[]
-            {
-            new Axis
-            {
-                Labels = days,
-                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
-                TextSize = 12,
-                MinStep = 1
-            }
-            };
+            PopulationLineChartXAxes =
+            [
+                new Axis
+                {
+                    Labels = days,
+                    LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+                    TextSize = 12,
+                    MinStep = 1
+                }
+            ];
 
             OnPropertyChanged(nameof(AgeSeries));
             OnPropertyChanged(nameof(GenderPieDataCollection));
             OnPropertyChanged(nameof(PopulationSeriesCollection));
+        
+            _logger.LogDebug("Demographics data loaded successfully");
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast($"Failed to load demographics: {ex.Message}");
+            _logger.LogError(ex, "Error loading demographics data");
+            _toastManager.CreateToast("Error Loading Demographics")
+                .WithContent($"Failed to load demographics: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
     }
-
 
     private void UpdateSeriesFill(Color primary)
     {
@@ -338,17 +396,69 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
 
     partial void OnDemographicsGroupSelectedFromDateChanged(DateTime value)
     {
-        _ = LoadDemographicsAsync();
-        /*UpdateDemographicsGroupChart();
-        UpdatePopulationChart();*/
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await LoadDemographicsAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading demographics after From date change");
+            }
+        }, LifecycleToken);
     }
 
     partial void OnDemographicsGroupSelectedToDateChanged(DateTime value)
     {
-        _ = LoadDemographicsAsync();
-        /*UpdateDemographicsGroupChart();
-        UpdatePopulationChart();*/
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await LoadDemographicsAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading demographics after To date change");
+            }
+        }, LifecycleToken);
     }
+    
+    private async void OnPopulationDataChanged()
+    {
+        try
+        {
+            _logger.LogDebug("Detected population data change — refreshing demographics");
+            await LoadDemographicsAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing demographics after population data change");
+        }
+    }
+    
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing GymDemographicsViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Clear collections
+        GenderPieDataCollection = [];
+        PopulationSeriesCollection = [];
+        AgeSeries = [];
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }
 
 public class PieData(string name, double?[] values, string color)

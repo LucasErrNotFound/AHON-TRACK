@@ -10,69 +10,57 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media.Imaging;
 using AHON_TRACK.Services.Events;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("checkInOut")]
 public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged, INavigable
 {
-    [ObservableProperty]
-    private List<WalkInPerson> _originalWalkInData = [];
+    [ObservableProperty] private List<WalkInPerson> _originalWalkInData = [];
+    [ObservableProperty] private List<MemberPerson> _originalMemberData = [];
+    [ObservableProperty] private List<WalkInPerson> _currentWalkInFilteredData = [];
+    [ObservableProperty] private List<MemberPerson> _currentMemberFilteredData = [];
+    [ObservableProperty] private ObservableCollection<WalkInPerson> _walkInPersons = [];
+    [ObservableProperty] private ObservableCollection<MemberPerson> _memberPersons = [];
+    [ObservableProperty] private DateTime _selectedDate = DateTime.Today;
+    [ObservableProperty] private bool _selectAll;
+    [ObservableProperty] private bool _isInitialized;
+    [ObservableProperty] private bool _isLoadingData;
+    [ObservableProperty] private int _selectedCount;
+    [ObservableProperty] private int _totalCount;
 
-    [ObservableProperty]
-    private List<MemberPerson> _originalMemberData = [];
-
-    [ObservableProperty]
-    private List<WalkInPerson> _currentWalkInFilteredData = [];
-
-    [ObservableProperty]
-    private List<MemberPerson> _currentMemberFilteredData = [];
-
-    [ObservableProperty]
-    private ObservableCollection<WalkInPerson> _walkInPersons = [];
-
-    [ObservableProperty]
-    private ObservableCollection<MemberPerson> _memberPersons = [];
-
-    [ObservableProperty]
-    private bool _selectAll;
-
-    [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
-    private DateTime _selectedDate = DateTime.Today;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private bool _isInitialized;
-
-    [ObservableProperty]
-    private bool _isLoadingData;
-
-    private readonly PageManager _pageManager;
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly LogGymMemberDialogCardViewModel _logGymMemberDialogCardViewModel;
     private readonly LogWalkInPurchaseViewModel _logWalkInPurchaseViewModel;
+    private readonly ILogger _logger;
     private readonly ICheckInOutService _checkInOutService;
+    private readonly INavigationService _navigationService;
 
-    public CheckInOutViewModel(PageManager pageManager, DialogManager dialogManager, ToastManager toastManager, LogGymMemberDialogCardViewModel logGymMemberDialogCardViewModel, LogWalkInPurchaseViewModel logWalkInPurchaseViewModel, ICheckInOutService checkInOutService)
+    public CheckInOutViewModel(DialogManager dialogManager, 
+        ToastManager toastManager, 
+        LogGymMemberDialogCardViewModel logGymMemberDialogCardViewModel, 
+        LogWalkInPurchaseViewModel logWalkInPurchaseViewModel, 
+        ILogger logger,
+        ICheckInOutService checkInOutService,
+        INavigationService navigationService)
     {
-        _pageManager = pageManager;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _logGymMemberDialogCardViewModel = logGymMemberDialogCardViewModel;
         _logWalkInPurchaseViewModel = logWalkInPurchaseViewModel;
+        _logger = logger;
         _checkInOutService = checkInOutService;
+        _navigationService = navigationService;
 
         /*LoadSampleData();
         UpdateWalkInCounts();
@@ -82,16 +70,16 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         SubscribeToEvents();
         // Load actual data from service
         _ = LoadDataAsync();
-
     }
 
     public CheckInOutViewModel()
     {
-        _pageManager = new PageManager(new ServiceProvider());
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _logGymMemberDialogCardViewModel = new LogGymMemberDialogCardViewModel();
         _logWalkInPurchaseViewModel = new LogWalkInPurchaseViewModel();
+        _logger = null!;
+        _navigationService = null!;
         _checkInOutService = null!;
 
         SubscribeToEvents();
@@ -100,6 +88,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         UpdateMemberCounts();
     }
 
+    /*
     [AvaloniaHotReload]
     public void Initialize()
     {
@@ -109,9 +98,58 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         _ = LoadDataAsync();
         /*LoadSampleData();
         UpdateWalkInCounts();
-        UpdateMemberCounts();*/
+        UpdateMemberCounts(); // Comment until here previously. Just in case...
         IsInitialized = true;
     }
+    */
+    
+    #region INavigable Implementation
+
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger.LogDebug("CheckInOutViewModel already initialized");
+            return;
+        }
+
+        _logger.LogInformation("Initializing CheckInOutViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadCheckInDataFromService(SelectedDate).ConfigureAwait(false);
+            UpdateWalkInCounts();
+            UpdateMemberCounts();
+
+            IsInitialized = true;
+            _logger.LogInformation("CheckInOutViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("CheckInOutViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing CheckInOutViewModel");
+            LoadSampleData(); // Fallback
+            UpdateWalkInCounts();
+            UpdateMemberCounts();
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from CheckInOut");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
 
     private void SubscribeToEvents()
     {
@@ -120,6 +158,15 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         eventService.CheckinAdded += OnCheckInOutDataChanged;
         eventService.CheckoutAdded += OnCheckInOutDataChanged;
         eventService.CheckInOutDeleted += OnCheckInOutDataChanged;
+    }
+    
+    private void UnsubscribeFromEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+        
+        eventService.CheckinAdded -= OnCheckInOutDataChanged;
+        eventService.CheckoutAdded -= OnCheckInOutDataChanged;
+        eventService.CheckInOutDeleted -= OnCheckInOutDataChanged;
     }
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
@@ -132,11 +179,11 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         try
         {
             IsLoadingData = true;
-            await LoadCheckInDataFromService(SelectedDate);
+            await LoadCheckInDataFromService(SelectedDate).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error loading data from service: {ex.Message}");
+            _logger.LogError(ex, "Error loading data from service");
             // Fallback to sample data if service fails
             LoadSampleData();
             UpdateWalkInCounts();
@@ -538,7 +585,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     [RelayCommand]
     private async Task OpenLogWalkInPurchase()
     {
-        _pageManager.Navigate<LogWalkInPurchaseViewModel>();
+        await _navigationService.NavigateAsync<LogWalkInPurchaseViewModel>();
         await LoadCheckInDataFromService(SelectedDate);
     }
 
@@ -560,8 +607,21 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     partial void OnSelectedDateChanged(DateTime value)
     {
-        //FilterDataByDate(value);
-        _ = LoadCheckInDataFromService(value);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await LoadCheckInDataFromService(value).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during disposal
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading data for selected date");
+            }
+        }, LifecycleToken);
     }
 
     private void FilterDataByDate(DateTime selectedDate)
@@ -613,6 +673,39 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
         SelectAll = MemberPersons.Count > 0 && MemberPersons.All(x => x.IsSelected);
     }
+    
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing CheckInOutViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Unsubscribe from item property changes
+        foreach (var item in WalkInPersons)
+        {
+            item.PropertyChanged -= OnWalkInPropertyChanged;
+        }
+    
+        foreach (var item in MemberPersons)
+        {
+            item.PropertyChanged -= OnMemberPropertyChanged;
+        }
+
+        // Clear collections
+        WalkInPersons.Clear();
+        MemberPersons.Clear();
+        OriginalWalkInData.Clear();
+        OriginalMemberData.Clear();
+        CurrentWalkInFilteredData.Clear();
+        CurrentMemberFilteredData.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }
 
 public partial class WalkInPerson : ObservableObject

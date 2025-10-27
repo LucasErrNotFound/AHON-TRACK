@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AHON_TRACK.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,34 +15,21 @@ using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ShadUI;
 using SkiaSharp;
 using AHON_TRACK.Services.Events;
+using AHON_TRACK.Services.Interface;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
 public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty]
-    private FinancialBreakdownPieData[] _financialBreakdownPieDataCollection;
-
-    [ObservableProperty]
-    private DateTime _financialBreakdownSelectedFromDate = DateTime.Today.AddMonths(-1);
-
-    [ObservableProperty]
-    private DateTime _financialBreakdownSelectedToDate = DateTime.Today;
-
-    [ObservableProperty]
-    private ISeries[] _revenueSeriesCollection = [];
-
-    [ObservableProperty]
-    private Axis[] _revenueChartXAxes;
-
-    [ObservableProperty]
-    private Axis[] _revenueChartYAxes;
-
-    [ObservableProperty]
-    private bool _hasValidDateRange = true;
-
-    [ObservableProperty]
-    private bool _isLoading = false;
+    [ObservableProperty] private FinancialBreakdownPieData[] _financialBreakdownPieDataCollection;
+    [ObservableProperty] private DateTime _financialBreakdownSelectedFromDate = DateTime.Today.AddMonths(-1);
+    [ObservableProperty] private DateTime _financialBreakdownSelectedToDate = DateTime.Today;
+    [ObservableProperty] private ISeries[] _revenueSeriesCollection = [];
+    [ObservableProperty] private Axis[] _revenueChartXAxes;
+    [ObservableProperty] private Axis[] _revenueChartYAxes;
+    [ObservableProperty] private bool _hasValidDateRange = true;
+    [ObservableProperty] private bool _isLoading = false;
 
     // === Dashboard Summary Cards ===
     [ObservableProperty] private double _totalRevenue;
@@ -54,18 +42,23 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     [ObservableProperty] private double _salesGrowthPercent;
     [ObservableProperty] private double _gymPackageGrowthPercent;
     [ObservableProperty] private double _walkInGrowthPercent;
+    
+    [ObservableProperty] private bool _isInitialized;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly DataCountingService _dataCountingService;
+    private readonly ILogger _logger;
 
-    public FinancialReportsViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, DataCountingService dataCountingService)
+    public FinancialReportsViewModel(DialogManager dialogManager, 
+        ToastManager toastManager, 
+        DataCountingService dataCountingService,
+        ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
         _dataCountingService = dataCountingService;
+        _logger = logger;
 
         _ = LoadFinancialDataAsync();
         _ = LoadFinancialSummaryAsync();
@@ -76,17 +69,63 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
+        _logger = null!;
 
         SubscribeToEvent();
         // For design-time, you'll need to handle this appropriately
     }
 
+    /*
     [AvaloniaHotReload]
     public void Initialize()
     {
         SubscribeToEvent();
     }
+    */
+    
+    #region INavigable Implementation
+
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger.LogDebug("FinancialReportsViewModel already initialized");
+            return;
+        }
+
+        _logger.LogInformation("Initializing FinancialReportsViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadFinancialDataAsync().ConfigureAwait(false);
+            await LoadFinancialSummaryAsync().ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger.LogInformation("FinancialReportsViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("FinancialReportsViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing FinancialReportsViewModel");
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from FinancialReports");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
 
     private void SubscribeToEvent()
     {
@@ -95,22 +134,43 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         eventService.SalesUpdated += OnFinancialDataChanged;
         eventService.ChartDataUpdated += OnFinancialDataChanged;
         eventService.ProductPurchased += OnFinancialDataChanged;
-        eventService.RecentLogsUpdated += OnFinancialDataChanged;
+    }
+    
+    private void UnsubscribeFromEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+        
+        eventService.SalesUpdated -= OnFinancialDataChanged;
+        eventService.ChartDataUpdated -= OnFinancialDataChanged;
+        eventService.ProductPurchased -= OnFinancialDataChanged;
     }
 
     private async void OnFinancialDataChanged(object? sender, EventArgs e)
     {
-        await LoadFinancialDataAsync();
-        await UpdateRevenueChartAsync();
-        await LoadFinancialSummaryAsync();
-        await UpdateRevenueChartAsync();
-        UpdateFinancialBreakdownChart();
+        try
+        {
+            _logger.LogDebug("Detected financial data change — refreshing");
+            await LoadFinancialDataAsync().ConfigureAwait(false);
+            await UpdateRevenueChartAsync().ConfigureAwait(false);
+            await LoadFinancialSummaryAsync().ConfigureAwait(false);
+            UpdateFinancialBreakdownChart();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing financial data after change event");
+        }
     }
 
     private async Task LoadFinancialSummaryAsync()
     {
         try
         {
+            _logger.LogDebug("Loading financial summary");
+        
             // Current and previous date ranges for comparison
             var from = FinancialBreakdownSelectedFromDate;
             var to = FinancialBreakdownSelectedToDate;
@@ -133,10 +193,16 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             SalesGrowthPercent = CalculateGrowth(current.TotalSales, previous.TotalSales);
             GymPackageGrowthPercent = CalculateGrowth(current.TotalGymPackages, previous.TotalGymPackages);
             WalkInGrowthPercent = CalculateGrowth(current.TotalWalkInMembers, previous.TotalWalkInMembers);
+        
+            _logger.LogDebug("Financial summary loaded successfully");
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast($"Error loading financial summary: {ex.Message}");
+            _logger.LogError(ex, "Error loading financial summary");
+            _toastManager?.CreateToast("Error Loading Summary")
+                .WithContent($"Failed to load financial summary: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
     }
 
@@ -150,6 +216,7 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     {
         if (FinancialBreakdownSelectedFromDate > FinancialBreakdownSelectedToDate)
         {
+            _logger.LogWarning("Invalid date range: From date is after To date");
             HasValidDateRange = false;
             FinancialBreakdownPieDataCollection = [];
             RevenueSeriesCollection = [];
@@ -161,12 +228,21 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
 
         try
         {
-            await UpdateRevenueChartAsync();
+            _logger.LogDebug("Loading financial data for date range {From} to {To}", 
+                FinancialBreakdownSelectedFromDate, FinancialBreakdownSelectedToDate);
+            
+            await UpdateRevenueChartAsync().ConfigureAwait(false);
             UpdateFinancialBreakdownChart();
+        
+            _logger.LogDebug("Financial data loaded successfully");
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast($"Error loading financial data: {ex.Message}");
+            _logger.LogError(ex, "Error loading financial data");
+            _toastManager?.CreateToast("Error Loading Data")
+                .WithContent($"Failed to load financial data: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
         finally
         {
@@ -212,12 +288,15 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     {
         if (_dataCountingService == null)
         {
+            _logger.LogWarning("DataCountingService is null, using mock data");
             UpdateRevenueChartWithMockData();
             return;
         }
 
         try
         {
+            _logger.LogDebug("Updating revenue chart");
+        
             // Fetch data from database
             var salesData = await _dataCountingService.GetPackageSalesDataAsync(
                 FinancialBreakdownSelectedFromDate,
@@ -228,9 +307,13 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             // If no data, show message and return
             if (!salesList.Any())
             {
+                _logger.LogInformation("No sales data found for selected date range");
                 RevenueSeriesCollection = [];
                 FinancialBreakdownPieDataCollection = [];
-                _toastManager?.CreateToast("No sales data found for the selected date range.");
+                _toastManager?.CreateToast("No Data")
+                    .WithContent("No sales data found for the selected date range")
+                    .DismissOnClick()
+                    .ShowInfo();
                 return;
             }
 
@@ -306,35 +389,41 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             RevenueChartXAxes =
             [
                 new Axis
-            {
-                Labels = dates.ToArray(),
-                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
-                TextSize = 12,
-                MinStep = 1,
-                LabelsRotation = dates.Count > 10 ? 45 : 0
-            }
+                {
+                    Labels = dates.ToArray(),
+                    LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+                    TextSize = 12,
+                    MinStep = 1,
+                    LabelsRotation = dates.Count > 10 ? 45 : 0
+                }
             ];
 
             RevenueChartYAxes =
             [
                 new Axis
-            {
-                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
-                TextSize = 12,
-                MinStep = 1,
-                SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
                 {
-                    StrokeThickness = 2,
-                    PathEffect = new DashEffect([3, 3])
-                },
-                Labeler = value => Labelers.FormatCurrency(value, ",", ".", "₱"),
-                LabelsRotation = 0
-            }
+                    LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+                    TextSize = 12,
+                    MinStep = 1,
+                    SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
+                    {
+                        StrokeThickness = 2,
+                        PathEffect = new DashEffect([3, 3])
+                    },
+                    Labeler = value => Labelers.FormatCurrency(value, ",", ".", "₱"),
+                    LabelsRotation = 0
+                }
             ];
+        
+            _logger.LogDebug("Revenue chart updated with {Count} package types", packageTypes.Count);
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast($"Error updating revenue chart: {ex.Message}");
+            _logger.LogError(ex, "Error updating revenue chart");
+            _toastManager?.CreateToast("Chart Error")
+                .WithContent($"Failed to update revenue chart: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
             RevenueSeriesCollection = [];
         }
     }
@@ -488,13 +577,51 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
 
     partial void OnFinancialBreakdownSelectedFromDateChanged(DateTime value)
     {
-        _ = LoadFinancialDataAsync();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await LoadFinancialDataAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading data after From date change");
+            }
+        }, LifecycleToken);
     }
 
     partial void OnFinancialBreakdownSelectedToDateChanged(DateTime value)
     {
-        _ = LoadFinancialDataAsync();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await LoadFinancialDataAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading data after To date change");
+            }
+        }, LifecycleToken);
     }
+    
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing FinancialReportsViewModel");
+
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Clear collections
+        FinancialBreakdownPieDataCollection = [];
+        RevenueSeriesCollection = [];
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }
 
 public class FinancialBreakdownPieData

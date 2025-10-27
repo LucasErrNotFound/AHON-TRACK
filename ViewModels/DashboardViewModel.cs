@@ -1,21 +1,22 @@
 ﻿using AHON_TRACK.Models;
-using AHON_TRACK.Services;
 using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
+using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Painting.Effects;
+using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.Input;
-using ShadUI;
+using AHON_TRACK.Services;
 using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.ViewModels;
@@ -25,13 +26,16 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 {
     #region Private Fields
 
-    private readonly PageManager _pageManager;
     private readonly IDashboardService _dashboardService;
     private readonly IInventoryService _inventoryService;
     private readonly IProductService _productService;
     private readonly IMemberService _memberService;
-    private readonly ToastManager _toastManager;
     private readonly DashboardModel _dashboardModel;
+    private readonly ILogger _logger;
+    
+    private CancellationTokenSource? _autoRefreshCts;
+    private Timer? _autoRefreshTimer;
+    
     private int _selectedYearIndex;
     private ISeries[] _series = [];
     private ObservableCollection<int> _availableYears = [];
@@ -42,9 +46,6 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     private string _salesSummary = "You made 0 sales this month.";
     private string _trainingSessionsSummary = "You have 0 upcoming training schedules this week";
     private string _recentLogsSummary = "You have 0 recent action logs today";
-
-    public event EventHandler RecentLogsUpdated;
-    public void NotifyRecentLogsUpdated() => RecentLogsUpdated?.Invoke(this, EventArgs.Empty);
 
     #endregion
 
@@ -81,7 +82,6 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             UpdateTrainingSessionsSummary();
         }
     }
-
 
     public ObservableCollection<RecentLog> RecentLogs
     {
@@ -133,7 +133,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             {
                 _selectedYearIndex = value;
                 OnPropertyChanged();
-                UpdateChartData();
+                _ = UpdateChartDataAsync();
             }
         }
     }
@@ -158,73 +158,119 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         }
     }
 
-    public Axis[] XAxes { get; set; } = [];
-    public Axis[] YAxes { get; set; } = [];
+    public Axis[] XAxes { get; set; } = Array.Empty<Axis>();
+    public Axis[] YAxes { get; set; } = Array.Empty<Axis>();
 
     #endregion
 
     #region Constructor
 
-    public DashboardViewModel(ToastManager toastManager, PageManager pageManager, DashboardModel dashboardModel, 
-        IDashboardService dashboardService, IInventoryService inventoryService, IProductService productService, 
-        IMemberService memberService)
+    public DashboardViewModel(
+        DashboardModel dashboardModel, 
+        IDashboardService dashboardService, 
+        IInventoryService inventoryService, 
+        IProductService productService, 
+        IMemberService memberService,
+        ILogger logger)
     {
-        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
-        _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
         _dashboardModel = dashboardModel ?? throw new ArgumentNullException(nameof(dashboardModel));
         _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
         _inventoryService = inventoryService ?? throw new ArgumentNullException(nameof(inventoryService));
         _productService = productService ?? throw new ArgumentNullException(nameof(productService));
         _memberService = memberService ?? throw new ArgumentNullException(nameof(memberService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         
+        // Register notification callbacks
         _inventoryService.RegisterNotificationCallback(AddNotification);
         _productService.RegisterNotificationCallback(AddNotification);
         _memberService.RegisterNotificationCallback(AddNotification);
         
-        _ = InitializeViewModel();
+        // Subscribe to events
+        DashboardEventService.Instance.RecentLogsUpdated += OnRecentLogsUpdated;
+        DashboardEventService.Instance.ChartDataUpdated += OnChartDataUpdated;
+        DashboardEventService.Instance.SalesUpdated += OnSalesUpdated;
+        DashboardEventService.Instance.TrainingSessionsUpdated += OnTrainingSessionsUpdated;
     }
-    
-    public DashboardViewModel(PageManager pageManager, IDashboardService dashboardService)
+
+    // Design-time constructor
+    public DashboardViewModel()
     {
-        _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
-        _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
-        _ = InitializeViewModel();
+        _dashboardModel = new DashboardModel();
+        _dashboardService = null!;
+        _inventoryService = null!;
+        _productService = null!;
+        _memberService = null!;
+        _logger = null!;
+        
+        // Design-time sample data
+        RecentSales.Add(new SalesItem { ProductName = "Protein Powder", Amount = 1500 });
+        UpcomingTrainingSessions.Add(new TrainingSession { TrainingType = "Cardio", Date = DateTime.Now.AddDays(1) });
+    }
+
+    #endregion
+
+    #region INavigable Implementation
+
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        _logger.LogInformation("Initializing DashboardViewModel");
+        
+        try
+        {
+            // Create linked cancellation token
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+            var token = linkedCts.Token;
+
+            InitializeAxes();
+            
+            // Load all data in parallel for faster startup
+            await Task.WhenAll(
+                InitializeAvailableYearsAsync(token),
+                InitializeChartAsync(token),
+                LoadSalesFromDatabaseAsync(token),
+                LoadTrainingSessionsFromDatabaseAsync(token),
+                LoadRecentLogsFromDatabaseAsync(token)
+            ).ConfigureAwait(false);
+            
+            // Start auto-refresh timer (every 5 minutes)
+            StartAutoRefresh();
+            
+            _logger.LogInformation("Dashboard initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Dashboard initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing dashboard");
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from Dashboard");
+        
+        // Stop auto-refresh
+        StopAutoRefresh();
+        
+        return ValueTask.CompletedTask;
     }
 
     #endregion
 
     #region Initialization Methods
 
-    private async Task InitializeViewModel()
-    {
-        InitializeAxes();
-        
-        await InitializeAvailableYears();
-        await InitializeChart();
-        await InitializeSalesData();
-        await InitializeTrainingSessionsData();
-        await RefreshRecentLogs();
-        
-        // await _inventoryService.ShowEquipmentAlertsAsync();
-        // await _productService.ShowProductAlertsAsync();
-
-        DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
-        {
-            await RefreshRecentLogs();
-        };
-        DashboardEventService.Instance.ChartDataUpdated += async (s, e) =>
-        {
-            await UpdateChartData(); // Direct chart refresh
-        };
-        DashboardEventService.Instance.SalesUpdated += async (s, e) => await LoadSalesFromDatabaseAsync();
-        DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
-    }
-
-    private async Task InitializeAvailableYears()
+    private async Task InitializeAvailableYearsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var years = await _dashboardService.GetAvailableYearsAsync();
+            var years = await _dashboardService.GetAvailableYearsAsync()
+                .ConfigureAwait(false);
+            
             AvailableYears = new ObservableCollection<int>(years);
 
             if (AvailableYears.Count > 0)
@@ -234,44 +280,27 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading available years: {ex.Message}");
+            _logger.LogError(ex, "Error loading available years");
         }
     }
 
-    private async Task InitializeSalesData()
-    {
-        await LoadSalesFromDatabaseAsync();
-    }
-
-    private async Task InitializeTrainingSessionsData()
-    {
-        await LoadTrainingSessionsFromDatabaseAsync();
-    }
-
-    public async Task RefreshRecentLogs()
-    {
-        await LoadRecentLogsFromDatabaseAsync();
-    }
-
-
-
     private void InitializeAxes()
     {
-        XAxes =
-        [
+        XAxes = new[]
+        {
             new Axis
             {
                 Name = "Months",
                 NamePaint = new SolidColorPaint(SKColors.Red),
-                Labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                Labels = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" },
                 LabelsPaint = new SolidColorPaint(SKColors.DarkGray),
                 TextSize = 13,
                 MinStep = 1,
             }
-        ];
+        };
 
-        YAxes =
-        [
+        YAxes = new[]
+        {
             new Axis
             {
                 Name = "Profit",
@@ -281,27 +310,28 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
                 SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
                 {
                     StrokeThickness = 2,
-                    PathEffect = new DashEffect([3, 3])
+                    PathEffect = new DashEffect(new[] { 3f, 3f })
                 },
                 Labeler = value => Labelers.FormatCurrency(value, ",", ".", "₱"),
             }
-        ];
+        };
     }
 
-    private async Task InitializeChart()
+    private async Task InitializeChartAsync(CancellationToken cancellationToken = default)
     {
-        await UpdateChartData();
+        await UpdateChartDataAsync(cancellationToken).ConfigureAwait(false);
     }
 
     #endregion
 
     #region Data Loading Methods
 
-    public async Task LoadSalesFromDatabaseAsync()
+    public async Task LoadSalesFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var salesFromDb = await _dashboardService.GetSalesAsync(5);
+            var salesFromDb = await _dashboardService.GetSalesAsync(5)
+                .ConfigureAwait(false);
 
             RecentSales.Clear();
             foreach (var sale in salesFromDb)
@@ -310,20 +340,24 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             }
 
             // Update summary using service
-            var summary = await _dashboardService.GenerateSalesSummaryAsync(5);
+            var summary = await _dashboardService.GenerateSalesSummaryAsync(5)
+                .ConfigureAwait(false);
             SalesSummary = summary;
+            
+            _logger.LogDebug("Loaded {Count} recent sales", salesFromDb.Count());
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading sales data: {ex.Message}");
+            _logger.LogError(ex, "Error loading sales data");
         }
     }
 
-    public async Task LoadTrainingSessionsFromDatabaseAsync()
+    public async Task LoadTrainingSessionsFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var sessionsFromDb = await _dashboardService.GetTrainingSessionsAsync(5);
+            var sessionsFromDb = await _dashboardService.GetTrainingSessionsAsync(5)
+                .ConfigureAwait(false);
 
             UpcomingTrainingSessions.Clear();
             foreach (var session in sessionsFromDb)
@@ -332,20 +366,24 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             }
 
             // Update summary using service
-            var summary = await _dashboardService.GenerateTrainingSessionsSummaryAsync(5);
+            var summary = await _dashboardService.GenerateTrainingSessionsSummaryAsync(5)
+                .ConfigureAwait(false);
             TrainingSessionsSummary = summary;
+            
+            _logger.LogDebug("Loaded {Count} training sessions", sessionsFromDb.Count());
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading training sessions data: {ex.Message}");
+            _logger.LogError(ex, "Error loading training sessions data");
         }
     }
 
-    public async Task LoadRecentLogsFromDatabaseAsync()
+    public async Task LoadRecentLogsFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var logsFromDb = await _dashboardService.GetRecentLogsAsync(5);
+            var logsFromDb = await _dashboardService.GetRecentLogsAsync(5)
+                .ConfigureAwait(false);
 
             RecentLogs.Clear();
             foreach (var log in logsFromDb)
@@ -354,12 +392,129 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             }
 
             // Update summary using service
-            var summary = await _dashboardService.GenerateRecentLogSummaryAsync(5);
+            var summary = await _dashboardService.GenerateRecentLogSummaryAsync(5)
+                .ConfigureAwait(false);
             RecentLogsSummary = summary;
+            
+            _logger.LogDebug("Loaded {Count} recent logs", logsFromDb.Count());
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading recent logs data: {ex.Message}");
+            _logger.LogError(ex, "Error loading recent logs data");
+        }
+    }
+
+    #endregion
+
+    #region Auto-Refresh
+
+    private void StartAutoRefresh()
+    {
+        StopAutoRefresh();
+        
+        _autoRefreshCts = CancellationTokenSource.CreateLinkedTokenSource(LifecycleToken);
+        
+        // Refresh every 5 minutes
+        _autoRefreshTimer = new Timer(
+            async _ => await RefreshDashboardDataAsync().ConfigureAwait(false),
+            null,
+            TimeSpan.FromMinutes(5),
+            TimeSpan.FromMinutes(5));
+        
+        _logger.LogDebug("Auto-refresh started (5 minute interval)");
+    }
+
+    private void StopAutoRefresh()
+    {
+        _autoRefreshTimer?.Dispose();
+        _autoRefreshTimer = null;
+        
+        _autoRefreshCts?.Cancel();
+        _autoRefreshCts?.Dispose();
+        _autoRefreshCts = null;
+        
+        _logger.LogDebug("Auto-refresh stopped");
+    }
+
+    private async Task RefreshDashboardDataAsync()
+    {
+        if (_autoRefreshCts?.Token.IsCancellationRequested == true)
+            return;
+
+        try
+        {
+            await Task.WhenAll(
+                LoadSalesFromDatabaseAsync(_autoRefreshCts!.Token),
+                LoadTrainingSessionsFromDatabaseAsync(_autoRefreshCts.Token),
+                LoadRecentLogsFromDatabaseAsync(_autoRefreshCts.Token),
+                UpdateChartDataAsync(_autoRefreshCts.Token)
+            ).ConfigureAwait(false);
+            
+            _logger.LogDebug("Dashboard data auto-refreshed");
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancelled
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during auto-refresh");
+        }
+    }
+
+    #endregion
+
+    #region Event Handlers
+
+    private async void OnRecentLogsUpdated(object? sender, EventArgs e)
+    {
+        try
+        {
+            await LoadRecentLogsFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing logs after update event");
+        }
+    }
+
+    private async void OnChartDataUpdated(object? sender, EventArgs e)
+    {
+        try
+        {
+            await UpdateChartDataAsync(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing chart after update event");
+        }
+    }
+
+    private async void OnSalesUpdated(object? sender, EventArgs e)
+    {
+        try
+        {
+            await LoadSalesFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing sales after update event");
+        }
+    }
+
+    private async void OnTrainingSessionsUpdated(object? sender, EventArgs e)
+    {
+        try
+        {
+            await LoadTrainingSessionsFromDatabaseAsync(LifecycleToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing training sessions after update event");
         }
     }
 
@@ -428,17 +583,18 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     #region Chart Operations
 
-    private async Task UpdateChartData()
+    private async Task UpdateChartDataAsync(CancellationToken cancellationToken = default)
     {
         if (_selectedYearIndex >= 0 && _selectedYearIndex < AvailableYears.Count)
         {
             try
             {
                 int selectedYear = AvailableYears[_selectedYearIndex];
-                var data = await _dashboardService.GetSalesDataForYearAsync(selectedYear);
+                var data = await _dashboardService.GetSalesDataForYearAsync(selectedYear)
+                    .ConfigureAwait(false);
 
-                Series =
-                [
+                Series = new ISeries[]
+                {
                     new ColumnSeries<int>
                     {
                         Values = data,
@@ -446,11 +602,13 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
                         MaxBarWidth = 45,
                         Name = $"{selectedYear} Sales"
                     }
-                ];
+                };
+                
+                _logger.LogDebug("Chart updated for year {Year}", selectedYear);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading chart data: {ex.Message}");
+                _logger.LogError(ex, "Error loading chart data");
             }
         }
     }
@@ -502,12 +660,14 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     public void AddNotification(Notification newNotification)
     {
-        var notificationKey = _dashboardModel.GenerateNotificationKey(newNotification.Title, newNotification.Message);
+        var notificationKey = _dashboardModel.GenerateNotificationKey(
+            newNotification.Title, 
+            newNotification.Message);
         newNotification.NotificationKey = notificationKey;
     
         if (_dashboardModel.IsNotificationAlreadyShown(notificationKey))
         {
-            Console.WriteLine($"[AddNotification] Skipping duplicate notification: {notificationKey}");
+            _logger.LogDebug("Skipping duplicate notification: {Key}", notificationKey);
             return;
         }
     
@@ -527,8 +687,16 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     #endregion
 
-    #region Delete Notification
+    #region Commands
+
+    private RelayCommand<Notification>? _deleteNotificationCommand;
+    public RelayCommand<Notification> DeleteNotificationCommand =>
+        _deleteNotificationCommand ??= new RelayCommand<Notification>(DeleteNotification);
     
+    private RelayCommand? _clearAllNotificationsCommand;
+    public RelayCommand ClearAllNotificationsCommand =>
+        _clearAllNotificationsCommand ??= new RelayCommand(ClearAllNotifications);
+
     private void DeleteNotification(Notification? notification)
     {
         if (notification != null)
@@ -542,28 +710,50 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         _dashboardModel.ClearAllNotificationTracking();
         Notifications.Clear();
     }
-    
+
     #endregion
 
-    #region HotAvalonia and PropertyChanged
-
+    /*
     [AvaloniaHotReload]
     public void Initialize()
     {
+        // Hot reload support - no-op
     }
-    
-    private RelayCommand<Notification>? _deleteNotificationCommand;
-    public RelayCommand<Notification> DeleteNotificationCommand =>
-        _deleteNotificationCommand ??= new RelayCommand<Notification>(DeleteNotification);
-    
-    private RelayCommand? _clearAllNotificationsCommand;
-    public RelayCommand ClearAllNotificationsCommand =>
-        _clearAllNotificationsCommand ??= new RelayCommand(ClearAllNotifications);
+    */
+
+    #region PropertyChanged
 
     public new event PropertyChangedEventHandler? PropertyChanged;
 
     private new void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    #endregion
+
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing DashboardViewModel");
+
+        // Stop auto-refresh
+        StopAutoRefresh();
+
+        // Unsubscribe from events
+        DashboardEventService.Instance.RecentLogsUpdated -= OnRecentLogsUpdated;
+        DashboardEventService.Instance.ChartDataUpdated -= OnChartDataUpdated;
+        DashboardEventService.Instance.SalesUpdated -= OnSalesUpdated;
+        DashboardEventService.Instance.TrainingSessionsUpdated -= OnTrainingSessionsUpdated;
+
+        // Clear collections
+        RecentSales?.Clear();
+        UpcomingTrainingSessions?.Clear();
+        RecentLogs?.Clear();
+        Notifications?.Clear();
+        AvailableYears?.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
 
     #endregion
 }

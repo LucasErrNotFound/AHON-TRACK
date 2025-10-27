@@ -17,7 +17,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -65,21 +67,22 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly EquipmentDialogCardViewModel _equipmentDialogCardViewModel;
     private readonly IInventoryService _inventoryService;
+    private readonly ILogger _logger;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
-    public EquipmentInventoryViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
-        EquipmentDialogCardViewModel equipmentDialogCardViewModel, SettingsService settingsService, IInventoryService inventoryService)
+    public EquipmentInventoryViewModel(DialogManager dialogManager, ToastManager toastManager,
+        EquipmentDialogCardViewModel equipmentDialogCardViewModel, SettingsService settingsService, 
+        IInventoryService inventoryService, ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
         _equipmentDialogCardViewModel = equipmentDialogCardViewModel;
         _inventoryService = inventoryService;
         _settingsService = settingsService;
+        _logger = logger;
 
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
@@ -89,15 +92,17 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _equipmentDialogCardViewModel = new EquipmentDialogCardViewModel();
         _settingsService = new SettingsService();
+        _logger = null!;
         _inventoryService = null!;
 
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
     }
 
+    
+    /*
     [AvaloniaHotReload]
     public async Task Initialize()
     {
@@ -106,19 +111,72 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _ = LoadEquipmentDataAsync();
         IsInitialized = true;
     }
+    */
 
+    #region INavigable Implementation
+
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger.LogDebug("EquipmentInventoryViewModel already initialized");
+            return;
+        }
+
+        _logger.LogInformation("Initializing EquipmentInventoryViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadSettingsAsync().ConfigureAwait(false);
+            await LoadEquipmentDataAsync().ConfigureAwait(false);
+            UpdateEquipmentCounts();
+
+            IsInitialized = true;
+            _logger.LogInformation("EquipmentInventoryViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("EquipmentInventoryViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing EquipmentInventoryViewModel");
+            // Equipment inventory has no sample data fallback
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from EquipmentInventory");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
 
     private async Task LoadEquipmentDataAsync()
     {
-        if (_inventoryService == null) return;
+        if (_inventoryService == null)
+        {
+            _logger.LogWarning("InventoryService is null, cannot load equipment data");
+            return;
+        }
 
         IsLoadingData = true;
         try
         {
+            _logger.LogDebug("Loading equipment data from database");
+        
             var (success, message, equipmentModels) = await _inventoryService.GetEquipmentAsync();
 
             if (!success || equipmentModels == null)
             {
+                _logger.LogWarning("Failed to load equipment: {Message}", message);
                 _toastManager.CreateToast("Error Loading Equipment")
                     .WithContent(message)
                     .DismissOnClick()
@@ -147,9 +205,12 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             ApplyEquipmentFilter();
             UpdateEquipmentCounts();
             await _inventoryService.ShowEquipmentAlertsAsync();
+        
+            _logger.LogDebug("Loaded {Count} equipment items from database", equipmentList.Count);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error loading equipment data from database");
             _toastManager.CreateToast("Error Loading Equipment")
                 .WithContent($"Failed to load equipment data: {ex.Message}")
                 .DismissOnClick()
@@ -207,9 +268,9 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private void ShowAddEquipmentDialog()
+    private async Task ShowAddEquipmentDialog()
     {
-        _equipmentDialogCardViewModel.Initialize();
+        await _equipmentDialogCardViewModel.InitializeAsync();
         _dialogManager.CreateDialog(_equipmentDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
@@ -229,12 +290,14 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         try
         {
+            _logger.LogInformation("Adding new equipment: {Name}", _equipmentDialogCardViewModel.BrandName);
+        
             var newEquipmentModel = new EquipmentModel
             {
                 EquipmentName = _equipmentDialogCardViewModel.BrandName ?? string.Empty,
                 Category = _equipmentDialogCardViewModel.Category ?? string.Empty,
                 CurrentStock = _equipmentDialogCardViewModel.CurrentStock ?? 0,
-                SupplierID = _equipmentDialogCardViewModel.SupplierID,  // Now using SupplierID
+                SupplierID = _equipmentDialogCardViewModel.SupplierID,
                 PurchasePrice = _equipmentDialogCardViewModel.PurchasePrice,
                 PurchaseDate = _equipmentDialogCardViewModel.PurchasedDate,
                 WarrantyExpiry = _equipmentDialogCardViewModel.WarrantyExpiry,
@@ -248,11 +311,12 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
             if (success)
             {
-                // Reload data to reflect changes
+                _logger.LogInformation("Successfully added equipment with ID: {EquipmentId}", equipmentId);
                 await LoadEquipmentDataAsync();
             }
             else
             {
+                _logger.LogWarning("Failed to add equipment: {Message}", message);
                 _toastManager.CreateToast("Error Adding Equipment")
                     .WithContent(message)
                     .DismissOnClick()
@@ -261,6 +325,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error adding equipment to database");
             _toastManager.CreateToast("Error Adding Equipment")
                 .WithContent($"Failed to add equipment: {ex.Message}")
                 .DismissOnClick()
@@ -307,7 +372,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private async Task SearchEquipment()
+    private async Task SearchEquipment(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
@@ -325,14 +390,17 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
         try
         {
-            await Task.Delay(500);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+            
+            await Task.Delay(500, linkedCts.Token).ConfigureAwait(false);
 
             var filteredEquipments = CurrentFilteredEquipmentData.Where(equipment =>
-                equipment is { BrandName: not null, Category: not null, Condition: not null } &&
-                (equipment.BrandName.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                 equipment.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                 equipment.Condition.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                 (equipment.SupplierName?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ?? false)))
+                    equipment is { BrandName: not null, Category: not null, Condition: not null } &&
+                    (equipment.BrandName.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     equipment.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     equipment.Condition.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     (equipment.SupplierName?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ?? false)))
                 .ToList();
 
             EquipmentItems.Clear();
@@ -342,6 +410,10 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 EquipmentItems.Add(equipment);
             }
             UpdateEquipmentCounts();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
         }
         finally
         {
@@ -440,11 +512,11 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private void ShowEditEquipmentDialog(Equipment? equipment)
+    private async Task ShowEditEquipmentDialog(Equipment? equipment)
     {
         if (equipment == null) return;
 
-        _equipmentDialogCardViewModel.InitializeForEditMode(equipment);
+        await _equipmentDialogCardViewModel.InitializeForEditMode(equipment, CancellationToken.None);
         _dialogManager.CreateDialog(_equipmentDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
@@ -464,7 +536,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         try
         {
-            // ✅ Validate maintenance dates before updating
+            // Validate maintenance dates before updating
             if (_equipmentDialogCardViewModel.LastMaintenance.HasValue &&
                 _equipmentDialogCardViewModel.NextMaintenance.HasValue &&
                 _equipmentDialogCardViewModel.NextMaintenance <= _equipmentDialogCardViewModel.LastMaintenance)
@@ -485,12 +557,14 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 return;
             }
 
+            _logger.LogInformation("Updating equipment ID: {EquipmentId}", equipment.ID);
+
             // Update the equipment object with values from dialog
             equipment.BrandName = _equipmentDialogCardViewModel.BrandName;
             equipment.Category = _equipmentDialogCardViewModel.Category;
             equipment.CurrentStock = _equipmentDialogCardViewModel.CurrentStock;
-            equipment.SupplierID = _equipmentDialogCardViewModel.SupplierID;  // Update SupplierID
-            equipment.SupplierName = _equipmentDialogCardViewModel.Supplier;  // Use Supplier instead of SelectedSupplier
+            equipment.SupplierID = _equipmentDialogCardViewModel.SupplierID;
+            equipment.SupplierName = _equipmentDialogCardViewModel.Supplier;
             equipment.PurchasedPrice = _equipmentDialogCardViewModel.PurchasePrice;
             equipment.PurchasedDate = _equipmentDialogCardViewModel.PurchasedDate;
             equipment.Warranty = _equipmentDialogCardViewModel.WarrantyExpiry;
@@ -499,24 +573,23 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             equipment.LastMaintenance = _equipmentDialogCardViewModel.LastMaintenance;
             equipment.NextMaintenance = _equipmentDialogCardViewModel.NextMaintenance;
 
-
-
             var equipmentModel = MapToEquipmentModel(equipment);
             var (success, message) = await _inventoryService.UpdateEquipmentAsync(equipmentModel);
 
             if (success)
             {
+                _logger.LogInformation("Successfully updated equipment ID: {EquipmentId}", equipment.ID);
                 _ = LoadEquipmentDataAsync();
                 _toastManager.CreateToast("Equipment Updated")
                     .WithContent($"Successfully modified {equipment.BrandName}!")
                     .DismissOnClick()
                     .ShowSuccess();
 
-                // Refresh the UI
                 OnPropertyChanged(nameof(EquipmentItems));
             }
             else
             {
+                _logger.LogWarning("Failed to update equipment: {Message}", message);
                 _toastManager.CreateToast("Update Failed")
                     .WithContent(message)
                     .DismissOnClick()
@@ -525,6 +598,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error updating equipment ID: {EquipmentId}", equipment.ID);
             _toastManager.CreateToast("Error Updating Equipment")
                 .WithContent($"Failed to update equipment: {ex.Message}")
                 .DismissOnClick()
@@ -570,10 +644,13 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         try
         {
+            _logger.LogInformation("Deleting equipment ID: {EquipmentId}", equipment.ID);
+        
             var (success, message) = await _inventoryService.DeleteEquipmentAsync(equipment.ID);
 
             if (success)
             {
+                _logger.LogInformation("Successfully deleted equipment ID: {EquipmentId}", equipment.ID);
                 equipment.PropertyChanged -= OnEquipmentPropertyChanged;
                 EquipmentItems.Remove(equipment);
                 OriginalEquipmentData.Remove(equipment);
@@ -588,6 +665,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             }
             else
             {
+                _logger.LogWarning("Failed to delete equipment: {Message}", message);
                 _toastManager.CreateToast("Delete Failed")
                     .WithContent(message)
                     .DismissOnClick()
@@ -596,6 +674,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error deleting equipment ID: {EquipmentId}", equipment.ID);
             _toastManager.CreateToast("Error Deleting Equipment")
                 .WithContent($"Failed to delete equipment: {ex.Message}")
                 .DismissOnClick()
@@ -617,11 +696,14 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
         try
         {
+            _logger.LogInformation("Deleting {Count} equipment items", selectedEquipments.Count);
+        
             var equipmentIds = selectedEquipments.Select(e => e.ID).ToList();
             var (success, message, deletedCount) = await _inventoryService.DeleteMultipleEquipmentAsync(equipmentIds);
 
             if (success)
             {
+                _logger.LogInformation("Successfully deleted {Count} equipment items", deletedCount);
                 foreach (var equipmentItem in selectedEquipments)
                 {
                     equipmentItem.PropertyChanged -= OnEquipmentPropertyChanged;
@@ -639,6 +721,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             }
             else
             {
+                _logger.LogWarning("Failed to delete multiple equipment items: {Message}", message);
                 _toastManager.CreateToast("Delete Failed")
                     .WithContent(message)
                     .DismissOnClick()
@@ -647,6 +730,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error deleting multiple equipment items");
             _toastManager.CreateToast("Error Deleting Equipment")
                 .WithContent($"Failed to delete equipment: {ex.Message}")
                 .DismissOnClick()
@@ -672,13 +756,34 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
     partial void OnSearchStringResultChanged(string value)
     {
-        SearchEquipmentCommand.Execute(null);
+        _ = SearchEquipment(LifecycleToken);
     }
 
     partial void OnSelectedEquipmentFilterItemChanged(string value)
     {
         ApplyEquipmentFilter();
     }
+    
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing EquipmentInventoryViewModel");
+
+        foreach (var item in EquipmentItems)
+        {
+            item.PropertyChanged -= OnEquipmentPropertyChanged;
+        }
+
+        // Clear collections
+        EquipmentItems.Clear();
+        OriginalEquipmentData.Clear();
+        CurrentFilteredEquipmentData.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }
 
 public partial class Equipment : ObservableObject
