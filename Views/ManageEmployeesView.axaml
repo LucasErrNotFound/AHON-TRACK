@@ -1,399 +1,744 @@
 <UserControl
-	xmlns="https://github.com/avaloniaui"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	x:Class="AHON_TRACK.Views.ManageEmployeesView"
-	x:DataType="vm:ManageEmployeesViewModel"
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:vm="using:AHON_TRACK.ViewModels"
-	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
-	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
-	xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
-	xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
-	d:DesignWidth="2080"
-	d:DesignHeight="1666"
-	mc:Ignorable="d">
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Class="AHON_TRACK.Views.ManageEmployeesView"
+    x:DataType="vm:ManageEmployeesViewModel"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:AHON_TRACK.ViewModels"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
+    d:DesignWidth="2080"
+    d:DesignHeight="1666"
+    mc:Ignorable="d">
 
-	<UserControl.Resources>
-		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
-		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
-		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36"/>
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
 
-		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
-		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75"/>
-		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
-		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
 
-		<converters:IntToBoolConverter x:Key="IntToBoolConverter"/>
-		<converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter"/>
-		<converters:DateToStringConverter x:Key="DateToStringConverter"/>
-	</UserControl.Resources>
+        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+        <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
+        <converters:DateToStringConverter x:Key="DateToStringConverter" />
+    </UserControl.Resources>
 
-	<DockPanel LastChildFill="True">
-		<StackPanel
+    <DockPanel LastChildFill="True">
+        <StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
             Margin="{StaticResource PageMargin}"
             DockPanel.Dock="Top">
-			<TextBlock
-				FontSize="30"
-				FontWeight="SemiBold"
-				Text="Manage Employees"
-				Foreground="{StaticResource FontForeground}"
-				Margin="90,30"/>
-		</StackPanel>
-		<ScrollViewer HorizontalScrollBarVisibility="Auto">
-			<Interaction.Behaviors>
-				<scroll:VerticalScrollViewerAnimatedBehavior/>
-			</Interaction.Behaviors>
-			<StackPanel
-				MaxWidth="{StaticResource PageMaxWidth}"
-				Margin="{StaticResource PageMargin}"
-				Spacing="32">
-				<StackPanel
-					Width="1390"
-					HorizontalAlignment="Center"
-					Margin="0,70"
-					Spacing="24">
+            <TextBlock
+                FontSize="30"
+                FontWeight="SemiBold"
+                Text="Manage Employees"
+                Foreground="{StaticResource FontForeground}"
+                Margin="90,30" />
+        </StackPanel>
+        <StackPanel
+            MaxWidth="{StaticResource PageMaxWidth}"
+            Margin="{StaticResource PageMargin}"
+            Spacing="32">
+            <shadui:BreakpointViewPort>
+                <shadui:BreakpointView Breakpoint="XlAndUp">
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Margin="0,70"
+                        Spacing="24">
 
-					<!-- Main container with a white background and border -->
-					<Border
-						Background="{DynamicResource CardBackgroundColor}"
-						BorderBrush="#E5E7EB"
-						BorderThickness="1"
-						CornerRadius="8"
-						Padding="24">
+                        <!-- Main container with a white background and border -->
+                        <Border
+                            Background="{DynamicResource CardBackgroundColor}"
+                            BorderBrush="#E5E7EB"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="24">
 
-						<StackPanel Spacing="24">
-							<!-- Search and Add Button Row -->
-							<Grid ColumnDefinitions="* Auto Auto Auto">
-								<TextBox
-									Grid.Column="0"
-									Width="400"
-									HorizontalAlignment="Left"
-									shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingEmployee}"
-									shadui:ControlAssist.Height="40"
-									Classes="Clearable"
-									Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
-									FontSize="15"
-									Watermark="Search Employees...">
-									<TextBox.InnerRightContent>
-										<Svg
-											Width="20"
-											Opacity="0.75"
-											Path="/Assets/ManageEmployeesView/search-icon.svg"/>
-									</TextBox.InnerRightContent>
-								</TextBox>
-								<StackPanel
-									Grid.Column="1"
-									Margin="0,0,20,0"
-									HorizontalAlignment="Left"
-									VerticalAlignment="Center">
-									<ComboBox
-										PlaceholderText="Sort Data"
-										Width="185"
-										SelectedIndex="{CompiledBinding SelectedSortIndex}">
-										<ComboBoxItem Content="By ID"/>
-										<ComboBoxItem Content="Names by A-Z"/>
-										<ComboBoxItem Content="Names by Z-A"/>
-										<ComboBoxItem Content="Usernames by A-Z"/>
-										<ComboBoxItem Content="Usernames by Z-A"/>
-										<ComboBoxItem Content="By newest to oldest"/>
-										<ComboBoxItem Content="By oldest to newest"/>
-										<ComboBoxItem Content="Reset Data"/>
-									</ComboBox>
-								</StackPanel>
-								<StackPanel
-									Grid.Column="2"
-									Margin="0,0,340,0"
-									HorizontalAlignment="Left"
-									VerticalAlignment="Center">
-									<ComboBox
-										PlaceholderText="Filter"
-										Width="155"
-										SelectedIndex="{CompiledBinding SelectedFilterIndex}">
-										<ComboBoxItem Content="By active"/>
-										<ComboBoxItem Content="By inactive"/>
-										<ComboBoxItem Content="By terminated"/>
-									</ComboBox>
-								</StackPanel>
-								<Button
-									Grid.Column="3"
-									Classes="Primary"
-									FontSize="16"
-									Width="220"
-									Height="40"
-									Padding="20,0,20,0"
-									Command="{CompiledBinding ShowAddNewEmployeeDialogCommand}">
-									<StackPanel Orientation="Horizontal">
-										<Svg
-											Width="22"
-											Height="22"
-											Margin="0,0,10,0"
-											Path="/Assets/ManageEmployeesView/add-new-employee-icon.svg"/>
-										<TextBlock Text="Add New Employee" Foreground="White" VerticalAlignment="Center" />
-									</StackPanel>
-								</Button>
-							</Grid>
+                            <StackPanel Spacing="24">
+                                <!-- Search and Add Button Row -->
+                                <Grid ColumnDefinitions="* * *">
+                                    <TextBox
+                                        Grid.Column="0"
+                                        Width="400"
+                                        HorizontalAlignment="Left"
+                                        shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingEmployee}"
+                                        shadui:ControlAssist.Height="40"
+                                        Classes="Clearable"
+                                        Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
+                                        FontSize="15"
+                                        Watermark="Search Employees...">
+                                        <TextBox.InnerRightContent>
+                                            <Svg
+                                                Width="20"
+                                                Opacity="0.75"
+                                                Path="/Assets/ManageEmployeesView/search-icon.svg" />
+                                        </TextBox.InnerRightContent>
+                                    </TextBox>
+                                    <StackPanel
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal"
+                                        Spacing="30">
+                                        <ComboBox
+                                            PlaceholderText="Sort Data"
+                                            Width="185"
+                                            SelectedIndex="{CompiledBinding SelectedSortIndex}">
+                                            <ComboBoxItem Content="By ID" />
+                                            <ComboBoxItem Content="Names by A-Z" />
+                                            <ComboBoxItem Content="Names by Z-A" />
+                                            <ComboBoxItem Content="Usernames by A-Z" />
+                                            <ComboBoxItem Content="Usernames by Z-A" />
+                                            <ComboBoxItem Content="By newest to oldest" />
+                                            <ComboBoxItem Content="By oldest to newest" />
+                                            <ComboBoxItem Content="Reset Data" />
+                                        </ComboBox>
+                                        <ComboBox
+                                            PlaceholderText="Filter"
+                                            Width="155"
+                                            SelectedIndex="{CompiledBinding SelectedFilterIndex}">
+                                            <ComboBoxItem Content="By active" />
+                                            <ComboBoxItem Content="By inactive" />
+                                            <ComboBoxItem Content="By terminated" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <Button
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Right"
+                                        Classes="Primary"
+                                        FontSize="16"
+                                        Width="220"
+                                        Height="40"
+                                        Padding="20,0,20,0"
+                                        Command="{CompiledBinding ShowAddNewEmployeeDialogCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
+                                                Width="22"
+                                                Height="22"
+                                                Margin="0,0,10,0"
+                                                Path="/Assets/ManageEmployeesView/add-new-employee-icon.svg" />
+                                            <TextBlock Text="Add New Employee" Foreground="White"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
 
-							<!-- DataGrid -->
-							<DataGrid
-								Height="500"
-								x:Name="ManageEmployeeDataGrid"
-								CanUserReorderColumns="False"
-								CanUserSortColumns="False"
-								GridLinesVisibility="Horizontal"
-								ItemsSource="{CompiledBinding EmployeeItems}"
-								SelectionMode="Single"
-								Background="{DynamicResource CardBackgroundColor}"
-								RowBackground="{DynamicResource CardBackgroundColor}"
-								HeadersVisibility="Column"
-								Margin="0">
+                                <!-- DataGrid -->
+                                <DataGrid
+                                    Height="500"
+                                    x:Name="ManageEmployeeDataGrid"
+                                    CanUserReorderColumns="False"
+                                    CanUserSortColumns="False"
+                                    GridLinesVisibility="Horizontal"
+                                    ItemsSource="{CompiledBinding EmployeeItems}"
+                                    SelectionMode="Single"
+                                    Background="{DynamicResource CardBackgroundColor}"
+                                    RowBackground="{DynamicResource CardBackgroundColor}"
+                                    HeadersVisibility="Column"
+                                    Margin="0">
 
-								<DataGrid.Resources>
-									<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
-								</DataGrid.Resources>
+                                    <DataGrid.Resources>
+                                        <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+                                    </DataGrid.Resources>
 
-								<DataGrid.Columns>
-									<DataGridCheckBoxColumn Binding="{CompiledBinding IsSelected}" CanUserSort="False" Width="60">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Binding="{CompiledBinding IsSelected}"
+                                                                CanUserSort="False" Width="60">
 
-										<!--CheckBox Header Column-->
-										<DataGridCheckBoxColumn.Header>
-											<CheckBox
-												x:Name="SelectToggler"
-												Command="{CompiledBinding ToggleSelectionCommand}"
-												CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
-												IsChecked="{CompiledBinding SelectAll}"
-												Margin="8,0"/>
-										</DataGridCheckBoxColumn.Header>
-									</DataGridCheckBoxColumn>
+                                            <!--CheckBox Header Column-->
+                                            <DataGridCheckBoxColumn.Header>
+                                                <CheckBox
+                                                    x:Name="SelectToggler"
+                                                    Command="{CompiledBinding ToggleSelectionCommand}"
+                                                    CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
+                                                    IsChecked="{CompiledBinding SelectAll}"
+                                                    Margin="8,0" />
+                                            </DataGridCheckBoxColumn.Header>
+                                        </DataGridCheckBoxColumn>
 
-									<!--ID Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding ID}"
-										CanUserSort="False"
-										Header="ID"
-										IsReadOnly="True"
-										FontSize="15"
-										IsVisible="{CompiledBinding ShowIdColumn}"
-										Width="80"/>
+                                        <!--ID Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding ID}"
+                                            CanUserSort="False"
+                                            Header="ID"
+                                            IsReadOnly="True"
+                                            FontSize="15"
+                                            IsVisible="{CompiledBinding ShowIdColumn}"
+                                            Width="80" />
 
-									<!--Picture/Avatar Header Column-->
-									<DataGridTemplateColumn
-										CanUserSort="False"
-										Header="Picture"
-										IsVisible="{CompiledBinding ShowPictureColumn}"
-										Width="100">
-										<DataGridTemplateColumn.CellTemplate>
-											<DataTemplate DataType="viewModels:ManageEmployeesItem">
-												<shadui:Avatar
-													Width="36"
-													Height="36"
-													VerticalAlignment="Center"
-													HorizontalAlignment="Center"
-													Source="{Binding AvatarSource}"
-													Margin="8"/>
-											</DataTemplate>
-										</DataGridTemplateColumn.CellTemplate>
-									</DataGridTemplateColumn>
+                                        <!--Picture/Avatar Header Column-->
+                                        <DataGridTemplateColumn
+                                            CanUserSort="False"
+                                            Header="Picture"
+                                            IsVisible="{CompiledBinding ShowPictureColumn}"
+                                            Width="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="viewModels:ManageEmployeesItem">
+                                                    <shadui:Avatar
+                                                        Width="36"
+                                                        Height="36"
+                                                        VerticalAlignment="Center"
+                                                        HorizontalAlignment="Left"
+                                                        Source="{Binding AvatarSource}"
+                                                        Margin="8" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
 
-									<!--Name Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding Name}"
-										CanUserSort="False"
-										Header="Name"
-										IsReadOnly="True"
-										FontSize="15"
-										IsVisible="{CompiledBinding ShowNameColumn}"
-										Width="200"/>
+                                        <!--Name Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding Name}"
+                                            CanUserSort="False"
+                                            Header="Name"
+                                            IsReadOnly="True"
+                                            FontSize="15"
+                                            IsVisible="{CompiledBinding ShowNameColumn}"
+                                            Width="200" />
 
-									<!--Username Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding Username}"
-										CanUserSort="False"
-										Header="Username"
-										IsReadOnly="True"
-										FontSize="15"
-										IsVisible="{CompiledBinding ShowUsernameColumn}"
-										Width="150"/>
+                                        <!--Username Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding Username}"
+                                            CanUserSort="False"
+                                            Header="Username"
+                                            IsReadOnly="True"
+                                            FontSize="15"
+                                            IsVisible="{CompiledBinding ShowUsernameColumn}"
+                                            Width="150" />
 
-									<!--Contact No. Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding ContactNumber}"
-										CanUserSort="False"
-										Header="Contact No."
-										IsReadOnly="True"
-										FontSize="14"
-										IsVisible="{CompiledBinding ShowContactNumberColumn}"
-										Width="180"/>
+                                        <!--Contact No. Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding ContactNumber}"
+                                            CanUserSort="False"
+                                            Header="Contact No."
+                                            IsReadOnly="True"
+                                            FontSize="14"
+                                            IsVisible="{CompiledBinding ShowContactNumberColumn}"
+                                            Width="180" />
 
-									<!--Position Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding Position}"
-										CanUserSort="False"
-										Header="Position"
-										IsReadOnly="True"
-										FontSize="14"
-										IsVisible="{CompiledBinding ShowPositionColumn}"
-										Width="160"/>
+                                        <!--Position Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding Position}"
+                                            CanUserSort="False"
+                                            Header="Position"
+                                            IsReadOnly="True"
+                                            FontSize="14"
+                                            IsVisible="{CompiledBinding ShowPositionColumn}"
+                                            Width="160" />
 
-									<!--Status Header Column with Custom Template-->
-									<DataGridTemplateColumn
-										CanUserSort="False"
-										Header="Status"
-										IsVisible="{CompiledBinding ShowStatusColumn}"
-										Width="140">
-										<DataGridTemplateColumn.CellTemplate>
-											<DataTemplate DataType="viewModels:ManageEmployeesItem">
-												<Border
-													Background="{CompiledBinding StatusBackground}"
-													CornerRadius="11"
-													Padding="8,4"
-													Margin="-13,0,0,0"
-													HorizontalAlignment="Left">
-													<TextBlock
-														Text="{CompiledBinding StatusDisplayText}"
-														Foreground="{CompiledBinding StatusForeground}"
-														FontSize="13"
-														FontWeight="Medium"
-														HorizontalAlignment="Center"
-														VerticalAlignment="Center"/>
-												</Border>
-											</DataTemplate>
-										</DataGridTemplateColumn.CellTemplate>
-									</DataGridTemplateColumn>
+                                        <!--Status Header Column with Custom Template-->
+                                        <DataGridTemplateColumn
+                                            CanUserSort="False"
+                                            Header="Status"
+                                            IsVisible="{CompiledBinding ShowStatusColumn}"
+                                            Width="140">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="viewModels:ManageEmployeesItem">
+                                                    <Border
+                                                        Background="{CompiledBinding StatusBackground}"
+                                                        CornerRadius="11"
+                                                        Padding="8,4"
+                                                        Margin="-13,0,0,0"
+                                                        HorizontalAlignment="Left">
+                                                        <TextBlock
+                                                            Text="{CompiledBinding StatusDisplayText}"
+                                                            Foreground="{CompiledBinding StatusForeground}"
+                                                            FontSize="13"
+                                                            FontWeight="Medium"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
 
-									<!--Date Joined Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding DateJoined, Converter={StaticResource DateToStringConverter}}"
-										CanUserSort="False"
-										Header="Date Joined"
-										IsReadOnly="True"
-										FontSize="15"
-										FontWeight="SemiBold"
-										IsVisible="{CompiledBinding ShowDateJoined}"
-										Width="170"/>
+                                        <!--Date Joined Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding DateJoined, Converter={StaticResource DateToStringConverter}}"
+                                            CanUserSort="False"
+                                            Header="Date Joined"
+                                            IsReadOnly="True"
+                                            FontSize="15"
+                                            FontWeight="SemiBold"
+                                            IsVisible="{CompiledBinding ShowDateJoined}"
+                                            Width="170" />
 
-									<!--Dropdown button (three-dots)-->
-									<DataGridTemplateColumn CanUserResize="False" CanUserSort="False" Width="60">
-										<DataGridTemplateColumn.CellTemplate>
-											<DataTemplate DataType="viewModels:ManageEmployeesItem">
-												<Menu>
-													<MenuItem
-														HorizontalAlignment="Center"
-														VerticalAlignment="Center"
-														Classes="Icon Grid"
-														shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
-														<MenuItem.Header>
-															<Svg
-																Width="24"
-																Height="24"
-																Path="/Assets/ManageEmployeesView/three-dots-icon.svg"/>
-														</MenuItem.Header>
-														<shadui:MenuItemAssist.Label>
-															<TextBlock Text="Actions" FontSize="15" FontWeight="Regular" Foreground="{DynamicResource MutedColor}"/>
-														</shadui:MenuItemAssist.Label>
+                                        <!--Dropdown button (three-dots)-->
+                                        <DataGridTemplateColumn CanUserResize="False" CanUserSort="False" Width="60">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="viewModels:ManageEmployeesItem">
+                                                    <Menu>
+                                                        <MenuItem
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Classes="Icon Grid"
+                                                            shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+                                                            <MenuItem.Header>
+                                                                <Svg
+                                                                    Width="24"
+                                                                    Height="24"
+                                                                    Path="/Assets/ManageEmployeesView/three-dots-icon.svg" />
+                                                            </MenuItem.Header>
+                                                            <shadui:MenuItemAssist.Label>
+                                                                <TextBlock Text="Actions" FontSize="15"
+                                                                           FontWeight="Regular"
+                                                                           Foreground="{DynamicResource MutedColor}" />
+                                                            </shadui:MenuItemAssist.Label>
 
-														<MenuItem
-															Header="View Employee"
-															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).OpenViewEmployeeProfileCommand, FallbackValue={x:Null}}"
-															CommandParameter="{CompiledBinding}"/>
-														<MenuItem Header="Copy">
-															<MenuItem
-																Header="Copy Employee Name"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeNameCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Selected Employee Name"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeNameCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Employee ID"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeIdCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Selected Employee ID"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeIdCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem Header="Copy Employee Username"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeUsernameCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem Header="Copy Selected Employee Username"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeUsernameCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem Header="Copy Employee Contact No."
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeContactNumberCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem Header="Copy Selected Employee Contact No."
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeContactNumberCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<Separator/>
-															<MenuItem
-																Header="Copy Employee Position"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeePositionCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Employee Status"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeStatusCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Employee Date Joined"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeDateJoinedCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-														</MenuItem>
+                                                            <MenuItem
+                                                                Header="View Employee"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).OpenViewEmployeeProfileCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}" />
+                                                            <MenuItem Header="Copy">
+                                                                <MenuItem
+                                                                    Header="Copy Employee Name"
+                                                                    IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeNameCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Selected Employee Name"
+                                                                    IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeNameCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Employee ID"
+                                                                    IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeIdCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Selected Employee ID"
+                                                                    IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeIdCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem Header="Copy Employee Username"
+                                                                          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+                                                                          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeUsernameCommand, FallbackValue={x:Null}}"
+                                                                          CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem Header="Copy Selected Employee Username"
+                                                                          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+                                                                          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeUsernameCommand, FallbackValue={x:Null}}"
+                                                                          CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem Header="Copy Employee Contact No."
+                                                                          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+                                                                          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeContactNumberCommand, FallbackValue={x:Null}}"
+                                                                          CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem Header="Copy Selected Employee Contact No."
+                                                                          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+                                                                          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeContactNumberCommand, FallbackValue={x:Null}}"
+                                                                          CommandParameter="{CompiledBinding}" />
+                                                                <Separator />
+                                                                <MenuItem
+                                                                    Header="Copy Employee Position"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeePositionCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Employee Status"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeStatusCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Employee Date Joined"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeDateJoinedCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                            </MenuItem>
 
-														<MenuItem
-															Header="Modify Employee Details"
-															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowModifyEmployeeDialogCommand, FallbackValue={x:Null}}"
-															CommandParameter="{CompiledBinding}"/>
-														<Separator/>
-														<MenuItem
-															Header="Delete"
-															Foreground="{DynamicResource DestructiveColor}"
-															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
-															CommandParameter="{CompiledBinding}"
-															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"/>
-														<MenuItem
-															Header="Delete Selected"
-															Foreground="{DynamicResource DestructiveColor}"
-															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
-															CommandParameter="{CompiledBinding}"
-															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"/>
-													</MenuItem>
-												</Menu>
-											</DataTemplate>
-										</DataGridTemplateColumn.CellTemplate>
-									</DataGridTemplateColumn>
-								</DataGrid.Columns>
-							</DataGrid>
+                                                            <MenuItem
+                                                                Header="Modify Employee Details"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowModifyEmployeeDialogCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}" />
+                                                            <Separator />
+                                                            <MenuItem
+                                                                Header="Delete"
+                                                                Foreground="{DynamicResource DestructiveColor}"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}"
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
+                                                            <MenuItem
+                                                                Header="Delete Selected"
+                                                                Foreground="{DynamicResource DestructiveColor}"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}"
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
+                                                        </MenuItem>
+                                                    </Menu>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
 
-							<!-- Footer with selection count and pagination -->
-							<Grid ColumnDefinitions="* Auto">
-								<TextBlock VerticalAlignment="Center" Classes="Small Muted">
-									<Run Text="{CompiledBinding SelectedCount}" />
-									<Run Text="of" />
-									<Run Text="{CompiledBinding TotalCount}" />
-									<Run Text="row(s) selected." />
-								</TextBlock>
-								<StackPanel
-									Grid.Column="1"
-									Orientation="Horizontal"
-									Spacing="8">
-									<Button Classes="Outline" IsEnabled="False">Previous</Button>
-									<Button Classes="Outline" IsEnabled="False">Next</Button>
-								</StackPanel>
-							</Grid>
-						</StackPanel>
-					</Border>
-				</StackPanel>
-			</StackPanel>
-		</ScrollViewer>
-	</DockPanel>
+                                <!-- Footer with selection count and pagination -->
+                                <Grid ColumnDefinitions="* Auto">
+                                    <TextBlock VerticalAlignment="Center" Classes="Small Muted">
+                                        <Run Text="{CompiledBinding SelectedCount}" />
+                                        <Run Text="of" />
+                                        <Run Text="{CompiledBinding TotalCount}" />
+                                        <Run Text="row(s) selected." />
+                                    </TextBlock>
+                                    <StackPanel
+                                        Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Spacing="8">
+                                        <Button Classes="Outline" IsEnabled="False">Previous</Button>
+                                        <Button Classes="Outline" IsEnabled="False">Next</Button>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </shadui:BreakpointView>
+                <shadui:BreakpointView Breakpoint="XlAndDown">
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        Margin="0,70"
+                        Spacing="24">
+
+                        <!-- Main container with a white background and border -->
+                        <Border
+                            Background="{DynamicResource CardBackgroundColor}"
+                            BorderBrush="#E5E7EB"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="24">
+
+                            <StackPanel Spacing="24">
+                                <!-- Search and Add Button Row -->
+                                <Grid ColumnDefinitions="Auto * Auto">
+                                    <TextBox
+                                        Grid.Column="0"
+                                        Width="230"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,0,20,0"
+                                        shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingEmployee}"
+                                        shadui:ControlAssist.Height="40"
+                                        Classes="Clearable"
+                                        Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
+                                        FontSize="14"
+                                        Watermark="Search Employees...">
+                                        <TextBox.InnerRightContent>
+                                            <Svg
+                                                Width="20"
+                                                Opacity="0.75"
+                                                Path="/Assets/ManageEmployeesView/search-icon.svg" />
+                                        </TextBox.InnerRightContent>
+                                    </TextBox>
+                                    <StackPanel
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal"
+                                        Spacing="30">
+                                        <ComboBox
+                                            PlaceholderText="Sort Data"
+                                            Width="145"
+                                            SelectedIndex="{CompiledBinding SelectedSortIndex}">
+                                            <ComboBoxItem Content="By ID" />
+                                            <ComboBoxItem Content="Names by A-Z" />
+                                            <ComboBoxItem Content="Names by Z-A" />
+                                            <ComboBoxItem Content="Usernames by A-Z" />
+                                            <ComboBoxItem Content="Usernames by Z-A" />
+                                            <ComboBoxItem Content="By newest to oldest" />
+                                            <ComboBoxItem Content="By oldest to newest" />
+                                            <ComboBoxItem Content="Reset Data" />
+                                        </ComboBox>
+                                        <ComboBox
+                                            PlaceholderText="Filter"
+                                            Width="125"
+                                            SelectedIndex="{CompiledBinding SelectedFilterIndex}">
+                                            <ComboBoxItem Content="By active" />
+                                            <ComboBoxItem Content="By inactive" />
+                                            <ComboBoxItem Content="By terminated" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <Button
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Right"
+                                        Classes="Primary"
+                                        FontSize="13"
+                                        Width="190"
+                                        Height="40"
+                                        Padding="20,0,20,0"
+                                        Command="{CompiledBinding ShowAddNewEmployeeDialogCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Svg
+                                                Width="22"
+                                                Height="22"
+                                                Margin="0,0,10,0"
+                                                Path="/Assets/ManageEmployeesView/add-new-employee-icon.svg" />
+                                            <TextBlock Text="Add New Employee" Foreground="White"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <!-- DataGrid -->
+                                <DataGrid
+                                    Height="500"
+                                    x:Name="ManageEmployeeDataGrid2"
+                                    CanUserReorderColumns="False"
+                                    CanUserSortColumns="False"
+                                    GridLinesVisibility="Horizontal"
+                                    ItemsSource="{CompiledBinding EmployeeItems}"
+                                    SelectionMode="Single"
+                                    Background="{DynamicResource CardBackgroundColor}"
+                                    RowBackground="{DynamicResource CardBackgroundColor}"
+                                    HeadersVisibility="Column"
+                                    Margin="0">
+
+                                    <DataGrid.Resources>
+                                        <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+                                    </DataGrid.Resources>
+
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn 
+                                            Binding="{CompiledBinding IsSelected}"
+                                            CanUserSort="False" MaxWidth="60">
+
+                                            <!--CheckBox Header Column-->
+                                            <DataGridCheckBoxColumn.Header>
+                                                <CheckBox
+                                                    x:Name="SelectToggler2"
+                                                    Command="{CompiledBinding ToggleSelectionCommand}"
+                                                    CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
+                                                    IsChecked="{CompiledBinding SelectAll}"
+                                                    Margin="8,0" />
+                                            </DataGridCheckBoxColumn.Header>
+                                        </DataGridCheckBoxColumn>
+
+                                        <!--ID Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding ID}"
+                                            CanUserSort="False"
+                                            Header="ID"
+                                            IsReadOnly="True"
+                                            FontSize="13"
+                                            IsVisible="{CompiledBinding ShowIdColumn}"
+                                            MaxWidth="80" />
+
+                                        <!--Picture/Avatar Header Column-->
+                                        <DataGridTemplateColumn
+                                            CanUserSort="False"
+                                            Header="Picture"
+                                            IsVisible="{CompiledBinding ShowPictureColumn}"
+                                            MaxWidth="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="viewModels:ManageEmployeesItem">
+                                                    <shadui:Avatar
+                                                        Width="26"
+                                                        Height="26"
+                                                        VerticalAlignment="Center"
+                                                        HorizontalAlignment="Left"
+                                                        Source="{Binding AvatarSource}"
+                                                        Margin="8" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <!--Name Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding Name}"
+                                            CanUserSort="False"
+                                            Header="Name"
+                                            IsReadOnly="True"
+                                            FontSize="13"
+                                            IsVisible="{CompiledBinding ShowNameColumn}"
+                                            MaxWidth="200" />
+
+                                        <!--Username Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding Username}"
+                                            CanUserSort="False"
+                                            Header="Username"
+                                            IsReadOnly="True"
+                                            FontSize="13"
+                                            IsVisible="{CompiledBinding ShowUsernameColumn}"
+                                            MaxWidth="150" />
+
+                                        <!--Contact No. Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding ContactNumber}"
+                                            CanUserSort="False"
+                                            Header="Contact No."
+                                            IsReadOnly="True"
+                                            FontSize="13"
+                                            IsVisible="{CompiledBinding ShowContactNumberColumn}"
+                                            MaxWidth="180" />
+
+                                        <!--Position Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding Position}"
+                                            CanUserSort="False"
+                                            Header="Position"
+                                            IsReadOnly="True"
+                                            FontSize="12"
+                                            IsVisible="{CompiledBinding ShowPositionColumn}"
+                                            MaxWidth="160" />
+
+                                        <!--Status Header Column with Custom Template-->
+                                        <DataGridTemplateColumn
+                                            CanUserSort="False"
+                                            Header="Status"
+                                            IsVisible="{CompiledBinding ShowStatusColumn}"
+                                            MaxWidth="140">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="viewModels:ManageEmployeesItem">
+                                                    <Border
+                                                        Background="{CompiledBinding StatusBackground}"
+                                                        CornerRadius="11"
+                                                        Padding="8,4"
+                                                        Margin="-13,0,0,0"
+                                                        HorizontalAlignment="Left">
+                                                        <TextBlock
+                                                            Text="{CompiledBinding StatusDisplayText}"
+                                                            Foreground="{CompiledBinding StatusForeground}"
+                                                            FontSize="13"
+                                                            FontWeight="Medium"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <!--Date Joined Header Column-->
+                                        <DataGridTextColumn
+                                            Binding="{CompiledBinding DateJoined, Converter={StaticResource DateToStringConverter}}"
+                                            CanUserSort="False"
+                                            Header="Date Joined"
+                                            IsReadOnly="True"
+                                            FontSize="12"
+                                            FontWeight="SemiBold"
+                                            IsVisible="{CompiledBinding ShowDateJoined}"
+                                            MaxWidth="170" />
+
+                                        <!--Dropdown button (three-dots)-->
+                                        <DataGridTemplateColumn CanUserResize="False" CanUserSort="False" Width="60">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="viewModels:ManageEmployeesItem">
+                                                    <Menu>
+                                                        <MenuItem
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Classes="Icon Grid"
+                                                            shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+                                                            <MenuItem.Header>
+                                                                <Svg
+                                                                    Width="24"
+                                                                    Height="24"
+                                                                    Path="/Assets/ManageEmployeesView/three-dots-icon.svg" />
+                                                            </MenuItem.Header>
+                                                            <shadui:MenuItemAssist.Label>
+                                                                <TextBlock Text="Actions" FontSize="15"
+                                                                           FontWeight="Regular"
+                                                                           Foreground="{DynamicResource MutedColor}" />
+                                                            </shadui:MenuItemAssist.Label>
+
+                                                            <MenuItem
+                                                                Header="View Employee"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).OpenViewEmployeeProfileCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}" />
+                                                            <MenuItem Header="Copy">
+                                                                <MenuItem
+                                                                    Header="Copy Employee Name"
+                                                                    IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeNameCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Selected Employee Name"
+                                                                    IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeNameCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Employee ID"
+                                                                    IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeIdCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Selected Employee ID"
+                                                                    IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeIdCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem Header="Copy Employee Username"
+                                                                          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+                                                                          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeUsernameCommand, FallbackValue={x:Null}}"
+                                                                          CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem Header="Copy Selected Employee Username"
+                                                                          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+                                                                          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeUsernameCommand, FallbackValue={x:Null}}"
+                                                                          CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem Header="Copy Employee Contact No."
+                                                                          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+                                                                          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeContactNumberCommand, FallbackValue={x:Null}}"
+                                                                          CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem Header="Copy Selected Employee Contact No."
+                                                                          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+                                                                          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopyMultipleEmployeeContactNumberCommand, FallbackValue={x:Null}}"
+                                                                          CommandParameter="{CompiledBinding}" />
+                                                                <Separator />
+                                                                <MenuItem
+                                                                    Header="Copy Employee Position"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeePositionCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Employee Status"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeStatusCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                                <MenuItem
+                                                                    Header="Copy Employee Date Joined"
+                                                                    Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowCopySingleEmployeeDateJoinedCommand, FallbackValue={x:Null}}"
+                                                                    CommandParameter="{CompiledBinding}" />
+                                                            </MenuItem>
+
+                                                            <MenuItem
+                                                                Header="Modify Employee Details"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowModifyEmployeeDialogCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}" />
+                                                            <Separator />
+                                                            <MenuItem
+                                                                Header="Delete"
+                                                                Foreground="{DynamicResource DestructiveColor}"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}"
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
+                                                            <MenuItem
+                                                                Header="Delete Selected"
+                                                                Foreground="{DynamicResource DestructiveColor}"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}"
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
+                                                        </MenuItem>
+                                                    </Menu>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- Footer with selection count and pagination -->
+                                <Grid ColumnDefinitions="* Auto">
+                                    <TextBlock VerticalAlignment="Center" Classes="Small Muted">
+                                        <Run Text="{CompiledBinding SelectedCount}" />
+                                        <Run Text="of" />
+                                        <Run Text="{CompiledBinding TotalCount}" />
+                                        <Run Text="row(s) selected." />
+                                    </TextBlock>
+                                    <StackPanel
+                                        Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Spacing="8">
+                                        <Button Classes="Outline" IsEnabled="False">Previous</Button>
+                                        <Button Classes="Outline" IsEnabled="False">Next</Button>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </shadui:BreakpointView>
+            </shadui:BreakpointViewPort>
+        </StackPanel>
+    </DockPanel>
 </UserControl>
