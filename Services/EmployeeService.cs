@@ -1,15 +1,16 @@
 ﻿using AHON_TRACK.Converters;
 using AHON_TRACK.Helpers;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Threading.Tasks;
-using AHON_TRACK.Services.Events;
-using Dapper;
 
 namespace AHON_TRACK.Services
 {
@@ -1456,6 +1457,164 @@ namespace AHON_TRACK.Services
             employee.CityProvince = $"{employee.CityTown}, {employee.Province}".TrimEnd(',', ' ');
 
             return employee;
+        }
+
+        #endregion
+
+        #region LOGIN LOCKOUT MANAGEMENT
+
+        public async Task<(bool IsLocked, int AttemptsLeft, string Message)> CheckLockoutStatusAsync(string username)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string query = @"
+    SELECT FailedLoginAttempts, LockedOutUntil
+    FROM LoginAttempts
+    WHERE Username = @Username";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Username", username);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    int attempts = reader.GetInt32(0);
+                    DateTime? lockedUntil = reader.IsDBNull(1) ? null : reader.GetDateTime(1);
+
+                    // Check if currently locked out
+                    if (lockedUntil.HasValue && lockedUntil.Value > DateTime.Now)
+                    {
+                        var timeRemaining = lockedUntil.Value - DateTime.Now;
+                        string message = timeRemaining.TotalMinutes >= 1
+                            ? $"Account locked. Try again in {Math.Ceiling(timeRemaining.TotalMinutes)} minute(s)."
+                            : $"Account locked. Try again in less than a minute.";
+
+                        return (true, 0, message);
+                    }
+
+                    // Check if max attempts reached (3)
+                    if (attempts >= 3)
+                    {
+                        return (true, 0, "Account locked due to too many failed attempts.");
+                    }
+
+                    // Return remaining attempts
+                    int attemptsLeft = Math.Max(0, 3 - attempts);
+                    return (false, attemptsLeft, $"{attemptsLeft} attempt(s) remaining");
+                }
+
+                // No record found - user has 3 attempts
+                return (false, 3, "3 attempt(s) remaining");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"CheckLockoutStatusAsync Error: {ex}");
+                return (false, 3, "Unable to verify lockout status");
+            }
+        }
+
+        public async Task RecordFailedLoginAttemptAsync(string username)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string query = @"
+    MERGE LoginAttempts AS target
+    USING (SELECT @Username AS Username) AS source
+    ON target.Username = source.Username
+    WHEN MATCHED THEN
+        UPDATE SET 
+            FailedLoginAttempts = FailedLoginAttempts + 1,
+            LastAttemptDate = GETDATE(),
+            LockedOutUntil = CASE 
+                WHEN FailedLoginAttempts + 1 >= 3 THEN DATEADD(MINUTE, 1, GETDATE())
+                ELSE LockedOutUntil 
+            END
+    WHEN NOT MATCHED THEN
+        INSERT (Username, FailedLoginAttempts, LastAttemptDate, CreatedDate)
+        VALUES (@Username, 1, GETDATE(), GETDATE());";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Username", username);
+                await cmd.ExecuteNonQueryAsync();
+
+                // Get the updated attempt count for logging
+                const string countQuery = "SELECT FailedLoginAttempts FROM LoginAttempts WHERE Username = @Username";
+                using var countCmd = new SqlCommand(countQuery, conn);
+                countCmd.Parameters.AddWithValue("@Username", username);
+                var attempts = await countCmd.ExecuteScalarAsync();
+
+                await LogActionAsync(conn, "Login",
+                    $"Failed login attempt #{attempts} recorded for username '{username}'.", false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RecordFailedLoginAttemptAsync Error: {ex}");
+            }
+        }
+
+        public async Task ResetLoginAttemptsAsync(string username)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string query = @"
+            UPDATE LoginAttempts
+            SET FailedLoginAttempts = 0,
+                LockedOutUntil = NULL,
+                LastAttemptDate = GETDATE()
+            WHERE Username = @Username";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Username", username);
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    await LogActionAsync(conn, "Login",
+                        $"Login attempts reset for username '{username}' after successful login.", true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ResetLoginAttemptsAsync Error: {ex}");
+            }
+        }
+
+        public async Task UnlockAllAccountsAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string query = @"
+            UPDATE LoginAttempts
+            SET FailedLoginAttempts = 0,
+                LockedOutUntil = NULL,
+                LastAttemptDate = GETDATE()
+            WHERE FailedLoginAttempts > 0 OR LockedOutUntil IS NOT NULL";
+
+                using var cmd = new SqlCommand(query, conn);
+                int unlockedCount = await cmd.ExecuteNonQueryAsync();
+
+                await LogActionAsync(conn, "Unlock",
+                    $"Master unlock performed. {unlockedCount} account(s) unlocked.", true);
+
+                Debug.WriteLine($"Master unlock: {unlockedCount} accounts unlocked");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"UnlockAllAccountsAsync Error: {ex}");
+                throw;
+            }
         }
 
         #endregion
