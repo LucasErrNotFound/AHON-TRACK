@@ -129,7 +129,7 @@
 									</shadui:BreakpointView>
 
 									<!-- Extra large and down breakpoint (less than 1280 px). -->
-									<shadui:BreakpointView Breakpoint="Xl">
+									<shadui:BreakpointView Breakpoint="XlAndDown">
 										<UniformGrid Margin="-6,0" Columns="2">
 											<UniformGrid.Resources>
 												<LinearGradientBrush x:Key="GreenGradient" StartPoint="0%,50%" EndPoint="100%, 50%">
