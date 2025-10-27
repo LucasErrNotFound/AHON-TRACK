@@ -90,7 +90,7 @@
 													</Interaction.Behaviors>
 													<ItemsControl 
 														Margin="40,0,24,24"
-														ItemsSource="{CompiledBinding RecentActivity}">
+														ItemsSource="{CompiledBinding RecentActivities}">
 
 														<!-- Define the item container style -->
 														<ItemsControl.ItemsPanel>
