@@ -283,6 +283,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             disposableVm.Dispose();
         }
         currentWindow?.Close();
+        DisposeManagedResources();
     }
     
     private void OnProfilePictureUpdated()
