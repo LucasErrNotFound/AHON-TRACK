@@ -1,6 +1,8 @@
 ﻿using Avalonia;
 using Serilog;
 using System;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using QuestPDF.Infrastructure;
 
 namespace AHON_TRACK
@@ -48,10 +50,7 @@ namespace AHON_TRACK
             }
             catch (Exception e)
             {
-                var serviceProvider = new ServiceProvider();
-
-                var logger = serviceProvider.GetService<ILogger>();
-                logger.Fatal(e, "An unhandled exception occurred during bootstrapping the application.");
+                Debug.WriteLine(e, "An unhandled exception occurred during bootstrapping the application.");
             }
         }
 
