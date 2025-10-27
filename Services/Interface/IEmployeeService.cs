@@ -31,5 +31,12 @@ namespace AHON_TRACK.Services.Interface
 
         // Hashed Password
         Task<(bool Success, string Message, int? EmployeeId, string? Role)> AuthenticateUserAsync(string username, string password);
+
+        #region lockout
+        Task<(bool IsLocked, int AttemptsLeft, string Message)> CheckLockoutStatusAsync(string username);
+        Task RecordFailedLoginAttemptAsync(string username);
+        Task ResetLoginAttemptsAsync(string username);
+        Task UnlockAllAccountsAsync();
+        #endregion
     }
 }
