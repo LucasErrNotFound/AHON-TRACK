@@ -12,21 +12,21 @@ using HotAvalonia;
 using ShadUI;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("add-new-product")]
-public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters, IDisposable
+public partial class AddEditProductViewModel : ViewModelBase, INavigableWithParameters
 {
-    [ObservableProperty]
-    private ProductViewContext _viewContext = ProductViewContext.AddProduct;
-
-    [ObservableProperty]
+    [ObservableProperty] private ProductViewContext _viewContext = ProductViewContext.AddProduct;
+    
+    [ObservableProperty] 
     private string[] _productStatusItems = ["In Stock", "Out of Stock"];
     private string? _selectedProductStatusItem = "In Stock";
 
@@ -38,25 +38,16 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string[] _productSupplierItems = ["None"];
     private string? _selectedSupplierCategoryItem = "None";
 
+
+    [ObservableProperty] private byte[]? _productImageBytes;
+    [ObservableProperty] private bool _isPercentageModeOn;
+    [ObservableProperty] private bool _isSaving;
+    [ObservableProperty] private bool _isLoadingSuppliers;
+    [ObservableProperty] private Image? _productImageControl;
+    
     private Dictionary<string, int> _supplierNameToIdMap = new();
 
-    [ObservableProperty]
-    private byte[]? _productImageBytes;
-
-    [ObservableProperty]
-    private bool _isPercentageModeOn;
-
-    [ObservableProperty]
-    private bool _isSaving;
-
-    [ObservableProperty]
-    private bool _isLoadingSuppliers;
-
-    [ObservableProperty]
-    private Image? _productImageControl;
-
     private bool _suppliersLoaded = false;
-
     private int? _productID;
     private string? _productName = string.Empty;
     private string? _productSKU = string.Empty;
@@ -76,21 +67,28 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly IProductService _productService;
     private readonly ISupplierService _supplierService;
+    private readonly INavigationService _navigationService;
+    private readonly ILogger _logger;
     private bool _disposed = false;
 
     public string DiscountSymbol => IsPercentageModeOn ? "%" : "₱";
     public string DiscountFormat => IsPercentageModeOn ? "N2" : "N0";
 
-    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IProductService productService, ISupplierService supplierService)
+    public AddEditProductViewModel(DialogManager dialogManager, 
+        ToastManager toastManager, 
+        IProductService productService, 
+        ISupplierService supplierService,
+        INavigationService navigationService,
+        ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
         _productService = productService;
         _supplierService = supplierService;
+        _navigationService = navigationService;
+        _logger = logger;
 
         _ = LoadSuppliersAsync();
     }
@@ -99,11 +97,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _productService = null!;
         _supplierService = null!;
+        _navigationService = null!;
+        _logger = null!;
     }
 
+    /*
     [AvaloniaHotReload]
     public async Task Initialize()
     {
@@ -112,18 +112,44 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             await LoadSuppliersAsync();
         }
     }
+    */
     
-    public void Dispose()
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (_disposed) return;
+        ThrowIfDisposed();
+    
+        _logger?.LogInformation("Initializing AddEditProductViewModel");
 
-        // No event subscriptions to clean up in this ViewModel currently,
-        // but good practice to implement IDisposable
-        
-        _disposed = true;
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            if (!_suppliersLoaded)
+            {
+                await LoadSuppliersAsync(linkedCts.Token).ConfigureAwait(false);
+            }
+
+            _logger?.LogInformation("AddEditProductViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("AddEditProductViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing AddEditProductViewModel");
+        }
     }
 
-    private async Task LoadSuppliersAsync()
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from AddEditProduct");
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task LoadSuppliersAsync(CancellationToken cancellationToken = default)
     {
         if (_supplierService == null) return;
 
@@ -131,7 +157,9 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         try
         {
-            var result = await _supplierService.GetAllSuppliersAsync();
+            var result = await _supplierService.GetAllSuppliersAsync().ConfigureAwait(false);
+        
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (result.Success && result.Suppliers != null)
             {
@@ -171,11 +199,17 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("LoadSuppliersAsync cancelled");
+            throw;
+        }
         catch (Exception ex)
         {
             ProductSupplierItems = ["None"];
             SelectedProductSupplier = "None";
 
+            _logger?.LogError(ex, "Failed to load suppliers");
             _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to load suppliers: {ex.Message}")
                 .DismissOnClick()
@@ -191,19 +225,30 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     [RelayCommand]
     private async Task RefreshSuppliers()
     {
-        await LoadSuppliersAsync();
+        try
+        {
+            await LoadSuppliersAsync(LifecycleToken).ConfigureAwait(false);
 
-        _toastManager?.CreateToast("Suppliers Refreshed")
-            .WithContent("Supplier list has been updated")
-            .DismissOnClick()
-            .ShowSuccess();
+            _toastManager?.CreateToast("Suppliers Refreshed")
+                .WithContent("Supplier list has been updated")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing suppliers");
+        }
     }
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
     {
         if (!_suppliersLoaded)
         {
-            _ = LoadSuppliersAsync();
+            _ = LoadSuppliersAsync(LifecycleToken);
         }
 
         if (parameters.TryGetValue("Context", out var context))
@@ -220,15 +265,38 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     private async Task LoadSuppliersAndPopulateForm(ProductStock product)
     {
-        while (!_suppliersLoaded && IsLoadingSuppliers)
+        try
         {
-            await Task.Delay(50);
+            // Wait for suppliers to load with timeout
+            var timeout = TimeSpan.FromSeconds(5);
+            var startTime = DateTime.UtcNow;
+        
+            while (!_suppliersLoaded && IsLoadingSuppliers)
+            {
+                LifecycleToken.ThrowIfCancellationRequested();
+            
+                if (DateTime.UtcNow - startTime > timeout)
+                {
+                    _logger?.LogWarning("Timeout waiting for suppliers to load");
+                    break;
+                }
+            
+                await Task.Delay(50, LifecycleToken).ConfigureAwait(false);
+            }
+
+            PopulateFormWithProductData(product);
+
+            OnPropertyChanged(nameof(ProductCurrentStock));
+            OnPropertyChanged(nameof(CurrentStock));
         }
-
-        PopulateFormWithProductData(product);
-
-        OnPropertyChanged(nameof(ProductCurrentStock));
-        OnPropertyChanged(nameof(CurrentStock));
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("LoadSuppliersAndPopulateForm cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error loading suppliers and populating form");
+        }
     }
 
     [RelayCommand]
@@ -256,6 +324,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         IsSaving = true;
         try
         {
+            LifecycleToken.ThrowIfCancellationRequested();
+        
             int? supplierIdToSave = null;
             if (!string.IsNullOrEmpty(SelectedProductSupplier) && SelectedProductSupplier != "None")
             {
@@ -265,13 +335,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 }
             }
 
-            // ✅ FIX: Use null-coalescing to ensure 0 is treated as valid
-            int currentStock = ProductCurrentStock.HasValue ? ProductCurrentStock.Value : 0;
-            Console.WriteLine($"📦 Current Stock Value: {currentStock}");
-
+            int currentStock = ProductCurrentStock ?? 0;
             string calculatedStatus = currentStock > 0 ? "In Stock" : "Out Of Stock";
-
-            // ✅ FIX: Handle image bytes properly for update
             byte[]? imageBytesToSave = ProductImageBytes;
 
             var productModel = new ProductModel
@@ -285,33 +350,47 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 DiscountedPrice = ProductDiscountedPrice,
                 IsPercentageDiscount = IsPercentageModeOn,
                 ProductImageFilePath = _productImageFilePath,
-                ProductImageBytes = imageBytesToSave, // ✅ Pass the image bytes
+                ProductImageBytes = imageBytesToSave,
                 ExpiryDate = ProductExpiry,
                 Status = calculatedStatus,
                 Category = SelectedProductCategory ?? "None",
-                CurrentStock = currentStock // ✅ Explicitly 0 or positive
+                CurrentStock = currentStock
             };
-
-            Console.WriteLine($"💾 Saving product with Stock: {productModel.CurrentStock}, Status: {productModel.Status}");
 
             (bool success, string message, int? productId) result;
             if (ViewContext == ProductViewContext.EditProduct)
             {
-                var updateResult = await _productService.UpdateProductAsync(productModel);
+                var updateResult = await _productService.UpdateProductAsync(productModel)
+                    .ConfigureAwait(false);
                 result = (updateResult.Success, updateResult.Message, productModel.ProductID);
             }
             else
             {
-                result = await _productService.AddProductAsync(productModel);
+                result = await _productService.AddProductAsync(productModel)
+                    .ConfigureAwait(false);
             }
 
             if (result.success)
             {
+                _logger?.LogInformation("Product saved successfully: {ProductId}", result.productId);
                 PublishSwitchBack();
             }
+            else
+            {
+                _logger?.LogWarning("Failed to save product: {Message}", result.message);
+                _toastManager?.CreateToast("Save Failed")
+                    .WithContent(result.message)
+                    .DismissOnClick()
+                    .ShowError();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("Product save cancelled");
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error saving product");
             _toastManager?.CreateToast("Error")
                 .WithContent($"An unexpected error occurred: {ex.Message}")
                 .DismissOnClick()
@@ -412,15 +491,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         }
     }
 
-    private void PublishSwitchBack()
+    private async Task PublishSwitchBack()
     {
-        _pageManager.Navigate<ProductStockViewModel>(new Dictionary<string, object>
+        await _navigationService.NavigateAsync<ProductStockViewModel>(new Dictionary<string, object>
         {
             { "ShouldRefresh", true }
         });
     }
 
-    private void CancelSwitchBack()
+    private async Task CancelSwitchBack()
     {
         var toastTitle = ViewContext == ProductViewContext.EditProduct
             ? "Edit Cancelled"
@@ -434,7 +513,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             .WithContent(toastMessage)
             .DismissOnClick()
             .ShowWarning();
-        _pageManager.Navigate<ProductStockViewModel>();
+        
+        await _navigationService.NavigateAsync<ProductStockViewModel>();
     }
 
     private void PopulateFormWithProductData(ProductStock product)
@@ -493,6 +573,17 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 ProductImageFilePath = product.Poster;
             }
         }
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing AddEditProductViewModel");
+    
+        // Clear any loaded data
+        _supplierNameToIdMap.Clear();
+        ProductImageBytes = null;
+    
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 
     public string ViewTitle => ViewContext switch

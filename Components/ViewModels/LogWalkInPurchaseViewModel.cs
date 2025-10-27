@@ -9,16 +9,25 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using AHON_TRACK.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("walk-in-purchase")]
-public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 {
+    private readonly DialogManager _dialogManager;
+    private readonly ToastManager _toastManager;
+    private readonly IWalkInService _walkInService;
+    private readonly INavigationService _navigationService;
+    private readonly ILogger _logger;
+
     [ObservableProperty]
     private string[] _middleInitialItems = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
@@ -53,12 +62,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     [ObservableProperty]
     private List<SellingModel> _availablePackages = new();
 
-    public int? LastRegisteredCustomerID { get; private set; }
+    [ObservableProperty] 
+    private bool _isInitialized;
 
-    private readonly DialogManager _dialogManager;
-    private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
-    private readonly IWalkInService _walkInService;
+    public int? LastRegisteredCustomerID { get; private set; }
 
     public bool IsCashVisible => IsCashSelected;
     public bool IsGCashVisible => IsGCashSelected;
@@ -69,78 +76,138 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     private bool _isGCashSelected;
     private bool _isMayaSelected;
 
-    public LogWalkInPurchaseViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IWalkInService walkInService)
+    public LogWalkInPurchaseViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager, 
+        IWalkInService walkInService,
+        INavigationService navigationService,
+        ILogger logger)
     {
-        _dialogManager = dialogManager;
-        _toastManager = toastManager;
-        _pageManager = pageManager;
-        _walkInService = walkInService;
-        _ = LoadAvailablePackagesAsync();
+        _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
+        _walkInService = walkInService ?? throw new ArgumentNullException(nameof(walkInService));
+        _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public LogWalkInPurchaseViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
+        _navigationService = null!;
         _walkInService = null!;
+        _logger = null!;
     }
+
+    #region INavigable Implementation
+
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        
+        if (IsInitialized)
+        {
+            _logger.LogDebug("LogWalkInPurchaseViewModel already initialized");
+            return;
+        }
+
+        _logger.LogInformation("Initializing LogWalkInPurchaseViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            await LoadAvailablePackagesAsync(linkedCts.Token).ConfigureAwait(false);
+
+            IsInitialized = true;
+            _logger.LogInformation("LogWalkInPurchaseViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("LogWalkInPurchaseViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing LogWalkInPurchaseViewModel");
+            _toastManager.CreateToast("Initialization Error")
+                .WithContent("Failed to load walk-in purchase page")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from LogWalkInPurchase");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
+
+    /*
+    #region HotAvalonia Support
 
     [AvaloniaHotReload]
     public async void Initialize()
     {
-        await LoadAvailablePackagesAsync();
+        await InitializeAsync(LifecycleToken).ConfigureAwait(false);
     }
 
-    private async Task LoadAvailablePackagesAsync()
+    #endregion
+    */
+
+    private async Task LoadAvailablePackagesAsync(CancellationToken cancellationToken = default)
     {
-        System.Diagnostics.Debug.WriteLine("🔄 LoadAvailablePackagesAsync started");
+        _logger.LogDebug("LoadAvailablePackagesAsync started");
 
         if (_walkInService == null)
         {
-            System.Diagnostics.Debug.WriteLine("❌ WalkInService is null");
+            _logger.LogWarning("WalkInService is null");
             return;
         }
 
-        System.Diagnostics.Debug.WriteLine("✅ WalkInService is not null");
-
         try
         {
-            System.Diagnostics.Debug.WriteLine("📡 Calling GetAvailablePackagesForWalkInAsync...");
-            var packages = await _walkInService.GetAvailablePackagesForWalkInAsync();
-            System.Diagnostics.Debug.WriteLine($"📦 Received {packages?.Count ?? 0} packages");
+            _logger.LogDebug("Calling GetAvailablePackagesForWalkInAsync...");
+            var packages = await _walkInService.GetAvailablePackagesForWalkInAsync()
+                .ConfigureAwait(false);
+            
+            _logger.LogDebug("Received {Count} packages", packages?.Count ?? 0);
 
             if (packages == null || packages.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine("⚠️ No packages returned from database");
-                SpecializedPackageItems = new[] { "None" };
+                _logger.LogWarning("No packages returned from database");
+                SpecializedPackageItems = ["None"];
                 return;
             }
 
             AvailablePackages = packages;
-            System.Diagnostics.Debug.WriteLine($"✅ AvailablePackages set with {packages.Count} items");
+            _logger.LogDebug("AvailablePackages set with {Count} items", packages.Count);
 
             // Update SpecializedPackageItems to show package names
             var packageNames = new List<string> { "None" };
             packageNames.AddRange(packages.Select(p => p.Title ?? "Unknown"));
 
-            System.Diagnostics.Debug.WriteLine($"📋 Package names: {string.Join(", ", packageNames)}");
+            _logger.LogDebug("Package names: {Names}", string.Join(", ", packageNames));
 
             SpecializedPackageItems = packageNames.ToArray();
-            System.Diagnostics.Debug.WriteLine($"✅ SpecializedPackageItems updated with {SpecializedPackageItems.Length} items");
+            _logger.LogDebug("SpecializedPackageItems updated with {Count} items", SpecializedPackageItems.Length);
 
             // Force UI update
             OnPropertyChanged(nameof(SpecializedPackageItems));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"❌ Error loading packages: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            _logger.LogError(ex, "Error loading packages");
             _toastManager?.CreateToast("Load Error")
                 .WithContent($"Failed to load packages: {ex.Message}")
                 .ShowError();
         }
     }
+
+    #region Validated Properties
 
     [Required(ErrorMessage = "First name is required")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
@@ -311,23 +378,19 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
     }
 
-    public bool IsQuantityVisible
-    {
-        get
-        {
-            return !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
-                   SelectedSpecializedPackageItem != "None";
-        }
-    }
+    #endregion
+
+    #region Computed Properties
+
+    public bool IsQuantityVisible => !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
+                                     SelectedSpecializedPackageItem != "None";
 
     public bool IsQuantityEditable
     {
         get
         {
-            // Quantity is not editable for Free Trial (always 1)
             var isEditable = SelectedWalkInTypeItem != "Free Trial" && IsQuantityVisible;
 
-            // Update helper message
             if (SelectedWalkInTypeItem == "Free Trial" && IsQuantityVisible)
             {
                 QuantityHelperMessage = "ℹ️ Free Trial customers are limited to 1 session only";
@@ -442,19 +505,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
     }
 
-    public bool IsPackageDetailsVisible
-    {
-        get
-        {
-            return !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
-                   SelectedSpecializedPackageItem != "None";
-        }
-    }
+    public bool IsPackageDetailsVisible => !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
+                                           SelectedSpecializedPackageItem != "None";
 
-    public bool IsPlanVisible
-    {
-        get { return !string.IsNullOrEmpty(SelectedWalkInTypeItem); }
-    }
+    public bool IsPlanVisible => !string.IsNullOrEmpty(SelectedWalkInTypeItem);
 
     public string SessionQuantity
     {
@@ -465,7 +519,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
 
             int quantity = SpecializedPackageQuantity.Value;
 
-            // Add Free Trial indicator
             if (SelectedWalkInTypeItem == "Free Trial")
             {
                 return $"{quantity} Session (Free Trial - Limited to 1)";
@@ -496,6 +549,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
             return hasValidInputs && hasValidQuantity && hasPaymentMethod && !IsProcessing;
         }
     }
+
+    #endregion
 
     private async Task CheckFreeTrialEligibilityAsync()
     {
@@ -530,12 +585,12 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error checking free trial eligibility: {ex.Message}");
+            _logger.LogWarning(ex, "Error checking free trial eligibility");
         }
     }
 
-    #region Getting package details
-    // Add this property to get the selected package object
+    #region Package Details
+
     public SellingModel? SelectedPackage
     {
         get
@@ -549,149 +604,102 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
     }
 
-    // Package name display
-    public string PackageName
-    {
-        get
-        {
-            var package = SelectedPackage;
-            return package?.Title ?? "No Package Selected";
-        }
-    }
+    public string PackageName => SelectedPackage?.Title ?? "No Package Selected";
 
-    // Single package price
     public string PackageUnitPrice
     {
         get
         {
             var package = SelectedPackage;
             if (package == null) return "₱0.00";
-
-            if (SelectedWalkInTypeItem == "Free Trial")
-                return "₱0.00";
-
+            if (SelectedWalkInTypeItem == "Free Trial") return "₱0.00";
             return $"₱{package.Price:N2}";
         }
     }
 
-    // Package subtotal (price × quantity)
     public string PackageSubtotal
     {
         get
         {
             var package = SelectedPackage;
-            if (package == null || !SpecializedPackageQuantity.HasValue)
-                return "₱0.00";
-
-            if (SelectedWalkInTypeItem == "Free Trial")
-                return "₱0.00";
+            if (package == null || !SpecializedPackageQuantity.HasValue) return "₱0.00";
+            if (SelectedWalkInTypeItem == "Free Trial") return "₱0.00";
             decimal subtotal = package.Price * SpecializedPackageQuantity.Value;
             return $"₱{subtotal:N2}";
         }
     }
 
-    // Package discount (currently 0%)
-    public string PackageDiscount
-    {
-        get
-        {
-            return "-₱0";
-        }
-    }
+    public string PackageDiscount => "-₱0";
 
-    // Package total after discount
     public string PackageTotal
     {
         get
         {
             var package = SelectedPackage;
-            if (package == null || !SpecializedPackageQuantity.HasValue)
-                return "₱0.00";
-            if (SelectedWalkInTypeItem == "Free Trial")
-                return "₱0.00";
+            if (package == null || !SpecializedPackageQuantity.HasValue) return "₱0.00";
+            if (SelectedWalkInTypeItem == "Free Trial") return "₱0.00";
             decimal total = package.Price * SpecializedPackageQuantity.Value;
             return $"₱{total:N2}";
         }
     }
 
-
-    // Purchase Summary - Package amount
     public string PurchaseSummaryPackage
     {
         get
         {
             var package = SelectedPackage;
-            if (package == null || !SpecializedPackageQuantity.HasValue)
-                return "₱0.00";
-
-            if (SelectedWalkInTypeItem == "Free Trial")
-                return "₱0.00";
+            if (package == null || !SpecializedPackageQuantity.HasValue) return "₱0.00";
+            if (SelectedWalkInTypeItem == "Free Trial") return "₱0.00";
             decimal amount = package.Price * SpecializedPackageQuantity.Value;
             return $"₱{amount:N2}";
         }
     }
 
-    // Purchase Summary - Subtotal
     public string PurchaseSummarySubtotal
     {
         get
         {
             decimal packageAmount = 0;
-
             var package = SelectedPackage;
             if (package != null && SpecializedPackageQuantity.HasValue)
             {
                 packageAmount = package.Price * SpecializedPackageQuantity.Value;
             }
-            if (SelectedWalkInTypeItem == "Free Trial")
-                return "₱0.00";
-
-            decimal subtotal = packageAmount;
-            return $"₱{subtotal:N2}";
+            if (SelectedWalkInTypeItem == "Free Trial") return "₱0.00";
+            return $"₱{packageAmount:N2}";
         }
     }
 
-    // Total Amount (same as subtotal for now)
     public string TotalAmount
     {
         get
         {
             decimal packageAmount = 0;
-
             var package = SelectedPackage;
             if (package != null && SpecializedPackageQuantity.HasValue)
             {
                 packageAmount = package.Price * SpecializedPackageQuantity.Value;
             }
-            if (SelectedWalkInTypeItem == "Free Trial")
-                return "₱0.00";
-
-            decimal total = packageAmount;
-            return $"₱{total:N2}";
+            if (SelectedWalkInTypeItem == "Free Trial") return "₱0.00";
+            return $"₱{packageAmount:N2}";
         }
     }
 
-    // Grand total for Pay button
     public string GrandTotal
     {
         get
         {
             decimal packageAmount = 0;
-
             var package = SelectedPackage;
             if (package != null && SpecializedPackageQuantity.HasValue)
             {
                 packageAmount = package.Price * SpecializedPackageQuantity.Value;
             }
-            if (SelectedWalkInTypeItem == "Free Trial")
-                return "₱0.00";
-
-            decimal total = packageAmount;
-            return $"Pay ₱{total:N2}";
+            if (SelectedWalkInTypeItem == "Free Trial") return "₱0.00";
+            return $"Pay ₱{packageAmount:N2}";
         }
     }
 
-    // Selected payment method display
     public string SelectedPaymentMethod
     {
         get
@@ -703,33 +711,19 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
     }
 
-    // Current Date
     public string CurrentDate => DateTime.Now.ToString("MMMM dd, yyyy");
-
-    // Current Time
     public string CurrentTime => DateTime.Now.ToString("h:mm tt");
-
-    // Transaction ID (you can generate this based on your requirements)
     public string TransactionID => $"TX-{DateTime.Now:yyyy-MMdd}-{new Random().Next(1000, 9999)}";
-
-    // Walk-in validity dates
     public string ValidFromDate => DateTime.Now.ToString("MMMM dd, yyyy");
+    public string ValidUntilDate => DateTime.Now.ToString("MMMM dd, yyyy");
 
-    public string ValidUntilDate
-    {
-        get
-        {
-            // For 1-day pass, valid until end of the same day
-            // You can adjust this based on your business logic
-            return DateTime.Now.ToString("MMMM dd, yyyy");
-        }
-    }
-
-    #endregion  
+    #endregion
 
     [RelayCommand]
     private async Task PaymentAsync()
     {
+        ThrowIfDisposed();
+
         if (_walkInService == null)
         {
             _toastManager.CreateToast("Service Unavailable")
@@ -744,13 +738,11 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         {
             IsProcessing = true;
 
-            // Get selected payment method
             string paymentMethod = IsCashSelected ? "Cash"
                 : IsGCashSelected ? "GCash"
                 : IsMayaSelected ? "Maya"
                 : "Cash";
 
-            // Create walk-in model
             var walkIn = new ManageWalkInModel
             {
                 FirstName = WalkInFirstName,
@@ -763,28 +755,29 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
                 WalkInPackage = SelectedSpecializedPackageItem,
                 PaymentMethod = paymentMethod,
                 Quantity = SelectedSpecializedPackageItem != "None" ? SpecializedPackageQuantity : null
-
             };
 
-            // Register walk-in customer
+            _logger.LogInformation("Registering walk-in customer: {FirstName} {LastName}", 
+                WalkInFirstName, WalkInLastName);
+
             var (success, message, customerId) = await _walkInService.AddWalkInCustomerAsync(walkIn);
 
             if (success)
             {
+                _logger.LogInformation("Walk-in customer registered successfully with ID: {CustomerId}", customerId);
+                
                 _toastManager.CreateToast("Payment Successful!")
                     .WithContent($"Walk-in customer registered with ID: {customerId}")
                     .DismissOnClick()
                     .ShowSuccess();
 
-                // Clear form
                 ClearForm();
-
-                //GoBack to previous page
-                _pageManager.Navigate<CheckInOutViewModel>();
-
+                await _navigationService.NavigateAsync<CheckInOutViewModel>();
             }
             else
             {
+                _logger.LogWarning("Failed to register walk-in customer: {Message}", message);
+                
                 _toastManager.CreateToast("Registration Failed")
                     .WithContent(message)
                     .DismissOnClick()
@@ -793,6 +786,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error processing walk-in payment");
+            
             _toastManager.CreateToast("Error")
                 .WithContent($"An error occurred: {ex.Message}")
                 .ShowError();
@@ -820,10 +815,14 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         HasFreeTrialWarning = false;
         FreeTrialWarningMessage = string.Empty;
 
-        // Reset transaction ID for new transaction
         OnPropertyChanged(nameof(TransactionID));
+        
+        _logger.LogDebug("Walk-in purchase form cleared");
     }
 
+    [GeneratedRegex(@"^09\d{9}$")]
+    private static partial Regex ContactNumberRegex();
+    
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected new virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -839,6 +838,20 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         return true;
     }
 
-    [GeneratedRegex(@"^09\d{9}$")]
-    private static partial Regex ContactNumberRegex();
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing LogWalkInPurchaseViewModel");
+
+        // Clear collections
+        AvailablePackages.Clear();
+
+        // Clear validation errors
+        ClearAllErrors();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }

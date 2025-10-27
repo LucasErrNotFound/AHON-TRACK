@@ -22,6 +22,6 @@ public partial class SettingsDialogCard : UserControl
         vm.DataRecoveryTextBoxControl = this.FindControl<TextBox>("RecoverDataTextBox");
         
         // Reload settings after controls are assigned
-        await vm.Initialize();
+        await vm.InitializeAsync().ConfigureAwait(false);
     }
 }

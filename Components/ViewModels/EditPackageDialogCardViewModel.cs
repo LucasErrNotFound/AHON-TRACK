@@ -9,8 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
+using AHON_TRACK.Services.Interface;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -27,6 +30,8 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     [ObservableProperty]
     private string[] _durationItems = ["/Month", "/Session", "/One-time only"];
     private string _selectedDurationItem = string.Empty;
+    
+    [ObservableProperty] private bool _isInitialized;
 
     private int _packageId;
     private string _packageName = string.Empty;
@@ -51,61 +56,131 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
+    private readonly ILogger _logger;
 
-    public EditPackageDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public EditPackageDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
+        _logger = logger;
     }
 
     public EditPackageDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
+        _logger = null!;
     }
 
+    /*
     [AvaloniaHotReload]
     public void Initialize()
     {
+    }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("EditPackageDialogCardViewModel already initialized");
+            return;
+        }
+
+        _logger?.LogInformation("Initializing EditPackageDialogCardViewModel");
+
+        try
+        {
+            await Task.Yield(); // Ensure async context
+        
+            IsInitialized = true;
+            _logger?.LogInformation("EditPackageDialogCardViewModel initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing EditPackageDialogCardViewModel");
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from EditPackageDialog");
+        return ValueTask.CompletedTask;
     }
 
     [RelayCommand]
     private void Cancel()
     {
-        _dialogManager.Close(this);
+        try
+        {
+            _logger?.LogDebug("Package edit cancelled");
+            _dialogManager.Close(this);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during cancel");
+        }
     }
 
     [RelayCommand]
     private void Delete()
     {
-        IsDeleteAction = true;
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+        try
+        {
+            _logger?.LogInformation("Package {PackageId} marked for deletion", PackageId);
+            IsDeleteAction = true;
+            _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during delete");
+        }
     }
 
+    
     [RelayCommand]
-    private void SaveDetails()
+    private Task SaveDetails()
     {
-        ValidateAllProperties();
-
-        if (EnableDiscount)
+        try
         {
-            ValidateProperty(ValidFrom, nameof(ValidFrom));
-            ValidateProperty(ValidTo, nameof(ValidTo));
-            ValidateProperty(DiscountValue, nameof(DiscountValue));
+            ValidateAllProperties();
+
+            if (EnableDiscount)
+            {
+                ValidateProperty(ValidFrom, nameof(ValidFrom));
+                ValidateProperty(ValidTo, nameof(ValidTo));
+                ValidateProperty(DiscountValue, nameof(DiscountValue));
+            }
+            else
+            {
+                ClearErrors(nameof(ValidFrom));
+                ClearErrors(nameof(ValidTo));
+                ClearErrors(nameof(DiscountValue));
+            }
+
+            if (HasErrors)
+            {
+                _logger?.LogWarning("Package edit validation failed");
+                return Task.CompletedTask;
+            }
+
+            _logger?.LogInformation("Saving package {PackageId}: {PackageName}", PackageId, PackageName);
+            IsDeleteAction = false;
+            _dialogManager.Close(this, new CloseDialogOptions { Success = true });
         }
-        else
+        catch (Exception ex)
         {
-            ClearErrors(nameof(ValidFrom));
-            ClearErrors(nameof(ValidTo));
-            ClearErrors(nameof(DiscountValue));
+            _logger?.LogError(ex, "Error saving package details");
+            _toastManager?.CreateToast("Error")
+                .WithContent($"An error occurred: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
 
-        if (HasErrors) return;
-        IsDeleteAction = false;
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+        return Task.CompletedTask;
     }
 
     public int PackageId
@@ -188,9 +263,16 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         set
         {
             if (!SetField(ref _enableDiscount, value)) return;
+        
             OnPropertyChanged(nameof(IsDiscountEnabled));
 
-            if (value) return;
+            if (value)
+            {
+                _logger?.LogDebug("Discount enabled for package {PackageId}", PackageId);
+                return;
+            }
+        
+            // Clear discount fields when disabled
             DiscountValue = null;
             ValidFrom = null;
             ValidTo = null;
@@ -198,6 +280,8 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             ClearErrors(nameof(DiscountValue));
             ClearErrors(nameof(ValidFrom));
             ClearErrors(nameof(ValidTo));
+        
+            _logger?.LogDebug("Discount disabled and fields cleared for package {PackageId}", PackageId);
         }
     }
 
@@ -306,91 +390,128 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
 
     public void PopulateFromPackage(Package package)
     {
-        PackageId = package.PackageId;
-        PackageName = package.Title;
-        Description = package.Description;
-        Price = package.Price;
-        SelectedDurationItem = package.Duration; // Now uses SelectedDurationItem from main
-
-        // Populate features (up to 5)
-        FeatureDescription1 = package.Features.Count > 0 ? package.Features[0] : string.Empty;
-        FeatureDescription2 = package.Features.Count > 1 ? package.Features[1] : string.Empty;
-        FeatureDescription3 = package.Features.Count > 2 ? package.Features[2] : string.Empty;
-        FeatureDescription4 = package.Features.Count > 3 ? package.Features[3] : string.Empty;
-        FeatureDescription5 = package.Features.Count > 4 ? package.Features[4] : string.Empty;
-
-        // Populate discount settings
-        EnableDiscount = package.IsDiscountChecked;
-        DiscountValue = package.DiscountValue;
-        SelectedDiscountForItem = package.SelectedDiscountFor;
-        if (!string.IsNullOrEmpty(package.SelectedDiscountType))
+        try
         {
-            SelectedDiscountTypeItem = package.SelectedDiscountType.ToLower() switch
+            _logger?.LogDebug("Populating dialog with package {PackageId}: {PackageName}", 
+                package.PackageId, package.Title);
+        
+            PackageId = package.PackageId;
+            PackageName = package.Title;
+            Description = package.Description;
+            Price = package.Price;
+            SelectedDurationItem = package.Duration;
+
+            // Populate features (up to 5)
+            FeatureDescription1 = package.Features.Count > 0 ? package.Features[0] : string.Empty;
+            FeatureDescription2 = package.Features.Count > 1 ? package.Features[1] : string.Empty;
+            FeatureDescription3 = package.Features.Count > 2 ? package.Features[2] : string.Empty;
+            FeatureDescription4 = package.Features.Count > 3 ? package.Features[3] : string.Empty;
+            FeatureDescription5 = package.Features.Count > 4 ? package.Features[4] : string.Empty;
+
+            // Populate discount settings
+            EnableDiscount = package.IsDiscountChecked;
+            DiscountValue = package.DiscountValue;
+            SelectedDiscountForItem = package.SelectedDiscountFor;
+        
+            if (!string.IsNullOrEmpty(package.SelectedDiscountType))
             {
-                "percentage" => "Percentage (%)",
-                "fixed" => "Fixed Amount (₱)",
-                _ => "Percentage (%)"
-            };
-        }
-        else
-        {
-            SelectedDiscountTypeItem = "Percentage (%)";
-        }
-        ValidFrom = package.DiscountValidFrom;
-        ValidTo = package.DiscountValidTo;
+                SelectedDiscountTypeItem = package.SelectedDiscountType.ToLower() switch
+                {
+                    "percentage" => "Percentage (%)",
+                    "fixed" => "Fixed Amount (₱)",
+                    _ => "Percentage (%)"
+                };
+            }
+            else
+            {
+                SelectedDiscountTypeItem = "Percentage (%)";
+            }
+        
+            ValidFrom = package.DiscountValidFrom;
+            ValidTo = package.DiscountValidTo;
 
-        ClearAllErrors();
+            ClearAllErrors();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error populating package data");
+            _toastManager?.CreateToast("Error")
+                .WithContent("Failed to load package data")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
 
     public PackageModel ToPackageModel(int packageId)
     {
-        // Get discount information
-        decimal discountAmount = 0;
-        string discountType = "none";
-        string discountFor = "";
-        decimal originalPrice = Price ?? 0;
-        decimal discountedPrice = originalPrice;
-
-        if (EnableDiscount && DiscountValue.HasValue)
+        try
         {
-            discountAmount = DiscountValue.Value;
-            discountType = SelectedDiscountTypeItem == "Percentage (%)" ? "percentage" : "fixed";
-            discountFor = SelectedDiscountForItem;
+            // Get discount information
+            decimal discountAmount = 0;
+            string discountType = "none";
+            string discountFor = "";
+            decimal originalPrice = Price ?? 0;
+            decimal discountedPrice = originalPrice;
 
-            // Calculate discounted price
-            if (discountType == "percentage")
+            if (EnableDiscount && DiscountValue.HasValue)
             {
-                discountedPrice = originalPrice - (originalPrice * discountAmount / 100);
+                discountAmount = DiscountValue.Value;
+                discountType = SelectedDiscountTypeItem == "Percentage (%)" ? "percentage" : "fixed";
+                discountFor = SelectedDiscountForItem;
+
+                // Calculate discounted price
+                if (discountType == "percentage")
+                {
+                    discountedPrice = originalPrice - (originalPrice * discountAmount / 100);
+                }
+                else // fixed amount
+                {
+                    discountedPrice = originalPrice - discountAmount;
+                    if (discountedPrice < 0) discountedPrice = 0;
+                }
+
+                _logger?.LogDebug("Package discount: {Type} - {Amount}, Final price: {Price}", 
+                    discountType, discountAmount, discountedPrice);
             }
-            else // fixed amount
+
+            // Convert DateOnly to DateTime
+            DateTime validFromDate = ValidFrom?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Now;
+            DateTime validToDate = ValidTo?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Now.AddDays(365);
+
+            return new PackageModel
             {
-                discountedPrice = originalPrice - discountAmount;
-                if (discountedPrice < 0) discountedPrice = 0;
-            }
+                packageID = packageId,
+                packageName = PackageName?.Trim() ?? string.Empty,
+                description = Description?.Trim() ?? string.Empty,
+                price = originalPrice,
+                duration = SelectedDurationItem?.Trim() ?? string.Empty,
+                features1 = FeatureDescription1?.Trim() ?? string.Empty,
+                features2 = FeatureDescription2?.Trim() ?? string.Empty,
+                features3 = FeatureDescription3?.Trim() ?? string.Empty,
+                features4 = FeatureDescription4?.Trim() ?? string.Empty,
+                features5 = FeatureDescription5?.Trim() ?? string.Empty,
+                discount = discountAmount,
+                discountType = discountType,
+                discountFor = discountFor,
+                discountedPrice = discountedPrice,
+                validFrom = validFromDate,
+                validTo = validToDate
+            };
         }
-
-        // Convert DateOnly to DateTime
-        DateTime validFromDate = ValidFrom?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Now;
-        DateTime validToDate = ValidTo?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Now.AddDays(365);
-
-        return new PackageModel
+        catch (Exception ex)
         {
-            packageID = packageId,
-            packageName = PackageName?.Trim() ?? string.Empty,
-            description = Description?.Trim() ?? string.Empty,
-            price = originalPrice,
-            duration = SelectedDurationItem?.Trim() ?? string.Empty, // Now uses SelectedDurationItem
-            features1 = FeatureDescription1?.Trim() ?? string.Empty,
-            features2 = FeatureDescription2?.Trim() ?? string.Empty,
-            features3 = FeatureDescription3?.Trim() ?? string.Empty,
-            features4 = FeatureDescription4?.Trim() ?? string.Empty,
-            features5 = FeatureDescription5?.Trim() ?? string.Empty,
-            discount = discountAmount,
-            discountType = discountType,
-            discountFor = discountFor,
-            discountedPrice = discountedPrice,
-            validFrom = validFromDate,
-            validTo = validToDate
-        };
+            _logger?.LogError(ex, "Error converting to package model");
+            return null;
+        }
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing EditPackageDialogCardViewModel");
+
+        // Clear fields
+        ClearAllFields();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 }

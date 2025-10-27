@@ -3,7 +3,6 @@ using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using HotAvalonia;
 using ShadUI;
 using System;
 using System.Collections.Generic;
@@ -12,6 +11,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AHON_TRACK.Converters;
 using Avalonia.Controls;
@@ -19,6 +19,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using AHON_TRACK.Services.Events;
+using HotAvalonia;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -32,18 +34,14 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
     [ObservableProperty]
     private string _dialogDescription = "Please fill out the form to edit this gym member's information";
-
-    [ObservableProperty]
-    private bool _isEditMode = false;
-
-    [ObservableProperty]
-    private int _currentMemberId = 0;
-
-    [ObservableProperty]
-    private Image? _memberProfileImageControl;
-
-    [ObservableProperty]
-    private Bitmap? _profileImageSource;
+    
+    [ObservableProperty] private bool _isEditMode = false;
+    [ObservableProperty] private int _currentMemberId = 0;
+    [ObservableProperty] private Image? _memberProfileImageControl;
+    [ObservableProperty] private Bitmap? _profileImageSource;
+    
+    [ObservableProperty] private bool _isInitialized;
+    [ObservableProperty] private bool _isLoading;
 
     // Personal Details Section
     private string _memberFirstName = string.Empty;
@@ -62,10 +60,10 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly IMemberService _memberService;
+    private readonly ILogger _logger;
 
-    private List<PackageModel> _memberPackageModels = new();
+    private List<PackageModel> _memberPackageModels = [];
 
     public DateTime? MemberDateJoined
     {
@@ -193,40 +191,83 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         }
     }
 
-    public MemberDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IMemberService memberService)
+    public MemberDialogCardViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager, 
+        IMemberService memberService,
+        ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
         _memberService = memberService;
+        _logger = logger;
     }
 
     public MemberDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _memberService = null!;
+        _logger = null!;
     }
 
+    /*
     [AvaloniaHotReload]
     public async Task Initialize()
     {
         IsEditMode = false;
         DialogTitle = "Edit Gym Member Details";
+        DialogDescription = "Please fill out the form to edit this gym member's information";
+    }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("MemberDialogCardViewModel already initialized");
+            return;
+        }
+
+        _logger?.LogInformation("Initializing MemberDialogCardViewModel");
+
+        try
+        {
+            await Task.Yield(); // Ensure async context
+        
+            IsEditMode = false;
+            DialogTitle = "Edit Gym Member Details";
+            DialogDescription = "Please fill out the form to edit this gym member's information";
+        
+            IsInitialized = true;
+            _logger?.LogInformation("MemberDialogCardViewModel initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing MemberDialogCardViewModel");
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from MemberDialog");
+        return ValueTask.CompletedTask;
     }
 
     // Overload to accept string (for backward compatibility)
-    public async Task PopulateWithMemberDataAsync(string memberId)
+    public async Task PopulateWithMemberDataAsync(string memberId, CancellationToken cancellationToken = default)
     {
         if (int.TryParse(memberId, out int id))
         {
-            await PopulateWithMemberDataAsync(id);
+            await PopulateWithMemberDataAsync(id, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            Debug.WriteLine($"[PopulateWithMemberData] Invalid member ID: {memberId}");
-            _toastManager.CreateToast("Invalid ID")
+            _logger?.LogWarning("Invalid member ID: {MemberId}", memberId);
+            _toastManager?.CreateToast("Invalid ID")
                 .WithContent("The member ID is not valid.")
                 .DismissOnClick()
                 .ShowError();
@@ -234,23 +275,33 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     }
 
     // Primary method accepting int
-    public async Task PopulateWithMemberDataAsync(int memberId)
+    public async Task PopulateWithMemberDataAsync(int memberId, CancellationToken cancellationToken = default)
     {
         CurrentMemberId = memberId;
 
         if (_memberService == null)
         {
-            Debug.WriteLine("[PopulateWithMemberData] MemberService is null");
+            _logger?.LogWarning("MemberService is null");
             return;
         }
 
+        IsLoading = true;
+
         try
         {
-            var result = await _memberService.GetMemberByIdAsync(memberId);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            var result = await _memberService.GetMemberByIdAsync(memberId)
+                .ConfigureAwait(false);
+
+            linkedCts.Token.ThrowIfCancellationRequested();
 
             if (!result.Success || result.Member == null)
             {
-                Debug.WriteLine($"[PopulateWithMemberData] Failed to load member: {result.Message}");
+                _logger?.LogWarning("Failed to load member {MemberId}: {Message}", 
+                    memberId, result.Message);
+            
                 _toastManager?.CreateToast("Load Error")
                     .WithContent(result.Message)
                     .DismissOnClick()
@@ -265,10 +316,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             MemberLastName = memberData.LastName ?? string.Empty;
             MemberGender = memberData.Gender ?? string.Empty;
             MemberContactNumber = memberData.ContactNumber?.Replace(" ", "") ?? string.Empty;
-
-            // Set the package name for display
             MemberPackages = memberData.MembershipType ?? string.Empty;
-
             MemberAge = memberData.Age;
             MemberBirthDate = memberData.DateOfBirth;
             MemberStatus = memberData.Status ?? "Active";
@@ -281,6 +329,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                     MemberValidUntil = validUntilDate;
                 }
             }
+
             if (memberData.AvatarSource != null)
             {
                 ProfileImageSource = memberData.AvatarSource;
@@ -293,15 +342,24 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
             IsEditMode = true;
 
-            Debug.WriteLine($"[PopulateWithMemberData] Loaded member: {memberData.MembershipType}");
+            _logger?.LogInformation("Loaded member {MemberId}: {Name}, Package: {Package}", 
+                memberId, $"{MemberFirstName} {MemberLastName}", MemberPackages);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("PopulateWithMemberDataAsync cancelled for member {MemberId}", memberId);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[PopulateWithMemberData] Error: {ex.Message}");
-            _toastManager.CreateToast("Load Error")
+            _logger?.LogError(ex, "Error loading member {MemberId}", memberId);
+            _toastManager?.CreateToast("Load Error")
                 .WithContent($"Failed to load member data: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
@@ -319,6 +377,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     {
         try
         {
+            LifecycleToken.ThrowIfCancellationRequested();
+        
             var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
                 ? desktop.MainWindow
                 : null;
@@ -332,7 +392,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 [
                     new FilePickerFileType("Image Files")
                     {
-                        Patterns = ["*.png", "*.jpg"]
+                        Patterns = ["*.png", "*.jpg", "*.jpeg"]
                     },
                     new FilePickerFileType("All Files")
                     {
@@ -344,14 +404,12 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             if (files.Count > 0)
             {
                 var selectedFile = files[0];
-                _toastManager.CreateToast("Image file selected")
+                _toastManager?.CreateToast("Image file selected")
                     .WithContent($"{selectedFile.Name}")
                     .DismissOnClick()
                     .ShowInfo();
 
-                var file = files[0];
-                await using var stream = await file.OpenReadAsync();
-
+                await using var stream = await selectedFile.OpenReadAsync();
                 var bitmap = new Bitmap(stream);
 
                 // Update UI control if present
@@ -368,13 +426,17 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 ProfileImage = memoryStream.ToArray();
                 ProfileImageSource = bitmap;
 
-                Debug.WriteLine($"✅ Profile image loaded: {ProfileImage.Length} bytes");
+                _logger?.LogDebug("Profile image loaded: {Size} bytes", ProfileImage.Length);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("File selection cancelled");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
-            _toastManager.CreateToast("Image Error")
+            _logger?.LogError(ex, "Error uploading picture");
+            _toastManager?.CreateToast("Image Error")
                 .WithContent($"Failed to load image: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
@@ -384,20 +446,35 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     [RelayCommand]
     private async Task SaveDetails()
     {
-        ClearAllErrors();
-        ValidateAllProperties();
-
-        if (HasErrors)
-        {
-            _toastManager?.CreateToast("Validation Error")
-                .WithContent("Please fix all validation errors before saving.")
-                .DismissOnClick()
-                .ShowWarning();
-            return;
-        }
-
         try
         {
+            LifecycleToken.ThrowIfCancellationRequested();
+        
+            ClearAllErrors();
+            ValidateAllProperties();
+
+            if (HasErrors)
+            {
+                _logger?.LogWarning("Member dialog validation failed");
+                _toastManager?.CreateToast("Validation Error")
+                    .WithContent("Please fix all validation errors before saving.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            if (_memberService == null)
+            {
+                _logger?.LogWarning("Member service is not available");
+                _toastManager?.CreateToast("Service Error")
+                    .WithContent("Member service is not available")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            IsLoading = true;
+
             // Get PackageID from the selected package name
             int? packageId = null;
             if (!string.IsNullOrEmpty(MemberPackages))
@@ -405,6 +482,11 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 var package = _memberPackageModels.FirstOrDefault(p =>
                     p.packageName.Equals(MemberPackages, StringComparison.OrdinalIgnoreCase));
                 packageId = package?.packageID;
+            
+                if (packageId == null)
+                {
+                    _logger?.LogWarning("Package '{Package}' not found in loaded packages", MemberPackages);
+                }
             }
 
             var memberModel = new ManageMemberModel
@@ -419,43 +501,62 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 DateOfBirth = MemberBirthDate,
                 ValidUntil = MemberValidUntil?.ToString("MMM dd, yyyy"),
                 MembershipType = MemberPackages,
-                Status = MemberStatus
+                Status = MemberStatus,
+                ProfilePicture = ProfileImage
             };
 
-            if (_memberService != null)
-            {
-                var result = await _memberService.UpdateMemberAsync(memberModel);
+            var result = await _memberService.UpdateMemberAsync(memberModel)
+                .ConfigureAwait(false);
 
-                if (!result.Success)
-                {
-                    _toastManager?.CreateToast("Update Failed")
-                        .WithContent(result.Message)
-                        .DismissOnClick()
-                        .ShowError();
-                    return;
-                }
+            if (!result.Success)
+            {
+                _logger?.LogWarning("Failed to update member {MemberId}: {Message}", 
+                    CurrentMemberId, result.Message);
+            
+                _toastManager?.CreateToast("Update Failed")
+                    .WithContent(result.Message)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
             }
 
             DashboardEventService.Instance.NotifyMemberUpdated();
 
-            Debug.WriteLine($"[SaveDetails] Updated member with Package ID: {packageId}");
+            _logger?.LogInformation("Updated member {MemberId}: {Name}, Package: {Package} (ID: {PackageId})", 
+                CurrentMemberId, $"{MemberFirstName} {MemberLastName}", MemberPackages, packageId);
 
             _dialogManager.Close(this, new CloseDialogOptions { Success = true });
         }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("Member save cancelled");
+        }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[SaveDetails] Error: {ex.Message}");
+            _logger?.LogError(ex, "Error updating member {MemberId}", CurrentMemberId);
             _toastManager?.CreateToast("Update Failed")
                 .WithContent($"Failed to update member: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
     [RelayCommand]
     private void Cancel()
     {
-        _dialogManager.Close(this);
+        try
+        {
+            _logger?.LogDebug("Member dialog cancelled");
+            _dialogManager.Close(this);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during cancel");
+        }
     }
 
     private void ClearAllFields()
@@ -473,5 +574,17 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         ProfileImage = null;
         ProfileImageSource = ImageHelper.GetDefaultAvatar();
         ClearAllErrors();
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing MemberDialogCardViewModel");
+
+        // Clear collections and references
+        _memberPackageModels.Clear();
+        ProfileImage = null;
+        ProfileImageSource = null;
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 }

@@ -14,10 +14,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -27,45 +28,28 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     private string[] _coachItems = ["None"];
 
     private string? _selectedCoachItems = "None";
-
-    [ObservableProperty]
-    private ObservableCollection<Trainees> _allTrainees = [];
-
-    [ObservableProperty]
-    private ObservableCollection<Trainees> _filteredTrainees = [];
-
-    [ObservableProperty]
-    private ObservableCollection<string> _traineesSuggestions = [];
-
-    [ObservableProperty]
-    private string _searchTraineeText = string.Empty;
-
-    [ObservableProperty]
-    private Trainees? _selectedTrainee;
-
-    [ObservableProperty]
-    private bool _isSearchingTrainee;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private bool _isLoadingCoaches;
+    
+    [ObservableProperty] private DataGridCollectionView _traineeList;
+    [ObservableProperty] private ObservableCollection<Trainees> _allTrainees = [];
+    [ObservableProperty] private ObservableCollection<Trainees> _filteredTrainees = [];
+    [ObservableProperty] private ObservableCollection<string> _traineesSuggestions = [];
+    [ObservableProperty] private Trainees? _selectedTrainee;
+    [ObservableProperty] private string _searchTraineeText = string.Empty;
+    [ObservableProperty] private bool _isSearchingTrainee;
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isLoadingCoaches;
+    [ObservableProperty] private bool _isInitialized;
 
     private Dictionary<string, int> _coachNameToIdMap = new();
     private bool _coachesLoaded = false;
-
 
     private TimeOnly? _startTime;
     private TimeOnly? _endTime;
     private DateTime? _selectedTrainingDate;
 
-    [ObservableProperty]
-    private DataGridCollectionView _traineeList;
-
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
+    private readonly ILogger _logger;
     private readonly ITrainingService _trainingService;
 
     [Required(ErrorMessage = "Select the coach")]
@@ -107,65 +91,133 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         }
     }
 
-    public AddTrainingScheduleDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager,
-        PageManager pageManager, ITrainingService trainingService)
+    public AddTrainingScheduleDialogCardViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager,
+        ITrainingService trainingService,
+        ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
         _trainingService = trainingService;
+        _logger = logger;
 
         SubscribeToEvents();
-        _ = LoadCoachesAsync();
-        LoadTraineeData();
     }
 
     public AddTrainingScheduleDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _trainingService = null!;
+        _logger = null!;
 
         SubscribeToEvents();
         UpdateSuggestions();
     }
 
-    [AvaloniaHotReload]
-    public async Task Initialize()
-    {
+    /*
+     [AvaloniaHotReload]
+     public async Task Initialize()
+     {
         ClearAllFields();
         ClearSearch();
         SubscribeToEvents();
-        if (AllTrainees.Count == 0) LoadTraineeData();
+        if (AllTrainees.Count == 0) await LoadTraineeDataAsync();
         await LoadCoachesAsync();
         UpdateSuggestions();
+    }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("AddTrainingScheduleDialogCardViewModel already initialized");
+            return;
+        }
+
+        _logger?.LogInformation("Initializing AddTrainingScheduleDialogCardViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            ClearAllFields();
+            ClearSearch();
+        
+            if (AllTrainees.Count == 0)
+            {
+                await LoadTraineeDataAsync(linkedCts.Token).ConfigureAwait(false);
+            }
+        
+            await LoadCoachesAsync(linkedCts.Token).ConfigureAwait(false);
+            UpdateSuggestions();
+        
+            IsInitialized = true;
+            _logger?.LogInformation("AddTrainingScheduleDialogCardViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("AddTrainingScheduleDialogCardViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing AddTrainingScheduleDialogCardViewModel");
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from AddTrainingScheduleDialog");
+        return ValueTask.CompletedTask;
     }
 
     private void SubscribeToEvents()
     {
         var eventService = DashboardEventService.Instance;
-
-        // When members are updated (sessions left changes)
+        
         eventService.MemberUpdated += OnTraineeDataChanged;
-
-        // When schedules are added/updated (affects sessions left)
         eventService.ScheduleAdded += OnTraineeDataChanged;
         eventService.ScheduleUpdated += OnTraineeDataChanged;
     }
 
-    private async void OnTraineeDataChanged(object? sender, EventArgs e)
+    private void UnsubscribeFromEvents()
     {
-        // Reload trainee data when sessions left changes
-        await LoadTraineeDataFromDatabaseAsync();
-        UpdateSuggestions();
+        var eventService = DashboardEventService.Instance;
+        
+        eventService.MemberUpdated -= OnTraineeDataChanged;
+        eventService.ScheduleAdded -= OnTraineeDataChanged;
+        eventService.ScheduleUpdated -= OnTraineeDataChanged;
     }
 
-    private async void LoadTraineeData()
+    private async void OnTraineeDataChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            _logger?.LogDebug("Detected trainee data change — refreshing");
+            await LoadTraineeDataAsync(LifecycleToken).ConfigureAwait(false);
+            UpdateSuggestions();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error refreshing trainees after change event");
+        }
+    }
+
+    private async Task LoadTraineeDataAsync(CancellationToken cancellationToken = default)
     {
         if (_trainingService != null)
         {
-            await LoadTraineeDataFromDatabaseAsync();
+            await LoadTraineeDataFromDatabaseAsync(cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -173,7 +225,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         }
     }
 
-    private async Task LoadCoachesAsync()
+    private async Task LoadCoachesAsync(CancellationToken cancellationToken = default)
     {
         if (_trainingService == null) return;
 
@@ -181,9 +233,10 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
 
         try
         {
-            // Assuming you have a method in ITrainingService to get coaches
-            // Adjust this based on your actual service method
-            var coaches = await _trainingService.GetCoachNamesAsync();
+            var coaches = await _trainingService.GetCoachNamesAsync()
+                .ConfigureAwait(false);
+        
+            cancellationToken.ThrowIfCancellationRequested();
 
             _coachNameToIdMap.Clear();
 
@@ -206,12 +259,20 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
             {
                 SelectedCoachItems = "None";
             }
+
+            _logger?.LogDebug("Loaded {Count} coaches", coachNames.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("LoadCoachesAsync cancelled");
+            throw;
         }
         catch (Exception ex)
         {
             CoachItems = ["None"];
             SelectedCoachItems = "None";
 
+            _logger?.LogError(ex, "Failed to load coaches");
             _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to load coaches: {ex.Message}")
                 .DismissOnClick()
@@ -224,19 +285,20 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         }
     }
 
-
-    private async Task LoadTraineeDataFromDatabaseAsync()
+    private async Task LoadTraineeDataFromDatabaseAsync(CancellationToken cancellationToken = default)
     {
+        IsLoading = true;
+
         try
         {
-            IsLoading = true;
-
-            var traineeModels = await _trainingService.GetAvailableTraineesAsync();
+            var traineeModels = await _trainingService.GetAvailableTraineesAsync()
+                .ConfigureAwait(false);
+        
+            cancellationToken.ThrowIfCancellationRequested();
 
             AllTrainees.Clear();
             FilteredTrainees.Clear();
 
-            // Convert TraineeModel to Trainees
             foreach (var model in traineeModels)
             {
                 var trainee = new Trainees
@@ -248,7 +310,6 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                     ContactNumber = model.ContactNumber,
                     PackageType = model.PackageType,
                     SessionLeft = model.SessionLeft,
-                    // Store additional data for later use
                     CustomerType = model.CustomerType,
                     PackageID = model.PackageID
                 };
@@ -258,15 +319,21 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
             }
 
             TraineeList = new DataGridCollectionView(FilteredTrainees);
+            _logger?.LogDebug("Loaded {Count} trainees from database", traineeModels.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("LoadTraineeDataFromDatabaseAsync cancelled");
+            throw;
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Failed to load trainees");
             _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to load trainees: {ex.Message}")
                 .WithDelay(5)
                 .ShowError();
 
-            // Load sample data as fallback
             LoadTraineeDataFromSample();
         }
         finally
@@ -353,14 +420,11 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         ];
     }
 
-
-
     [RelayCommand]
-    private async Task SearchTrainees()
+    private async Task SearchTrainees(CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(SearchTraineeText))
         {
-            // Reset to show all trainees 
             FilteredTrainees.Clear();
             foreach (var trainee in AllTrainees)
             {
@@ -374,7 +438,11 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
 
         try
         {
-            await Task.Delay(200);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+        
+            await Task.Delay(200, linkedCts.Token).ConfigureAwait(false);
+        
             var searchTerm = SearchTraineeText.ToLowerInvariant();
             var filteredResults = AllTrainees.Where(trainee =>
                 trainee.FirstName.Contains(searchTerm, StringComparison.InvariantCultureIgnoreCase) ||
@@ -398,6 +466,10 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
             {
                 SelectedTrainee = exactMatch;
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during disposal
         }
         finally
         {
@@ -459,34 +531,41 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     [RelayCommand]
     private async Task Submit()
     {
-        ClearAllErrors();
-        ValidateAllProperties();
-        ValidateProperty(StartTime, nameof(StartTime));
-        ValidateProperty(EndTime, nameof(EndTime));
-
-        if (HasErrors) return;
-        if (SelectedTrainee == null)
-        {
-            _toastManager?.CreateToast("Validation Error")
-                .WithContent("Please select a trainee")
-                .ShowWarning();
-            return;
-        }
-
-        // If no service available (design-time), skip DB call
-        if (_trainingService == null)
-        {
-            LastSelectedTrainee = SelectedTrainee;
-            ClearSearch();
-            _dialogManager.Close(this, new CloseDialogOptions { Success = true });
-            return;
-        }
-
         try
         {
+            LifecycleToken.ThrowIfCancellationRequested();
+        
+            ClearAllErrors();
+            ValidateAllProperties();
+            ValidateProperty(StartTime, nameof(StartTime));
+            ValidateProperty(EndTime, nameof(EndTime));
+
+            if (HasErrors)
+            {
+                _logger?.LogWarning("Training schedule submission validation failed");
+                return;
+            }
+        
+            if (SelectedTrainee == null)
+            {
+                _toastManager?.CreateToast("Validation Error")
+                    .WithContent("Please select a trainee")
+                    .ShowWarning();
+                return;
+            }
+
+            // If no service available (design-time), skip DB call
+            if (_trainingService == null)
+            {
+                LastSelectedTrainee = SelectedTrainee;
+                ClearSearch();
+                _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+                return;
+            }
+
             IsLoading = true;
 
-            // ✅ Convert Bitmap (Avalonia) to byte[]
+            // Convert Bitmap to byte[]
             byte[]? imageBytes = null;
             if (SelectedTrainee.Picture != null)
             {
@@ -495,23 +574,18 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                 imageBytes = ms.ToArray();
             }
 
-            // ✅ CRITICAL FIX: Ensure CustomerType is exactly 'Member' or 'WalkIn'
-            string customerType = SelectedTrainee.CustomerType?.Trim();
-
-            // Normalize the customer type to match CHECK constraint
-            if (string.IsNullOrWhiteSpace(customerType))
+            // Normalize customer type
+            string customerType = SelectedTrainee.CustomerType?.Trim() ?? "Member";
+            if (customerType.Equals("walk-in", StringComparison.OrdinalIgnoreCase))
             {
-                customerType = "Member"; // Default fallback
-            }
-            else if (customerType.Equals("walk-in", StringComparison.OrdinalIgnoreCase))
-            {
-                customerType = "WalkIn"; // Ensure correct casing
+                customerType = "WalkIn";
             }
             else if (!customerType.Equals("Member", StringComparison.Ordinal) &&
-                     !customerType.Equals("Walk-in", StringComparison.Ordinal))
+                     !customerType.Equals("WalkIn", StringComparison.Ordinal))
             {
-                customerType = "Member"; // Fallback for any other value
+                customerType = "Member";
             }
+
             int? coachId = null;
             if (!string.IsNullOrEmpty(SelectedCoachItems) && SelectedCoachItems != "None")
             {
@@ -521,11 +595,10 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                 }
             }
 
-            // ✅ Create the model to send to the DB
             var training = new TrainingModel
             {
                 customerID = SelectedTrainee.ID,
-                customerType = customerType, // ✅ Now properly validated
+                customerType = customerType,
                 firstName = SelectedTrainee.FirstName,
                 lastName = SelectedTrainee.LastName,
                 contactNumber = SelectedTrainee.ContactNumber,
@@ -540,11 +613,14 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                 attendance = "Pending"
             };
 
-            // ✅ Save to DB using your service
-            var success = await _trainingService.AddTrainingScheduleAsync(training);
+            var success = await _trainingService.AddTrainingScheduleAsync(training)
+                .ConfigureAwait(false);
 
             if (success)
             {
+                _logger?.LogInformation("Training schedule added for {Name}", 
+                    $"{SelectedTrainee.FirstName} {SelectedTrainee.LastName}");
+            
                 _toastManager?.CreateToast("Success")
                     .WithContent("Training schedule added successfully.")
                     .ShowSuccess();
@@ -555,19 +631,23 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
             }
             else
             {
+                _logger?.LogWarning("Failed to add training schedule");
                 _toastManager?.CreateToast("Error")
                     .WithContent("Failed to add training schedule.")
                     .ShowError();
             }
         }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("Training schedule submission cancelled");
+        }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error submitting training schedule");
             _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to add training schedule: {ex.Message}")
                 .WithDelay(5)
                 .ShowError();
-
-            Console.WriteLine($"[Submit] Error: {ex.Message}");
         }
         finally
         {
@@ -578,8 +658,16 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     [RelayCommand]
     private void Cancel()
     {
-        ClearSearch();
-        _dialogManager.Close(this);
+        try
+        {
+            _logger?.LogDebug("Training schedule creation cancelled");
+            ClearSearch();
+            _dialogManager.Close(this);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during cancel");
+        }
     }
 
     private void ClearAllFields()
@@ -593,7 +681,22 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         SelectedTrainee = null;
         ClearAllErrors();
     }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing AddTrainingScheduleDialogCardViewModel");
 
+        // Unsubscribe from events
+        UnsubscribeFromEvents();
+
+        // Clear collections
+        AllTrainees.Clear();
+        FilteredTrainees.Clear();
+        TraineesSuggestions.Clear();
+        _coachNameToIdMap.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
 }
 
 public partial class Trainees : ObservableObject

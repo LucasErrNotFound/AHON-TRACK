@@ -1,4 +1,3 @@
-using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
@@ -11,7 +10,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -19,7 +20,13 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
 {
     [ObservableProperty]
     private string[] _coachFilterItems = ["None"];
+    
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isLoadingCoaches;
+    [ObservableProperty] private int? _trainingID;
+    [ObservableProperty] private bool _isInitialized;
 
+    private Dictionary<string, int> _coachNameToIdMap = new();
     private TimeOnly? _startTime;
     private TimeOnly? _endTime;
     private DateTime? _selectedTrainingDate;
@@ -27,34 +34,27 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly ITrainingService _trainingService;
+    private readonly ILogger _logger;
 
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private bool _isLoadingCoaches;
-
-    [ObservableProperty]
-    private int? _trainingID;
-
-    private Dictionary<string, int> _coachNameToIdMap = new();
-
-    public ChangeScheduleDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, ITrainingService trainingService)
+    public ChangeScheduleDialogCardViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager, 
+        ITrainingService trainingService,
+        ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
         _trainingService = trainingService;
+        _logger = logger;
     }
 
     public ChangeScheduleDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _trainingService = null!;
+        _logger = null!;
     }
 
     [TodayValidation]
@@ -96,29 +96,84 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         }
     }
 
+    /*
     [AvaloniaHotReload]
     public async Task Initialize()
     {
         ClearAllFields();
         await LoadCoachesAsync();
     }
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
+        {
+            _logger?.LogDebug("ChangeScheduleDialogCardViewModel already initialized");
+            return;
+        }
+
+        _logger?.LogInformation("Initializing ChangeScheduleDialogCardViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            ClearAllFields();
+            await LoadCoachesAsync(linkedCts.Token).ConfigureAwait(false);
+        
+            IsInitialized = true;
+            _logger?.LogInformation("ChangeScheduleDialogCardViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("ChangeScheduleDialogCardViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing ChangeScheduleDialogCardViewModel");
+        }
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from ChangeScheduleDialog");
+        return ValueTask.CompletedTask;
+    }
 
     public async Task Initialize(ScheduledPerson scheduledPerson)
     {
-        TrainingID = scheduledPerson.TrainingID;
-        SelectedTrainingDate = scheduledPerson.ScheduledDate;
+        try
+        {
+            _logger?.LogInformation("Initializing with scheduled person for training {TrainingId}", 
+                scheduledPerson.TrainingID);
+        
+            TrainingID = scheduledPerson.TrainingID;
+            SelectedTrainingDate = scheduledPerson.ScheduledDate;
 
-        // Load coaches first
-        await LoadCoachesAsync();
+            // Load coaches first
+            await LoadCoachesAsync(LifecycleToken).ConfigureAwait(false);
 
-        // Then set the selected coach
-        SelectedCoach = scheduledPerson.AssignedCoach;
-
-        StartTime = scheduledPerson.ScheduledTimeStart;
-        EndTime = scheduledPerson.ScheduledTimeEnd;
+            // Then set the selected coach
+            SelectedCoach = scheduledPerson.AssignedCoach;
+            StartTime = scheduledPerson.ScheduledTimeStart;
+            EndTime = scheduledPerson.ScheduledTimeEnd;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("Initialize with scheduled person cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing with scheduled person");
+        }
     }
 
-    private async Task LoadCoachesAsync()
+    private async Task LoadCoachesAsync(CancellationToken cancellationToken = default)
     {
         if (_trainingService == null) return;
 
@@ -126,7 +181,10 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
 
         try
         {
-            var coaches = await _trainingService.GetCoachNamesAsync();
+            var coaches = await _trainingService.GetCoachNamesAsync()
+                .ConfigureAwait(false);
+        
+            cancellationToken.ThrowIfCancellationRequested();
 
             _coachNameToIdMap.Clear();
 
@@ -149,12 +207,20 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
             {
                 SelectedCoach = "None";
             }
+
+            _logger?.LogDebug("Loaded {Count} coaches", coachNames.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("LoadCoachesAsync cancelled");
+            throw;
         }
         catch (Exception ex)
         {
             CoachFilterItems = ["None"];
             SelectedCoach = "None";
 
+            _logger?.LogError(ex, "Failed to load coaches");
             _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to load coaches: {ex.Message}")
                 .ShowError();
@@ -168,21 +234,48 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
     [RelayCommand]
     private async Task Save()
     {
-        ClearAllErrors();
-        ValidateAllProperties();
-        ValidateProperty(StartTime, nameof(StartTime));
-        ValidateProperty(EndTime, nameof(EndTime));
-
-        if (HasErrors || _trainingService == null || !TrainingID.HasValue) return;
-
         try
         {
+            LifecycleToken.ThrowIfCancellationRequested();
+        
+            ClearAllErrors();
+            ValidateAllProperties();
+            ValidateProperty(StartTime, nameof(StartTime));
+            ValidateProperty(EndTime, nameof(EndTime));
+
+            if (HasErrors)
+            {
+                _logger?.LogWarning("Schedule change validation failed");
+                return;
+            }
+
+            if (_trainingService == null)
+            {
+                _logger?.LogWarning("Training service not available");
+                _toastManager?.CreateToast("Service Error")
+                    .WithContent("Training service is not available")
+                    .ShowError();
+                return;
+            }
+
+            if (!TrainingID.HasValue)
+            {
+                _logger?.LogWarning("Training ID is missing");
+                _toastManager?.CreateToast("Error")
+                    .WithContent("Training ID is missing")
+                    .ShowError();
+                return;
+            }
+
             IsLoading = true;
 
-            var training = await _trainingService.GetTrainingScheduleByIdAsync(TrainingID.Value);
+            var training = await _trainingService.GetTrainingScheduleByIdAsync(TrainingID.Value)
+                .ConfigureAwait(false);
+        
             if (training == null)
             {
-                _toastManager.CreateToast("Error")
+                _logger?.LogWarning("Training schedule {TrainingId} not found", TrainingID.Value);
+                _toastManager?.CreateToast("Error")
                     .WithContent("Training schedule not found")
                     .ShowError();
                 return;
@@ -200,22 +293,40 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
                 {
                     training.coachID = coachId;
                 }
+                else
+                {
+                    _logger?.LogWarning("Coach '{Coach}' not found in map", SelectedCoach);
+                }
             }
             else
             {
-                training.coachID = 0; // or null if your model supports it
+                training.coachID = 0;
             }
 
-            var success = await _trainingService.UpdateTrainingScheduleAsync(training);
+            var success = await _trainingService.UpdateTrainingScheduleAsync(training)
+                .ConfigureAwait(false);
 
             if (success)
             {
+                _logger?.LogInformation("Training schedule {TrainingId} updated successfully", TrainingID.Value);
                 _dialogManager.Close(this, new CloseDialogOptions { Success = true });
             }
+            else
+            {
+                _logger?.LogWarning("Failed to update training schedule {TrainingId}", TrainingID.Value);
+                _toastManager?.CreateToast("Update Failed")
+                    .WithContent("Failed to update training schedule")
+                    .ShowError();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("Schedule change save cancelled");
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast("Error")
+            _logger?.LogError(ex, "Error updating training schedule");
+            _toastManager?.CreateToast("Error")
                 .WithContent($"Failed to update training schedule: {ex.Message}")
                 .ShowError();
         }
@@ -228,8 +339,16 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
     [RelayCommand]
     private void Discard()
     {
-        ClearAllErrors();
-        _dialogManager.Close(this);
+        try
+        {
+            _logger?.LogDebug("Schedule change discarded");
+            ClearAllErrors();
+            _dialogManager.Close(this);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during discard");
+        }
     }
 
     private void ClearAllFields()
@@ -239,5 +358,15 @@ public partial class ChangeScheduleDialogCardViewModel : ViewModelBase, INavigab
         SelectedTrainingDate = null;
         SelectedCoach = null;
         ClearAllErrors();
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing ChangeScheduleDialogCardViewModel");
+
+        // Clear coach name map
+        _coachNameToIdMap.Clear();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 }

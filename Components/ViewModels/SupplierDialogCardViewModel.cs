@@ -1,20 +1,25 @@
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Threading;
+using System.Threading.Tasks;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
-using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
 {
+    private readonly DialogManager _dialogManager;
+    private readonly ToastManager _toastManager;
+    private readonly ILogger _logger;
+
     [ObservableProperty]
     private string[] _statusFilterItems = ["Active", "Inactive", "Suspended"];
 
@@ -24,20 +29,12 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     [ObservableProperty]
     private string _dialogDescription = "Register new supplier with their contact to maintain reliable supply management";
 
-    [ObservableProperty]
-    private ObservableCollection<string> _deliveryScheduleItems = [];
-
-    [ObservableProperty]
-    private ObservableCollection<string> _contractTermsItems = [];
-
-    [ObservableProperty]
-    private string? _selectedDeliverySchedule;
-
-    [ObservableProperty]
-    private string? _selectedContractTerms;
-
-    [ObservableProperty]
-    private bool _isEditMode = false;
+    [ObservableProperty] private ObservableCollection<string> _deliveryScheduleItems = [];
+    [ObservableProperty] private ObservableCollection<string> _contractTermsItems = [];
+    [ObservableProperty] private string? _selectedDeliverySchedule;
+    [ObservableProperty] private string? _selectedContractTerms;
+    [ObservableProperty] private bool _isEditMode = false;
+    [ObservableProperty] private bool _isInitialized;
 
     public string? DeliveryPattern => SchedulePattern;
 
@@ -50,91 +47,192 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     private string? _contractPattern = "Month";
     private string? _status = string.Empty;
 
-    private readonly DialogManager _dialogManager;
-    private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
-
-    public SupplierDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public SupplierDialogCardViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager, 
+        ILogger logger)
     {
-        _dialogManager = dialogManager;
-        _toastManager = toastManager;
-        _pageManager = pageManager;
+        _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         PopulateDeliveryScheduleItems();
         PopulateContractTermsItems();
     }
 
+    // Design-time constructor
     public SupplierDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
+        _logger = null!;
 
         PopulateDeliveryScheduleItems();
         PopulateContractTermsItems();
     }
 
+    #region INavigable Implementation
+
+    [AvaloniaHotReload]
+    public ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        
+        if (IsInitialized)
+        {
+            _logger.LogDebug("SupplierDialogCardViewModel already initialized");
+            return ValueTask.CompletedTask;
+        }
+
+        _logger.LogInformation("Initializing SupplierDialogCardViewModel");
+
+        try
+        {
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            DialogTitle = "Add Supplier Contact";
+            DialogDescription = "Register new supplier with their contact to maintain reliable supply management";
+            IsEditMode = false;
+            ClearAllFields();
+
+            IsInitialized = true;
+            _logger.LogInformation("SupplierDialogCardViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("SupplierDialogCardViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing SupplierDialogCardViewModel");
+            _toastManager.CreateToast("Initialization Error")
+                .WithContent("Failed to initialize supplier dialog")
+                .DismissOnClick()
+                .ShowError();
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Navigating away from SupplierDialog");
+        return ValueTask.CompletedTask;
+    }
+
+    #endregion
+
+    /*
+    #region HotAvalonia Support
+
     [AvaloniaHotReload]
     public void Initialize()
     {
-        DialogTitle = "Add Supplier Contact";
-        DialogDescription = "Register new supplier with their contact to maintain reliable supply management";
-        IsEditMode = false;
-        ClearAllFields();
+        _ = InitializeAsync(LifecycleToken);
     }
+
+    #endregion
+    */
 
     public void InitializeForEditMode(Supplier? supplier)
     {
-        IsEditMode = true;
-        DialogTitle = "Edit Existing Supplier Contact";
-        DialogDescription = "Edit existing supplier with their contact to maintain latest details";
-        ClearAllFields();
-
-        SupplierName = supplier?.Name;
-        ContactPerson = supplier?.ContactPerson;
-        Email = supplier?.Email;
-        PhoneNumber = supplier?.PhoneNumber;
-        Products = supplier?.Products;
-        Status = supplier?.Status;
-
-        if (string.IsNullOrWhiteSpace(supplier?.DeliverySchedule)) return;
-
-        if (supplier.DeliverySchedule.Contains("day", StringComparison.OrdinalIgnoreCase))
+        ThrowIfDisposed();
+        
+        try
         {
-            SchedulePattern = "Day";
-        }
-        else if (supplier.DeliverySchedule.Contains("month", StringComparison.OrdinalIgnoreCase))
-        {
-            SchedulePattern = "Month";
-        }
-        SelectedDeliverySchedule = supplier.DeliverySchedule;
+            IsEditMode = true;
+            DialogTitle = "Edit Existing Supplier Contact";
+            DialogDescription = "Edit existing supplier with their contact to maintain latest details";
+            ClearAllFields();
 
-        if (string.IsNullOrWhiteSpace(supplier?.ContractTerms)) return;
+            if (supplier == null)
+            {
+                _logger.LogWarning("InitializeForEditMode called with null supplier");
+                return;
+            }
 
-        if (supplier.ContractTerms.Contains("day", StringComparison.OrdinalIgnoreCase))
-        {
-            ContractPattern = "Day";
+            SupplierName = supplier.Name;
+            ContactPerson = supplier.ContactPerson;
+            Email = supplier.Email;
+            PhoneNumber = supplier.PhoneNumber;
+            Products = supplier.Products;
+            Status = supplier.Status;
+
+            if (!string.IsNullOrWhiteSpace(supplier.DeliverySchedule))
+            {
+                if (supplier.DeliverySchedule.Contains("day", StringComparison.OrdinalIgnoreCase))
+                {
+                    SchedulePattern = "Day";
+                }
+                else if (supplier.DeliverySchedule.Contains("month", StringComparison.OrdinalIgnoreCase))
+                {
+                    SchedulePattern = "Month";
+                }
+                SelectedDeliverySchedule = supplier.DeliverySchedule;
+            }
+
+            if (!string.IsNullOrWhiteSpace(supplier.ContractTerms))
+            {
+                if (supplier.ContractTerms.Contains("day", StringComparison.OrdinalIgnoreCase))
+                {
+                    ContractPattern = "Day";
+                }
+                else if (supplier.ContractTerms.Contains("month", StringComparison.OrdinalIgnoreCase))
+                {
+                    ContractPattern = "Month";
+                }
+                SelectedContractTerms = supplier.ContractTerms;
+            }
+
+            _logger.LogDebug("Initialized edit mode for supplier: {SupplierName}", supplier.Name);
         }
-        else if (supplier.ContractTerms.Contains("month", StringComparison.OrdinalIgnoreCase))
+        catch (Exception ex)
         {
-            ContractPattern = "Month";
+            _logger.LogError(ex, "Error initializing edit mode for supplier");
+            _toastManager.CreateToast("Error")
+                .WithContent("Failed to load supplier data")
+                .DismissOnClick()
+                .ShowError();
         }
-        SelectedContractTerms = supplier.ContractTerms;
     }
 
     [RelayCommand]
     private void Cancel()
     {
+        ThrowIfDisposed();
+        _logger.LogDebug("Supplier dialog cancelled");
         _dialogManager.Close(this);
     }
 
     [RelayCommand]
     private void AddSupplier()
     {
-        ValidateAllProperties();
+        ThrowIfDisposed();
+        
+        try
+        {
+            ValidateAllProperties();
 
-        if (HasErrors) return;
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+            if (HasErrors)
+            {
+                _logger.LogDebug("Supplier validation failed");
+                return;
+            }
+
+            _logger.LogInformation("Supplier {Mode}: {SupplierName}", 
+                IsEditMode ? "updated" : "added", SupplierName);
+            
+            _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing supplier");
+            _toastManager.CreateToast("Error")
+                .WithContent("Failed to save supplier")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
 
     private void ClearAllFields()
@@ -150,6 +248,8 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
 
         ClearAllErrors();
     }
+
+    #region Validated Properties
 
     [Required(ErrorMessage = "Supplier name is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
@@ -206,10 +306,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                 OnPropertyChanged(nameof(IsScheduleDeliveryByDay));
                 OnPropertyChanged(nameof(IsScheduleDeliveryByMonth));
 
-                // Repopulate items when pattern changes
                 PopulateDeliveryScheduleItems();
-
-                // Clear selection when switching patterns
                 SelectedDeliverySchedule = null;
             }
         }
@@ -227,10 +324,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                 OnPropertyChanged(nameof(IsContractTermsByDay));
                 OnPropertyChanged(nameof(IsContractTermsByMonth));
 
-                // Repopulate items when pattern changes
                 PopulateContractTermsItems();
-
-                // Clear selection when switching patterns
                 SelectedContractTerms = null;
             }
         }
@@ -266,6 +360,8 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _status;
         set => SetProperty(ref _status, value, true);
     }
+
+    #endregion
 
     public string? DeliverySchedule => SelectedDeliverySchedule;
     public string? ContractTerms => SelectedContractTerms;
@@ -313,4 +409,22 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
             }
         }
     }
+
+    #region Disposal
+
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger.LogInformation("Disposing SupplierDialogCardViewModel");
+
+        // Clear collections
+        DeliveryScheduleItems.Clear();
+        ContractTermsItems.Clear();
+
+        // Clear validation errors
+        ClearAllErrors();
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
+    }
+
+    #endregion
 }

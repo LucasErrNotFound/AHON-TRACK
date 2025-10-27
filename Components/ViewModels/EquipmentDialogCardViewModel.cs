@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
-using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Services;
+using Microsoft.Extensions.Logging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -27,11 +28,11 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private string[] _statusFilterItems = ["Active", "Inactive", "Under Maintenance", "Retired", "On Loan"];
 
     // Supplier dropdown items - now contains supplier names as strings
-    [ObservableProperty]
-    private string[] _supplierFilterItems = Array.Empty<string>();
+    [ObservableProperty] 
+    private string[] _supplierFilterItems = [];
 
     // This maintains the internal list of supplier objects
-    private List<SupplierDropdownModel> _supplierModels = new();
+    private List<SupplierDropdownModel> _supplierModels = [];
 
     [ObservableProperty]
     private string _dialogTitle = "Add New Equipment";
@@ -39,11 +40,9 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     [ObservableProperty]
     private string _dialogDescription = "Easily register gym equipment with details like brand name, category, quantity, etc.";
 
-    [ObservableProperty]
-    private bool _isEditMode = false;
-
-    [ObservableProperty]
-    private bool _isLoadingSuppliers = false;
+    [ObservableProperty] private bool _isEditMode = false;
+    [ObservableProperty] private bool _isLoadingSuppliers = false;
+    [ObservableProperty] private bool _isInitialized;
 
     private int _equipmentID;
     private string? _brandName = string.Empty;
@@ -60,8 +59,8 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
-    private readonly PageManager _pageManager;
     private readonly IInventoryService _inventoryService;
+    private readonly ILogger _logger;
 
     public int EquipmentID
     {
@@ -180,23 +179,24 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     public EquipmentDialogCardViewModel(
         DialogManager dialogManager,
         ToastManager toastManager,
-        PageManager pageManager,
-        IInventoryService inventoryService)
+        IInventoryService inventoryService,
+        ILogger logger)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
-        _pageManager = pageManager;
         _inventoryService = inventoryService;
+        _logger = logger;
     }
 
     public EquipmentDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
-        _pageManager = new PageManager(new ServiceProvider());
         _inventoryService = null!;
+        _logger = null!;
     }
 
+    /*
     [AvaloniaHotReload]
     public async void Initialize()
     {
@@ -207,60 +207,140 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         ClearAllFields();
         await LoadSuppliersAsync();
     }
-
-    public async void InitializeForEditMode(Equipment? equipment)
+    */
+    
+    [AvaloniaHotReload]
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
     {
-        IsEditMode = true;
-        DialogTitle = "Edit Equipment Details";
-        DialogDescription = "Edit gym equipment with details like brand name, category, quantity, etc.";
-
-        ClearAllErrors();
-
-        EquipmentID = equipment?.ID ?? 0;
-        BrandName = equipment?.BrandName;
-        Category = equipment?.Category;
-        Condition = equipment?.Condition;
-        Status = equipment?.Status ?? "Active";
-        CurrentStock = equipment?.CurrentStock;
-        PurchasePrice = equipment?.PurchasedPrice;
-        PurchasedDate = equipment?.PurchasedDate;
-        WarrantyExpiry = equipment?.Warranty;
-        LastMaintenance = equipment?.LastMaintenance;
-        NextMaintenance = equipment?.NextMaintenance;
-
-        // Load suppliers first
-        await LoadSuppliersAsync();
-
-        // Set the supplier NAME (not ID) to match the XAML binding
-        if (equipment?.SupplierID.HasValue == true)
+        ThrowIfDisposed();
+    
+        if (IsInitialized)
         {
-            var supplierModel = _supplierModels.FirstOrDefault(s => s.SupplierID == equipment.SupplierID);
-            Supplier = supplierModel?.SupplierName;
-        }
-        else if (!string.IsNullOrEmpty(equipment?.SupplierName))
-        {
-            // Fallback: use the supplier name directly if ID lookup fails
-            Supplier = equipment.SupplierName;
+            _logger?.LogDebug("EquipmentDialogCardViewModel already initialized");
+            return;
         }
 
-        else
+        _logger?.LogInformation("Initializing EquipmentDialogCardViewModel");
+
+        try
         {
-            Supplier = "None";
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+
+            DialogTitle = "Add New Equipment";
+            DialogDescription = "Easily register gym equipment with details like brand name, category, quantity, etc.";
+            IsEditMode = false;
+            EquipmentID = 0;
+            ClearAllFields();
+        
+            await LoadSuppliersAsync(linkedCts.Token).ConfigureAwait(false);
+        
+            IsInitialized = true;
+            _logger?.LogInformation("EquipmentDialogCardViewModel initialized successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("EquipmentDialogCardViewModel initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing EquipmentDialogCardViewModel");
         }
     }
 
-    private async Task LoadSuppliersAsync()
+    public ValueTask OnNavigatingFromAsync(CancellationToken cancellationToken = default)
+    {
+        _logger?.LogInformation("Navigating away from EquipmentDialog");
+        return ValueTask.CompletedTask;
+    }
+
+    public async Task InitializeForEditMode(Equipment? equipment, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            IsEditMode = true;
+            DialogTitle = "Edit Equipment Details";
+            DialogDescription = "Edit gym equipment with details like brand name, category, quantity, etc.";
+
+            ClearAllErrors();
+
+            EquipmentID = equipment?.ID ?? 0;
+            BrandName = equipment?.BrandName;
+            Category = equipment?.Category;
+            Condition = equipment?.Condition;
+            Status = equipment?.Status ?? "Active";
+            CurrentStock = equipment?.CurrentStock;
+            PurchasePrice = equipment?.PurchasedPrice;
+            PurchasedDate = equipment?.PurchasedDate;
+            WarrantyExpiry = equipment?.Warranty;
+            LastMaintenance = equipment?.LastMaintenance;
+            NextMaintenance = equipment?.NextMaintenance;
+
+            _logger?.LogInformation("Initializing edit mode for equipment {EquipmentId}", EquipmentID);
+
+            // Load suppliers first
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                LifecycleToken, cancellationToken);
+        
+            await LoadSuppliersAsync(linkedCts.Token).ConfigureAwait(false);
+
+            // Set the supplier NAME (not ID) to match the XAML binding
+            if (equipment?.SupplierID.HasValue == true)
+            {
+                var supplierModel = _supplierModels.FirstOrDefault(s => s.SupplierID == equipment.SupplierID);
+                Supplier = supplierModel?.SupplierName;
+            
+                if (string.IsNullOrEmpty(Supplier))
+                {
+                    _logger?.LogWarning("Supplier ID {SupplierId} not found in loaded suppliers", 
+                        equipment.SupplierID);
+                }
+            }
+            else if (!string.IsNullOrEmpty(equipment?.SupplierName))
+            {
+                Supplier = equipment.SupplierName;
+            }
+            else
+            {
+                Supplier = "None";
+            }
+
+            _logger?.LogDebug("Edit mode initialized for equipment {EquipmentId}: {BrandName}", 
+                EquipmentID, BrandName);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("InitializeForEditMode cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error initializing edit mode");
+            _toastManager?.CreateToast("Error")
+                .WithContent("Failed to initialize edit mode")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+    
+    /*
+    public async void InitializeForEditMode(Equipment? equipment)
+    {
+        await InitializeForEditMode(equipment, LifecycleToken);
+    }
+    */
+
+    private async Task LoadSuppliersAsync(CancellationToken cancellationToken = default)
     {
         if (_inventoryService == null)
         {
             // Fallback for design-time
             _supplierModels = new List<SupplierDropdownModel>
-                    {
-                        new() { SupplierID = 1, SupplierName = "San Miguel" },
-                        new() { SupplierID = 2, SupplierName = "FitLab" },
-                        new() { SupplierID = 3, SupplierName = "Optimum" }
-                    };
-            // Add "None" option at the beginning
+            {
+                new() { SupplierID = 1, SupplierName = "San Miguel" },
+                new() { SupplierID = 2, SupplierName = "FitLab" },
+                new() { SupplierID = 3, SupplierName = "Optimum" }
+            };
+        
             var supplierNames = new List<string> { "None" };
             supplierNames.AddRange(_supplierModels.Select(s => s.SupplierName));
             SupplierFilterItems = supplierNames.ToArray();
@@ -268,39 +348,52 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         }
 
         IsLoadingSuppliers = true;
+    
         try
         {
-            var (success, message, suppliers) = await _inventoryService.GetSuppliersForDropdownAsync();
+            var (success, message, suppliers) = await _inventoryService
+                .GetSuppliersForDropdownAsync()
+                .ConfigureAwait(false);
+        
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (success && suppliers != null && suppliers.Any())
             {
                 _supplierModels = suppliers;
 
-                // Add "None" option at the beginning, followed by supplier names
                 var supplierNames = new List<string> { "None" };
                 supplierNames.AddRange(_supplierModels.Select(s => s.SupplierName));
                 SupplierFilterItems = supplierNames.ToArray();
 
-                // Auto-select first real supplier if adding new equipment (skip "None")
                 if (!IsEditMode && _supplierModels.Any())
                 {
                     Supplier = "None";
                 }
+
+                _logger?.LogDebug("Loaded {Count} suppliers", _supplierModels.Count);
             }
             else
             {
+                _logger?.LogWarning("Failed to load suppliers: {Message}", message);
+            
                 _toastManager?.CreateToast("Failed to Load Suppliers")
                     .WithContent(message)
                     .DismissOnClick()
                     .ShowWarning();
 
-                // Provide "None" option as fallback
                 _supplierModels = new List<SupplierDropdownModel>();
                 SupplierFilterItems = new[] { "None" };
             }
         }
+        catch (OperationCanceledException)
+        {
+            _logger?.LogInformation("LoadSuppliersAsync cancelled");
+            throw;
+        }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error loading suppliers");
+        
             _toastManager?.CreateToast("Error Loading Suppliers")
                 .WithContent($"Failed to load suppliers: {ex.Message}")
                 .DismissOnClick()
@@ -318,64 +411,79 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     [RelayCommand]
     private void Cancel()
     {
-        _dialogManager.Close(this);
+        try
+        {
+            _logger?.LogDebug("Equipment dialog cancelled");
+            _dialogManager.Close(this);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during cancel");
+        }
     }
 
     [RelayCommand]
-    private void AddEquipment()
+    private async Task AddEquipment()
     {
-        ValidateAllProperties();
-
-        // Custom validation for supplier
-        if (string.IsNullOrEmpty(Supplier))
+        try
         {
-            _toastManager?.CreateToast("Validation Error")
-                .WithContent("Please select a supplier")
-                .DismissOnClick()
-                .ShowWarning();
-            return;
-        }
+            ValidateAllProperties();
 
-        // ? Custom validation for warranty date
-        if (PurchasedDate.HasValue && WarrantyExpiry.HasValue)
-        {
-            if (WarrantyExpiry.Value <= PurchasedDate.Value)
+            // Custom validation for supplier
+            if (string.IsNullOrEmpty(Supplier) || Supplier == "None")
             {
-                _toastManager?.CreateToast("Invalid Warranty Date")
-                    .WithContent("Warranty expiry must be after the purchase date.")
+                _logger?.LogWarning("No supplier selected");
+                _toastManager?.CreateToast("Validation Error")
+                    .WithContent("Please select a supplier")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            // Custom validation for warranty date
+            if (PurchasedDate.HasValue && WarrantyExpiry.HasValue)
+            {
+                if (WarrantyExpiry.Value <= PurchasedDate.Value)
+                {
+                    _logger?.LogWarning("Invalid warranty date: expiry before purchase");
+                    _toastManager?.CreateToast("Invalid Warranty Date")
+                        .WithContent("Warranty expiry must be after the purchase date.")
+                        .DismissOnClick()
+                        .ShowError();
+                    return;
+                }
+            }
+
+            // Validate purchase date is not in the future
+            if (PurchasedDate.HasValue && PurchasedDate.Value > DateTime.Today)
+            {
+                _logger?.LogWarning("Invalid purchase date: in the future");
+                _toastManager?.CreateToast("Invalid Purchase Date")
+                    .WithContent("Purchase date cannot be in the future.")
                     .DismissOnClick()
                     .ShowError();
                 return;
             }
-        }
 
-        // ? (Optional) If you want to ensure purchase date is not in the future
-        if (PurchasedDate.HasValue && PurchasedDate.Value > DateTime.Today)
+            if (HasErrors)
+            {
+                _logger?.LogWarning("Equipment validation failed");
+                return;
+            }
+
+            _logger?.LogInformation("Equipment {Mode}: {BrandName}", 
+                IsEditMode ? "edited" : "added", BrandName);
+        
+            _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+        }
+        catch (Exception ex)
         {
-            _toastManager?.CreateToast("Invalid Purchase Date")
-                .WithContent("Purchase date cannot be in the future.")
+            _logger?.LogError(ex, "Error adding/editing equipment");
+            _toastManager?.CreateToast("Error")
+                .WithContent($"An error occurred: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
-            return;
         }
-
-        if (HasErrors) return;
-
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
-
-        // Custom validation for supplier
-        if (string.IsNullOrEmpty(Supplier))
-        {
-            _toastManager?.CreateToast("Validation Error")
-                .WithContent("Please select a supplier")
-                .DismissOnClick()
-                .ShowWarning();
-            return;
-        }
-
-        if (HasErrors) return;
-
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
 
     private void ClearAllFields()
@@ -392,5 +500,16 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         LastMaintenance = null;
         NextMaintenance = null;
         ClearAllErrors();
+    }
+    
+    protected override async ValueTask DisposeAsyncCore()
+    {
+        _logger?.LogInformation("Disposing EquipmentDialogCardViewModel");
+
+        // Clear collections
+        _supplierModels.Clear();
+        SupplierFilterItems = [];
+
+        await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 }
