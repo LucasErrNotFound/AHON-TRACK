@@ -53,7 +53,7 @@
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="50,10,10,0" Spacing="16">
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
-						<Grid ColumnDefinitions="3* 2*" ColumnSpacing="10">
+						<Grid ColumnDefinitions="3* 1.25*" ColumnSpacing="10">
 							<shadui:Card Margin="0,30" HorizontalAlignment="Left" VerticalAlignment="Top" Height="835">
 								<StackPanel Spacing="25">
 									<Grid ColumnDefinitions="Auto Auto Auto *">
