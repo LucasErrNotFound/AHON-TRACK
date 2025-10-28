@@ -185,8 +185,9 @@
                                         </Grid>
                                         <Grid 
                                             RowDefinitions="* *" 
-                                            ColumnDefinitions="* *" 
+                                            ColumnDefinitions="* * Auto" 
                                             RowSpacing="5"
+                                            ColumnSpacing="10"
                                             Margin="0,30,0,0">
                                             <!-- Recover Section -->
                                             <StackPanel Grid.Row="0" Grid.Column="0">
@@ -209,7 +210,7 @@
                                                 Classes="Clearable"
                                                 IsReadOnly="True"
                                                 IsEnabled="True"
-                                                Width="270" />
+                                                Width="180" />
                                             <Button 
                                                 Grid.Row="1" 
                                                 Grid.Column="1" 
@@ -217,6 +218,13 @@
                                                 Classes="Outline"
                                                 Content="Browse"
                                                 Command="{CompiledBinding SelectRecoveryFileCommand}"/>
+                                            <Button 
+                                                Grid.Row="1" 
+                                                Grid.Column="2" 
+                                                HorizontalAlignment="Right"
+                                                Classes="Secondary"
+                                                Content="Restore"
+                                                Command="{CompiledBinding RestoreFromBackupCommand}"/>
                                         </Grid>
                                     </StackPanel>
                                 </TabItem>
