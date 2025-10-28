@@ -49,8 +49,8 @@
                 Margin="90,0" />
 		</StackPanel>
 		<ScrollViewer VerticalScrollBarVisibility="Auto">
-			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="350,30,350,0" Spacing="16">
-				<Grid RowDefinitions="* * *" ColumnDefinitions="1.5* *" ColumnSpacing="30">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="0,30,0,0" Spacing="16">
+				<Grid RowDefinitions="* * *" ColumnDefinitions="1.5* *" ColumnSpacing="30" MaxWidth="1000">
 
 					<!-- Column 1 -->
 					<!-- Product Details -->
