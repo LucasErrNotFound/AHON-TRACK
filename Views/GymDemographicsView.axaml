@@ -7,8 +7,6 @@
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
-    xmlns:skiaSharpView="clr-namespace:LiveChartsCore.SkiaSharpView;assembly=LiveChartsCore.SkiaSharpView"
-    xmlns:system="clr-namespace:System;assembly=System.Runtime"
     x:DataType="viewModels:GymDemographicsViewModel"
     mc:Ignorable="d" d:DesignWidth="1683" d:DesignHeight="1080"
     x:Class="AHON_TRACK.Views.GymDemographicsView">
@@ -66,58 +64,116 @@
                         shadui:ControlAssist.ReadOnly="True"
                         SelectedDate="{CompiledBinding DemographicsGroupSelectedToDate}" />
                 </StackPanel>
-                <Grid RowDefinitions="* *" ColumnDefinitions="* *" ColumnSpacing="30">
-                    <shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True">
-                        <StackPanel>
-                            <shadui:CardTitle Content="Gender" FontSize="20" FontWeight="SemiBold" />
-                            <StackPanel>
-                                <lvc:PieChart
-                                    ZIndex="-1"
-                                    InitialRotation="120"
-                                    SeriesSource="{CompiledBinding GenderPieDataCollection}"
-                                    LegendPosition="Right"
-                                    Height="310">
-                                    <lvc:PieChart.SeriesTemplate>
-                                        <DataTemplate x:DataType="viewModels:PieData">
-                                            <lvc:XamlPieSeries
-                                                SeriesName="{Binding Name}"
-                                                Values="{Binding Values}"
-                                                Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
-                                                Fill="{Binding Color, Converter={StaticResource StringToPaintConverter}}"
-                                                HoverPushout="15"
-                                                DataLabelsFormatter="{Binding Formatter}"
-                                                DataLabelsSize="15"
-                                                ShowDataLabels="{Binding IsTotal}"
-                                                DataLabelsPosition="Outer"
-                                                IsVisibleAtLegend="{Binding IsTotal}">
-                                            </lvc:XamlPieSeries>
-                                        </DataTemplate>
-                                    </lvc:PieChart.SeriesTemplate>
-                                </lvc:PieChart>
-                            </StackPanel>
-                        </StackPanel>
-                    </shadui:Card>
-                    <shadui:Card Grid.Row="0" Grid.Column="1" HasShadow="True">
-                        <StackPanel>
-                            <shadui:CardTitle Content="Age Group" FontSize="20" FontWeight="SemiBold" />
-                            <lvc:CartesianChart
-                                Height="300"
-                                Name="CartesianChart1"
-                                Margin="12,0,12,12"
-                                XAxes="{CompiledBinding XAxes}"
-                                YAxes="{CompiledBinding YAxes}"
-                                HoveredPointsChangedCommand="{CompiledBinding HoveredPointsChangedCommand}"
-                                TooltipTextSize="14">
-                                <lvc:CartesianChart.Series>
-                                    <lvc:XamlColumnSeries
-                                        Values="{CompiledBinding AgeSeries[0].Values}"
-                                        Stroke="{lvc:SolidColorPaint Color='#00000000'}"
-                                        PointMeasuredCommand="{CompiledBinding PointMeasuredCommand}"/>
-                                </lvc:CartesianChart.Series>
-                            </lvc:CartesianChart>
-                        </StackPanel>
-                    </shadui:Card>
-                </Grid>
+                <shadui:BreakpointViewPort>
+                    <shadui:BreakpointView Breakpoint="XlAndUp">
+                        <Grid RowDefinitions="* *" ColumnDefinitions="* *" ColumnSpacing="30">
+                            <shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True">
+                                <StackPanel>
+                                    <shadui:CardTitle Content="Gender" FontSize="20" FontWeight="SemiBold" />
+                                    <StackPanel>
+                                        <lvc:PieChart
+                                            ZIndex="-1"
+                                            InitialRotation="120"
+                                            SeriesSource="{CompiledBinding GenderPieDataCollection}"
+                                            LegendPosition="Right"
+                                            Height="310">
+                                            <lvc:PieChart.SeriesTemplate>
+                                                <DataTemplate x:DataType="viewModels:PieData">
+                                                    <lvc:XamlPieSeries
+                                                        SeriesName="{Binding Name}"
+                                                        Values="{Binding Values}"
+                                                        Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
+                                                        Fill="{Binding Color, Converter={StaticResource StringToPaintConverter}}"
+                                                        HoverPushout="15"
+                                                        DataLabelsFormatter="{Binding Formatter}"
+                                                        DataLabelsSize="15"
+                                                        ShowDataLabels="{Binding IsTotal}"
+                                                        DataLabelsPosition="Outer"
+                                                        IsVisibleAtLegend="{Binding IsTotal}">
+                                                    </lvc:XamlPieSeries>
+                                                </DataTemplate>
+                                            </lvc:PieChart.SeriesTemplate>
+                                        </lvc:PieChart>
+                                    </StackPanel>
+                                </StackPanel>
+                            </shadui:Card>
+                            <shadui:Card Grid.Row="0" Grid.Column="1" HasShadow="True">
+                                <StackPanel>
+                                    <shadui:CardTitle Content="Age Group" FontSize="20" FontWeight="SemiBold" />
+                                    <lvc:CartesianChart
+                                        Height="300"
+                                        Name="CartesianChart1"
+                                        Margin="12,0,12,12"
+                                        XAxes="{CompiledBinding XAxes}"
+                                        YAxes="{CompiledBinding YAxes}"
+                                        HoveredPointsChangedCommand="{CompiledBinding HoveredPointsChangedCommand}"
+                                        TooltipTextSize="14">
+                                        <lvc:CartesianChart.Series>
+                                            <lvc:XamlColumnSeries
+                                                Values="{CompiledBinding AgeSeries[0].Values}"
+                                                Stroke="{lvc:SolidColorPaint Color='#00000000'}"
+                                                PointMeasuredCommand="{CompiledBinding PointMeasuredCommand}" />
+                                        </lvc:CartesianChart.Series>
+                                    </lvc:CartesianChart>
+                                </StackPanel>
+                            </shadui:Card>
+                        </Grid>
+                    </shadui:BreakpointView>
+                    <shadui:BreakpointView Breakpoint="XlAndDown">
+                        <Grid RowDefinitions="* *" RowSpacing="20">
+                            <shadui:Card Grid.Row="0" HasShadow="True">
+                                <StackPanel>
+                                    <shadui:CardTitle Content="Gender" FontSize="20" FontWeight="SemiBold" />
+                                    <StackPanel>
+                                        <lvc:PieChart
+                                            ZIndex="-1"
+                                            InitialRotation="120"
+                                            SeriesSource="{CompiledBinding GenderPieDataCollection}"
+                                            LegendPosition="Right"
+                                            Height="410">
+                                            <lvc:PieChart.SeriesTemplate>
+                                                <DataTemplate x:DataType="viewModels:PieData">
+                                                    <lvc:XamlPieSeries
+                                                        SeriesName="{Binding Name}"
+                                                        Values="{Binding Values}"
+                                                        Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
+                                                        Fill="{Binding Color, Converter={StaticResource StringToPaintConverter}}"
+                                                        HoverPushout="15"
+                                                        DataLabelsFormatter="{Binding Formatter}"
+                                                        DataLabelsSize="15"
+                                                        ShowDataLabels="{Binding IsTotal}"
+                                                        DataLabelsPosition="Outer"
+                                                        IsVisibleAtLegend="{Binding IsTotal}">
+                                                    </lvc:XamlPieSeries>
+                                                </DataTemplate>
+                                            </lvc:PieChart.SeriesTemplate>
+                                        </lvc:PieChart>
+                                    </StackPanel>
+                                </StackPanel>
+                            </shadui:Card>
+                            <shadui:Card Grid.Row="1" HasShadow="True">
+                                <StackPanel>
+                                    <shadui:CardTitle Content="Age Group" FontSize="20" FontWeight="SemiBold" />
+                                    <lvc:CartesianChart
+                                        Height="300"
+                                        Name="CartesianChart2"
+                                        Margin="12,0,12,12"
+                                        XAxes="{CompiledBinding XAxes}"
+                                        YAxes="{CompiledBinding YAxes}"
+                                        HoveredPointsChangedCommand="{CompiledBinding HoveredPointsChangedCommand}"
+                                        TooltipTextSize="14">
+                                        <lvc:CartesianChart.Series>
+                                            <lvc:XamlColumnSeries
+                                                Values="{CompiledBinding AgeSeries[0].Values}"
+                                                Stroke="{lvc:SolidColorPaint Color='#00000000'}"
+                                                PointMeasuredCommand="{CompiledBinding PointMeasuredCommand}" />
+                                        </lvc:CartesianChart.Series>
+                                    </lvc:CartesianChart>
+                                </StackPanel>
+                            </shadui:Card>
+                        </Grid>
+                    </shadui:BreakpointView>
+                </shadui:BreakpointViewPort>
                 <shadui:Card>
                     <StackPanel>
                         <shadui:CardTitle Content="Gym Population" FontSize="20"/>
