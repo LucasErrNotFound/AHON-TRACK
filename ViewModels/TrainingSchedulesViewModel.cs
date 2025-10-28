@@ -334,7 +334,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
                 _toastManager.CreateToast("Adding new training schedule cancelled")
                     .WithContent("Add a new training schedule to continue")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(1465)
+                    .ShowWarning()).WithMaxWidth(1360)
             .Show();
     }
 

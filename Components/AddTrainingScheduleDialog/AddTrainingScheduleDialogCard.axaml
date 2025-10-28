@@ -8,7 +8,7 @@
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     x:DataType="viewModels:AddTrainingScheduleDialogCardViewModel"
     mc:Ignorable="d"
-    Width="1465"
+    Width="1360"
     MaxHeight="725"
     d:DesignWidth="1465"
     d:DesignHeight="655"
