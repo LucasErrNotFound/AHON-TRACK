@@ -198,7 +198,7 @@
 												Title="Active Now"
 												CardBackground="{StaticResource OrangeGradient}"
 												Foreground="White"
-												Hint="{CompiledBinding ActiveNowGrowth, StringFormat='+{0}% since yesterday'}"
+												Hint="{CompiledBinding ActiveNowGrowthFormatted}"
 												Value="{CompiledBinding ActiveNow, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg

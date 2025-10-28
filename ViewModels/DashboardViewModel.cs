@@ -251,6 +251,17 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         }
     }
 
+    public string ActiveNowGrowthFormatted
+    {
+        get
+        {
+            if (ActiveNowGrowth >= 0)
+                return $"+{ActiveNowGrowth}% an hour ago";
+            else
+                return $"{ActiveNowGrowth}% an hour ago";
+        }
+    }
+
     #endregion
 
     #region Constructor
@@ -314,6 +325,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
         };
         DashboardEventService.Instance.CheckinAdded += async (s, e) => await LoadDashboardSummary();
+        DashboardEventService.Instance.CheckoutAdded += async (s, e) => await LoadDashboardSummary();
         DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
     }
 
