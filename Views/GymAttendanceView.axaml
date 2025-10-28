@@ -9,8 +9,6 @@
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
-    xmlns:skiaSharpView="clr-namespace:LiveChartsCore.SkiaSharpView;assembly=LiveChartsCore.SkiaSharpView"
-    xmlns:system="clr-namespace:System;assembly=System.Runtime"
     x:DataType="viewModels:GymAttendanceViewModel"
     mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
     x:Class="AHON_TRACK.Views.GymAttendanceView">
@@ -56,7 +54,7 @@
                 TextWrapping="Wrap"
                 Margin="90,0" />
 		</StackPanel>
-		<ScrollViewer HorizontalScrollBarVisibility="Auto">
+		<ScrollViewer>
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
 				<ScrollViewer VerticalScrollBarVisibility="Auto">
 					<Interaction.Behaviors>
@@ -149,53 +147,106 @@
                                 shadui:ControlAssist.ReadOnly="True"
                                 SelectedDate="{CompiledBinding AttendanceGroupSelectedToDate}" />
 						</StackPanel>
-						<Grid RowDefinitions="* *" ColumnDefinitions="2* *" ColumnSpacing="30" Margin="0,15,0,0">
-							<shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True" VerticalAlignment="Top">
-								<StackPanel>
-									<shadui:CardTitle
-                                        Content="Gym Attendance Report"
-                                        FontSize="20"
-                                        FontWeight="SemiBold" />
-									<lvc:CartesianChart
-                                        Height="400"
-                                        Series="{CompiledBinding AttendanceSeriesCollection}"
-                                        XAxes="{CompiledBinding AttendanceLineChartXAxes}"
-                                        LegendPosition="Bottom">
-									</lvc:CartesianChart>
-								</StackPanel>
-							</shadui:Card>
-							<shadui:Card Grid.Row="0" Grid.Column="1" HasShadow="True" VerticalAlignment="Top">
-								<StackPanel>
-									<shadui:CardTitle
-                                        Content="Walk-ins vs. Members"
-                                        FontSize="20"
-                                        FontWeight="SemiBold" />
-									<lvc:PieChart
-                                        Height="400"
-                                        InitialRotation="130"
-                                        LegendPosition="Bottom"
-                                        ZIndex="2"
-                                        SeriesSource="{CompiledBinding CustomerTypePieDataCollection}">
-										<lvc:PieChart.SeriesTemplate>
-											<DataTemplate x:DataType="viewModels:CustomerPieData">
-												<lvc:XamlPieSeries
-                                                    SeriesName="{CompiledBinding Name}"
-                                                    Values="{CompiledBinding Values}"
-                                                    Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
-                                                    Fill="{CompiledBinding Color, Converter={StaticResource StringToPaintConverter}}"
-                                                    HoverPushout="15"
-                                                    DataLabelsFormatter="{CompiledBinding Formatter}"
-                                                    DataLabelsSize="15"
-                                                    ShowDataLabels="{CompiledBinding IsTotal}"
-                                                    DataLabelsPosition="Outer"
-                                                    IsVisibleAtLegend="{CompiledBinding IsTotal}" >
-												</lvc:XamlPieSeries>
-											</DataTemplate>
-										</lvc:PieChart.SeriesTemplate>
-									</lvc:PieChart>
-								</StackPanel>
-							</shadui:Card>
-						</Grid>
+						<shadui:BreakpointViewPort>
+							<shadui:BreakpointView Breakpoint="XlAndUp">
+								<Grid RowDefinitions="* *" ColumnDefinitions="2* *" ColumnSpacing="30" Margin="0,15,0,0">
+									<shadui:Card Grid.Row="0" Grid.Column="0" HasShadow="True" VerticalAlignment="Top">
+										<StackPanel>
+											<shadui:CardTitle
+												Content="Gym Attendance Report"
+												FontSize="20"
+												FontWeight="SemiBold" />
+											<lvc:CartesianChart
+												Height="400"
+												Series="{CompiledBinding AttendanceSeriesCollection}"
+												XAxes="{CompiledBinding AttendanceLineChartXAxes}"
+												LegendPosition="Bottom">
+											</lvc:CartesianChart>
+										</StackPanel>
+									</shadui:Card>
+									<shadui:Card Grid.Row="0" Grid.Column="1" HasShadow="True" VerticalAlignment="Top">
+										<StackPanel>
+											<shadui:CardTitle
+												Content="Walk-ins vs. Members"
+												FontSize="20"
+												FontWeight="SemiBold" />
+											<lvc:PieChart
+												Height="400"
+												InitialRotation="130"
+												LegendPosition="Bottom"
+												ZIndex="2"
+												SeriesSource="{CompiledBinding CustomerTypePieDataCollection}">
+												<lvc:PieChart.SeriesTemplate>
+													<DataTemplate x:DataType="viewModels:CustomerPieData">
+														<lvc:XamlPieSeries
+															SeriesName="{CompiledBinding Name}"
+															Values="{CompiledBinding Values}"
+															Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
+															Fill="{CompiledBinding Color, Converter={StaticResource StringToPaintConverter}}"
+															HoverPushout="15"
+															DataLabelsFormatter="{CompiledBinding Formatter}"
+															DataLabelsSize="15"
+															ShowDataLabels="{CompiledBinding IsTotal}"
+															DataLabelsPosition="Outer"
+															IsVisibleAtLegend="{CompiledBinding IsTotal}">
+														</lvc:XamlPieSeries>
+													</DataTemplate>
+												</lvc:PieChart.SeriesTemplate>
+											</lvc:PieChart>
+										</StackPanel>
+									</shadui:Card>
+								</Grid>
+							</shadui:BreakpointView>
+							<shadui:BreakpointView Breakpoint="XlAndDown">
+								<Grid RowDefinitions="* *" RowSpacing="20" Margin="0,15,0,0">
+									<shadui:Card Grid.Row="0" HasShadow="True" VerticalAlignment="Top">
+										<StackPanel>
+											<shadui:CardTitle
+												Content="Gym Attendance Report"
+												FontSize="20"
+												FontWeight="SemiBold" />
+											<lvc:CartesianChart
+												Height="400"
+												Series="{CompiledBinding AttendanceSeriesCollection}"
+												XAxes="{CompiledBinding AttendanceLineChartXAxes}"
+												LegendPosition="Bottom">
+											</lvc:CartesianChart>
+										</StackPanel>
+									</shadui:Card>
+									<shadui:Card Grid.Row="1" HasShadow="True" VerticalAlignment="Top">
+										<StackPanel>
+											<shadui:CardTitle
+												Content="Walk-ins vs. Members"
+												FontSize="20"
+												FontWeight="SemiBold" />
+											<lvc:PieChart
+												Height="500"
+												InitialRotation="130"
+												LegendPosition="Bottom"
+												ZIndex="2"
+												SeriesSource="{CompiledBinding CustomerTypePieDataCollection}">
+												<lvc:PieChart.SeriesTemplate>
+													<DataTemplate x:DataType="viewModels:CustomerPieData">
+														<lvc:XamlPieSeries
+															SeriesName="{CompiledBinding Name}"
+															Values="{CompiledBinding Values}"
+															Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
+															Fill="{CompiledBinding Color, Converter={StaticResource StringToPaintConverter}}"
+															HoverPushout="15"
+															DataLabelsFormatter="{CompiledBinding Formatter}"
+															DataLabelsSize="15"
+															ShowDataLabels="{CompiledBinding IsTotal}"
+															DataLabelsPosition="Outer"
+															IsVisibleAtLegend="{CompiledBinding IsTotal}">
+														</lvc:XamlPieSeries>
+													</DataTemplate>
+												</lvc:PieChart.SeriesTemplate>
+											</lvc:PieChart>
+										</StackPanel>
+									</shadui:Card>
+								</Grid>
+							</shadui:BreakpointView>
+						</shadui:BreakpointViewPort>
 					</StackPanel>
 				</ScrollViewer>
 			</StackPanel>
