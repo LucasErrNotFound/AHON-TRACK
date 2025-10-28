@@ -459,7 +459,7 @@ SELECT TOP (@TopN)
     t.PackageType AS TrainingType,
     t.AssignedCoach,
     t.ScheduledDate AS Date,
-    CONVERT(VARCHAR(5), t.ScheduledTimeStart, 108) + ' - ' + CONVERT(VARCHAR(5), t.ScheduledTimeEnd, 108) AS TimeSlot,
+    FORMAT(t.ScheduledTimeStart, 'hh:mm tt') + ' - ' + FORMAT(t.ScheduledTimeEnd, 'hh:mm tt') AS TimeSlot,
     t.Attendance,
     t.ProfilePicture
 FROM Trainings t

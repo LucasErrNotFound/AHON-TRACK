@@ -63,6 +63,25 @@ namespace AHON_TRACK.Services
             if (training == null)
                 throw new ArgumentNullException(nameof(training));
 
+            var duration = training.scheduledTimeEnd - training.scheduledTimeStart;
+            const int MIN_DURATION_MINUTES = 30;
+
+            if (duration.TotalMinutes < MIN_DURATION_MINUTES)
+            {
+                ShowToast("Invalid Schedule Duration",
+                    $"Training schedule must be at least {MIN_DURATION_MINUTES} minutes. Current duration: {duration.TotalMinutes:F0} minutes.",
+                    ToastType.Warning);
+                return false;
+            }
+
+            if (duration.TotalMinutes <= 0)
+            {
+                ShowToast("Invalid Time Range",
+                    "End time must be after start time.",
+                    ToastType.Warning);
+                return false;
+            }
+
             try
             {
                 using var connection = new SqlConnection(_connectionString);
@@ -377,6 +396,25 @@ ORDER BY e.FirstName";
 
             if (training == null)
                 throw new ArgumentNullException(nameof(training));
+
+            var duration = training.scheduledTimeEnd - training.scheduledTimeStart;
+            const int MIN_DURATION_MINUTES = 30;
+
+            if (duration.TotalMinutes < MIN_DURATION_MINUTES)
+            {
+                ShowToast("Invalid Schedule Duration",
+                    $"Training schedule must be at least {MIN_DURATION_MINUTES} minutes. Current duration: {duration.TotalMinutes:F0} minutes.",
+                    ToastType.Warning);
+                return false;
+            }
+
+            if (duration.TotalMinutes <= 0)
+            {
+                ShowToast("Invalid Time Range",
+                    "End time must be after start time.",
+                    ToastType.Warning);
+                return false;
+            }
 
             const string query = @"
 UPDATE Trainings SET 
