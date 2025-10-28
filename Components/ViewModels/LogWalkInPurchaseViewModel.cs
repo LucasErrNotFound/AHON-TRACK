@@ -214,10 +214,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         get => _walkInGender;
         set
         {
-            if (_walkInGender != value)
+            var newValue = value ?? string.Empty;
+            if (_walkInGender != newValue)
             {
-                _walkInGender = value ?? string.Empty;
-                OnPropertyChanged(nameof(WalkInGender));
+                SetProperty(ref _walkInGender, newValue);
                 OnPropertyChanged(nameof(IsMale));
                 OnPropertyChanged(nameof(IsFemale));
                 OnPropertyChanged(nameof(IsPaymentPossible));
@@ -235,6 +235,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
             OnPropertyChanged(nameof(SelectedWalkInType));
             OnPropertyChanged(nameof(IsPlanVisible));
             OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsQuantityEditable));
 
             OnPropertyChanged(nameof(PurchaseSummarySubtotal));
             OnPropertyChanged(nameof(TotalAmount));
@@ -245,6 +246,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
             {
                 SpecializedPackageQuantity = 1;
             }
+            OnPropertyChanged(nameof(SpecializedPackageQuantity));
+            OnPropertyChanged(nameof(SessionQuantity));
 
             _ = CheckFreeTrialEligibilityAsync();
         }
@@ -290,14 +293,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         set
         {
             // Enforce quantity = 1 for Free Trial
-            if (SelectedWalkInTypeItem == "Free Trial" && value > 1)
-            {
-                SetProperty(ref _specializedPackageQuantity, 1, true);
-            }
-            else
-            {
-                SetProperty(ref _specializedPackageQuantity, value, true);
-            }
+            var newValue = SelectedWalkInTypeItem == "Free Trial" ? 1 : value;
+            SetProperty(ref _specializedPackageQuantity, newValue, true);
 
             OnPropertyChanged(nameof(SessionQuantity));
             OnPropertyChanged(nameof(IsPaymentPossible));
@@ -311,14 +308,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
     }
 
-    public bool IsQuantityVisible
-    {
-        get
-        {
-            return !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
-                   SelectedSpecializedPackageItem != "None";
-        }
-    }
+    public bool IsQuantityVisible =>
+        !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
+        SelectedSpecializedPackageItem != "None";
 
     public bool IsQuantityEditable
     {
@@ -362,18 +354,24 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         get => _isCashSelected;
         set
         {
-            if (SetField(ref _isCashSelected, value))
+            if (_isCashSelected != value)
             {
+                _isCashSelected = value; // Set directly first
+                OnPropertyChanged(nameof(IsCashSelected)); // Notify manually
+            
                 if (value)
                 {
-                    IsGCashSelected = false;
-                    IsMayaSelected = false;
+                    // Directly set backing fields to avoid triggering setters
+                    _isGCashSelected = false;
+                    _isMayaSelected = false;
+                    OnPropertyChanged(nameof(IsGCashSelected));
+                    OnPropertyChanged(nameof(IsMayaSelected));
                 }
+            
                 OnPropertyChanged(nameof(IsCashVisible));
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
-
                 OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
@@ -384,18 +382,24 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         get => _isGCashSelected;
         set
         {
-            if (SetField(ref _isGCashSelected, value))
+            if (_isGCashSelected != value)
             {
+                _isGCashSelected = value; // Set directly first
+                OnPropertyChanged(nameof(IsGCashSelected)); // Notify manually
+            
                 if (value)
                 {
-                    IsCashSelected = false;
-                    IsMayaSelected = false;
+                    // Directly set backing fields to avoid triggering setters
+                    _isCashSelected = false;
+                    _isMayaSelected = false;
+                    OnPropertyChanged(nameof(IsCashSelected));
+                    OnPropertyChanged(nameof(IsMayaSelected));
                 }
+            
                 OnPropertyChanged(nameof(IsCashVisible));
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
-
                 OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
@@ -406,18 +410,24 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         get => _isMayaSelected;
         set
         {
-            if (SetField(ref _isMayaSelected, value))
+            if (_isMayaSelected != value)
             {
+                _isMayaSelected = value; // Set directly first
+                OnPropertyChanged(nameof(IsMayaSelected)); // Notify manually
+            
                 if (value)
                 {
-                    IsCashSelected = false;
-                    IsGCashSelected = false;
+                    // Directly set backing fields to avoid triggering setters
+                    _isCashSelected = false;
+                    _isGCashSelected = false;
+                    OnPropertyChanged(nameof(IsCashSelected));
+                    OnPropertyChanged(nameof(IsGCashSelected));
                 }
+            
                 OnPropertyChanged(nameof(IsCashVisible));
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
-
                 OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
@@ -442,19 +452,11 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         }
     }
 
-    public bool IsPackageDetailsVisible
-    {
-        get
-        {
-            return !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
-                   SelectedSpecializedPackageItem != "None";
-        }
-    }
+    public bool IsPackageDetailsVisible =>
+        !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
+        SelectedSpecializedPackageItem != "None";
 
-    public bool IsPlanVisible
-    {
-        get { return !string.IsNullOrEmpty(SelectedWalkInTypeItem); }
-    }
+    public bool IsPlanVisible => !string.IsNullOrEmpty(SelectedWalkInTypeItem);
 
     public string SessionQuantity
     {
@@ -591,13 +593,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     }
 
     // Package discount (currently 0%)
-    public string PackageDiscount
-    {
-        get
-        {
-            return "-₱0";
-        }
-    }
+    public string PackageDiscount => "-₱0";
 
     // Package total after discount
     public string PackageTotal
@@ -715,15 +711,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     // Walk-in validity dates
     public string ValidFromDate => DateTime.Now.ToString("MMMM dd, yyyy");
 
-    public string ValidUntilDate
-    {
-        get
-        {
-            // For 1-day pass, valid until end of the same day
-            // You can adjust this based on your business logic
-            return DateTime.Now.ToString("MMMM dd, yyyy");
-        }
-    }
+    public string ValidUntilDate =>
+        // For 1-day pass, valid until end of the same day
+        DateTime.Now.ToString("MMMM dd, yyyy");
 
     #endregion  
 
@@ -831,14 +821,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return false;
-        field = value;
-        OnPropertyChanged(propertyName);
-        return true;
-    }
-
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
 
@@ -894,7 +876,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         // Remove any PropertyChanged subscribers
         PropertyChanged = null;
 
-        // Note: injected readonly services (dialog/toast/page/walkInService) are not reassigned here.
+        // Injected readonly services (dialog/toast/page/walkInService) are not reassigned here.
 
         base.DisposeManagedResources();
     }

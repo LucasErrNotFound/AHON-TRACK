@@ -215,6 +215,7 @@
 											<NumericUpDown
 												IsVisible="{CompiledBinding IsQuantityVisible, Mode=TwoWay}"
 												Value="{CompiledBinding SpecializedPackageQuantity, Mode=TwoWay}"
+												IsEnabled="{CompiledBinding IsQuantityEditable}"
 												Width="130"
 												Minimum="1"
 												Maximum="100"
@@ -387,12 +388,14 @@
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<Border
 														HorizontalAlignment="Right"
+														Width="160"
 														CornerRadius="5"
 														Padding="15,5,15,5"
 														Background="LightGray">
 														<TextBlock
 															Text="{CompiledBinding SessionQuantity}"
 															FontSize="14"
+															TextWrapping="WrapWithOverflow"
 															FontWeight="Bold"
 															HorizontalAlignment="Center"
 															Foreground="{StaticResource FontForeground}" />
@@ -799,6 +802,7 @@
 											<NumericUpDown
 												IsVisible="{CompiledBinding IsQuantityVisible, Mode=TwoWay}"
 												Value="{CompiledBinding SpecializedPackageQuantity, Mode=TwoWay}"
+												IsEnabled="{CompiledBinding IsQuantityEditable}"
 												Width="130"
 												Minimum="1"
 												Maximum="100"
@@ -971,12 +975,14 @@
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<Border
 														HorizontalAlignment="Right"
+														Width="160"
 														CornerRadius="5"
 														Padding="15,5,15,5"
 														Background="LightGray">
 														<TextBlock
 															Text="{CompiledBinding SessionQuantity}"
 															FontSize="14"
+															TextWrapping="WrapWithOverflow"
 															FontWeight="Bold"
 															HorizontalAlignment="Center"
 															Foreground="{StaticResource FontForeground}" />
