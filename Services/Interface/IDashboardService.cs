@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static AHON_TRACK.Services.DashboardService;
 
 namespace AHON_TRACK.Services.Interface
 {
@@ -30,6 +31,13 @@ namespace AHON_TRACK.Services.Interface
         Task<IEnumerable<DateTime>> GetAuditLogDatesAsync();
         Task<int> GetAuditLogCountByDateAsync(DateTime date);
         Task<string> GenerateAuditLogsSummaryAsync();
+
+        #region SUMMARY FOR CARDS
+        Task<DashboardSummaryDto> GetDashboardSummaryAsync(DateTime fromDate, DateTime toDate);
+        Task<DashboardGrowthDto> GetDashboardGrowthAsync(DateTime currentFrom, DateTime currentTo);
+        Task<(int CurrentActive, double GrowthPercent)> GetActiveNowWithGrowthAsync();
+        #endregion
+
     }
 
 

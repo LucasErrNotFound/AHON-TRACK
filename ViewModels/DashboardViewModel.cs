@@ -2,11 +2,14 @@
 using AHON_TRACK.Services;
 using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
+using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Painting.Effects;
+using Microsoft.Identity.Client;
+using ShadUI;
 using SkiaSharp;
 using System;
 using System.Collections.ObjectModel;
@@ -14,8 +17,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.Input;
-using ShadUI;
 using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.ViewModels;
@@ -147,7 +148,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             OnPropertyChanged();
         }
     }
-    
+
     public ObservableCollection<Notification> Notifications
     {
         get => _notifications;
@@ -161,12 +162,101 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     public Axis[] XAxes { get; set; } = [];
     public Axis[] YAxes { get; set; } = [];
 
+    private double _totalRevenue;
+    public double TotalRevenue
+    {
+        get => _totalRevenue;
+        set
+        {
+            _totalRevenue = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private int _memberSubscriptions;
+    public int MemberSubscriptions
+    {
+        get => _memberSubscriptions;
+        set
+        {
+            _memberSubscriptions = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private int _salesCount;
+    public int SalesCount
+    {
+        get => _salesCount;
+        set
+        {
+            _salesCount = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private int _activeNow;
+    public int ActiveNow
+    {
+        get => _activeNow;
+        set
+        {
+            _activeNow = value;
+            OnPropertyChanged();
+        }
+    }
+
+    // Growth percentages
+    private double _revenueGrowth;
+    public double RevenueGrowth
+    {
+        get => _revenueGrowth;
+        set
+        {
+            _revenueGrowth = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private double _subscriptionsGrowth;
+    public double SubscriptionsGrowth
+    {
+        get => _subscriptionsGrowth;
+        set
+        {
+            _subscriptionsGrowth = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private double _salesGrowth;
+    public double SalesGrowth
+    {
+        get => _salesGrowth;
+        set
+        {
+            _salesGrowth = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private double _activeNowGrowth;
+    public double ActiveNowGrowth
+    {
+        get => _activeNowGrowth;
+        set
+        {
+            _activeNowGrowth = value;
+            OnPropertyChanged();
+        }
+    }
+
     #endregion
 
     #region Constructor
 
-    public DashboardViewModel(ToastManager toastManager, PageManager pageManager, DashboardModel dashboardModel, 
-        IDashboardService dashboardService, IInventoryService inventoryService, IProductService productService, 
+    public DashboardViewModel(ToastManager toastManager, PageManager pageManager, DashboardModel dashboardModel,
+        IDashboardService dashboardService, IInventoryService inventoryService, IProductService productService,
         IMemberService memberService)
     {
         _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
@@ -176,14 +266,14 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         _inventoryService = inventoryService ?? throw new ArgumentNullException(nameof(inventoryService));
         _productService = productService ?? throw new ArgumentNullException(nameof(productService));
         _memberService = memberService ?? throw new ArgumentNullException(nameof(memberService));
-        
+
         _inventoryService.RegisterNotificationCallback(AddNotification);
         _productService.RegisterNotificationCallback(AddNotification);
         _memberService.RegisterNotificationCallback(AddNotification);
-        
+
         _ = InitializeViewModel();
     }
-    
+
     public DashboardViewModel(PageManager pageManager, IDashboardService dashboardService)
     {
         _pageManager = pageManager ?? throw new ArgumentNullException(nameof(pageManager));
@@ -198,13 +288,14 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     private async Task InitializeViewModel()
     {
         InitializeAxes();
-        
+
         await InitializeAvailableYears();
         await InitializeChart();
         await InitializeSalesData();
         await InitializeTrainingSessionsData();
         await RefreshRecentLogs();
-        
+        await LoadDashboardSummary();
+
         // await _inventoryService.ShowEquipmentAlertsAsync();
         // await _productService.ShowProductAlertsAsync();
 
@@ -216,7 +307,13 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         {
             await UpdateChartData(); // Direct chart refresh
         };
-        DashboardEventService.Instance.SalesUpdated += async (s, e) => await LoadSalesFromDatabaseAsync();
+        DashboardEventService.Instance.SalesUpdated += async (s, e) =>
+        {
+            await LoadSalesFromDatabaseAsync();
+            await LoadDashboardSummary();
+
+        };
+        DashboardEventService.Instance.CheckinAdded += async (s, e) => await LoadDashboardSummary();
         DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
     }
 
@@ -365,6 +462,57 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     #endregion
 
+    #region SUMMARY CARDS
+    private async Task LoadDashboardSummary()
+    {
+        try
+        {
+            Console.WriteLine("=== Loading Dashboard Summary ===");
+
+            // Load current month's data
+            var currentMonth = DateTime.Now;
+            var fromDate = new DateTime(currentMonth.Year, currentMonth.Month, 1);
+            var toDate = currentMonth;
+
+            Console.WriteLine($"Date Range: {fromDate:yyyy-MM-dd} to {toDate:yyyy-MM-dd}");
+
+            // Get summary data
+            var summary = await _dashboardService.GetDashboardSummaryAsync(fromDate, toDate);
+            TotalRevenue = summary.TotalRevenue;
+            MemberSubscriptions = summary.MemberSubscriptions;
+            SalesCount = summary.SalesCount;
+
+            // Get active now with growth (using Option 2 - yesterday comparison)
+            var (activeCount, activeGrowth) = await _dashboardService.GetActiveNowWithGrowthAsync();
+            ActiveNow = activeCount;
+            ActiveNowGrowth = activeGrowth;
+
+            Console.WriteLine($"TotalRevenue: ₱{TotalRevenue:N2}");
+            Console.WriteLine($"MemberSubscriptions: {MemberSubscriptions}");
+            Console.WriteLine($"SalesCount: {SalesCount}");
+            Console.WriteLine($"ActiveNow: {ActiveNow} (Growth: {ActiveNowGrowth}%)");
+
+            // Get growth data for other metrics
+            var growth = await _dashboardService.GetDashboardGrowthAsync(fromDate, toDate);
+            RevenueGrowth = growth.RevenueGrowth;
+            SubscriptionsGrowth = growth.SubscriptionsGrowth;
+            SalesGrowth = growth.SalesGrowth;
+            // Don't overwrite ActiveNowGrowth here since we calculated it above
+
+            Console.WriteLine($"RevenueGrowth: {RevenueGrowth}%");
+            Console.WriteLine($"SubscriptionsGrowth: {SubscriptionsGrowth}%");
+            Console.WriteLine($"SalesGrowth: {SalesGrowth}%");
+
+            Console.WriteLine("=== Dashboard Summary Loaded Successfully ===");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"!!! Error loading dashboard summary: {ex.Message}");
+            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+        }
+    }
+    #endregion
+
     #region CRUD Operations for Sales
 
     public void AddSale(SalesItem newSale)
@@ -497,20 +645,20 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     }
 
     #endregion
-    
+
     #region CRUD Operations for Notifications
 
     public void AddNotification(Notification newNotification)
     {
         var notificationKey = _dashboardModel.GenerateNotificationKey(newNotification.Title, newNotification.Message);
         newNotification.NotificationKey = notificationKey;
-    
+
         if (_dashboardModel.IsNotificationAlreadyShown(notificationKey))
         {
             Console.WriteLine($"[AddNotification] Skipping duplicate notification: {notificationKey}");
             return;
         }
-    
+
         _dashboardModel.MarkNotificationAsShown(notificationKey);
         Notifications.Insert(0, newNotification);
     }
@@ -521,14 +669,14 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         {
             _dashboardModel.RemoveNotificationTracking(notification.NotificationKey);
         }
-    
+
         Notifications.Remove(notification);
     }
 
     #endregion
 
     #region Delete Notification
-    
+
     private void DeleteNotification(Notification? notification)
     {
         if (notification != null)
@@ -536,13 +684,13 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             RemoveNotification(notification);
         }
     }
-    
+
     private void ClearAllNotifications()
     {
         _dashboardModel.ClearAllNotificationTracking();
         Notifications.Clear();
     }
-    
+
     #endregion
 
     #region HotAvalonia and PropertyChanged
@@ -551,11 +699,11 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     public void Initialize()
     {
     }
-    
+
     private RelayCommand<Notification>? _deleteNotificationCommand;
     public RelayCommand<Notification> DeleteNotificationCommand =>
         _deleteNotificationCommand ??= new RelayCommand<Notification>(DeleteNotification);
-    
+
     private RelayCommand? _clearAllNotificationsCommand;
     public RelayCommand ClearAllNotificationsCommand =>
         _clearAllNotificationsCommand ??= new RelayCommand(ClearAllNotifications);
@@ -566,7 +714,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     #endregion
-    
+
     // Add to DashboardViewModel class
 
     protected override void DisposeManagedResources()
@@ -576,26 +724,26 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         DashboardEventService.Instance.ChartDataUpdated -= async (s, e) => await UpdateChartData();
         DashboardEventService.Instance.SalesUpdated -= async (s, e) => await LoadSalesFromDatabaseAsync();
         DashboardEventService.Instance.TrainingSessionsUpdated -= async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
-    
+
         // Unsubscribe from notification callbacks
         /*
         _inventoryService?.UnregisterNotificationCallback(AddNotification);
         _productService?.UnregisterNotificationCallback(AddNotification);
         _memberService?.UnregisterNotificationCallback(AddNotification);
         */
-    
+
         // Clear observable collections
         RecentSales?.Clear();
         UpcomingTrainingSessions?.Clear();
         RecentLogs?.Clear();
         Notifications?.Clear();
         AvailableYears?.Clear();
-    
+
         // Clear chart data
         Series = [];
         XAxes = [];
         YAxes = [];
-    
+
         base.DisposeManagedResources();
     }
 }

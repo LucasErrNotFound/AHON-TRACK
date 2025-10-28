@@ -417,6 +417,12 @@ namespace AHON_TRACK.Services
                 return (false, "Insufficient permissions to delete employees.");
             }
 
+            if (employeeId == CurrentUserModel.UserId)
+            {
+                ShowWarningToast("Invalid Operation", "You cannot delete your own account.");
+                return (false, "Cannot delete your own account.");
+            }
+
             try
             {
                 using var conn = new SqlConnection(_connectionString);
@@ -491,10 +497,12 @@ namespace AHON_TRACK.Services
 
                 // Try Admin
                 const string adminQuery = @"
-                    SELECT a.AdminID, a.Password, e.FirstName, e.LastName, e.Status
-                    FROM Admins a
-                    INNER JOIN Employees e ON a.AdminID = e.EmployeeID
-                    WHERE a.Username = @Username";
+    SELECT a.AdminID, a.Password, e.FirstName, e.LastName, e.Status
+    FROM Admins a
+    INNER JOIN Employees e ON a.AdminID = e.EmployeeID
+    WHERE a.Username = @Username 
+    AND a.IsDeleted = 0 
+    AND e.IsDeleted = 0";
 
                 using (var adminCmd = new SqlCommand(adminQuery, conn))
                 {
@@ -540,10 +548,12 @@ namespace AHON_TRACK.Services
 
                 // Try Coach
                 const string coachQuery = @"
-                    SELECT c.CoachID, c.Password, e.FirstName, e.LastName, e.Status
-                    FROM Coach c
-                    INNER JOIN Employees e ON c.CoachID = e.EmployeeID
-                    WHERE c.Username = @Username AND c.IsDeleted = 0";
+    SELECT c.CoachID, c.Password, e.FirstName, e.LastName, e.Status
+    FROM Coach c
+    INNER JOIN Employees e ON c.CoachID = e.EmployeeID
+    WHERE c.Username = @Username 
+    AND c.IsDeleted = 0 
+    AND e.IsDeleted = 0";
 
                 using (var coachCmd = new SqlCommand(coachQuery, conn))
                 {
@@ -589,10 +599,12 @@ namespace AHON_TRACK.Services
 
                 // Try Staff
                 const string staffQuery = @"
-                    SELECT s.StaffID, s.Password, e.FirstName, e.LastName, e.Status
-                    FROM Staffs s
-                    INNER JOIN Employees e ON s.StaffID = e.EmployeeID
-                    WHERE s.Username = @Username";
+    SELECT s.StaffID, s.Password, e.FirstName, e.LastName, e.Status
+    FROM Staffs s
+    INNER JOIN Employees e ON s.StaffID = e.EmployeeID
+    WHERE s.Username = @Username 
+    AND s.IsDeleted = 0 
+    AND e.IsDeleted = 0";
 
                 using (var staffCmd = new SqlCommand(staffQuery, conn))
                 {

@@ -67,6 +67,8 @@ namespace AHON_TRACK;
 [Singleton<IWalkInService, WalkInService>]
 [Singleton<IProductPurchaseService, ProductPurchaseService>]
 [Singleton<DataCountingService, DataCountingService>]
+[Singleton(typeof(BackupDatabaseService), Factory = nameof(BackupDatabaseServiceFactory))]
+[Singleton(typeof(BackupSchedulerService), Factory = nameof(BackupSchedulerServiceFactory))]
 
 public partial class ServiceProvider
 {
@@ -92,6 +94,20 @@ public partial class ServiceProvider
     public PageManager PageManagerFactory()
     {
         return new PageManager(this);
+    }
+
+    private BackupDatabaseService BackupDatabaseServiceFactory()
+    {
+        var connectionString = ConnectionStringFactory();
+        return new BackupDatabaseService(connectionString);
+    }
+
+    private BackupSchedulerService BackupSchedulerServiceFactory()
+    {
+        var settingsService = GetService<SettingsService>();
+        var backupDatabaseService = GetService<BackupDatabaseService>();
+        var toastManager = GetService<ToastManager>();
+        return new BackupSchedulerService(settingsService, backupDatabaseService, toastManager);
     }
 
     private string ConnectionStringFactory()

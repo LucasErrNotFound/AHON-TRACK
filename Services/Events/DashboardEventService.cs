@@ -55,6 +55,12 @@ namespace AHON_TRACK.Services.Events
         public event EventHandler? PackageDeleted;
         public event EventHandler? PackageUpdated;
 
+        // NEW: Add metrics update event
+        public event EventHandler? MetricsUpdated;
+
+        //
+        public event EventHandler? SessionAdded;
+
         private DashboardEventService() { }
 
         // --- Dashboard events ---
@@ -117,5 +123,11 @@ namespace AHON_TRACK.Services.Events
         public void NotifyPackageAdded() => PackageAdded?.Invoke(this, EventArgs.Empty);
         public void NotifyPackageUpdated() => PackageUpdated?.Invoke(this, EventArgs.Empty);
         public void NotifyPackageDeleted() => PackageDeleted?.Invoke(this, EventArgs.Empty);
+
+        // -- METRICS --
+        public void NotifyMetricsUpdated() => MetricsUpdated?.Invoke(this, EventArgs.Empty);
+
+        // -- SESSION ADDED --
+        public void NotifySessionAdded() => SessionAdded?.Invoke(this, EventArgs.Empty);
     }
 }

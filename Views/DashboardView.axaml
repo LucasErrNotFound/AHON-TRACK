@@ -76,8 +76,8 @@
 															Title="Total Revenue"
 															CardBackground="{StaticResource GreenGradient}"
 															Foreground="White"
-															Hint="+96% from last month"
-															Value="₱20,911.69">
+															Hint="{CompiledBinding RevenueGrowth, StringFormat='+{0}% from last month'}"
+															Value="{CompiledBinding TotalRevenue, StringFormat='₱{0:N2}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -90,8 +90,8 @@
 												Title="Member Subscriptions"
 												CardBackground="{StaticResource BlueGradient}"
 												Foreground="White"
-												Hint="+16% from last month"
-												Value="+18">
+												Hint="{CompiledBinding SubscriptionsGrowth, StringFormat='+{0}% from last month'}"
+												Value="{CompiledBinding MemberSubscriptions, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -103,8 +103,8 @@
 												Title="Sales"
 												CardBackground="{StaticResource PurpleGradient}"
 												Foreground="White"
-												Hint="+16% from last month"
-												Value="+69">
+												Hint="{CompiledBinding SalesGrowth, StringFormat='+{0}% from last month'}"
+												Value="{CompiledBinding SalesCount, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -116,8 +116,8 @@
 												Title="Active Now"
 												CardBackground="{StaticResource OrangeGradient}"
 												Foreground="White"
-												Hint="+26 since last hour"
-												Value="+9">
+												Hint="{CompiledBinding ActiveNowGrowth, StringFormat='+{0}% since yesterday'}"
+												Value="{CompiledBinding ActiveNow, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -158,8 +158,8 @@
 															CardBackground="{StaticResource GreenGradient}"
 															Foreground="White"
 															FontWeight="SemiBold"
-															Hint="+96% from last month"
-															Value="₱20,911.69">
+															Hint="{CompiledBinding RevenueGrowth, StringFormat='+{0}% from last month'}"
+															Value="{CompiledBinding TotalRevenue, StringFormat='₱{0:N0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -172,8 +172,8 @@
 												Title="Member Subscriptions"
 												CardBackground="{StaticResource BlueGradient}"
 												Foreground="White"
-												Hint="+16% from last month"
-												Value="+18">
+												Hint="{CompiledBinding SubscriptionsGrowth, StringFormat='+{0}% from last month'}"
+												Value="{CompiledBinding MemberSubscriptions, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -185,8 +185,8 @@
 												Title="Sales"
 												CardBackground="{StaticResource PurpleGradient}"
 												Foreground="White"
-												Hint="+16% from last month"
-												Value="+69">
+												Hint="{CompiledBinding SalesGrowth, StringFormat='+{0}% from last month'}"
+												Value="{CompiledBinding SalesCount, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -198,8 +198,8 @@
 												Title="Active Now"
 												CardBackground="{StaticResource OrangeGradient}"
 												Foreground="White"
-												Hint="+26 since last hour"
-												Value="+9">
+												Hint="{CompiledBinding ActiveNowGrowth, StringFormat='+{0}% since yesterday'}"
+												Value="{CompiledBinding ActiveNow, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"

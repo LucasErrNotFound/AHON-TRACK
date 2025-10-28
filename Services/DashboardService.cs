@@ -22,6 +22,217 @@ namespace AHON_TRACK.Services
                 ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
+        #region DASHBOARD SUMMARY CARDS
+
+        public async Task<DashboardSummaryDto> GetDashboardSummaryAsync(DateTime fromDate, DateTime toDate)
+        {
+            var summary = new DashboardSummaryDto();
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Total Revenue for current period
+                string revenueQuery = @"
+            SELECT ISNULL(SUM(Amount), 0) AS TotalRevenue
+            FROM Sales
+            WHERE IsDeleted = 0 
+              AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
+
+                using (var cmd = new SqlCommand(revenueQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@From", fromDate);
+                    cmd.Parameters.AddWithValue("@To", toDate);
+                    summary.TotalRevenue = Convert.ToDouble(await cmd.ExecuteScalarAsync());
+                }
+
+                // Member Subscriptions (new members in period)
+                string subscriptionsQuery = @"
+            SELECT COUNT(*)
+            FROM Members
+            WHERE IsDeleted = 0
+              AND CAST(DateJoined AS DATE) BETWEEN @From AND @To";
+
+                using (var cmd = new SqlCommand(subscriptionsQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@From", fromDate);
+                    cmd.Parameters.AddWithValue("@To", toDate);
+                    summary.MemberSubscriptions = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
+
+                // Sales Count
+                string salesQuery = @"
+            SELECT COUNT(DISTINCT SaleID)
+            FROM Sales
+            WHERE IsDeleted = 0 
+              AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
+
+                using (var cmd = new SqlCommand(salesQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@From", fromDate);
+                    cmd.Parameters.AddWithValue("@To", toDate);
+                    summary.SalesCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
+
+                // Active Now (checked in today)
+                string activeQuery = @"
+            SELECT COUNT(DISTINCT MemberID)
+            FROM MemberCheckIns
+            WHERE IsDeleted = 0
+              AND CAST(DateAttendance AS DATE) = CAST(GETDATE() AS DATE)
+            UNION ALL
+            SELECT COUNT(DISTINCT CustomerID)
+            FROM WalkInRecords
+            WHERE IsDeleted = 0
+              AND CAST(Attendance AS DATE) = CAST(GETDATE() AS DATE)";
+
+                using (var cmd = new SqlCommand(activeQuery, conn))
+                {
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    int total = 0;
+                    while (await reader.ReadAsync())
+                    {
+                        total += reader.GetInt32(0);
+                    }
+                    summary.ActiveNow = total;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetDashboardSummaryAsync] Error: {ex.Message}");
+            }
+
+            return summary;
+        }
+
+        /// <summary>
+        /// Calculates growth percentage between two periods
+        /// </summary>
+        public async Task<DashboardGrowthDto> GetDashboardGrowthAsync(DateTime currentFrom, DateTime currentTo)
+        {
+            var growth = new DashboardGrowthDto();
+
+            try
+            {
+                // Calculate previous period (same duration, shifted back)
+                var duration = (currentTo - currentFrom).Days;
+                var previousFrom = currentFrom.AddDays(-duration - 1);
+                var previousTo = currentFrom.AddDays(-1);
+
+                var currentSummary = await GetDashboardSummaryAsync(currentFrom, currentTo);
+                var previousSummary = await GetDashboardSummaryAsync(previousFrom, previousTo);
+
+                // Calculate growth percentages
+                growth.RevenueGrowth = CalculateGrowthPercentage(
+                    currentSummary.TotalRevenue,
+                    previousSummary.TotalRevenue);
+
+                growth.SubscriptionsGrowth = CalculateGrowthPercentage(
+                    currentSummary.MemberSubscriptions,
+                    previousSummary.MemberSubscriptions);
+
+                growth.SalesGrowth = CalculateGrowthPercentage(
+                    currentSummary.SalesCount,
+                    previousSummary.SalesCount);
+
+                growth.ActiveNowGrowth = CalculateGrowthPercentage(
+                    currentSummary.ActiveNow,
+                    previousSummary.ActiveNow);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetDashboardGrowthAsync] Error: {ex.Message}");
+            }
+
+            return growth;
+        }
+
+        private static double CalculateGrowthPercentage(double current, double previous)
+        {
+            if (previous == 0) return current > 0 ? 100 : 0;
+            return Math.Round(((current - previous) / previous) * 100, 2);
+        }
+
+        public async Task<(int CurrentActive, double GrowthPercent)> GetActiveNowWithGrowthAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Current active (today)
+                string currentQuery = @"
+            SELECT 
+                (SELECT COUNT(DISTINCT MemberID)
+                 FROM MemberCheckIns
+                 WHERE IsDeleted = 0
+                   AND CAST(DateAttendance AS DATE) = CAST(GETDATE() AS DATE))
+                +
+                (SELECT COUNT(DISTINCT CustomerID)
+                 FROM WalkInRecords
+                 WHERE IsDeleted = 0
+                   AND CAST(Attendance AS DATE) = CAST(GETDATE() AS DATE))";
+
+                int currentActive;
+                using (var cmd = new SqlCommand(currentQuery, conn))
+                {
+                    currentActive = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
+
+                // Yesterday's active count
+                string yesterdayQuery = @"
+            SELECT 
+                (SELECT COUNT(DISTINCT MemberID)
+                 FROM MemberCheckIns
+                 WHERE IsDeleted = 0
+                   AND CAST(DateAttendance AS DATE) = CAST(DATEADD(day, -1, GETDATE()) AS DATE))
+                +
+                (SELECT COUNT(DISTINCT CustomerID)
+                 FROM WalkInRecords
+                 WHERE IsDeleted = 0
+                   AND CAST(Attendance AS DATE) = CAST(DATEADD(day, -1, GETDATE()) AS DATE))";
+
+                int yesterdayActive;
+                using (var cmd = new SqlCommand(yesterdayQuery, conn))
+                {
+                    yesterdayActive = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
+
+                // Calculate growth
+                double growth = yesterdayActive == 0
+                    ? (currentActive > 0 ? 100 : 0)
+                    : Math.Round(((double)(currentActive - yesterdayActive) / yesterdayActive) * 100, 0);
+
+                return (currentActive, growth);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetActiveNowWithGrowthAsync] Error: {ex.Message}");
+                return (0, 0);
+            }
+        }
+
+        #endregion
+
+        #region SUPPORTING CLASS
+        public class DashboardSummaryDto
+        {
+            public double TotalRevenue { get; set; }
+            public int MemberSubscriptions { get; set; }
+            public int SalesCount { get; set; }
+            public int ActiveNow { get; set; }
+        }
+
+        public class DashboardGrowthDto
+        {
+            public double RevenueGrowth { get; set; }
+            public double SubscriptionsGrowth { get; set; }
+            public double SalesGrowth { get; set; }
+            public double ActiveNowGrowth { get; set; }
+        }
+        #endregion
+
         #region SALES
 
         public async Task<IEnumerable<SalesItem>> GetSalesAsync(int topN = 5)
@@ -224,8 +435,6 @@ namespace AHON_TRACK.Services
         }
 
         #endregion
-
-
         // Add this to your DashboardService.cs file (or wherever IDashboardService is implemented)
 
         #region TRAINING SESSIONS

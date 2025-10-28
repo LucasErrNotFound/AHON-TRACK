@@ -173,12 +173,16 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         }
     }
 
+    // Replace the UpdateFinancialBreakdownChart method in FinancialReportsViewModel
     private void UpdateFinancialBreakdownChart()
     {
         if (RevenueSeriesCollection.Length == 0)
+        {
+            FinancialBreakdownPieDataCollection = [];
             return;
+        }
 
-        var categoryTotals = new List<(string Name, double Total, string Color)>();
+        var categoryTotals = new List<(string Name, double Total, SKColor Color)>();
 
         foreach (var series in RevenueSeriesCollection)
         {
@@ -186,26 +190,31 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
             if (stackedSeries.Values == null) continue;
 
             var total = stackedSeries.Values.Sum();
-            var color = stackedSeries.Name switch
-            {
-                "Boxing" => "#FF0000",
-                "Muay Thai" => "#FFC0CB",
-                "Crossfit" => "#1E90FF",
-                "Coaching" => "#8E24AA",
-                "Walk-Ins" => "#FFA500",
-                "Monthly Membership" => "#1D2021",
-                _ => "#585D61"
-            };
 
-            categoryTotals.Add((stackedSeries.Name, total, color)!);
+            // Extract the actual SKColor from the series
+            var skColor = SKColors.Gray; // Default
+            if (stackedSeries.Fill is SolidColorPaint solidPaint)
+            {
+                skColor = solidPaint.Color;
+            }
+
+            categoryTotals.Add((stackedSeries.Name!, total, skColor));
         }
 
-        // Create pie chart data with the correct individual totals
+        // Calculate grand total for percentage calculation
+        var grandTotal = categoryTotals.Sum(ct => ct.Total);
+
+        // Create pie chart data with the correct percentages
         FinancialBreakdownPieDataCollection = categoryTotals
             .Where(ct => ct.Total > 0)
-            .Select(ct => new FinancialBreakdownPieData(ct.Name, ct.Total, ct.Color))
+            .Select(ct => new FinancialBreakdownPieData(
+                ct.Name,
+                ct.Total,
+                ct.Color,
+                grandTotal))
             .ToArray();
     }
+
 
     private async Task UpdateRevenueChartAsync()
     {
@@ -288,14 +297,17 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
                 var skColor = GetColorForPackageType(packageType, colorPalette[colorIndex % colorPalette.Length]);
                 colorIndex++;
 
+                // CRITICAL: Create local copy to avoid closure issue in lambda
+                var localPackageType = packageType;
+
                 seriesList.Add(new StackedColumnSeries<double>
                 {
                     Values = values,
-                    Name = packageType,
+                    Name = localPackageType,
                     Fill = new SolidColorPaint(skColor),
                     Stroke = null,
                     XToolTipLabelFormatter = point =>
-                        $"{packageType}: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
+                        $"{localPackageType}: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
                 });
             }
 
@@ -494,7 +506,7 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     {
         _ = LoadFinancialDataAsync();
     }
-    
+
     // Add to FinancialReportsViewModel class
 
     protected override void DisposeManagedResources()
@@ -504,13 +516,13 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         eventService.SalesUpdated -= OnFinancialDataChanged;
         eventService.ChartDataUpdated -= OnFinancialDataChanged;
         eventService.ProductPurchased -= OnFinancialDataChanged;
-    
+
         // Clear chart data
         RevenueSeriesCollection = [];
         RevenueChartXAxes = [];
         RevenueChartYAxes = [];
         FinancialBreakdownPieDataCollection = [];
-    
+
         base.DisposeManagedResources();
     }
 }
@@ -521,17 +533,33 @@ public class FinancialBreakdownPieData
     public double Value { get; set; }
     public double?[] Values { get; set; }
     public string Color { get; set; }
-    public bool IsTotal => Name is "Boxing" or "Muay Thai" or "Crossfit" or "Coaching" or "Walk-Ins" or "Membership";
+    public double Percentage { get; private set; }
+    public bool IsTotal { get; set; }
+    private readonly double _grandTotal;
+
     public Func<ChartPoint, string> Formatter { get; }
     public Func<ChartPoint, string> ToolTipFormatter { get; }
 
-    public FinancialBreakdownPieData(string name, double value, string color)
+    public FinancialBreakdownPieData(string name, double value, SKColor skColor, double grandTotal)
     {
         Name = name;
         Value = value;
         Values = [value];
-        Color = color;
-        Formatter = point => $"{point.StackedValue!.Share:P1}";
-        ToolTipFormatter = point => $"₱{value:N0}";
+        _grandTotal = grandTotal;
+
+        // Convert SKColor to hex string
+        Color = $"#{skColor.Red:X2}{skColor.Green:X2}{skColor.Blue:X2}";
+
+        // Calculate percentage
+        Percentage = grandTotal > 0 ? (value / grandTotal) * 100 : 0;
+
+        // Set IsTotal to true for all items (since they're all category totals)
+        IsTotal = true;
+
+        // Format percentage label
+        Formatter = point => $"{Percentage:F1}%";
+
+        // Format tooltip
+        ToolTipFormatter = point => $"{Name}: ₱{Value:N0} ({Percentage:F1}%)";
     }
 }

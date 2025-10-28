@@ -281,15 +281,36 @@ namespace AHON_TRACK.Services
                 durationStr = result?.ToString()?.Trim()?.ToLower() ?? "";
             }
 
-            if (durationStr != "session" && durationStr != "one-time only")
+            // Check if Duration contains "session" or is "one-time only"
+            // Changed from exact match to contains check
+            bool isSessionBased = durationStr.Contains("session") || durationStr == "one-time only";
+
+            if (!isSessionBased)
                 return;
 
-            int sessionsToAdd = (durationStr == "one-time only" ? 1 : 1) * item.Quantity;
+            // Calculate sessions to add
+            int sessionsToAdd;
+            if (durationStr == "one-time only")
+            {
+                sessionsToAdd = 1 * item.Quantity;
+            }
+            else
+            {
+                // Try to parse the number from duration string (e.g., "1 session", "5 sessions")
+                // If parsing fails, default to 1 session per quantity
+                int sessionCount = 1;
+                var parts = durationStr.Split(' ');
+                if (parts.Length > 0 && int.TryParse(parts[0], out int parsed))
+                {
+                    sessionCount = parsed;
+                }
+                sessionsToAdd = sessionCount * item.Quantity;
+            }
 
             string checkExisting = @"
-                SELECT SessionID, SessionsLeft 
-                FROM MemberSessions 
-                WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
+        SELECT SessionID, SessionsLeft 
+        FROM MemberSessions 
+        WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
 
             int? existingSessionId = null;
 
@@ -779,6 +800,7 @@ namespace AHON_TRACK.Services
             DashboardEventService.Instance.NotifySalesUpdated();
             DashboardEventService.Instance.NotifyChartDataUpdated();
             DashboardEventService.Instance.NotifyProductPurchased();
+            DashboardEventService.Instance.NotifySessionAdded();
         }
 
         #endregion

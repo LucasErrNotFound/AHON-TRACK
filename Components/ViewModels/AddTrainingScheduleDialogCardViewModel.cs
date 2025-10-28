@@ -52,6 +52,8 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     [ObservableProperty]
     private bool _isLoadingCoaches;
 
+    private bool _isManualSelection = false;
+
     private Dictionary<string, int> _coachNameToIdMap = new();
     private bool _coachesLoaded = false;
 
@@ -152,6 +154,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         // When schedules are added/updated (affects sessions left)
         eventService.ScheduleAdded += OnTraineeDataChanged;
         eventService.ScheduleUpdated += OnTraineeDataChanged;
+        eventService.SessionAdded += OnTraineeDataChanged;
     }
 
     private async void OnTraineeDataChanged(object? sender, EventArgs e)
@@ -360,7 +363,6 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     {
         if (string.IsNullOrWhiteSpace(SearchTraineeText))
         {
-            // Reset to show all trainees 
             FilteredTrainees.Clear();
             foreach (var trainee in AllTrainees)
             {
@@ -391,12 +393,15 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                 FilteredTrainees.Add(trainee);
             }
 
-            var exactMatch = filteredResults.FirstOrDefault(m =>
-                $"{m.FirstName} {m.LastName}".Equals(SearchTraineeText, StringComparison.OrdinalIgnoreCase));
-
-            if (exactMatch != null)
+            // Only auto-select if there's exactly one match
+            if (filteredResults.Count == 1)
             {
-                SelectedTrainee = exactMatch;
+                SelectedTrainee = filteredResults[0];
+            }
+            else
+            {
+                // Clear selection if multiple matches to avoid confusion
+                SelectedTrainee = null;
             }
         }
         finally
@@ -428,12 +433,6 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
     partial void OnSelectedTraineeChanged(Trainees? value)
     {
         if (value == null) return;
-        // Update the search text to match the selected trainee 
-        SearchTraineeText = $"{value.FirstName} {value.LastName}";
-
-        // Show only the selected trainee in the grid
-        FilteredTrainees.Clear();
-        FilteredTrainees.Add(value);
     }
 
     [RelayCommand]
@@ -593,7 +592,7 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
         SelectedTrainee = null;
         ClearAllErrors();
     }
-    
+
     protected override void DisposeManagedResources()
     {
         // Unsubscribe events

@@ -26,7 +26,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     private string[] _walkInTypeItems = ["Regular", "Free Trial"];
 
     [ObservableProperty]
-    private string[] _specializedPackageItems = ["None"];
+    private string[] _specializedPackageItems = [];
 
     private string _walkInFirstName = string.Empty;
     private string _selectedMiddleInitialItem = string.Empty;
@@ -35,7 +35,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     private int? _walkInAge;
     private string _walkInGender = string.Empty;
     private string _selectedWalkInTypeItem = string.Empty;
-    private string _selectedSpecializedPackageItem = "None";
+    private string _selectedSpecializedPackageItem = "";
     private int? _specializedPackageQuantity = 1;
 
     [ObservableProperty]
@@ -121,7 +121,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
             System.Diagnostics.Debug.WriteLine($"✅ AvailablePackages set with {packages.Count} items");
 
             // Update SpecializedPackageItems to show package names
-            var packageNames = new List<string> { "None" };
+            var packageNames = new List<string> { };
             packageNames.AddRange(packages.Select(p => p.Title ?? "Unknown"));
 
             System.Diagnostics.Debug.WriteLine($"📋 Package names: {string.Join(", ", packageNames)}");
@@ -841,7 +841,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
 
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
-    
+
     protected override void DisposeManagedResources()
     {
         // Wipe out static arrays to drop references
