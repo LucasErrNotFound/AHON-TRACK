@@ -7,9 +7,7 @@ using HotAvalonia;
 using ShadUI;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Linq;
@@ -336,13 +334,25 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     public bool IsMale
     {
         get => WalkInGender == "Male";
-        set { if (value) WalkInGender = "Male"; }
+        set 
+        { 
+            if (value) 
+                WalkInGender = "Male";
+            else if (WalkInGender == "Male")
+                WalkInGender = string.Empty;
+        }
     }
 
     public bool IsFemale
     {
         get => WalkInGender == "Female";
-        set { if (value) WalkInGender = "Female"; }
+        set 
+        { 
+            if (value) 
+                WalkInGender = "Female";
+            else if (WalkInGender == "Female")
+                WalkInGender = string.Empty;
+        }
     }
 
     public bool IsCashSelected
@@ -481,7 +491,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 && !string.IsNullOrWhiteSpace(WalkInLastName)
                 && !string.IsNullOrWhiteSpace(WalkInContactNumber)
                 && ContactNumberRegex().IsMatch(WalkInContactNumber)
-                && (WalkInAge >= 3 && WalkInAge <= 100)
+                && WalkInAge >= 3 && WalkInAge <= 100
                 && !string.IsNullOrWhiteSpace(WalkInGender)
                 && !string.IsNullOrWhiteSpace(SelectedWalkInTypeItem)
                 && !string.IsNullOrWhiteSpace(SelectedSpecializedPackageItem);

@@ -64,7 +64,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     private string _memberFirstName = string.Empty;
     private string _selectedMiddleInitialItem = string.Empty;
     private string _memberLastName = string.Empty;
-    private string _memberGender = string.Empty;
+    private string? _memberGender = string.Empty;
     private string _memberContactNumber = string.Empty;
     private int? _memberAge;
     private int _selectedMemberId = 0;
@@ -161,25 +161,35 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         get => _memberGender;
         set
         {
-            if (_memberGender == value) return;
-            _memberGender = value ?? string.Empty;
-            OnPropertyChanged(nameof(MemberGender));
+            SetProperty(ref _memberGender, value, true);
             OnPropertyChanged(nameof(IsMale));
             OnPropertyChanged(nameof(IsFemale));
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
-
+    
     public bool IsMale
     {
         get => MemberGender == "Male";
-        set { if (value) MemberGender = "Male"; }
+        set 
+        { 
+            if (value) 
+                MemberGender = "Male";
+            else if (MemberGender == "Male")
+                MemberGender = string.Empty;
+        }
     }
 
     public bool IsFemale
     {
         get => MemberGender == "Female";
-        set { if (value) MemberGender = "Female"; }
+        set 
+        { 
+            if (value) 
+                MemberGender = "Female";
+            else if (MemberGender == "Female")
+                MemberGender = string.Empty;
+        }
     }
 
     [Required(ErrorMessage = "Contact number is required")]
