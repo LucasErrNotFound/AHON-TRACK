@@ -17,7 +17,7 @@ using System.Linq;
 namespace AHON_TRACK.Components.ViewModels;
 
 [Page("walk-in-purchase")]
-public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
     private string[] _middleInitialItems = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
@@ -33,7 +33,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
     private string _walkInLastName = string.Empty;
     private string _walkInContactNumber = string.Empty;
     private int? _walkInAge;
-    private string _walkInGender = string.Empty;
+    private string? _walkInGender = string.Empty;
     private string _selectedWalkInTypeItem = string.Empty;
     private string _selectedSpecializedPackageItem = "";
     private int? _specializedPackageQuantity = 1;
@@ -214,14 +214,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         get => _walkInGender;
         set
         {
-            var newValue = value ?? string.Empty;
-            if (_walkInGender != newValue)
-            {
-                SetProperty(ref _walkInGender, newValue);
-                OnPropertyChanged(nameof(IsMale));
-                OnPropertyChanged(nameof(IsFemale));
-                OnPropertyChanged(nameof(IsPaymentPossible));
-            }
+            SetProperty(ref _walkInGender, value, true);
+            OnPropertyChanged(nameof(IsMale));
+            OnPropertyChanged(nameof(IsFemale));
+            OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
 
@@ -814,13 +810,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         OnPropertyChanged(nameof(TransactionID));
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    protected new virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
-
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
 
@@ -872,9 +861,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable, INo
         OnPropertyChanged(nameof(TransactionID));
         OnPropertyChanged(nameof(CurrentDate));
         OnPropertyChanged(nameof(CurrentTime));
-
-        // Remove any PropertyChanged subscribers
-        PropertyChanged = null;
 
         // Injected readonly services (dialog/toast/page/walkInService) are not reassigned here.
 
