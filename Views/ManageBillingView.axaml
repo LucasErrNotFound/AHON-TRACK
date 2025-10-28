@@ -287,28 +287,28 @@
 												shadui:ControlAssist.ReadOnly="True"
 												SelectedDate="{CompiledBinding SelectedDate}" />
 										</Grid>
+										<Button
+											Classes="Primary"
+											Background="{DynamicResource InfoColor}"
+											HorizontalAlignment="Left"
+											Command="{CompiledBinding DownloadInvoicesCommand}">
+											<StackPanel Orientation="Horizontal">
+												<Svg
+													Width="20"
+													Height="20"
+													Margin="0,0,10,0"
+													VerticalAlignment="Center"
+													Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
+												<TextBlock
+													Text="Download Invoice (PDF)"
+													Foreground="White"
+													VerticalAlignment="Center" />
+											</StackPanel>
+										</Button>
 										<StackPanel>
 											<!-- Extra large and up breakpoint (1280 px and above). -->
 											<shadui:BreakpointViewPort>
 												<shadui:BreakpointView Breakpoint="XlAndUp">
-													<Button
-														Classes="Primary"
-														Background="{DynamicResource InfoColor}"
-														HorizontalAlignment="Left"
-														Command="{CompiledBinding DownloadInvoicesCommand}">
-														<StackPanel Orientation="Horizontal">
-															<Svg
-																Width="20"
-																Height="20"
-																Margin="0,0,10,0"
-																VerticalAlignment="Center"
-																Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
-															<TextBlock
-																Text="Download Invoice (PDF)"
-																Foreground="White"
-																VerticalAlignment="Center" />
-														</StackPanel>
-													</Button>
 													<DataGrid
 														Height="315"
 														CanUserReorderColumns="False"
