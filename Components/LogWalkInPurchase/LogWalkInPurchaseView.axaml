@@ -168,11 +168,13 @@
 										<!-- Gender Field -->
 										<StackPanel Grid.Row="1" Grid.Column="2" Margin="0,30">
 											<TextBlock Text="Gender" Classes="LabelField" />
-											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="23">
-												<RadioButton Content="Male" GroupName="EmployeeGender" Classes="FormRadio"
-												             IsChecked="{CompiledBinding IsMale}" />
-												<RadioButton Content="Female" GroupName="EmployeeGender" Classes="FormRadio"
-												             IsChecked="{CompiledBinding IsFemale}" />
+											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="15">
+												<CheckBox
+													Content="Male"
+													IsChecked="{CompiledBinding IsMale}"/>
+												<CheckBox
+													Content="Female"
+													IsChecked="{CompiledBinding IsFemale}"/>
 											</StackPanel>
 										</StackPanel>
 									</Grid>
@@ -215,6 +217,7 @@
 											<NumericUpDown
 												IsVisible="{CompiledBinding IsQuantityVisible, Mode=TwoWay}"
 												Value="{CompiledBinding SpecializedPackageQuantity, Mode=TwoWay}"
+												IsEnabled="{CompiledBinding IsQuantityEditable}"
 												Width="130"
 												Minimum="1"
 												Maximum="100"
@@ -387,12 +390,14 @@
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<Border
 														HorizontalAlignment="Right"
+														Width="160"
 														CornerRadius="5"
 														Padding="15,5,15,5"
 														Background="LightGray">
 														<TextBlock
 															Text="{CompiledBinding SessionQuantity}"
 															FontSize="14"
+															TextWrapping="WrapWithOverflow"
 															FontWeight="Bold"
 															HorizontalAlignment="Center"
 															Foreground="{StaticResource FontForeground}" />
@@ -752,11 +757,13 @@
 										<!-- Gender Field -->
 										<StackPanel Grid.Row="1" Grid.Column="2" Margin="0,30">
 											<TextBlock Text="Gender" Classes="LabelField" />
-											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="23">
-												<RadioButton Content="Male" GroupName="EmployeeGender" Classes="FormRadio"
-												             IsChecked="{CompiledBinding IsMale}" />
-												<RadioButton Content="Female" GroupName="EmployeeGender" Classes="FormRadio"
-												             IsChecked="{CompiledBinding IsFemale}" />
+											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="15">
+												<CheckBox
+													Content="Male"
+													IsChecked="{CompiledBinding IsMale}"/>
+												<CheckBox
+													Content="Female"
+													IsChecked="{CompiledBinding IsFemale}"/>
 											</StackPanel>
 										</StackPanel>
 									</Grid>
@@ -799,6 +806,7 @@
 											<NumericUpDown
 												IsVisible="{CompiledBinding IsQuantityVisible, Mode=TwoWay}"
 												Value="{CompiledBinding SpecializedPackageQuantity, Mode=TwoWay}"
+												IsEnabled="{CompiledBinding IsQuantityEditable}"
 												Width="130"
 												Minimum="1"
 												Maximum="100"
@@ -971,12 +979,14 @@
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<Border
 														HorizontalAlignment="Right"
+														Width="160"
 														CornerRadius="5"
 														Padding="15,5,15,5"
 														Background="LightGray">
 														<TextBlock
 															Text="{CompiledBinding SessionQuantity}"
 															FontSize="14"
+															TextWrapping="WrapWithOverflow"
 															FontWeight="Bold"
 															HorizontalAlignment="Center"
 															Foreground="{StaticResource FontForeground}" />

@@ -35,9 +35,9 @@ namespace AHON_TRACK.Services
             // Load settings
             var settings = await _settingsService.LoadSettingsAsync();
 
-            if (string.IsNullOrWhiteSpace(settings.DownloadPath))
+            if (string.IsNullOrWhiteSpace(settings.RecoveryFilePath))
             {
-                // No backup path configured, don't start scheduler
+                // No backup path/recovery file path configured, don't start scheduler
                 return;
             }
 
@@ -58,7 +58,7 @@ namespace AHON_TRACK.Services
 
             // Create timer that fires at midnight, then every 24 hours
             _schedulerTimer = new Timer(
-                async _ => await OnTimerElapsed(),
+                async void (_) => await OnTimerElapsed(),
                 null,
                 timeUntilMidnight,
                 TimeSpan.FromHours(24));

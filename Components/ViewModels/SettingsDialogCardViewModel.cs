@@ -348,7 +348,7 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
                 .DismissOnClick()
                 .ShowSuccess();
 
-            _toastManager.CreateToast("?? Restart Required")
+            _toastManager.CreateToast("Restart Required")
                 .WithContent("Please restart the application to ensure all data is properly loaded")
                 .DismissOnClick()
                 .ShowWarning();
