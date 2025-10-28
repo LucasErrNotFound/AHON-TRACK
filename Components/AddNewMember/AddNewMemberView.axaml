@@ -146,9 +146,9 @@
 											<TextBlock Text="Gender" Classes="LabelField" />
 											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="23">
 												<RadioButton Content="Male" GroupName="EmployeeGender" Classes="FormRadio"
-												             IsChecked="{CompiledBinding IsMale}" />
+												             IsChecked="{CompiledBinding IsMale, Mode=TwoWay}" />
 												<RadioButton Content="Female" GroupName="EmployeeGender" Classes="FormRadio"
-												             IsChecked="{CompiledBinding IsFemale}" />
+												             IsChecked="{CompiledBinding IsFemale, Mode=TwoWay}" />
 											</StackPanel>
 										</StackPanel>
 
@@ -771,12 +771,12 @@
 													Content="Male" 
 													GroupName="EmployeeGender" 
 													Classes="FormRadio"
-													IsChecked="{CompiledBinding IsMale}" />
+													IsChecked="{CompiledBinding IsMale, Mode=TwoWay}" />
 												<RadioButton 
 													Content="Female" 
 													GroupName="EmployeeGender" 
 													Classes="FormRadio"
-													IsChecked="{CompiledBinding IsFemale}" />
+													IsChecked="{CompiledBinding IsFemale, Mode=TwoWay}" />
 											</StackPanel>
 										</StackPanel>
 
