@@ -121,6 +121,7 @@
                                 <DataGrid
                                     Height="650"
                                     Margin="0,20,0,0"
+                                    IsReadOnly="True"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
@@ -355,6 +356,7 @@
                                 <DataGrid
                                     MaxHeight="650"
                                     Margin="0,20,0,0"
+                                    IsReadOnly="True"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
