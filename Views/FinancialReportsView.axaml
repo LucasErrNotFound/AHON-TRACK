@@ -59,95 +59,190 @@
 				<scroll:VerticalScrollViewerAnimatedBehavior />
 			</Interaction.Behaviors>
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
-				<UniformGrid Margin="-6,30,-6,0" Columns="4">
-					<UniformGrid.Resources>
-						<LinearGradientBrush
-                            x:Key="GreenGradient"
-                            StartPoint="0%,50%"
-                            EndPoint="100%, 50%">
-							<GradientStop Color="#22C55E" Offset="0.0" />
-							<GradientStop Color="#4CAF50" Offset="1.0" />
-						</LinearGradientBrush>
+				<shadui:BreakpointViewPort>
+					<shadui:BreakpointView Breakpoint="XlAndUp">
+						<UniformGrid Margin="-6,30,-6,0" Columns="4">
+							<UniformGrid.Resources>
+								<LinearGradientBrush
+									x:Key="GreenGradient"
+									StartPoint="0%,50%"
+									EndPoint="100%, 50%">
+									<GradientStop Color="#22C55E" Offset="0.0" />
+									<GradientStop Color="#4CAF50" Offset="1.0" />
+								</LinearGradientBrush>
 
-						<LinearGradientBrush
-                            x:Key="BlueGradient"
-                            StartPoint="0%,50%"
-                            EndPoint="100%,50%">
-							<GradientStop Color="#64B5F6" Offset="0.0" />
-							<GradientStop Color="#2196F3" Offset="1.0" />
-						</LinearGradientBrush>
+								<LinearGradientBrush
+									x:Key="BlueGradient"
+									StartPoint="0%,50%"
+									EndPoint="100%,50%">
+									<GradientStop Color="#64B5F6" Offset="0.0" />
+									<GradientStop Color="#2196F3" Offset="1.0" />
+								</LinearGradientBrush>
 
-						<LinearGradientBrush
-                            x:Key="OrangeGradient"
-                            StartPoint="0%,50%"
-                            EndPoint="100%,50%">
-							<GradientStop Color="#FFB74D" Offset="0.0" />
-							<GradientStop Color="#FF9800" Offset="1.0" />
-						</LinearGradientBrush>
+								<LinearGradientBrush
+									x:Key="OrangeGradient"
+									StartPoint="0%,50%"
+									EndPoint="100%,50%">
+									<GradientStop Color="#FFB74D" Offset="0.0" />
+									<GradientStop Color="#FF9800" Offset="1.0" />
+								</LinearGradientBrush>
 
-						<LinearGradientBrush
-                            x:Key="PurpleGradient"
-                            StartPoint="0%,50%"
-                            EndPoint="100%,50%">
-							<GradientStop Color="#BA68C8" Offset="0.0" />
-							<GradientStop Color="#9C27B0" Offset="1.0" />
-						</LinearGradientBrush>
-					</UniformGrid.Resources>
+								<LinearGradientBrush
+									x:Key="PurpleGradient"
+									StartPoint="0%,50%"
+									EndPoint="100%,50%">
+									<GradientStop Color="#BA68C8" Offset="0.0" />
+									<GradientStop Color="#9C27B0" Offset="1.0" />
+								</LinearGradientBrush>
+							</UniformGrid.Resources>
 
-					<dashboard:OverviewCard
-                        Title="Total Revenue"
-                        CardBackground="{StaticResource GreenGradient}"
-                        Foreground="White"
-                        Hint="{CompiledBinding RevenueGrowthPercent, StringFormat='+{0}% from last month'}"
-                        Value="{CompiledBinding TotalRevenue, StringFormat='+₱{0:N0}'}">
-						<dashboard:OverviewCard.Icon>
-							<Svg
-                                Width="30"
-                                Height="30"
-                                Path="/Assets/DashboardView/philippine-peso-icon.svg"
-                                Opacity="0.5" />
-						</dashboard:OverviewCard.Icon>
-					</dashboard:OverviewCard>
-					<dashboard:OverviewCard
-                        Title="Sales"
-                        CardBackground="{StaticResource BlueGradient}"
-                        Foreground="White"
-                        Hint="{CompiledBinding SalesGrowthPercent, StringFormat='+{0}% from last month'}"
-                        Value="{CompiledBinding Sales, StringFormat='+{0}'}">
-						<dashboard:OverviewCard.Icon>
-							<Svg
-                                Width="30"
-                                Height="30"
-                                Path="/Assets/DashboardView/sales-icon.svg" />
-						</dashboard:OverviewCard.Icon>
-					</dashboard:OverviewCard>
-					<dashboard:OverviewCard
-                        Title="Gym Package Revenue"
-                        CardBackground="{StaticResource PurpleGradient}"
-                        Foreground="White"
-                        Hint="{CompiledBinding GymPackageGrowthPercent, StringFormat='+{0}% from last month'}"
-                        Value="{CompiledBinding GymPackageRevenue, StringFormat='+{0}'}">
-						<dashboard:OverviewCard.Icon>
-							<Svg
-                                Width="30"
-                                Height="30"
-                                Path="/Assets/DashboardView/sales-icon.svg" />
-						</dashboard:OverviewCard.Icon>
-					</dashboard:OverviewCard>
-					<dashboard:OverviewCard
-                        Title="Walk-In/Membership Revenue"
-                        CardBackground="{StaticResource OrangeGradient}"
-                        Foreground="White"
-                        Hint="{Binding WalkInGrowthPercent, StringFormat='+{0}% since last month'}"
-                        Value="{CompiledBinding WalkInMember, StringFormat='+{0}'}">
-						<dashboard:OverviewCard.Icon>
-							<Svg
-                                Width="30"
-                                Height="30"
-                                Path="/Assets/DashboardView/sales-icon.svg" />
-						</dashboard:OverviewCard.Icon>
-					</dashboard:OverviewCard>
-				</UniformGrid>
+							<dashboard:OverviewCard
+								Title="Total Revenue"
+								CardBackground="{StaticResource GreenGradient}"
+								Foreground="White"
+								Hint="{CompiledBinding RevenueGrowthPercent, StringFormat='+{0}% from last month'}"
+								Value="{CompiledBinding TotalRevenue, StringFormat='+₱{0:N0}'}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
+										Width="30"
+										Height="30"
+										Path="/Assets/DashboardView/philippine-peso-icon.svg"
+										Opacity="0.5" />
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
+								Title="Sales"
+								CardBackground="{StaticResource BlueGradient}"
+								Foreground="White"
+								Hint="{CompiledBinding SalesGrowthPercent, StringFormat='+{0}% from last month'}"
+								Value="{CompiledBinding Sales, StringFormat='+{0}'}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
+										Width="30"
+										Height="30"
+										Path="/Assets/DashboardView/sales-icon.svg" />
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
+								Title="Gym Package Revenue"
+								CardBackground="{StaticResource PurpleGradient}"
+								Foreground="White"
+								Hint="{CompiledBinding GymPackageGrowthPercent, StringFormat='+{0}% from last month'}"
+								Value="{CompiledBinding GymPackageRevenue, StringFormat='+{0}'}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
+										Width="30"
+										Height="30"
+										Path="/Assets/DashboardView/sales-icon.svg" />
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
+								Title="Walk-In/Membership Revenue"
+								CardBackground="{StaticResource OrangeGradient}"
+								Foreground="White"
+								Hint="{Binding WalkInGrowthPercent, StringFormat='+{0}% since last month'}"
+								Value="{CompiledBinding WalkInMember, StringFormat='+{0}'}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
+										Width="30"
+										Height="30"
+										Path="/Assets/DashboardView/sales-icon.svg" />
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+						</UniformGrid>
+					</shadui:BreakpointView>
+					<shadui:BreakpointView Breakpoint="XlAndDown">
+						<UniformGrid Margin="-6,30,-6,0" Columns="2">
+							<UniformGrid.Resources>
+								<LinearGradientBrush
+									x:Key="GreenGradient"
+									StartPoint="0%,50%"
+									EndPoint="100%, 50%">
+									<GradientStop Color="#22C55E" Offset="0.0" />
+									<GradientStop Color="#4CAF50" Offset="1.0" />
+								</LinearGradientBrush>
+
+								<LinearGradientBrush
+									x:Key="BlueGradient"
+									StartPoint="0%,50%"
+									EndPoint="100%,50%">
+									<GradientStop Color="#64B5F6" Offset="0.0" />
+									<GradientStop Color="#2196F3" Offset="1.0" />
+								</LinearGradientBrush>
+
+								<LinearGradientBrush
+									x:Key="OrangeGradient"
+									StartPoint="0%,50%"
+									EndPoint="100%,50%">
+									<GradientStop Color="#FFB74D" Offset="0.0" />
+									<GradientStop Color="#FF9800" Offset="1.0" />
+								</LinearGradientBrush>
+
+								<LinearGradientBrush
+									x:Key="PurpleGradient"
+									StartPoint="0%,50%"
+									EndPoint="100%,50%">
+									<GradientStop Color="#BA68C8" Offset="0.0" />
+									<GradientStop Color="#9C27B0" Offset="1.0" />
+								</LinearGradientBrush>
+							</UniformGrid.Resources>
+
+							<dashboard:OverviewCard
+								Title="Total Revenue"
+								CardBackground="{StaticResource GreenGradient}"
+								Foreground="White"
+								Hint="{CompiledBinding RevenueGrowthPercent, StringFormat='+{0}% from last month'}"
+								Value="{CompiledBinding TotalRevenue, StringFormat='+₱{0:N0}'}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
+										Width="30"
+										Height="30"
+										Path="/Assets/DashboardView/philippine-peso-icon.svg"
+										Opacity="0.5" />
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
+								Title="Sales"
+								CardBackground="{StaticResource BlueGradient}"
+								Foreground="White"
+								Hint="{CompiledBinding SalesGrowthPercent, StringFormat='+{0}% from last month'}"
+								Value="{CompiledBinding Sales, StringFormat='+{0}'}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
+										Width="30"
+										Height="30"
+										Path="/Assets/DashboardView/sales-icon.svg" />
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
+								Title="Gym Package Revenue"
+								CardBackground="{StaticResource PurpleGradient}"
+								Foreground="White"
+								Hint="{CompiledBinding GymPackageGrowthPercent, StringFormat='+{0}% from last month'}"
+								Value="{CompiledBinding GymPackageRevenue, StringFormat='+{0}'}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
+										Width="30"
+										Height="30"
+										Path="/Assets/DashboardView/sales-icon.svg" />
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+							<dashboard:OverviewCard
+								Title="Walk-In/Membership Revenue"
+								CardBackground="{StaticResource OrangeGradient}"
+								Foreground="White"
+								Hint="{Binding WalkInGrowthPercent, StringFormat='+{0}% since last month'}"
+								Value="{CompiledBinding WalkInMember, StringFormat='+{0}'}">
+								<dashboard:OverviewCard.Icon>
+									<Svg
+										Width="30"
+										Height="30"
+										Path="/Assets/DashboardView/sales-icon.svg" />
+								</dashboard:OverviewCard.Icon>
+							</dashboard:OverviewCard>
+						</UniformGrid>
+					</shadui:BreakpointView>
+				</shadui:BreakpointViewPort>
 				<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15" Margin="0,0,0,10">
 					<CalendarDatePicker
                         shadui:ControlAssist.Label="From"
@@ -158,62 +253,124 @@
                         shadui:ControlAssist.ReadOnly="True"
                         SelectedDate="{CompiledBinding FinancialBreakdownSelectedToDate}" />
 				</StackPanel>
-				<Grid RowDefinitions="* *" ColumnDefinitions="4.5* 2.35*" ColumnSpacing="30">
-					<shadui:Card Grid.Row="0" Grid.Column="0">
-						<StackPanel>
-							<shadui:CardTitle Content="Revenue Metrics" FontSize="20" FontWeight="SemiBold" />
-							<lvc:CartesianChart
-                                Height="400"
-                                Series="{CompiledBinding RevenueSeriesCollection}"
-                                XAxes="{CompiledBinding RevenueChartXAxes}"
-                                YAxes="{CompiledBinding RevenueChartYAxes}"
-                                LegendPosition="Bottom">
-							</lvc:CartesianChart>
-						</StackPanel>
-					</shadui:Card>
-					<shadui:Card Grid.Row="0" Grid.Column="1" VerticalAlignment="Top">
-						<StackPanel>
-							<shadui:CardTitle Content="Total Breakdown" FontSize="20" FontWeight="SemiBold" />
-							<TextBlock
-                                IsVisible="{CompiledBinding !HasValidDateRange}"
-                                Text="Not enough data. Please select a valid date range."
-                                FontSize="16"
-                                Foreground="{StaticResource MutedColor}"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                TextAlignment="Center"
-                                TextWrapping="Wrap"
-                                Margin="20" />
-							<lvc:PieChart
-                                VerticalAlignment="Top"
-                                Height="400"
-                                InitialRotation="130"
-                                LegendPosition="Bottom"
-                                ZIndex="6"
-                                IsVisible="{CompiledBinding HasValidDateRange}"
-                                SeriesSource="{CompiledBinding FinancialBreakdownPieDataCollection}">
-								<lvc:PieChart.SeriesTemplate>
-									<DataTemplate x:DataType="viewModels:FinancialBreakdownPieData">
-										<lvc:XamlPieSeries
-                                            SeriesName="{CompiledBinding Name}"
-                                            Values="{CompiledBinding Values}"
-                                            Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
-                                            Fill="{CompiledBinding Color, Converter={StaticResource StringToPaintConverter}}"
-                                            HoverPushout="15"
-                                            DataLabelsSize="18"
-                                            DataLabelsRotation="20"
-                                            DataLabelsPosition="Middle"
-                                            DataLabelsFormatter="{CompiledBinding Formatter}"
-                                            ShowDataLabels="{CompiledBinding IsTotal}"
-                                            IsVisibleAtLegend="{CompiledBinding IsTotal}"
-                                            ToolTipLabelFormatter="{CompiledBinding ToolTipFormatter}">
-										</lvc:XamlPieSeries>
-									</DataTemplate>
-								</lvc:PieChart.SeriesTemplate>
-							</lvc:PieChart>
-						</StackPanel>
-					</shadui:Card>
-				</Grid>
+				<shadui:BreakpointViewPort>
+					<shadui:BreakpointView Breakpoint="XlAndUp">
+						<Grid RowDefinitions="* *" ColumnDefinitions="4.5* 2.35*" ColumnSpacing="30">
+							<shadui:Card Grid.Row="0" Grid.Column="0">
+								<StackPanel>
+									<shadui:CardTitle Content="Revenue Metrics" FontSize="20" FontWeight="SemiBold" />
+									<lvc:CartesianChart
+										Height="400"
+										Series="{CompiledBinding RevenueSeriesCollection}"
+										XAxes="{CompiledBinding RevenueChartXAxes}"
+										YAxes="{CompiledBinding RevenueChartYAxes}"
+										LegendPosition="Bottom">
+									</lvc:CartesianChart>
+								</StackPanel>
+							</shadui:Card>
+							<shadui:Card Grid.Row="0" Grid.Column="1" VerticalAlignment="Top">
+								<StackPanel>
+									<shadui:CardTitle Content="Total Breakdown" FontSize="20" FontWeight="SemiBold" />
+									<TextBlock
+										IsVisible="{CompiledBinding !HasValidDateRange}"
+										Text="Not enough data. Please select a valid date range."
+										FontSize="16"
+										Foreground="{StaticResource MutedColor}"
+										HorizontalAlignment="Center"
+										VerticalAlignment="Center"
+										TextAlignment="Center"
+										TextWrapping="Wrap"
+										Margin="20" />
+									<lvc:PieChart
+										VerticalAlignment="Top"
+										Height="400"
+										InitialRotation="130"
+										LegendPosition="Bottom"
+										ZIndex="6"
+										IsVisible="{CompiledBinding HasValidDateRange}"
+										SeriesSource="{CompiledBinding FinancialBreakdownPieDataCollection}">
+										<lvc:PieChart.SeriesTemplate>
+											<DataTemplate x:DataType="viewModels:FinancialBreakdownPieData">
+												<lvc:XamlPieSeries
+													SeriesName="{CompiledBinding Name}"
+													Values="{CompiledBinding Values}"
+													Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
+													Fill="{CompiledBinding Color, Converter={StaticResource StringToPaintConverter}}"
+													HoverPushout="15"
+													DataLabelsSize="18"
+													DataLabelsRotation="20"
+													DataLabelsPosition="Middle"
+													DataLabelsFormatter="{CompiledBinding Formatter}"
+													ShowDataLabels="{CompiledBinding IsTotal}"
+													IsVisibleAtLegend="{CompiledBinding IsTotal}"
+													ToolTipLabelFormatter="{CompiledBinding ToolTipFormatter}">
+												</lvc:XamlPieSeries>
+											</DataTemplate>
+										</lvc:PieChart.SeriesTemplate>
+									</lvc:PieChart>
+								</StackPanel>
+							</shadui:Card>
+						</Grid>
+					</shadui:BreakpointView>
+					<shadui:BreakpointView Breakpoint="XlAndDown">
+						<Grid RowDefinitions="* *" RowSpacing="30">
+							<shadui:Card Grid.Row="0" Grid.Column="0">
+								<StackPanel>
+									<shadui:CardTitle Content="Revenue Metrics" FontSize="20" FontWeight="SemiBold" />
+									<lvc:CartesianChart
+										Height="400"
+										Series="{CompiledBinding RevenueSeriesCollection}"
+										XAxes="{CompiledBinding RevenueChartXAxes}"
+										YAxes="{CompiledBinding RevenueChartYAxes}"
+										LegendPosition="Bottom">
+									</lvc:CartesianChart>
+								</StackPanel>
+							</shadui:Card>
+							<shadui:Card Grid.Row="1" VerticalAlignment="Top">
+								<StackPanel>
+									<shadui:CardTitle Content="Total Breakdown" FontSize="20" FontWeight="SemiBold" />
+									<TextBlock
+										IsVisible="{CompiledBinding !HasValidDateRange}"
+										Text="Not enough data. Please select a valid date range."
+										FontSize="16"
+										Foreground="{StaticResource MutedColor}"
+										HorizontalAlignment="Center"
+										VerticalAlignment="Center"
+										TextAlignment="Center"
+										TextWrapping="Wrap"
+										Margin="20" />
+									<lvc:PieChart
+										VerticalAlignment="Top"
+										Height="400"
+										InitialRotation="130"
+										LegendPosition="Bottom"
+										ZIndex="6"
+										IsVisible="{CompiledBinding HasValidDateRange}"
+										SeriesSource="{CompiledBinding FinancialBreakdownPieDataCollection}">
+										<lvc:PieChart.SeriesTemplate>
+											<DataTemplate x:DataType="viewModels:FinancialBreakdownPieData">
+												<lvc:XamlPieSeries
+													SeriesName="{CompiledBinding Name}"
+													Values="{CompiledBinding Values}"
+													Stroke="{lvc:SolidColorPaint Color='#fff', StrokeWidth=2}"
+													Fill="{CompiledBinding Color, Converter={StaticResource StringToPaintConverter}}"
+													HoverPushout="15"
+													DataLabelsSize="18"
+													DataLabelsRotation="20"
+													DataLabelsPosition="Middle"
+													DataLabelsFormatter="{CompiledBinding Formatter}"
+													ShowDataLabels="{CompiledBinding IsTotal}"
+													IsVisibleAtLegend="{CompiledBinding IsTotal}"
+													ToolTipLabelFormatter="{CompiledBinding ToolTipFormatter}">
+												</lvc:XamlPieSeries>
+											</DataTemplate>
+										</lvc:PieChart.SeriesTemplate>
+									</lvc:PieChart>
+								</StackPanel>
+							</shadui:Card>
+						</Grid>
+					</shadui:BreakpointView>
+				</shadui:BreakpointViewPort>
 			</StackPanel>
 		</ScrollViewer>
 	</DockPanel>
