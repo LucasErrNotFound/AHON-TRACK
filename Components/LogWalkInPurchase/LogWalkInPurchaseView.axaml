@@ -558,6 +558,7 @@
 															Classes="h5" />
 														<TextBlock
 															Text="{CompiledBinding PurchaseSummarySubtotal}"
+															TextAlignment="Right"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
