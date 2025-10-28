@@ -352,7 +352,7 @@
                                 </Grid>
                                 <DataGrid
                                     MaxHeight="650"
-                                    IsReadOnly="True"
+IsReadOnly="True"
                                     Margin="0,20,0,0"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
