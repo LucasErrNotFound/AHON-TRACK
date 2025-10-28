@@ -197,7 +197,7 @@
                                                     FontWeight="SemiBold"
                                                     HorizontalAlignment="Left"/>
                                                 <TextBlock 
-                                                    Text="Recover your data from an existing backup. (JSON file)"
+                                                    Text="Recover your data from an existing backup. (BAK file)"
                                                     Width="500"
                                                     Classes="Caption Muted"
                                                     HorizontalAlignment="Left"/>
