@@ -35,10 +35,10 @@ namespace AHON_TRACK.Services
 
                 // Total Revenue for current period
                 string revenueQuery = @"
-            SELECT ISNULL(SUM(Amount), 0) AS TotalRevenue
-            FROM Sales
-            WHERE IsDeleted = 0 
-              AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
+    SELECT ISNULL(SUM(Amount), 0) AS TotalRevenue
+    FROM Sales
+    WHERE IsDeleted = 0 
+      AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
 
                 using (var cmd = new SqlCommand(revenueQuery, conn))
                 {
@@ -49,10 +49,10 @@ namespace AHON_TRACK.Services
 
                 // Member Subscriptions (new members in period)
                 string subscriptionsQuery = @"
-            SELECT COUNT(*)
-            FROM Members
-            WHERE IsDeleted = 0
-              AND CAST(DateJoined AS DATE) BETWEEN @From AND @To";
+    SELECT COUNT(*)
+    FROM Members
+    WHERE IsDeleted = 0
+      AND CAST(DateJoined AS DATE) BETWEEN @From AND @To";
 
                 using (var cmd = new SqlCommand(subscriptionsQuery, conn))
                 {
@@ -63,10 +63,10 @@ namespace AHON_TRACK.Services
 
                 // Sales Count
                 string salesQuery = @"
-            SELECT COUNT(DISTINCT SaleID)
-            FROM Sales
-            WHERE IsDeleted = 0 
-              AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
+    SELECT COUNT(DISTINCT SaleID)
+    FROM Sales
+    WHERE IsDeleted = 0 
+      AND CAST(SaleDate AS DATE) BETWEEN @From AND @To";
 
                 using (var cmd = new SqlCommand(salesQuery, conn))
                 {
@@ -75,27 +75,24 @@ namespace AHON_TRACK.Services
                     summary.SalesCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
                 }
 
-                // Active Now (checked in today)
+                // Active Now - Count currently checked in (CheckIn NOT NULL and CheckOut IS NULL)
                 string activeQuery = @"
-            SELECT COUNT(DISTINCT MemberID)
-            FROM MemberCheckIns
-            WHERE IsDeleted = 0
-              AND CAST(DateAttendance AS DATE) = CAST(GETDATE() AS DATE)
-            UNION ALL
-            SELECT COUNT(DISTINCT CustomerID)
-            FROM WalkInRecords
-            WHERE IsDeleted = 0
-              AND CAST(Attendance AS DATE) = CAST(GETDATE() AS DATE)";
+    SELECT 
+        (SELECT COUNT(DISTINCT MemberID)
+         FROM MemberCheckIns
+         WHERE IsDeleted = 0
+           AND CheckIn IS NOT NULL
+           AND CheckOut IS NULL)
+        +
+        (SELECT COUNT(DISTINCT CustomerID)
+         FROM WalkInRecords
+         WHERE IsDeleted = 0
+           AND CheckIn IS NOT NULL
+           AND CheckOut IS NULL)";
 
                 using (var cmd = new SqlCommand(activeQuery, conn))
                 {
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    int total = 0;
-                    while (await reader.ReadAsync())
-                    {
-                        total += reader.GetInt32(0);
-                    }
-                    summary.ActiveNow = total;
+                    summary.ActiveNow = Convert.ToInt32(await cmd.ExecuteScalarAsync());
                 }
             }
             catch (Exception ex)
@@ -154,6 +151,10 @@ namespace AHON_TRACK.Services
             return Math.Round(((current - previous) / previous) * 100, 2);
         }
 
+        /// <summary>
+        /// Gets current active count and hourly growth percentage
+        /// Compares current active users with those active 1 hour ago
+        /// </summary>
         public async Task<(int CurrentActive, double GrowthPercent)> GetActiveNowWithGrowthAsync()
         {
             try
@@ -161,18 +162,20 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Current active (today)
+                // Current active - Currently checked in (CheckOut IS NULL)
                 string currentQuery = @"
-            SELECT 
-                (SELECT COUNT(DISTINCT MemberID)
-                 FROM MemberCheckIns
-                 WHERE IsDeleted = 0
-                   AND CAST(DateAttendance AS DATE) = CAST(GETDATE() AS DATE))
-                +
-                (SELECT COUNT(DISTINCT CustomerID)
-                 FROM WalkInRecords
-                 WHERE IsDeleted = 0
-                   AND CAST(Attendance AS DATE) = CAST(GETDATE() AS DATE))";
+    SELECT 
+        (SELECT COUNT(DISTINCT MemberID)
+         FROM MemberCheckIns
+         WHERE IsDeleted = 0
+           AND CheckIn IS NOT NULL
+           AND CheckOut IS NULL)
+        +
+        (SELECT COUNT(DISTINCT CustomerID)
+         FROM WalkInRecords
+         WHERE IsDeleted = 0
+           AND CheckIn IS NOT NULL
+           AND CheckOut IS NULL)";
 
                 int currentActive;
                 using (var cmd = new SqlCommand(currentQuery, conn))
@@ -180,29 +183,32 @@ namespace AHON_TRACK.Services
                     currentActive = Convert.ToInt32(await cmd.ExecuteScalarAsync());
                 }
 
-                // Yesterday's active count
-                string yesterdayQuery = @"
-            SELECT 
-                (SELECT COUNT(DISTINCT MemberID)
-                 FROM MemberCheckIns
-                 WHERE IsDeleted = 0
-                   AND CAST(DateAttendance AS DATE) = CAST(DATEADD(day, -1, GETDATE()) AS DATE))
-                +
-                (SELECT COUNT(DISTINCT CustomerID)
-                 FROM WalkInRecords
-                 WHERE IsDeleted = 0
-                   AND CAST(Attendance AS DATE) = CAST(DATEADD(day, -1, GETDATE()) AS DATE))";
+                // Active count from 1 hour ago
+                // Counts people who: checked in before/at 1hr ago AND (haven't checked out OR checked out after 1hr ago)
+                string oneHourAgoQuery = @"
+    SELECT 
+        (SELECT COUNT(DISTINCT MemberID)
+         FROM MemberCheckIns
+         WHERE IsDeleted = 0
+           AND CheckIn <= DATEADD(hour, -1, GETDATE())
+           AND (CheckOut IS NULL OR CheckOut >= DATEADD(hour, -1, GETDATE())))
+        +
+        (SELECT COUNT(DISTINCT CustomerID)
+         FROM WalkInRecords
+         WHERE IsDeleted = 0
+           AND CheckIn <= DATEADD(hour, -1, GETDATE())
+           AND (CheckOut IS NULL OR CheckOut >= DATEADD(hour, -1, GETDATE())))";
 
-                int yesterdayActive;
-                using (var cmd = new SqlCommand(yesterdayQuery, conn))
+                int oneHourAgoActive;
+                using (var cmd = new SqlCommand(oneHourAgoQuery, conn))
                 {
-                    yesterdayActive = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                    oneHourAgoActive = Convert.ToInt32(await cmd.ExecuteScalarAsync());
                 }
 
-                // Calculate growth
-                double growth = yesterdayActive == 0
+                // Calculate hourly growth percentage
+                double growth = oneHourAgoActive == 0
                     ? (currentActive > 0 ? 100 : 0)
-                    : Math.Round(((double)(currentActive - yesterdayActive) / yesterdayActive) * 100, 0);
+                    : Math.Round(((double)(currentActive - oneHourAgoActive) / oneHourAgoActive) * 100, 0);
 
                 return (currentActive, growth);
             }
