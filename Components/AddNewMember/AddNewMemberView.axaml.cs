@@ -14,6 +14,7 @@ public partial class AddNewMemberView : UserControl
             if (DataContext is AddNewMemberViewModel vm)
             {
                 vm.MemberProfileImageControl = this.FindControl<Image>("MemberProfileImage");
+                vm.MemberProfileImageControl2 = this.FindControl<Image>("MemberProfileImage2");
             }
         };
     }

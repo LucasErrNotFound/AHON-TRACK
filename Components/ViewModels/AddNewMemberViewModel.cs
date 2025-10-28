@@ -56,6 +56,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
     [ObservableProperty]
     private Image? _memberProfileImageControl;
+    
+    [ObservableProperty]
+    private Image? _memberProfileImageControl2;
 
     // Personal Details Section
     private string _memberFirstName = string.Empty;
@@ -775,6 +778,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                     MemberProfileImageControl.IsVisible = true;
                 }
 
+                if (MemberProfileImageControl2 != null)
+                {
+                    MemberProfileImageControl2.Source = bitmap;
+                    MemberProfileImageControl2.IsVisible = true;
+                }
+
                 stream.Position = 0;
                 using var memoryStream = new MemoryStream();
                 await stream.CopyToAsync(memoryStream);
@@ -1187,6 +1196,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         if (ProfileImageSource is IDisposable d0) d0.Dispose();
         ProfileImageSource = null;
         MemberProfileImageControl = null;
+        MemberProfileImageControl2 = null;
         ProfileImage = null;
 
         // Clear collections
