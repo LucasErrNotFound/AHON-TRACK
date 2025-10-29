@@ -310,6 +310,11 @@ public partial class LoginViewModel : ViewModelBase
             disposableVm.Dispose();
         }
         currentWindow?.Close();
+        DisposeManagedResources();
+        
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
     }
 
     protected override void DisposeManagedResources()
@@ -317,6 +322,9 @@ public partial class LoginViewModel : ViewModelBase
         _loginCts?.Cancel();
         _loginCts?.Dispose();
         _loginCts = null;
+        
+        Password = string.Empty;
+        Username = string.Empty;
 
         base.DisposeManagedResources();
     }

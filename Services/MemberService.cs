@@ -13,11 +13,12 @@ using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.Services
 {
-    public class MemberService : IMemberService
+    public class MemberService : IMemberService, IDisposable
     {
         private readonly string _connectionString;
         private readonly ToastManager _toastManager;
         private Action<Notification>? _notificationCallback;
+        private bool _disposed;
 
         private const int EXPIRATION_THRESHOLD_DAYS = 4;
         private const string MEMBER_NOT_DELETED_FILTER = "(IsDeleted = 0 OR IsDeleted IS NULL)";
@@ -31,6 +32,11 @@ namespace AHON_TRACK.Services
         public void RegisterNotificationCallback(Action<Notification> callback)
         {
             _notificationCallback = callback;
+        }
+
+        public void UnRegisterNotificationCallback()
+        {
+            _notificationCallback = null;
         }
 
         #region Role-Based Access Control
@@ -1196,6 +1202,28 @@ namespace AHON_TRACK.Services
         }
 
         #endregion
+        
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                // Clear callback reference
+                _notificationCallback = null;
+            
+                // Dispose ToastManager if it's disposable
+                _toastManager.DismissAll();
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
         #region SUPPORTING CLASSES
 

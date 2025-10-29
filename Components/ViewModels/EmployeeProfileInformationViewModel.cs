@@ -318,6 +318,8 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         // Null other UI fields
         EmployeeFullName = string.Empty;
         EmployeeFullNameHeader = string.Empty;
+        
+        (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
 
         base.DisposeManagedResources();
     }

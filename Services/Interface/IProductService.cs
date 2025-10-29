@@ -25,6 +25,7 @@ namespace AHON_TRACK.Services.Interface
 
         // NOTIFICATIONS
         void RegisterNotificationCallback(Action<Notification> callback);
+        void UnRegisterNotificationCallback();
         Task ShowProductAlertsAsync(Action<Notification>? addNotificationCallback = null);
         Task<ProductAlertSummary> GetProductAlertSummaryAsync();
     }

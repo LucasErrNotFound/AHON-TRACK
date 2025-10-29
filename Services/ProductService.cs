@@ -13,11 +13,12 @@ using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.Services
 {
-    public class ProductService : IProductService
+    public class ProductService : IProductService, IDisposable
     {
         private readonly string _connectionString;
         private readonly ToastManager _toastManager;
         private Action<Notification>? _notificationCallback;
+        private bool _disposed;
 
         public ProductService(string connectionString, ToastManager toastManager)
         {
@@ -28,6 +29,11 @@ namespace AHON_TRACK.Services
         public void RegisterNotificationCallback(Action<Notification> callback)
         {
             _notificationCallback = callback;
+        }
+
+        public void UnRegisterNotificationCallback()
+        {
+            _notificationCallback = null;
         }
 
         #region Role-Based Access Control
@@ -1071,6 +1077,28 @@ namespace AHON_TRACK.Services
                 Console.WriteLine($"[GetExpiredItemsAsync] Error: {ex.Message}");
             }
             return items;
+        }
+        
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                // Clear callback reference
+                _notificationCallback = null;
+            
+                // Dispose ToastManager if it's disposable
+                _toastManager.DismissAll();
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         #endregion

@@ -1065,6 +1065,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         OriginalEmployeeData.Clear();
         CurrentFilteredData.Clear();
         Employees.Clear();
+        
+        (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
+        (_employeeProfileInformationViewModel as IDisposable).Dispose();
+
+        base.DisposeManagedResources();
     }
 }
 
