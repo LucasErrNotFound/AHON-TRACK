@@ -127,12 +127,26 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
-        await LoadProductDataAsync(showAlerts: false);
+        try
+        {
+            await LoadProductDataAsync(showAlerts: false);
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
-    
+
     private async void OnProductPurchased(object? sender, EventArgs e)
     {
-        await LoadProductDataAsync(showAlerts: true);
+        try
+        {
+            await LoadProductDataAsync(showAlerts: true);
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private async Task LoadProductDataAsync(bool showAlerts = false)
@@ -583,7 +597,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             Poster = posterPath
         };
     }
-    
+
     protected override void DisposeManagedResources()
     {
         var eventService = DashboardEventService.Instance;

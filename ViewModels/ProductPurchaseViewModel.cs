@@ -188,17 +188,38 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
-        await LoadCustomerListFromDatabaseAsync();
+        try
+        {
+            await LoadCustomerListFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
-        await LoadProductsFromDatabaseAsync();
+        try
+        {
+            await LoadProductsFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private async void OnPackageDataChanged(object? sender, EventArgs e)
     {
-        await LoadPackagesFromDatabaseAsync();
+        try
+        {
+            await LoadPackagesFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private void LoadCustomerList()
@@ -939,7 +960,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         SelectedCustomer != null &&
         !IsCartEmpty &&
         (IsCashSelected || IsGCashSelected || IsMayaSelected);
-    
+
     protected override void DisposeManagedResources()
     {
         var eventService = DashboardEventService.Instance;

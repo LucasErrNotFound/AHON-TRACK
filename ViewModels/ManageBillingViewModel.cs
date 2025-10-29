@@ -146,8 +146,15 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     private async void OnBillingDataChanged(object? sender, EventArgs e)
     {
-        await LoadInvoicesFromDatabaseAsync();
-        await LoadRecentPurchasesFromDatabaseAsync();
+        try
+        {
+            await LoadInvoicesFromDatabaseAsync();
+            await LoadRecentPurchasesFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
 
@@ -662,7 +669,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         _ = LoadInvoicesFromDatabaseAsync();
     }
-    
+
     protected override void DisposeManagedResources()
     {
         // Unsubscribe from events

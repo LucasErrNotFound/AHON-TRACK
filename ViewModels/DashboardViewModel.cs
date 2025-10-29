@@ -298,35 +298,42 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     private async Task InitializeViewModel()
     {
-        InitializeAxes();
-
-        await InitializeAvailableYears();
-        await InitializeChart();
-        await InitializeSalesData();
-        await InitializeTrainingSessionsData();
-        await RefreshRecentLogs();
-        await LoadDashboardSummary();
-
-        // await _inventoryService.ShowEquipmentAlertsAsync();
-        // await _productService.ShowProductAlertsAsync();
-
-        DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
+        try
         {
+            InitializeAxes();
+
+            await InitializeAvailableYears();
+            await InitializeChart();
+            await InitializeSalesData();
+            await InitializeTrainingSessionsData();
             await RefreshRecentLogs();
-        };
-        DashboardEventService.Instance.ChartDataUpdated += async (s, e) =>
-        {
-            await UpdateChartData(); // Direct chart refresh
-        };
-        DashboardEventService.Instance.SalesUpdated += async (s, e) =>
-        {
-            await LoadSalesFromDatabaseAsync();
             await LoadDashboardSummary();
 
-        };
-        DashboardEventService.Instance.CheckinAdded += async (s, e) => await LoadDashboardSummary();
-        DashboardEventService.Instance.CheckoutAdded += async (s, e) => await LoadDashboardSummary();
-        DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
+            // await _inventoryService.ShowEquipmentAlertsAsync();
+            // await _productService.ShowProductAlertsAsync();
+
+            DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
+            {
+                await RefreshRecentLogs();
+            };
+            DashboardEventService.Instance.ChartDataUpdated += async (s, e) =>
+            {
+                await UpdateChartData(); // Direct chart refresh
+            };
+            DashboardEventService.Instance.SalesUpdated += async (s, e) =>
+            {
+                await LoadSalesFromDatabaseAsync();
+                await LoadDashboardSummary();
+
+            };
+            DashboardEventService.Instance.CheckinAdded += async (s, e) => await LoadDashboardSummary();
+            DashboardEventService.Instance.CheckoutAdded += async (s, e) => await LoadDashboardSummary();
+            DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private async Task InitializeAvailableYears()
@@ -735,7 +742,8 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         var eventService = DashboardEventService.Instance;
         eventService.RecentLogsUpdated -= async (s, e) => await RefreshRecentLogs();
         eventService.ChartDataUpdated -= async (s, e) => await UpdateChartData();
-        eventService.SalesUpdated -= async (s, e) => { 
+        eventService.SalesUpdated -= async (s, e) =>
+        {
             await LoadSalesFromDatabaseAsync();
             await LoadDashboardSummary();
         };
@@ -747,7 +755,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         _inventoryService.UnregisterNotificationCallback();
         _productService.UnRegisterNotificationCallback();
         _memberService.UnRegisterNotificationCallback();
-        
+
         (_inventoryService as IDisposable)?.Dispose();
         (_productService as IDisposable)?.Dispose();
         (_memberService as IDisposable)?.Dispose();

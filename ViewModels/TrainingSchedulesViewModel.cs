@@ -73,7 +73,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     [ObservableProperty]
     private ObservableCollection<ScheduledPerson> _scheduledPeople = [];
-    
+
     private bool _disposed = false;
 
     private readonly DialogManager _dialogManager;
@@ -132,7 +132,14 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private void OnTrainingDataChanged(object? sender, EventArgs e)
     {
-        _ = LoadTrainingsAsync();
+        try
+        {
+            _ = LoadTrainingsAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private void UpdateDashboardStatistics()

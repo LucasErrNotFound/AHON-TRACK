@@ -77,8 +77,15 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
 
     private async void OnAttendanceDataChanged(object? sender, EventArgs e)
     {
-        await UpdateAttendanceChartAsync();
-        await UpdateCustomerTypeGroupChartAsync();
+        try
+        {
+            await UpdateAttendanceChartAsync();
+            await UpdateCustomerTypeGroupChartAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private async Task LoadDataAsync()
@@ -313,18 +320,18 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     {
         _ = LoadDataAsync();
     }
-    
+
     protected override void DisposeManagedResources()
     {
         // Unsubscribe from events
         var eventService = DashboardEventService.Instance;
         eventService.CheckinAdded -= OnAttendanceDataChanged;
-    
+
         // Clear chart data
         AttendanceSeriesCollection = [];
         AttendanceLineChartXAxes = [];
         CustomerTypePieDataCollection = [];
-    
+
         base.DisposeManagedResources();
     }
 }
@@ -332,7 +339,7 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
 public class CustomerPieData(string name, double?[] values, string color)
 {
     public string Name { get; set; } = name;
-    public double?[] Values { get; set; } = values.Select(v => 
+    public double?[] Values { get; set; } = values.Select(v =>
         v.HasValue ? Math.Round(v.Value, 1) : v).ToArray();
     public string Color { get; set; } = color;
     public bool IsTotal => Name is "Walk-Ins" or "Gym Members";

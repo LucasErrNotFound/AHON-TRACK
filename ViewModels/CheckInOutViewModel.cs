@@ -124,7 +124,14 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
-        await LoadDataAsync();
+        try
+        {
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private async Task LoadDataAsync()
@@ -613,7 +620,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
         SelectAll = MemberPersons.Count > 0 && MemberPersons.All(x => x.IsSelected);
     }
-    
+
     // Add to CheckInOutViewModel class
 
     protected override void DisposeManagedResources()
@@ -623,18 +630,18 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         eventService.CheckinAdded -= OnCheckInOutDataChanged;
         eventService.CheckoutAdded -= OnCheckInOutDataChanged;
         eventService.CheckInOutDeleted -= OnCheckInOutDataChanged;
-    
+
         // Unsubscribe from property change handlers
         foreach (var walkIn in WalkInPersons)
         {
             walkIn.PropertyChanged -= OnWalkInPropertyChanged;
         }
-    
+
         foreach (var member in MemberPersons)
         {
             member.PropertyChanged -= OnMemberPropertyChanged;
         }
-    
+
         // Clear collections
         WalkInPersons?.Clear();
         MemberPersons?.Clear();
@@ -642,7 +649,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         OriginalMemberData?.Clear();
         CurrentWalkInFilteredData?.Clear();
         CurrentMemberFilteredData?.Clear();
-    
+
         base.DisposeManagedResources();
     }
 }

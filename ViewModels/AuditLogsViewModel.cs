@@ -142,7 +142,14 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 
     private async void OnAuditDataChanged(object? sender, EventArgs e)
     {
-        await LoadDataFromDatabaseAsync();
+        try
+        {
+            await LoadDataFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private async Task LoadDataFromDatabaseAsync()
@@ -570,7 +577,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     {
         SearchAuditLogsCommand.Execute(null);
     }
-    
+
     // Add to AuditLogsViewModel class
 
     protected override void DisposeManagedResources()
@@ -578,18 +585,18 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         // Unsubscribe from events
         var eventService = DashboardEventService.Instance;
         eventService.RecentLogsUpdated -= OnAuditDataChanged;
-    
+
         // Unsubscribe from property change handlers
         foreach (var log in AuditLogs)
         {
             log.PropertyChanged -= OnAuditLogPropertyChanged;
         }
-    
+
         // Clear collections
         AuditLogs?.Clear();
         OriginalAuditLogData?.Clear();
         CurrentFilteredAuditLogData?.Clear();
-    
+
         base.DisposeManagedResources();
     }
 }
