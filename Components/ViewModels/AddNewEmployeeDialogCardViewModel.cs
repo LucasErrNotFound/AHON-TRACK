@@ -82,6 +82,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private string _employeeStatus = string.Empty;
 
     [Required(ErrorMessage = "First name is required")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeFirstName
@@ -97,6 +98,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Last name is required")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeLastName
@@ -113,7 +115,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         {
             if (_employeeGender == value) return;
             _employeeGender = value ?? string.Empty;
-            OnPropertyChanged(nameof(EmployeeGender));
             OnPropertyChanged(nameof(IsMale));
             OnPropertyChanged(nameof(IsFemale));
         }
@@ -175,6 +176,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "House address is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string EmployeeHouseAddress
@@ -184,6 +186,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "House number is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 character long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeHouseNumber
@@ -193,6 +196,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Street is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
     public string EmployeeStreet
@@ -202,6 +206,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Barangay is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
     public string EmployeeBarangay
@@ -211,6 +216,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "City/Town is required")]
+    [RegularExpression("^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
     public string EmployeeCityTown
@@ -220,6 +226,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Province is required")]
+    [RegularExpression("^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
     public string EmployeeProvince
@@ -229,6 +236,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Username is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "Only letters and numbers are allowed.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeUsername
@@ -568,7 +576,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeProvince = string.Empty;
         EmployeeUsername = string.Empty;
         EmployeePassword = string.Empty;
-        // EmployeeStatus = string.Empty;
         ProfileImage = null;
         ProfileImageSource = ImageHelper.GetDefaultAvatar();
         EditingEmployeeID = null;
