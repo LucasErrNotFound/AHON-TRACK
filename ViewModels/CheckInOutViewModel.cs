@@ -454,7 +454,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                         .WithContent("Member check-in was cancelled")
                         .DismissOnClick()
                         .ShowWarning())
-                .WithMaxWidth(1000)
+                .WithMaxWidth(850)
                 .Show();
         }
         catch (Exception ex)
