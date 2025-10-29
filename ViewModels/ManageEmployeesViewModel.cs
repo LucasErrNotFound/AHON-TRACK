@@ -245,10 +245,6 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         ];
     }
 
-    // Method to load employees from a database (for future implementation) new
-    public const string connectionString =
-    "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
-
     private async Task LoadEmployeesFromDatabaseAsync()
     {
         try
@@ -279,11 +275,27 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = emp.Status,
                 DateJoined = emp.DateJoined
             }).ToList();
+            
+            foreach (var employee in EmployeeItems)
+            {
+                employee.PropertyChanged -= OnEmployeePropertyChanged;
+                // Dispose bitmaps if they're not shared
+                if (employee.AvatarSource != ManageEmployeeModel.DefaultAvatarSource)
+                {
+                    employee.AvatarSource?.Dispose();
+                }
+            }
 
             OriginalEmployeeData = employeeItems;
             CurrentFilteredData = [.. employeeItems];
 
             EmployeeItems.Clear();
+            
+            if (employeeItems.Count >= 1) // Only for large datasets
+            {
+                GC.Collect(0, GCCollectionMode.Optimized);
+            }
+            
             foreach (var employee in employeeItems)
             {
                 employee.PropertyChanged += OnEmployeePropertyChanged;
@@ -1070,6 +1082,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         (_employeeProfileInformationViewModel as IDisposable).Dispose();
 
         base.DisposeManagedResources();
+        ForceGarbageCollection();
     }
 }
 
