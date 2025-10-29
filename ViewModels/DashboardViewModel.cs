@@ -731,18 +731,27 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     protected override void DisposeManagedResources()
     {
-        // Unsubscribe from event service
-        DashboardEventService.Instance.RecentLogsUpdated -= async (s, e) => await RefreshRecentLogs();
-        DashboardEventService.Instance.ChartDataUpdated -= async (s, e) => await UpdateChartData();
-        DashboardEventService.Instance.SalesUpdated -= async (s, e) => await LoadSalesFromDatabaseAsync();
-        DashboardEventService.Instance.TrainingSessionsUpdated -= async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
+        // CRITICAL: Unsubscribe from events FIRST
+        var eventService = DashboardEventService.Instance;
+        eventService.RecentLogsUpdated -= async (s, e) => await RefreshRecentLogs();
+        eventService.ChartDataUpdated -= async (s, e) => await UpdateChartData();
+        eventService.SalesUpdated -= async (s, e) => { 
+            await LoadSalesFromDatabaseAsync();
+            await LoadDashboardSummary();
+        };
+        eventService.CheckinAdded -= async (s, e) => await LoadDashboardSummary();
+        eventService.CheckoutAdded -= async (s, e) => await LoadDashboardSummary();
+        eventService.TrainingSessionsUpdated -= async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
 
-        // Unsubscribe from notification callbacks
-        /*
-        _inventoryService?.UnregisterNotificationCallback(AddNotification);
-        _productService?.UnregisterNotificationCallback(AddNotification);
-        _memberService?.UnregisterNotificationCallback(AddNotification);
-        */
+        // Unregister notification callbacks
+        _inventoryService.UnregisterNotificationCallback();
+        _productService.UnRegisterNotificationCallback();
+        _memberService.UnRegisterNotificationCallback();
+        
+        (_inventoryService as IDisposable)?.Dispose();
+        (_productService as IDisposable)?.Dispose();
+        (_memberService as IDisposable)?.Dispose();
+        (_dashboardService as IDisposable)?.Dispose();
 
         // Clear observable collections
         RecentSales?.Clear();
@@ -752,9 +761,9 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         AvailableYears?.Clear();
 
         // Clear chart data
-        Series = [];
-        XAxes = [];
-        YAxes = [];
+        Series = Array.Empty<ISeries>();
+        XAxes = Array.Empty<Axis>();
+        YAxes = Array.Empty<Axis>();
 
         base.DisposeManagedResources();
     }

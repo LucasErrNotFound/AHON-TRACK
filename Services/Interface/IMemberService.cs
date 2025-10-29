@@ -19,6 +19,7 @@ namespace AHON_TRACK.Services.Interface
         Task<List<SellingModel>> GetAvailablePackagesForMembersAsync();
 
         void RegisterNotificationCallback(Action<Notification> callback);
+        void UnRegisterNotificationCallback();
         Task AutoInactivateExpiredMembersAsync();
         Task ShowMemberExpirationAlertsAsync(Action<Notification>? addNotificationCallback = null);
         Task<MemberExpirationSummary> GetMemberExpirationSummaryAsync();

@@ -284,6 +284,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         }
         currentWindow?.Close();
         DisposeManagedResources();
+        
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
     }
     
     private void OnProfilePictureUpdated()
@@ -296,22 +300,23 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         UserProfileEventService.Instance.ProfilePictureUpdated -= OnProfilePictureUpdated;
 
         // Dispose all child ViewModels if they implement IDisposable
-        (_dashboardViewModel as IDisposable)?.Dispose();
-        (_manageEmployeesViewModel as IDisposable)?.Dispose();
-        (_checkInOutViewModel as IDisposable)?.Dispose();
-        (_manageMembershipViewModel as IDisposable)?.Dispose();
-        (_trainingSchedulesViewModel as IDisposable)?.Dispose();
-        (_manageBillingViewModel as IDisposable)?.Dispose();
-        (_productPurchaseViewModel as IDisposable)?.Dispose();
-        (_equipmentInventoryViewModel as IDisposable)?.Dispose();
-        (_productStockViewModel as IDisposable)?.Dispose();
-        (_supplierManagementViewModel as IDisposable)?.Dispose();
-        (_financialReportsViewModel as IDisposable)?.Dispose();
-        (_gymDemographicsViewModel as IDisposable)?.Dispose();
-        (_gymAttendanceViewModel as IDisposable)?.Dispose();
-        (_auditLogsViewModel as IDisposable)?.Dispose();
-        (_employeeProfileInformationViewModel as IDisposable)?.Dispose();
-        (_settingsDialogCardViewModel as IDisposable)?.Dispose();
+        (_dashboardViewModel as IDisposable).Dispose();
+        (_manageEmployeesViewModel as IDisposable).Dispose();
+        (_checkInOutViewModel as IDisposable).Dispose();
+        (_manageMembershipViewModel as IDisposable).Dispose();
+        (_trainingSchedulesViewModel as IDisposable).Dispose();
+        (_manageBillingViewModel as IDisposable).Dispose();
+        (_productPurchaseViewModel as IDisposable).Dispose();
+        (_equipmentInventoryViewModel as IDisposable).Dispose();
+        (_productStockViewModel as IDisposable).Dispose();
+        (_supplierManagementViewModel as IDisposable).Dispose();
+        (_financialReportsViewModel as IDisposable).Dispose();
+        (_gymDemographicsViewModel as IDisposable).Dispose();
+        (_gymAttendanceViewModel as IDisposable).Dispose();
+        (_auditLogsViewModel as IDisposable).Dispose();
+        (_employeeProfileInformationViewModel as IDisposable).Dispose();
+        (_settingsDialogCardViewModel as IDisposable).Dispose();
+        _pageManager.Dispose();
 
         base.DisposeManagedResources();
     }

@@ -14,11 +14,12 @@ using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.Services
 {
-    public class InventoryService : IInventoryService
+    public class InventoryService : IInventoryService, IDisposable
     {
         private readonly string _connectionString;
         private readonly ToastManager _toastManager;
         private Action<Notification>? _notificationCallback;
+        private bool _disposed;
 
         public InventoryService(string connectionString, ToastManager toastManager)
         {
@@ -29,6 +30,11 @@ namespace AHON_TRACK.Services
         public void RegisterNotificationCallback(Action<Notification> callback)
         {
             _notificationCallback = callback;
+        }
+
+        public void UnregisterNotificationCallback()
+        {
+            _notificationCallback = null;
         }
 
         private void AddNotification(string title, string message, NotificationType type)
@@ -1504,6 +1510,28 @@ namespace AHON_TRACK.Services
             {
                 return (false, $"Error: {ex.Message}", 0);
             }
+        }
+        
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                // Clear callback reference
+                _notificationCallback = null;
+            
+                // Dispose ToastManager if it's disposable
+                _toastManager.DismissAll();
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
     #endregion

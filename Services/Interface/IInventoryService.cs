@@ -22,6 +22,7 @@ public interface IInventoryService
 
     // Register notification callback
     void RegisterNotificationCallback(Action<Notification> callback);
+    void UnregisterNotificationCallback();
     
     // NOTIFICATIONS
     Task ShowEquipmentAlertsAsync(Action<Notification>? addNotificationCallback = null);
