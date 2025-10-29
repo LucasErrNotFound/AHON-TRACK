@@ -148,20 +148,7 @@
                                     </DataGrid.Resources>
 
                                     <DataGrid.Columns>
-                                        <DataGridCheckBoxColumn Binding="{CompiledBinding IsSelected}"
-                                                                CanUserSort="False" Width="60">
-
-                                            <!--CheckBox Header Column-->
-                                            <DataGridCheckBoxColumn.Header>
-                                                <CheckBox
-                                                    x:Name="SelectToggler"
-                                                    Command="{CompiledBinding ToggleSelectionCommand}"
-                                                    CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
-                                                    IsChecked="{CompiledBinding SelectAll}"
-                                                    Margin="8,0" />
-                                            </DataGridCheckBoxColumn.Header>
-                                        </DataGridCheckBoxColumn>
-
+                                        
                                         <!--ID Header Column-->
                                         <DataGridTextColumn
                                             Binding="{CompiledBinding ID}"
@@ -357,12 +344,6 @@
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
                                                                 IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
-                                                            <MenuItem
-                                                                Header="Delete Selected"
-                                                                Foreground="{DynamicResource DestructiveColor}"
-                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
-                                                                CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
                                                         </MenuItem>
                                                     </Menu>
                                                 </DataTemplate>
@@ -494,20 +475,6 @@
                                     </DataGrid.Resources>
 
                                     <DataGrid.Columns>
-                                        <DataGridCheckBoxColumn 
-                                            Binding="{CompiledBinding IsSelected}"
-                                            CanUserSort="False" MaxWidth="60">
-
-                                            <!--CheckBox Header Column-->
-                                            <DataGridCheckBoxColumn.Header>
-                                                <CheckBox
-                                                    x:Name="SelectToggler2"
-                                                    Command="{CompiledBinding ToggleSelectionCommand}"
-                                                    CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
-                                                    IsChecked="{CompiledBinding SelectAll}"
-                                                    Margin="8,0" />
-                                            </DataGridCheckBoxColumn.Header>
-                                        </DataGridCheckBoxColumn>
 
                                         <!--ID Header Column-->
                                         <DataGridTextColumn
@@ -704,12 +671,6 @@
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
                                                                 IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
-                                                            <MenuItem
-                                                                Header="Delete Selected"
-                                                                Foreground="{DynamicResource DestructiveColor}"
-                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
-                                                                CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageEmployeesViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
                                                         </MenuItem>
                                                     </Menu>
                                                 </DataTemplate>

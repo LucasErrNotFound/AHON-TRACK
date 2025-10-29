@@ -960,21 +960,6 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
     }
 
-    [RelayCommand]
-    private void ShowMultipleItemDeletionDialog(ManageEmployeesItem? employee)
-    {
-        if (employee == null) return;
-
-        _dialogManager.CreateDialog("" +
-            "Are you absolutely sure?",
-            $"This action cannot be undone. This will permanently delete multiple accounts and remove their data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteMultipleItems(employee), DialogButtonStyle.Destructive)
-            .WithCancelButton("Cancel")
-            .WithMaxWidth(512)
-            .Dismissible()
-            .Show();
-    }
-
     private async Task OnSubmitDeleteSingleItem(ManageEmployeesItem employee)
     {
         var (success, message) = await _employeeService.DeleteEmployeeAsync(employee.ID);
@@ -990,39 +975,6 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 .DismissOnClick()
                 .ShowError();
         }
-    }
-
-
-    private async Task OnSubmitDeleteMultipleItems(ManageEmployeesItem employee)
-    {
-        var selectedEmployees = EmployeeItems.Where(item => item.IsSelected).ToList();
-        if (!selectedEmployees.Any()) return;
-
-        foreach (var emp in selectedEmployees)
-        {
-            await DeleteEmployeeFromDatabase(emp);
-        }
-
-        // ✅ Instead of removing from UI, reload from database
-        await LoadEmployeesFromDatabaseAsync();
-        DashboardEventService.Instance.NotifyEmployeeDeleted();
-
-        _toastManager.CreateToast($"Delete Selected Accounts")
-            .WithContent($"Multiple accounts deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
-    }
-
-    // Helper method to delete from database
-    private async Task DeleteEmployeeFromDatabase(ManageEmployeesItem employee)
-    {
-        // using var connection = new SqlConnection(connectionString);
-        // await connection.ExecuteAsync("DELETE FROM Employees WHERE ID = @ID", new { IDI = employee.ID });
-        await _employeeService.DeleteEmployeeAsync(employee.ID);
-        DashboardEventService.Instance.NotifyEmployeeDeleted();
-
-        await Task.Delay(100); // Just an animation/simulation of async operation
     }
 
     private void ExecuteSortCommand(int selectedIndex)

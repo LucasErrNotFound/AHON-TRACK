@@ -446,6 +446,15 @@ namespace AHON_TRACK.Services
                         ShowWarningToast("Already Deleted", $"{employeeName} has already been deleted.");
                         return (false, "Employee is already deleted.");
                     }
+                    
+                    var employeeStatus = await GetEmployeeStatusAsync(conn, transaction, employeeId);
+                    if (string.Equals(employeeStatus, "Active", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(employeeStatus, "Inactive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        transaction.Rollback();
+                        ShowWarningToast("Cannot Delete", $"Cannot delete {employeeName}. Only employees with 'Terminated' status can be deleted.");
+                        return (false, "Only terminated employees can be deleted.");
+                    }
 
                     await SoftDeleteFromRoleTableAsync(conn, transaction, employeeId, position);
                     int rowsAffected = await SoftDeleteEmployeeAsync(conn, transaction, employeeId);
@@ -473,15 +482,25 @@ namespace AHON_TRACK.Services
             catch (SqlException ex)
             {
                 ShowErrorToast("Database Error", $"Failed to delete employee: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"DeleteEmployeeAsync Error: {ex}");
+                Debug.WriteLine($"DeleteEmployeeAsync Error: {ex}");
                 return (false, $"Database error: {ex.Message}");
             }
             catch (Exception ex)
             {
                 ShowErrorToast("Error", $"An unexpected error occurred: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"DeleteEmployeeAsync Error: {ex}");
+                Debug.WriteLine($"DeleteEmployeeAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}");
             }
+        }
+        
+        private async Task<string> GetEmployeeStatusAsync(SqlConnection conn, SqlTransaction transaction, int employeeId)
+        {
+            using var cmd = new SqlCommand(
+                "SELECT Status FROM Employees WHERE EmployeeId = @employeeId AND IsDeleted = 0",
+                conn, transaction);
+            cmd.Parameters.AddWithValue("@employeeId", employeeId);
+
+            return (await cmd.ExecuteScalarAsync())?.ToString() ?? string.Empty;
         }
 
         #endregion
