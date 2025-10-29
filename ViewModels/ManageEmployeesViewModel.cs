@@ -420,12 +420,22 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .WithContent("Welcome, new employee!")
                     .DismissOnClick()
                     .ShowSuccess();
+                
+                (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
+            
+                // Suggest GC for image cleanup
+                GC.Collect(0, GCCollectionMode.Optimized);
+                ForceGarbageCollection();
             })
             .WithCancelCallback(() =>
+            {
                 _toastManager.CreateToast("Adding new employee cancelled")
                     .WithContent("Add a new employee to continue")
                     .DismissOnClick()
-                    .ShowWarning())
+                    .ShowWarning();
+            
+                (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
+            })
             .WithMaxWidth(950)
             .Show();
     }
@@ -453,16 +463,23 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .WithContent($"You have successfully modified {employee.Name}'s details")
                     .DismissOnClick()
                     .ShowSuccess();
+                
+                (_addNewEmployeeDialogCardViewModel as IDisposable)?.Dispose();
+                GC.Collect(0, GCCollectionMode.Optimized);
+                ForceGarbageCollection();
             })
             .WithCancelCallback(() =>
+            {
                 _toastManager.CreateToast("Modifying Employee Details Cancelled")
                     .WithContent("Click the three-dots if you want to modify your employees' details")
                     .DismissOnClick()
-                    .ShowWarning())
+                    .ShowWarning();
+            
+                (_addNewEmployeeDialogCardViewModel as IDisposable)?.Dispose();
+            })
             .WithMaxWidth(950)
             .Show();
     }
-
 
     [RelayCommand]
     private void OpenViewEmployeeProfile(ManageEmployeesItem? employee)
