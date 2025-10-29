@@ -319,7 +319,7 @@
 							HorizontalAlignment="Left"
 							Width="160"
 							shadui:ControlAssist.Label="Status"
-							PlaceholderText="-"
+							IsEnabled="{CompiledBinding IsEmployeeStatusItemEnabled}"
 							ItemsSource="{CompiledBinding EmployeeStatusItems}"
 							SelectedItem="{CompiledBinding EmployeeStatus, Mode=TwoWay}">
 						</ComboBox>

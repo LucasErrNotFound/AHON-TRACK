@@ -35,6 +35,9 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 
     [ObservableProperty]
     private string[] _employeeStatusItems = ["Active", "Inactive", "Terminated"];
+    
+    [ObservableProperty]
+    private bool _isEmployeeStatusItemEnabled;
 
     [ObservableProperty]
     private string _dialogTitle = "Add Employee Details";
@@ -284,6 +287,9 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         IsEditMode = false;
         DialogTitle = "Add Employee Details";
         DialogDescription = "Please fill out the form to create this employee's information";
+        EmployeeStatusItems = ["Active"];
+        EmployeeStatus = "Active";
+        IsEmployeeStatusItemEnabled = false;
         ClearAllFields();
     }
 
@@ -294,6 +300,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         IsEditMode = true;
         DialogTitle = "Edit Employee Details";
         DialogDescription = "Please update the employee's information";
+        IsEmployeeStatusItemEnabled = true;
         EditingEmployeeID = employee.ID;
 
         ClearAllErrors();
@@ -561,7 +568,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeProvince = string.Empty;
         EmployeeUsername = string.Empty;
         EmployeePassword = string.Empty;
-        EmployeeStatus = string.Empty;
+        // EmployeeStatus = string.Empty;
         ProfileImage = null;
         ProfileImageSource = ImageHelper.GetDefaultAvatar();
         EditingEmployeeID = null;
