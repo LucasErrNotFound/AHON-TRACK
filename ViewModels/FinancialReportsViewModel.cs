@@ -99,11 +99,17 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
 
     private async void OnFinancialDataChanged(object? sender, EventArgs e)
     {
-        await LoadFinancialDataAsync();
-        await UpdateRevenueChartAsync();
-        await LoadFinancialSummaryAsync();
-        await UpdateRevenueChartAsync();
-        UpdateFinancialBreakdownChart();
+        try
+        {
+            await LoadFinancialDataAsync();
+            await LoadFinancialSummaryAsync();
+            await UpdateRevenueChartAsync();
+            UpdateFinancialBreakdownChart();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Error refreshing financial data: {ex.Message}");
+        }
     }
 
     private async Task LoadFinancialSummaryAsync()
@@ -150,6 +156,7 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         if (FinancialBreakdownSelectedFromDate > FinancialBreakdownSelectedToDate)
         {
             HasValidDateRange = false;
+            _toastManager?.CreateToast("Invalid date range: 'From' date must be before 'To' date");
             FinancialBreakdownPieDataCollection = [];
             RevenueSeriesCollection = [];
             return;

@@ -191,7 +191,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         eventService.CheckoutAdded += OnMemberChanged;
         eventService.ProductPurchased += OnMemberChanged;
     }
-    
+
     partial void OnSelectedMemberChanged(ManageMembersItem? value)
     {
         OnPropertyChanged(nameof(IsActiveVisible));
@@ -205,7 +205,14 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     private async void OnMemberChanged(object? sender, EventArgs e)
     {
-        await LoadMemberDataAsync();
+        try
+        {
+            await LoadMemberDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     public async Task LoadMemberDataAsync()
@@ -1145,7 +1152,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             .Dismissible()
             .Show();
     }
-    
+
     protected override void DisposeManagedResources()
     {
         // Unsubscribe from events

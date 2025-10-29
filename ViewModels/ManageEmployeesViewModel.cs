@@ -160,9 +160,16 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
     private async void OnEmployeeChanged(object? sender, EventArgs e)
     {
-        Debug.WriteLine("🔁 Detected employee data change — refreshing...");
-        await LoadEmployeesFromDatabaseAsync();
-        await UpdateCounts();
+        try
+        {
+            Debug.WriteLine("🔁 Detected employee data change — refreshing...");
+            await LoadEmployeesFromDatabaseAsync();
+            await UpdateCounts();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
     }
 
     private void LoadSampleData()
@@ -1079,7 +1086,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         SearchEmployeesCommand.Execute(null);
     }
-    
+
     protected override void DisposeManagedResources()
     {
         // Unsubscribe from events
@@ -1098,7 +1105,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         OriginalEmployeeData.Clear();
         CurrentFilteredData.Clear();
         Employees.Clear();
-        
+
         (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
         (_employeeProfileInformationViewModel as IDisposable).Dispose();
 
