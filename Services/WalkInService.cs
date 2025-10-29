@@ -443,7 +443,7 @@ namespace AHON_TRACK.Services
                     FROM Packages
                     WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
                     AND IsDeleted = 0
-                    AND (Duration NOT LIKE '%month%' AND Duration NOT LIKE '%Month%')
+                    AND (Duration LIKE '%One-time Only%' AND Duration LIKE '%one-time only%')
                     ORDER BY Price ASC";
 
                 using var cmd = new SqlCommand(query, conn);

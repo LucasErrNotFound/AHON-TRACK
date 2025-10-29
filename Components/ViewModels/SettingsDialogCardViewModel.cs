@@ -51,6 +51,7 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
     private readonly PageManager _pageManager;
     private readonly SettingsService _settingsService;
     private readonly BackupDatabaseService _backupDatabaseService;
+    private readonly BackupSchedulerService? _backupScheduler;
     private AppSettings? _currentSettings;
     private DateTime? _restoreConfirmationExpiry;
 
@@ -59,13 +60,15 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         ToastManager toastManager,
         PageManager pageManager,
         SettingsService settingsService,
-        BackupDatabaseService backupDatabaseService)
+        BackupDatabaseService backupDatabaseService,
+        BackupSchedulerService backupScheduler)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _settingsService = settingsService;
         _backupDatabaseService = backupDatabaseService;
+        _backupScheduler = backupScheduler;
 
         BackupFrequencyOptions = ["Everyday"];
         for (int i = 2; i <= 30; i++)
@@ -83,6 +86,7 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         _pageManager = new PageManager(new ServiceProvider());
         _settingsService = new SettingsService();
         _backupDatabaseService = new BackupDatabaseService("Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True");
+        _backupScheduler = null;
 
         BackupFrequencyOptions = ["Everyday"];
         for (int i = 2; i <= 30; i++)
@@ -115,12 +119,36 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         if (_currentSettings == null)
             _currentSettings = new AppSettings();
 
+        // IMPORTANT: Make sure to capture current property values
         _currentSettings.DownloadPath = DownloadPath;
         _currentSettings.IsDarkMode = IsDarkMode;
         _currentSettings.BackupFrequency = SelectedBackupFrequency;
         _currentSettings.RecoveryFilePath = RecoveryFilePath;
 
+        // Debug output
+        System.Diagnostics.Debug.WriteLine($"Saving DownloadPath: '{_currentSettings.DownloadPath}'");
+        System.Diagnostics.Debug.WriteLine($"Saving BackupFrequency: '{_currentSettings.BackupFrequency}'");
+
+        // Save settings
         await _settingsService.SaveSettingsAsync(_currentSettings);
+
+        // Restart the backup scheduler if available
+        if (_backupScheduler != null)
+        {
+            await _backupScheduler.StartSchedulerAsync();
+
+            _toastManager.CreateToast("Settings saved")
+                .WithContent($"Backup schedule updated to: {SelectedBackupFrequency}")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        else
+        {
+            _toastManager.CreateToast("Settings saved")
+                .WithContent("Settings have been updated")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
 
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
@@ -134,36 +162,56 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private async Task SetDownloadPath()
     {
+        System.Diagnostics.Debug.WriteLine("===== SetDownloadPath CALLED =====");
+
         var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
             ? desktop.MainWindow
             : null;
-        if (toplevel == null) return;
+        if (toplevel == null)
+        {
+            System.Diagnostics.Debug.WriteLine("ERROR: toplevel is null!");
+            return;
+        }
 
         var folder = await toplevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Select a folder"
+            Title = "Select backup folder"
         });
+
+        System.Diagnostics.Debug.WriteLine($"Folder picker returned {folder.Count} folders");
 
         if (folder.Count > 0)
         {
             var selectedFolder = folder[0];
             DownloadPath = selectedFolder.Path.LocalPath;
 
+            System.Diagnostics.Debug.WriteLine($"===== SET DownloadPath to: '{DownloadPath}' =====");
+
             _toastManager.CreateToast("Folder path selected")
-                .WithContent($"Set path to: {selectedFolder.Name} folder")
+                .WithContent($"Set path to: {selectedFolder.Name}")
                 .DismissOnClick()
                 .ShowInfo();
 
             if (DownloadTextBoxControl != null)
             {
                 DownloadTextBoxControl.Text = DownloadPath;
+                System.Diagnostics.Debug.WriteLine($"TextBox updated to: '{DownloadTextBoxControl.Text}'");
             }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("WARNING: DownloadTextBoxControl is null!");
+            }
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("No folder selected (user cancelled)");
         }
     }
 
     [RelayCommand]
     private async Task SelectRecoveryFile()
     {
+        System.Diagnostics.Debug.WriteLine("===== RECOVERY FILE BROWSE CLICKED =====");
         var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
             ? desktop.MainWindow
             : null;
@@ -348,7 +396,7 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
                 .DismissOnClick()
                 .ShowSuccess();
 
-            _toastManager.CreateToast("Restart Required")
+            _toastManager.CreateToast("?? Restart Required")
                 .WithContent("Please restart the application to ensure all data is properly loaded")
                 .DismissOnClick()
                 .ShowWarning();
