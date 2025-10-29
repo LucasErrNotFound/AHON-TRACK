@@ -195,7 +195,7 @@
 										</StackPanel>
 
 										<!-- Row 2: Contact and Personal Details -->
-										<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,-90">
+										<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,-70,0,0">
 											<TextBox
 												Text="{CompiledBinding MemberContactNumber, Mode=TwoWay}"
 												Width="200"
@@ -207,7 +207,7 @@
 										</StackPanel>
 
 										<!-- Age Field -->
-										<StackPanel Grid.Row="1" Grid.Column="1" Margin="45,-87">
+										<StackPanel Grid.Row="1" Grid.Column="1" Margin="45,-71,45,0">
 											<NumericUpDown
 												Value="{CompiledBinding MemberAge, Mode=TwoWay}"
 												shadui:ControlAssist.Label="Age"
@@ -223,7 +223,7 @@
 										</StackPanel>
 
 										<!-- Date of Birth Field -->
-										<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91">
+										<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-75,0,0">
 											<CalendarDatePicker
 												shadui:ControlAssist.Label="Date of Birth"
 												shadui:ControlAssist.ReadOnly="True"
@@ -725,14 +725,14 @@
 									<!-- Personal Information Grid-->
 									<Grid
 										RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto"
-										ColumnDefinitions="2*, 1*, 2*, 1.5*, 1.5*">
+										ColumnDefinitions="Auto Auto Auto Auto">
 
 										<!-- Name Fields and Profile Picture -->
 										<!-- First Name Field -->
 										<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,30,0,0">
 											<TextBox
 												Text="{CompiledBinding MemberFirstName, Mode=TwoWay}"
-												Width="150"
+												Width="210"
 												FontSize="15"
 												Classes="Clearable"
 												UseFloatingWatermark="True"
@@ -741,11 +741,11 @@
 										</StackPanel>
 
 										<!-- Middle Initial Field -->
-										<StackPanel Grid.Row="0" Grid.Column="1" Margin="-10,26,0,0">
+										<StackPanel Grid.Row="0" Grid.Column="1" Margin="30,26,0,0">
 											<ComboBox
 												shadui:ControlAssist.Label="M.I"
 												shadui:ControlAssist.Height="35"
-												Width="60"
+												Width="70"
 												HorizontalAlignment="Left"
 												PlaceholderText="-"
 												ItemsSource="{CompiledBinding MiddleInitialItems}"
@@ -754,10 +754,10 @@
 										</StackPanel>
 
 										<!-- Last Name Field -->
-										<StackPanel Grid.Row="0" Grid.Column="2" Margin="-10,30,0,0">
+										<StackPanel Grid.Row="0" Grid.Column="2" Margin="30,30,0,0">
 											<TextBox
 												Text="{CompiledBinding MemberLastName, Mode=TwoWay}"
-												Width="150"
+												Width="210"
 												FontSize="15"
 												Classes="Clearable"
 												UseFloatingWatermark="True"
@@ -766,7 +766,7 @@
 										</StackPanel>
 
 										<!-- Gender Field -->
-										<StackPanel Grid.Row="0" Grid.Column="3" Margin="0,30,0,0">
+										<StackPanel Grid.Row="0" Grid.Column="3" Margin="50,30,0,0">
 											<TextBlock Text="Gender" Classes="LabelField" />
 											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="23">
 												<CheckBox
@@ -778,8 +778,46 @@
 											</StackPanel>
 										</StackPanel>
 
+										<!-- Row 2: Contact and Personal Details -->
+										<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,0">
+											<TextBox
+												Text="{CompiledBinding MemberContactNumber, Mode=TwoWay}"
+												Width="210"
+												FontSize="15"
+												Classes="Clearable"
+												UseFloatingWatermark="True"
+												Watermark="Contact Number"
+												HorizontalAlignment="Left" />
+										</StackPanel>
+
+										<!-- Age Field -->
+										<StackPanel Grid.Row="1" Grid.Column="1" Margin="30,0,0,-87">
+											<NumericUpDown
+												Value="{CompiledBinding MemberAge, Mode=TwoWay}"
+												shadui:ControlAssist.Label="Age"
+												Minimum="1"
+												Maximum="100"
+												ShowButtonSpinner="False"
+												FormatString="N0"
+												Watermark="Age"
+												Width="70"
+												IsReadOnly="True"
+												IsEnabled="False"
+												HorizontalAlignment="Left" />
+										</StackPanel>
+
+										<!-- Date of Birth Field -->
+										<StackPanel Grid.Row="1" Grid.Column="2" Margin="30,0,0,0">
+											<CalendarDatePicker
+												shadui:ControlAssist.Label="Date of Birth"
+												shadui:ControlAssist.ReadOnly="True"
+												Width="150"
+												HorizontalAlignment="Left"
+												SelectedDate="{CompiledBinding MemberBirthDate}" />
+										</StackPanel>
+										
 										<!-- Profile Image Field -->
-										<StackPanel Grid.Row="0" Grid.Column="4" Margin="0,30,0,0">
+										<StackPanel Grid.Row="1" Grid.Column="3" Margin="0,30,0,0">
 											<TextBlock
 												Text="Profile Picture"
 												Classes="LabelField"
@@ -816,44 +854,6 @@
 													</StackPanel>
 												</Button>
 											</StackPanel>
-										</StackPanel>
-
-										<!-- Row 2: Contact and Personal Details -->
-										<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,-90">
-											<TextBox
-												Text="{CompiledBinding MemberContactNumber, Mode=TwoWay}"
-												Width="150"
-												FontSize="15"
-												Classes="Clearable"
-												UseFloatingWatermark="True"
-												Watermark="Contact Number"
-												HorizontalAlignment="Left" />
-										</StackPanel>
-
-										<!-- Age Field -->
-										<StackPanel Grid.Row="1" Grid.Column="1" Margin="-10,-90,0,-87">
-											<NumericUpDown
-												Value="{CompiledBinding MemberAge, Mode=TwoWay}"
-												shadui:ControlAssist.Label="Age"
-												Minimum="1"
-												Maximum="100"
-												ShowButtonSpinner="False"
-												FormatString="N0"
-												Watermark="Age"
-												Width="70"
-												IsReadOnly="True"
-												IsEnabled="False"
-												HorizontalAlignment="Left" />
-										</StackPanel>
-
-										<!-- Date of Birth Field -->
-										<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91,0,-91">
-											<CalendarDatePicker
-												shadui:ControlAssist.Label="Date of Birth"
-												shadui:ControlAssist.ReadOnly="True"
-												Width="150"
-												HorizontalAlignment="Left"
-												SelectedDate="{CompiledBinding MemberBirthDate}" />
 										</StackPanel>
 									</Grid>
 

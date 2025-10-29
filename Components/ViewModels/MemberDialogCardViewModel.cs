@@ -74,6 +74,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     }
 
     [Required(ErrorMessage = "First name is required")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string MemberFirstName
@@ -90,6 +91,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     }
 
     [Required(ErrorMessage = "Last name is required")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string MemberLastName
