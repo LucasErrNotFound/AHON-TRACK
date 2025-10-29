@@ -89,9 +89,9 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     private readonly IEmployeeService _employeeService;
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
+    private readonly ServiceProvider _serviceProvider;
     private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
-
 
     public ObservableCollection<ManageEmployeeModel> Employees { get; } = new ObservableCollection<ManageEmployeeModel>();
 
@@ -99,13 +99,17 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         DialogManager dialogManager,
         ToastManager toastManager,
         PageManager pageManager,
-        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, EmployeeProfileInformationViewModel employeeProfileInformationViewModel, IEmployeeService employeeService)
+        ServiceProvider serviceProvider,
+        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, 
+        EmployeeProfileInformationViewModel employeeProfileInformationViewModel, 
+        IEmployeeService employeeService)
     {
         _pageManager = pageManager;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
+        _serviceProvider = serviceProvider;
         _employeeService = employeeService;
         SubscribToEvent();
         _ = LoadEmployeesFromDatabaseAsync(); ;
@@ -410,9 +414,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private void ShowAddNewEmployeeDialog()
     {
-        _addNewEmployeeDialogCardViewModel.Initialize();
+        var dialogVm = new AddNewEmployeeDialogCardViewModel(_dialogManager, _employeeService, _toastManager);
+        dialogVm.Initialize();
 
-        _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
+        _dialogManager.CreateDialog(dialogVm)
             .WithSuccessCallback(async _ =>
             {
                 await LoadEmployeesFromDatabaseAsync();
@@ -421,11 +426,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .DismissOnClick()
                     .ShowSuccess();
                 
-                (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
+                (dialogVm as IDisposable).Dispose();
             
                 // Suggest GC for image cleanup
-                GC.Collect(0, GCCollectionMode.Optimized);
-                ForceGarbageCollection();
+                // GC.Collect(0, GCCollectionMode.Optimized);
+                // ForceGarbageCollection();
             })
             .WithCancelCallback(() =>
             {
@@ -434,7 +439,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .DismissOnClick()
                     .ShowWarning();
             
-                (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
+                (dialogVm as IDisposable).Dispose();
             })
             .WithMaxWidth(950)
             .Show();
@@ -453,9 +458,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             return;
         }
 
-        await _addNewEmployeeDialogCardViewModel.InitializeForEditMode(employee);
+        var dialogVm = new AddNewEmployeeDialogCardViewModel(_dialogManager, _employeeService, _toastManager);
+        await dialogVm.InitializeForEditMode(employee);
 
-        _dialogManager.CreateDialog(_addNewEmployeeDialogCardViewModel)
+        _dialogManager.CreateDialog(dialogVm)
             .WithSuccessCallback(async _ =>
             {
                 await LoadEmployeesFromDatabaseAsync();
@@ -464,9 +470,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .DismissOnClick()
                     .ShowSuccess();
                 
-                (_addNewEmployeeDialogCardViewModel as IDisposable)?.Dispose();
-                GC.Collect(0, GCCollectionMode.Optimized);
-                ForceGarbageCollection();
+                (dialogVm as IDisposable).Dispose();
             })
             .WithCancelCallback(() =>
             {
@@ -475,7 +479,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .DismissOnClick()
                     .ShowWarning();
             
-                (_addNewEmployeeDialogCardViewModel as IDisposable)?.Dispose();
+                (dialogVm as IDisposable).Dispose();
             })
             .WithMaxWidth(950)
             .Show();
