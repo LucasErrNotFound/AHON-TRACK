@@ -252,10 +252,6 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         ];
     }
 
-    // Method to load employees from a database (for future implementation) new
-    public const string connectionString =
-    "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
-
     private async Task LoadEmployeesFromDatabaseAsync()
     {
         try
@@ -286,11 +282,27 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = emp.Status,
                 DateJoined = emp.DateJoined
             }).ToList();
+            
+            foreach (var employee in EmployeeItems)
+            {
+                employee.PropertyChanged -= OnEmployeePropertyChanged;
+                // Dispose bitmaps if they're not shared
+                if (employee.AvatarSource != ManageEmployeeModel.DefaultAvatarSource)
+                {
+                    employee.AvatarSource?.Dispose();
+                }
+            }
 
             OriginalEmployeeData = employeeItems;
             CurrentFilteredData = [.. employeeItems];
 
             EmployeeItems.Clear();
+            
+            if (employeeItems.Count >= 1) // Only for large datasets
+            {
+                GC.Collect(0, GCCollectionMode.Optimized);
+            }
+            
             foreach (var employee in employeeItems)
             {
                 employee.PropertyChanged += OnEmployeePropertyChanged;
@@ -415,12 +427,22 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .WithContent("Welcome, new employee!")
                     .DismissOnClick()
                     .ShowSuccess();
+                
+                (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
+            
+                // Suggest GC for image cleanup
+                GC.Collect(0, GCCollectionMode.Optimized);
+                ForceGarbageCollection();
             })
             .WithCancelCallback(() =>
+            {
                 _toastManager.CreateToast("Adding new employee cancelled")
                     .WithContent("Add a new employee to continue")
                     .DismissOnClick()
-                    .ShowWarning())
+                    .ShowWarning();
+            
+                (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
+            })
             .WithMaxWidth(950)
             .Show();
     }
@@ -448,16 +470,23 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .WithContent($"You have successfully modified {employee.Name}'s details")
                     .DismissOnClick()
                     .ShowSuccess();
+                
+                (_addNewEmployeeDialogCardViewModel as IDisposable)?.Dispose();
+                GC.Collect(0, GCCollectionMode.Optimized);
+                ForceGarbageCollection();
             })
             .WithCancelCallback(() =>
+            {
                 _toastManager.CreateToast("Modifying Employee Details Cancelled")
                     .WithContent("Click the three-dots if you want to modify your employees' details")
                     .DismissOnClick()
-                    .ShowWarning())
+                    .ShowWarning();
+            
+                (_addNewEmployeeDialogCardViewModel as IDisposable)?.Dispose();
+            })
             .WithMaxWidth(950)
             .Show();
     }
-
 
     [RelayCommand]
     private void OpenViewEmployeeProfile(ManageEmployeesItem? employee)
@@ -1077,6 +1106,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         (_employeeProfileInformationViewModel as IDisposable).Dispose();
 
         base.DisposeManagedResources();
+        ForceGarbageCollection();
     }
 }
 

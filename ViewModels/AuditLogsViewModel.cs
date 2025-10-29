@@ -593,11 +593,12 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         }
 
         // Clear collections
-        AuditLogs?.Clear();
-        OriginalAuditLogData?.Clear();
-        CurrentFilteredAuditLogData?.Clear();
-
+        AuditLogs.Clear();
+        OriginalAuditLogData.Clear();
+        CurrentFilteredAuditLogData.Clear();
+    
         base.DisposeManagedResources();
+        ForceGarbageCollection();
     }
 }
 

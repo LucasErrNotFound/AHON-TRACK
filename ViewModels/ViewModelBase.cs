@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -116,6 +117,28 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo, ID
         }
 
         _disposed = true;
+    }
+    
+    /// <summary>
+    /// Forces a full garbage collection. Use sparingly, only after major cleanup operations.
+    /// </summary>
+    protected void ForceGarbageCollection()
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        
+        Debug.WriteLine($"[{GetType().Name}] Forced garbage collection completed.");
+    }
+
+    /// <summary>
+    /// Suggests a lightweight garbage collection for generation 0 or 1.
+    /// Use for moderate cleanup operations.
+    /// </summary>
+    protected void SuggestGarbageCollection(int generation = 0)
+    {
+        GC.Collect(generation, GCCollectionMode.Optimized);
+        Debug.WriteLine($"[{GetType().Name}] Suggested Gen{generation} garbage collection.");
     }
 
     protected virtual void DisposeManagedResources()

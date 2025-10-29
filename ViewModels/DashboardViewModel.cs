@@ -774,5 +774,6 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         YAxes = Array.Empty<Axis>();
 
         base.DisposeManagedResources();
+        ForceGarbageCollection();
     }
 }

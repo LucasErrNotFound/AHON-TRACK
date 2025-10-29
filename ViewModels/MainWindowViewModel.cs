@@ -285,9 +285,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         currentWindow?.Close();
         DisposeManagedResources();
         
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
+        ForceGarbageCollection();
     }
     
     private void OnProfilePictureUpdated()

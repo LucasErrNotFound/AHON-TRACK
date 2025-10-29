@@ -576,20 +576,30 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     protected override void DisposeManagedResources()
     {
         // Clear image-related memory
+        if (ProfileImageSource is IDisposable disposableBitmap)
+        {
+            disposableBitmap.Dispose();
+        }
+        ProfileImageSource = null;
+        ProfileImage = null;
+        
         EmployeeProfileImageControl = null;
-        EmployeeProfileImageControl = null;
-        MiddleInitialItems = [];
-        EmployeePositionItems = [];
-        EmployeeStatusItems = [];
+        
+        // Clear arrays
+        MiddleInitialItems = Array.Empty<string>();
+        EmployeePositionItems = Array.Empty<string>();
+        EmployeeStatusItems = Array.Empty<string>();
 
-        // Null out strings/fields holding data
-        DialogTitle = null!;
-        DialogDescription = null!;
-        _employeeFirstName = string.Empty;
-        _employeeLastName = string.Empty;
-        _employeeContactNumber = string.Empty;
-        _employeeUsername = string.Empty;
-        _employeePassword = string.Empty;
+        // Clear sensitive data
+        EmployeePassword = string.Empty;
+        EmployeeUsername = string.Empty;
+        EmployeeFirstName = string.Empty;
+        EmployeeLastName = string.Empty;
+        EmployeeContactNumber = string.Empty;
+        EmployeeHouseAddress = string.Empty;
+        
+        // Clear event subscriptions
+        ImageResetRequested = null;
 
         base.DisposeManagedResources();
     }
