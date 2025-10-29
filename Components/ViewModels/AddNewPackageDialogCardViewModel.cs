@@ -25,7 +25,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
     private string _selectedDiscountForItem = "All";
 
     [ObservableProperty]
-    private string[] _durationItems = ["Month", "Session", "One-time only"];
+    private string[] _durationItems = ["/Month", "/Session", "/One-time only"];
     private string _selectedDurationItem = string.Empty;
 
     private string _packageName = string.Empty;
