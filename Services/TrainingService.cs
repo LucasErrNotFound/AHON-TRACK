@@ -302,13 +302,14 @@ WHERE TrainingID = @TrainingID";
                 await connection.OpenAsync();
 
                 const string query = @"
+-- Get Members with sessions
 SELECT 
     m.MemberID AS CustomerID,
     m.CustomerType AS CustomerType,
     m.Firstname AS FirstName,
     m.Lastname AS LastName,
+    NULL AS ProfilePicture,
     m.ContactNumber,
-    m.ProfilePicture,
     p.PackageName AS PackageType,
     p.PackageID,
     COALESCE(ms.SessionsLeft, 0) AS SessionsLeft
@@ -316,6 +317,25 @@ FROM Members m
 INNER JOIN MemberSessions ms ON m.MemberID = ms.CustomerID
 INNER JOIN Packages p ON ms.PackageID = p.PackageID
 WHERE COALESCE(ms.SessionsLeft, 0) > 0
+
+UNION ALL
+
+-- Get Walk-ins with sessions
+SELECT 
+    w.CustomerID AS CustomerID,
+    w.CustomerType AS CustomerType,
+    w.FirstName AS FirstName,
+    w.LastName AS LastName,
+    NULL AS ProfilePicture,
+    w.ContactNumber,
+    p.PackageName AS PackageType,
+    p.PackageID,
+    COALESCE(ws.SessionsLeft, 0) AS SessionsLeft
+FROM WalkInCustomers w
+INNER JOIN WalkInSessions ws ON w.CustomerID = ws.CustomerID
+INNER JOIN Packages p ON ws.PackageID = p.PackageID
+WHERE COALESCE(ws.SessionsLeft, 0) > 0
+
 ORDER BY FirstName, LastName";
 
                 await using var command = new SqlCommand(query, connection);

@@ -35,9 +35,9 @@ namespace AHON_TRACK.Services
             // Load settings
             var settings = await _settingsService.LoadSettingsAsync();
 
-            if (string.IsNullOrWhiteSpace(settings.RecoveryFilePath))
+            if (string.IsNullOrWhiteSpace(settings.DownloadPath))
             {
-                // No backup path/recovery file path configured, don't start scheduler
+                // No backup path configured, don't start scheduler
                 return;
             }
 
@@ -58,7 +58,7 @@ namespace AHON_TRACK.Services
 
             // Create timer that fires at midnight, then every 24 hours
             _schedulerTimer = new Timer(
-                async void (_) => await OnTimerElapsed(),
+                async _ => await OnTimerElapsed(),
                 null,
                 timeUntilMidnight,
                 TimeSpan.FromHours(24));
@@ -96,22 +96,33 @@ namespace AHON_TRACK.Services
             // Check if we have a last backup date
             if (!settings.LastBackupDate.HasValue)
             {
+                System.Diagnostics.Debug.WriteLine("No LastBackupDate found, backup is due");
                 // Never backed up before
                 return true;
             }
 
             // Check if enough days have passed
             var daysSinceLastBackup = (DateTime.Now - settings.LastBackupDate.Value).TotalDays;
-            return daysSinceLastBackup >= frequencyDays;
+            var isDue = daysSinceLastBackup >= frequencyDays;
+
+            System.Diagnostics.Debug.WriteLine($"Days since last backup: {daysSinceLastBackup:F2}, Frequency: {frequencyDays}, Is due: {isDue}");
+
+            return isDue;
         }
 
         private async Task PerformScheduledBackupAsync(AppSettings settings)
         {
-            if (_isBackupInProgress) return;
+            if (_isBackupInProgress)
+            {
+                System.Diagnostics.Debug.WriteLine("Backup already in progress, skipping duplicate backup");
+                return;
+            }
 
             _isBackupInProgress = true;
             int retryCount = 0;
             bool backupSuccessful = false;
+
+            System.Diagnostics.Debug.WriteLine("===== STARTING AUTOMATIC BACKUP =====");
 
             while (retryCount < MAX_BACKUP_RETRIES && !backupSuccessful)
             {
@@ -121,7 +132,9 @@ namespace AHON_TRACK.Services
                     var backupFolder = settings.DownloadPath;
                     if (string.IsNullOrWhiteSpace(backupFolder))
                     {
+                        System.Diagnostics.Debug.WriteLine("Backup folder is empty, skipping backup");
                         // If no path configured, skip backup
+                        _isBackupInProgress = false;
                         return;
                     }
 
@@ -135,12 +148,16 @@ namespace AHON_TRACK.Services
                     var backupFileName = $"AHON_TRACK_AutoBackup_{timestamp}.bak";
                     var backupFilePath = Path.Combine(backupFolder, backupFileName);
 
+                    System.Diagnostics.Debug.WriteLine($"Creating backup: {backupFileName}");
+
                     // Perform backup
                     await _backupDatabaseService.BackupDatabaseAsync(backupFilePath);
 
                     // Update last backup date
                     settings.LastBackupDate = DateTime.Now;
                     await _settingsService.SaveSettingsAsync(settings);
+
+                    System.Diagnostics.Debug.WriteLine($"Backup completed successfully, LastBackupDate updated to: {settings.LastBackupDate}");
 
                     // Clean up old backups (keep last 10)
                     await CleanupOldBackups(backupFolder, 10);
@@ -156,6 +173,8 @@ namespace AHON_TRACK.Services
                 catch (Exception ex)
                 {
                     retryCount++;
+
+                    System.Diagnostics.Debug.WriteLine($"Backup attempt {retryCount} failed: {ex.Message}");
 
                     if (retryCount >= MAX_BACKUP_RETRIES)
                     {
@@ -174,6 +193,7 @@ namespace AHON_TRACK.Services
             }
 
             _isBackupInProgress = false;
+            System.Diagnostics.Debug.WriteLine("===== AUTOMATIC BACKUP FINISHED =====");
         }
 
         private async Task CleanupOldBackups(string backupFolder, int keepCount)

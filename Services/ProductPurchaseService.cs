@@ -67,12 +67,18 @@ namespace AHON_TRACK.Services
             {
                 decimal totalAmount = 0;
                 int totalTransactions = 0;
+                bool anyDiscountApplied = false; // Track if any discount was applied
 
                 foreach (var item in cartItems)
                 {
-                    decimal itemTotal = await CalculateItemTotal(item, customer, conn, transaction);
+                    var (itemTotal, hasDiscount) = await CalculateItemTotal(item, customer, conn, transaction);
                     totalAmount += itemTotal;
                     totalTransactions++;
+
+                    if (hasDiscount)
+                    {
+                        anyDiscountApplied = true; // Mark that at least one discount was applied
+                    }
 
                     await RecordSaleAsync(item, customer, employeeId, itemTotal, conn, transaction);
                     await RecordPurchaseAsync(item, customer, itemTotal, conn, transaction);
@@ -84,7 +90,7 @@ namespace AHON_TRACK.Services
                 transaction.Commit();
 
                 await LogSuccessfulPayment(conn, customer, totalAmount, paymentMethod, cartItems);
-                ShowPaymentSuccess(totalAmount, paymentMethod, cartItems);
+                ShowPaymentSuccess(totalAmount, paymentMethod, cartItems, anyDiscountApplied); // Pass the discount flag
 
                 return true;
             }
@@ -97,23 +103,28 @@ namespace AHON_TRACK.Services
             }
         }
 
-        private async Task<decimal> CalculateItemTotal(SellingModel item, CustomerModel customer, SqlConnection conn, SqlTransaction transaction)
+        private async Task<(decimal itemTotal, bool hasDiscount)> CalculateItemTotal(SellingModel item, CustomerModel customer, SqlConnection conn, SqlTransaction transaction)
         {
-            decimal itemTotal = item.Price * item.Quantity;
+            decimal itemTotal;
+            bool discountApplied = false;
 
             if (item.Category == CategoryConstants.GymPackage)
             {
-                itemTotal = await ApplyPackageDiscount(item, customer, conn, transaction);
+                (itemTotal, discountApplied) = await ApplyPackageDiscount(item, customer, conn, transaction);
             }
             else if (item.Category == CategoryConstants.Product)
             {
-                itemTotal = await ApplyProductDiscount(item, conn, transaction);
+                (itemTotal, discountApplied) = await ApplyProductDiscount(item, conn, transaction);
+            }
+            else
+            {
+                itemTotal = item.Price * item.Quantity;
             }
 
-            return itemTotal;
+            return (itemTotal, discountApplied);
         }
 
-        private async Task<decimal> ApplyPackageDiscount(SellingModel item, CustomerModel customer, SqlConnection conn, SqlTransaction transaction)
+        private async Task<(decimal itemTotal, bool discountApplied)> ApplyPackageDiscount(SellingModel item, CustomerModel customer, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"SELECT Discount, DiscountType, DiscountFor, ValidFrom, ValidTo FROM Packages WHERE PackageID = @PackageID";
 
@@ -143,14 +154,14 @@ namespace AHON_TRACK.Services
                         ? item.Price * (discountValue / 100m)
                         : discountValue;
 
-                    return (item.Price - discountAmount) * item.Quantity;
+                    return ((item.Price - discountAmount) * item.Quantity, true); // Discount applied
                 }
             }
 
-            return item.Price * item.Quantity;
+            return (item.Price * item.Quantity, false); // No discount applied
         }
 
-        private async Task<decimal> ApplyProductDiscount(SellingModel item, SqlConnection conn, SqlTransaction transaction)
+        private async Task<(decimal itemTotal, bool discountApplied)> ApplyProductDiscount(SellingModel item, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"SELECT Price, DiscountedPrice, IsPercentageDiscount FROM Products WHERE ProductID = @ProductID";
 
@@ -167,11 +178,11 @@ namespace AHON_TRACK.Services
                 if (discountValue > 0 && isPercentage)
                 {
                     decimal finalPrice = price - (price * (discountValue / 100m));
-                    return Math.Max(0, finalPrice * item.Quantity);
+                    return (Math.Max(0, finalPrice * item.Quantity), true); // Discount applied
                 }
             }
 
-            return item.Price * item.Quantity;
+            return (item.Price * item.Quantity, false); // No discount applied
         }
 
         private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, SqlConnection conn, SqlTransaction transaction)
@@ -235,9 +246,19 @@ namespace AHON_TRACK.Services
             {
                 await UpdateProductStockAsync(item, conn, transaction);
             }
-            else if (item.Category == CategoryConstants.GymPackage && customer.CustomerType == CategoryConstants.Member)
+            else if (item.Category == CategoryConstants.GymPackage)
             {
-                await HandleMemberSessionsAsync(item, customer, conn, transaction);
+                // Add debugging here
+                System.Diagnostics.Debug.WriteLine($"Customer Type: {customer.CustomerType}, ID: {customer.CustomerID}");
+
+                if (customer.CustomerType == CategoryConstants.Member)
+                {
+                    await HandleMemberSessionsAsync(item, customer, conn, transaction);
+                }
+                else if (customer.CustomerType == CategoryConstants.WalkIn)
+                {
+                    await HandleWalkInSessionsAsync(item, customer, conn, transaction);
+                }
             }
         }
 
@@ -281,30 +302,13 @@ namespace AHON_TRACK.Services
                 durationStr = result?.ToString()?.Trim()?.ToLower() ?? "";
             }
 
-            // Check if Duration contains "session" or is "one-time only"
-            // Changed from exact match to contains check
-            bool isSessionBased = durationStr.Contains("session") || durationStr == "one-time only";
+            // Calculate sessions to add - directly parse from duration string
+            int sessionsToAdd = item.Quantity; // Default: 1 session per quantity
 
-            if (!isSessionBased)
-                return;
-
-            // Calculate sessions to add
-            int sessionsToAdd;
-            if (durationStr == "one-time only")
+            var parts = durationStr.Split(' ');
+            if (parts.Length > 0 && int.TryParse(parts[0], out int parsed))
             {
-                sessionsToAdd = 1 * item.Quantity;
-            }
-            else
-            {
-                // Try to parse the number from duration string (e.g., "1 session", "5 sessions")
-                // If parsing fails, default to 1 session per quantity
-                int sessionCount = 1;
-                var parts = durationStr.Split(' ');
-                if (parts.Length > 0 && int.TryParse(parts[0], out int parsed))
-                {
-                    sessionCount = parsed;
-                }
-                sessionsToAdd = sessionCount * item.Quantity;
+                sessionsToAdd = parsed * item.Quantity;
             }
 
             string checkExisting = @"
@@ -336,6 +340,56 @@ namespace AHON_TRACK.Services
             }
         }
 
+        private async Task HandleWalkInSessionsAsync(SellingModel item, CustomerModel customer, SqlConnection conn, SqlTransaction transaction)
+        {
+            string getDuration = @"SELECT Duration FROM Packages WHERE PackageID = @PackageID;";
+            string durationStr = "";
+
+            using (var cmd = new SqlCommand(getDuration, conn, transaction))
+            {
+                cmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+                var result = await cmd.ExecuteScalarAsync();
+                durationStr = result?.ToString()?.Trim()?.ToLower() ?? "";
+            }
+
+            // Calculate sessions to add - directly parse from duration string
+            int sessionsToAdd = item.Quantity; // Default: 1 session per quantity
+
+            var parts = durationStr.Split(' ');
+            if (parts.Length > 0 && int.TryParse(parts[0], out int parsed))
+            {
+                sessionsToAdd = parsed * item.Quantity;
+            }
+
+            string checkExisting = @"
+        SELECT SessionID, SessionsLeft 
+        FROM WalkInSessions 
+        WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
+
+            int? existingSessionId = null;
+
+            using (var checkCmd = new SqlCommand(checkExisting, conn, transaction))
+            {
+                checkCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
+                checkCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
+
+                using var reader = await checkCmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    existingSessionId = reader.GetInt32(0);
+                }
+            }
+
+            if (existingSessionId.HasValue)
+            {
+                await UpdateExistingWalkInSessionAsync(existingSessionId.Value, sessionsToAdd, conn, transaction);
+            }
+            else
+            {
+                await CreateNewWalkInSessionAsync(customer.CustomerID, item.SellingID, sessionsToAdd, conn, transaction);
+            }
+        }
+
         private async Task UpdateExistingSessionAsync(int sessionId, int sessionsToAdd, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
@@ -360,6 +414,53 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@PackageID", packageId);
             cmd.Parameters.AddWithValue("@SessionsLeft", sessions);
             await cmd.ExecuteNonQueryAsync();
+        }
+
+        private async Task UpdateExistingWalkInSessionAsync(int sessionId, int sessionsToAdd, SqlConnection conn, SqlTransaction transaction)
+        {
+            string query = @"
+        UPDATE WalkInSessions 
+        SET SessionsLeft = SessionsLeft + @NewSessions
+        WHERE SessionID = @SessionID;";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@SessionID", sessionId);
+            cmd.Parameters.AddWithValue("@NewSessions", sessionsToAdd);
+
+            try
+            {
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                System.Diagnostics.Debug.WriteLine($"✓ Updated WalkInSession. Rows affected: {rowsAffected}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"✗ ERROR updating WalkInSession: {ex.Message}");
+                throw;
+            }
+        }
+
+        private async Task CreateNewWalkInSessionAsync(int customerId, int packageId, int sessions, SqlConnection conn, SqlTransaction transaction)
+        {
+            string query = @"
+        INSERT INTO WalkInSessions (CustomerID, PackageID, SessionsLeft, StartDate)
+        VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());
+        SELECT SCOPE_IDENTITY();";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@CustomerID", customerId);
+            cmd.Parameters.AddWithValue("@PackageID", packageId);
+            cmd.Parameters.AddWithValue("@SessionsLeft", sessions);
+
+            try
+            {
+                var newSessionId = await cmd.ExecuteScalarAsync();
+                System.Diagnostics.Debug.WriteLine($"✓ Successfully created WalkInSession ID: {newSessionId}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"✗ ERROR creating WalkInSession: {ex.Message}");
+                throw;
+            }
         }
 
         private async Task UpdateDailySalesAsync(int employeeId, decimal totalAmount, int totalTransactions, SqlConnection conn, SqlTransaction transaction)
@@ -728,15 +829,16 @@ namespace AHON_TRACK.Services
                 .ShowSuccess();
         }
 
-        private void ShowPaymentSuccess(decimal totalAmount, string paymentMethod, List<SellingModel> cartItems)
+        private void ShowPaymentSuccess(decimal totalAmount, string paymentMethod, List<SellingModel> cartItems, bool discountApplied)
         {
             ShowSuccess("Payment Successful", $"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}");
 
-            bool hasPackageDiscount = cartItems.Any(i => i.Category == CategoryConstants.GymPackage);
-            bool hasProductDiscount = cartItems.Any(i => i.Category == CategoryConstants.Product);
-
-            if (hasPackageDiscount || hasProductDiscount)
+            // Only show discount toast if a discount was actually applied
+            if (discountApplied)
             {
+                bool hasPackageDiscount = cartItems.Any(i => i.Category == CategoryConstants.GymPackage);
+                bool hasProductDiscount = cartItems.Any(i => i.Category == CategoryConstants.Product);
+
                 string message = hasPackageDiscount && hasProductDiscount
                     ? "Package and product discounts applied successfully."
                     : hasPackageDiscount
