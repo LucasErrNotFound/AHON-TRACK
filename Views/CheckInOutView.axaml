@@ -89,7 +89,6 @@
                                     <Grid RowDefinitions="Auto *">
                                         <DataGrid
                                             MaxHeight="660"
-                                            MinHeight="500"
                                             Grid.Row="1"
                                             AutoGenerateColumns="False"
                                             CanUserReorderColumns="False"
@@ -242,7 +241,6 @@
                                         <DataGrid
                                             Grid.Row="1"
                                             MaxHeight="660"
-                                            MinHeight="500"
                                             CanUserReorderColumns="False"
                                             CanUserResizeColumns="False"
                                             CanUserSortColumns="False"
@@ -437,7 +435,6 @@
                                     </StackPanel>
                                     <DataGrid
                                         MaxHeight="660"
-                                        MinHeight="500"
                                         AutoGenerateColumns="False"
                                         CanUserReorderColumns="False"
                                         CanUserResizeColumns="False"
@@ -592,7 +589,6 @@
                                         <DataGrid
                                             Grid.Row="1"
                                             MaxHeight="660"
-                                            MinHeight="500"
                                             CanUserReorderColumns="False"
                                             CanUserResizeColumns="False"
                                             CanUserSortColumns="False"
