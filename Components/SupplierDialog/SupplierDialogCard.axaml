@@ -173,7 +173,7 @@
                             <StackPanel Grid.Row="5">
                                 <ComboBox
                                     shadui:ControlAssist.Label="Status"
-                                    PlaceholderText="Select status"
+                                    IsEnabled="{CompiledBinding IsStatusEnabled}"
                                     ItemsSource="{CompiledBinding StatusFilterItems}"
                                     SelectedItem="{CompiledBinding Status, Mode=TwoWay}">
                                 </ComboBox>

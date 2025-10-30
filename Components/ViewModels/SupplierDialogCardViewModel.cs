@@ -15,6 +15,9 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     [ObservableProperty]
     private string[] _statusFilterItems = ["Active", "Inactive", "Suspended"];
 
+    [ObservableProperty] 
+    private bool _isStatusEnabled;
+
     [ObservableProperty]
     private string _dialogTitle = "Add Supplier Contact";
 
@@ -74,15 +77,18 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     [AvaloniaHotReload]
     public void Initialize()
     {
+        ClearAllFields();
         DialogTitle = "Add Supplier Contact";
         DialogDescription = "Register new supplier with their contact to maintain reliable supply management";
+        Status = "Active";
+        IsStatusEnabled = false;
         IsEditMode = false;
-        ClearAllFields();
     }
 
     public void InitializeForEditMode(Supplier? supplier)
     {
         IsEditMode = true;
+        IsStatusEnabled = true;
         DialogTitle = "Edit Existing Supplier Contact";
         DialogDescription = "Edit existing supplier with their contact to maintain latest details";
         ClearAllFields();
