@@ -12,6 +12,7 @@ using ShadUI;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Services;
+using AHON_TRACK.Validators;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -142,7 +143,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     }
 
     [Required(ErrorMessage = "Price is required")]
-    [Range(0.01, 1000000000, ErrorMessage = "Price must be between 0.01 and 1000000000")]
+    [Range(1, 1000000000, ErrorMessage = "Price must be between 1 and 1,000,000,000")]
     public decimal? PurchasePrice
     {
         get => _purchasePrice;
@@ -151,31 +152,77 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
 
     [Required(ErrorMessage = "Purchased Date is required")]
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
+    [PurchasedDateValidation(nameof(WarrantyExpiry), ErrorMessage = "Purchase date must be before warranty expiry")]
+    [NotFutureDate(ErrorMessage = "Purchase date cannot be in the future")]
     public DateTime? PurchasedDate
     {
         get => _purchaseDate;
-        set => SetProperty(ref _purchaseDate, value, true);
+        set
+        {
+            var oldValue = _purchaseDate;
+            SetProperty(ref _purchaseDate, value, true);
+            
+            // Re-validate WarrantyExpiry when PurchasedDate changes
+            if (oldValue != value)
+            {
+                ValidateProperty(WarrantyExpiry, nameof(WarrantyExpiry));
+            }
+        }
     }
 
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
+    [WarrantyDateValidation(nameof(PurchasedDate), ErrorMessage = "Warranty expiry must be after purchase date")]
     public DateTime? WarrantyExpiry
     {
         get => _warrantyExpiry;
-        set => SetProperty(ref _warrantyExpiry, value, true);
+        set
+        {
+            var oldValue = _warrantyExpiry;
+            SetProperty(ref _warrantyExpiry, value, true);
+            
+            // Re-validate PurchasedDate when WarrantyExpiry changes
+            if (oldValue != value)
+            {
+                ValidateProperty(PurchasedDate, nameof(PurchasedDate));
+            }
+        }
     }
 
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
+    [LastMaintenanceDateValidation(nameof(NextMaintenance), ErrorMessage = "Last maintenance must be before next maintenance")]
+    [NotFutureDate(ErrorMessage = "Last maintenance cannot be in the future")]
     public DateTime? LastMaintenance
     {
         get => _lastMaintenance;
-        set => SetProperty(ref _lastMaintenance, value, true);
+        set
+        {
+            var oldValue = _lastMaintenance;
+            SetProperty(ref _lastMaintenance, value, true);
+            
+            // Re-validate NextMaintenance when LastMaintenance changes
+            if (oldValue != value)
+            {
+                ValidateProperty(NextMaintenance, nameof(NextMaintenance));
+            }
+        }
     }
 
     [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
+    [NextMaintenanceDateValidation(nameof(LastMaintenance), ErrorMessage = "Next maintenance must be after last maintenance")]
     public DateTime? NextMaintenance
     {
         get => _nextMaintenance;
-        set => SetProperty(ref _nextMaintenance, value, true);
+        set
+        {
+            var oldValue = _nextMaintenance;
+            SetProperty(ref _nextMaintenance, value, true);
+            
+            // Re-validate LastMaintenance when NextMaintenance changes
+            if (oldValue != value)
+            {
+                ValidateProperty(LastMaintenance, nameof(LastMaintenance));
+            }
+        }
     }
 
     public EquipmentDialogCardViewModel(
@@ -327,54 +374,14 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     {
         ValidateAllProperties();
 
-        // Custom validation for supplier
-        if (string.IsNullOrEmpty(Supplier))
+        if (HasErrors)
         {
-            _toastManager?.CreateToast("Validation Error")
-                .WithContent("Please select a supplier")
+            _toastManager.CreateToast("Validation Error")
+                .WithContent("Please correct the form errors")
                 .DismissOnClick()
                 .ShowWarning();
             return;
         }
-
-        // ? Custom validation for warranty date
-        if (PurchasedDate.HasValue && WarrantyExpiry.HasValue)
-        {
-            if (WarrantyExpiry.Value <= PurchasedDate.Value)
-            {
-                _toastManager?.CreateToast("Invalid Warranty Date")
-                    .WithContent("Warranty expiry must be after the purchase date.")
-                    .DismissOnClick()
-                    .ShowError();
-                return;
-            }
-        }
-
-        // ? (Optional) If you want to ensure purchase date is not in the future
-        if (PurchasedDate.HasValue && PurchasedDate.Value > DateTime.Today)
-        {
-            _toastManager?.CreateToast("Invalid Purchase Date")
-                .WithContent("Purchase date cannot be in the future.")
-                .DismissOnClick()
-                .ShowError();
-            return;
-        }
-
-        if (HasErrors) return;
-
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
-
-        // Custom validation for supplier
-        if (string.IsNullOrEmpty(Supplier))
-        {
-            _toastManager?.CreateToast("Validation Error")
-                .WithContent("Please select a supplier")
-                .DismissOnClick()
-                .ShowWarning();
-            return;
-        }
-
-        if (HasErrors) return;
 
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
