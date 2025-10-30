@@ -16,6 +16,7 @@ using System.IO;
 namespace AHON_TRACK;
 
 [ServiceProvider]
+[Transient<ServiceProvider>]
 [Transient<LoginViewModel>]
 [Transient<MainWindowViewModel>]
 [Transient<DashboardViewModel>]
