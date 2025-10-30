@@ -182,9 +182,6 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         }
     }
 
-    /// <summary>
-    /// Reloads data from the database
-    /// </summary>
     [RelayCommand]
     private async Task RefreshDataAsync()
     {
@@ -596,7 +593,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         AuditLogs.Clear();
         OriginalAuditLogData.Clear();
         CurrentFilteredAuditLogData.Clear();
-    
+
         base.DisposeManagedResources();
         ForceGarbageCollection();
     }
