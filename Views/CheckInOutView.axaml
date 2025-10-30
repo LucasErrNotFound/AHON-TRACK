@@ -456,19 +456,22 @@
                                         
                                         <DataGrid.Columns>
                                             <DataGridTextColumn
-                                                MaxWidth="80"
+                                                Width="Auto"
+                                                MinWidth="50"
                                                 Header="ID"
                                                 FontSize="13"
                                                 x:DataType="viewModels:WalkInPerson"
                                                 Binding="{CompiledBinding ID}" />
                                             <DataGridTextColumn
-                                                MaxWidth="120"
+                                                Width="*"
+                                                MinWidth="120"
                                                 Header="First Name"
                                                 FontSize="13"
                                                 x:DataType="viewModels:WalkInPerson"
                                                 Binding="{CompiledBinding FirstName}" />
                                             <DataGridTextColumn
-                                                MaxWidth="120"
+                                                Width="*"
+                                                MinWidth="120"
                                                 Header="Last Name"
                                                 FontSize="13"
                                                 x:DataType="viewModels:WalkInPerson"
@@ -480,13 +483,15 @@
                                                 x:DataType="viewModels:WalkInPerson"
                                                 Binding="{CompiledBinding Age}" />
                                             <DataGridTextColumn
-                                                MaxWidth="120"
+                                                Width="*"
+                                                MinWidth="120"
                                                 Header="Contact No."
                                                 FontSize="13"
                                                 x:DataType="viewModels:WalkInPerson"
                                                 Binding="{CompiledBinding ContactNumber}" />
                                             <DataGridTextColumn
-                                                MaxWidth="120"
+                                                Width="*"
+                                                MinWidth="100"
                                                 Header="Package Type"
                                                 FontSize="12"
                                                 x:DataType="viewModels:WalkInPerson"
@@ -637,29 +642,29 @@
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
                                                 <DataGridTextColumn
-                                                    Width="Auto"
-                                                    MaxWidth="120"
+                                                    Width="*"
+                                                    MinWidth="100"
                                                     Header="First Name"
                                                     FontSize="12"
                                                     x:DataType="viewModels:MemberPerson"
                                                     Binding="{CompiledBinding FirstName}" />
                                                 <DataGridTextColumn
-                                                    Width="Auto"
-                                                    MaxWidth="120"
+                                                    Width="*"
+                                                    MinWidth="100"
                                                     Header="Last Name"
                                                     FontSize="12"
                                                     x:DataType="viewModels:MemberPerson"
                                                     Binding="{CompiledBinding LastName}" />
                                                 <DataGridTextColumn
-                                                    Width="Auto"
-                                                    MaxWidth="150"
+                                                    Width="*"
+                                                    MinWidth="120"
                                                     Header="Contact No."
                                                     FontSize="12"
                                                     x:DataType="viewModels:MemberPerson"
                                                     Binding="{CompiledBinding ContactNumber}" />
                                                 <DataGridTextColumn
-                                                    Width="Auto"
-                                                    MaxWidth="120"
+                                                    Width="*"
+                                                    MinWidth="115"
                                                     Header="Membership Type"
                                                     FontSize="12"
                                                     x:DataType="viewModels:MemberPerson"
@@ -667,8 +672,8 @@
                                                 <DataGridTemplateColumn
                                                     CanUserSort="False"
                                                     Header="Status"
-                                                    Width="Auto"
-                                                    MaxWidth="145">
+                                                    Width="*"
+                                                    MinWidth="100">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate DataType="viewModels:MemberPerson">
                                                             <Border
