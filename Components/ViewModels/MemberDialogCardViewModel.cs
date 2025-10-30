@@ -65,6 +65,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private readonly PageManager _pageManager;
     private readonly IMemberService _memberService;
 
+    private int? _memberPackageId;
+
     private List<PackageModel> _memberPackageModels = new();
 
     public DateTime? MemberDateJoined
@@ -270,6 +272,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
             // Set the package name for display
             MemberPackages = memberData.MembershipType ?? string.Empty;
+            _memberPackageId = memberData.PackageID;
 
             MemberAge = memberData.Age;
             MemberBirthDate = memberData.DateOfBirth;
@@ -421,6 +424,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 DateOfBirth = MemberBirthDate,
                 ValidUntil = MemberValidUntil?.ToString("MMM dd, yyyy"),
                 MembershipType = MemberPackages,
+                PackageID = _memberPackageId,
                 Status = MemberStatus
             };
 
@@ -473,10 +477,11 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         MemberValidUntil = null;
         MemberStatus = string.Empty;
         ProfileImage = null;
+        _memberPackageId = null;
         ProfileImageSource = ImageHelper.GetDefaultAvatar();
         ClearAllErrors();
     }
-    
+
     protected override void DisposeManagedResources()
     {
         // Dispose and drop image resources
@@ -512,6 +517,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         // Aggressively clear package models
         _memberPackageModels?.Clear();
         _memberPackageModels = new List<PackageModel>();
+        _memberPackageId = null;
 
         // Clear dialog metadata
         DialogTitle = string.Empty;
