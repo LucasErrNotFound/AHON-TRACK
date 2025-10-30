@@ -70,6 +70,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     }
 
     [Required(ErrorMessage = "Brand name is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string? BrandName

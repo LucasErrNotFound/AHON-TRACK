@@ -121,7 +121,6 @@
                                 <DataGrid
                                     Height="650"
                                     Margin="0,20,0,0"
-                                    IsReadOnly="True"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
@@ -152,6 +151,7 @@
 
                                         <!-- Product ID -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="80"
                                             Header="ID"
@@ -159,6 +159,7 @@
 
                                         <!-- Product Name -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="*"
                                             MinWidth="120"
                                             Header="Product Name"
@@ -166,6 +167,7 @@
 
                                         <!-- SKU -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="*"
                                             MinWidth="150"
                                             Header="SKU"
@@ -173,6 +175,7 @@
 
                                         <!-- Category -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="160"
                                             Header="Category"
@@ -180,6 +183,7 @@
 
                                         <!-- Current Stock -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="100"
                                             Header="Current Stock"
@@ -187,6 +191,7 @@
 
                                         <!-- Price -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="130"
                                             Header="Price"
@@ -194,6 +199,7 @@
 
                                         <!-- Supplier -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="150"
                                             Header="Supplier"
@@ -201,6 +207,7 @@
 
                                         <!-- Expiry -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="140"
                                             Header="Expiry"
@@ -208,6 +215,7 @@
 
                                         <!-- Status -->
                                         <DataGridTemplateColumn
+                                            IsReadOnly="True"
                                             CanUserSort="False"
                                             Header="Status"
                                             Width="170">
@@ -356,7 +364,6 @@
                                 <DataGrid
                                     MaxHeight="650"
                                     Margin="0,20,0,0"
-                                    IsReadOnly="True"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
@@ -389,6 +396,7 @@
 
                                         <!-- Product ID -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="50"
                                             Header="ID"
@@ -396,6 +404,7 @@
 
                                         <!-- Product Name -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="*"
                                             MinWidth="140"
                                             Header="Product Name"
@@ -403,6 +412,7 @@
 
                                         <!-- SKU -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="*"
                                             MinWidth="140"
                                             Header="SKU"
@@ -410,6 +420,7 @@
 
                                         <!-- Category -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="160"
                                             Header="Category"
@@ -417,6 +428,7 @@
 
                                         <!-- Current Stock -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="100"
                                             Header="Current Stock"
@@ -424,6 +436,7 @@
 
                                         <!-- Price -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Price"
@@ -431,6 +444,7 @@
 
                                         <!-- Supplier -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="150"
                                             Header="Supplier"
@@ -438,6 +452,7 @@
 
                                         <!-- Expiry -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="140"
                                             Header="Expiry"
@@ -445,6 +460,7 @@
 
                                         <!-- Status -->
                                         <DataGridTemplateColumn
+                                            IsReadOnly="True"
                                             CanUserSort="False"
                                             Header="Status"
                                             Width="Auto"

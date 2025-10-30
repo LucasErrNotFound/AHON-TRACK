@@ -238,6 +238,7 @@
 								<shadui:CardTitle Content="Expiry" />
 								<CalendarDatePicker
                                     shadui:ControlAssist.Hint="Pick the product's expiry date (optional)"
+                                    shadui:ControlAssist.ReadOnly="True"
                                     Margin="0,20,0,0"
                                     SelectedDate="{CompiledBinding ProductExpiry}"/>
 							</StackPanel>

@@ -149,6 +149,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     }
 
     [Required(ErrorMessage = "Supplier name is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string? SupplierName
@@ -158,6 +159,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     }
 
     [Required(ErrorMessage = "Contact person is required")]
+    [RegularExpression("^[a-zA-Z ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string? ContactPerson

@@ -122,7 +122,6 @@
                                 <DataGrid
                                     Height="650"
                                     Margin="0,20,0,0"
-                                    IsReadOnly="True"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
                                     GridLinesVisibility="All"
@@ -153,6 +152,7 @@
 
                                         <!-- Supplier ID -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="80"
                                             Header="ID"
@@ -160,6 +160,7 @@
 
                                         <!-- Supplier Name -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="*"
                                             MinWidth="120"
                                             Header="Supplier Name"
@@ -167,6 +168,7 @@
 
                                         <!-- Contact Person -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="170"
                                             Header="Contact Person"
@@ -174,6 +176,7 @@
 
                                         <!-- Email -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="200"
                                             Header="Email"
@@ -181,6 +184,7 @@
 
                                         <!-- Phone -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="150"
                                             Header="Phone"
@@ -188,6 +192,7 @@
 
                                         <!-- Products -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="160"
                                             Header="Products"
@@ -195,6 +200,7 @@
 
                                         <!-- Delivery Schedule -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="130"
                                             Header="Delivery Schedule"
@@ -202,6 +208,7 @@
 
                                         <!-- Contract Terms -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="130"
                                             Header="Contract Terms"
@@ -209,6 +216,7 @@
 
                                         <!-- Status -->
                                         <DataGridTemplateColumn
+                                            IsReadOnly="True"
                                             CanUserSort="False"
                                             Header="Status"
                                             Width="150">
@@ -352,7 +360,6 @@
                                 </Grid>
                                 <DataGrid
                                     MaxHeight="650"
-IsReadOnly="True"
                                     Margin="0,20,0,0"
                                     CanUserReorderColumns="False"
                                     CanUserSortColumns="False"
@@ -386,6 +393,7 @@ IsReadOnly="True"
 
                                         <!-- Supplier ID -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="80"
                                             Header="ID"
@@ -393,6 +401,7 @@ IsReadOnly="True"
 
                                         <!-- Supplier Name -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="*"
                                             MinWidth="120"
                                             Header="Supplier Name"
@@ -400,6 +409,7 @@ IsReadOnly="True"
 
                                         <!-- Contact Person -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="170"
                                             Header="Contact Person"
@@ -407,6 +417,7 @@ IsReadOnly="True"
 
                                         <!-- Email -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="210"
                                             Header="Email"
@@ -414,6 +425,7 @@ IsReadOnly="True"
 
                                         <!-- Phone -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="150"
                                             Header="Phone"
@@ -421,6 +433,7 @@ IsReadOnly="True"
 
                                         <!-- Products -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="160"
                                             Header="Products"
@@ -428,6 +441,7 @@ IsReadOnly="True"
 
                                         <!-- Delivery Schedule -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Delivery Schedule"
@@ -435,6 +449,7 @@ IsReadOnly="True"
 
                                         <!-- Contract Terms -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Contract Terms"
@@ -442,6 +457,7 @@ IsReadOnly="True"
 
                                         <!-- Status -->
                                         <DataGridTemplateColumn
+                                            IsReadOnly="True"
                                             CanUserSort="False"
                                             Header="Status"
                                             MaxWidth="150"

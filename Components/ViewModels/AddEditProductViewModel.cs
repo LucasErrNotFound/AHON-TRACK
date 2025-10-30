@@ -513,6 +513,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     }
 
     [Required(ErrorMessage = "Product Name is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string? ProductName
@@ -522,6 +523,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     }
 
     [Required(ErrorMessage = "Product SKU is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(8, ErrorMessage = "Must be at least 8-12 characters long")]
     [MaxLength(12, ErrorMessage = "Must not exceed 12 characters")]
     public string? ProductSKU
@@ -530,7 +532,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _productSKU, value, true);
     }
 
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string? ProductDescription
     {

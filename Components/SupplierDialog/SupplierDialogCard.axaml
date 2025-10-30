@@ -89,7 +89,7 @@
                                             Classes="Clearable"
                                             Width="250"
                                             shadui:ControlAssist.Label="Supplier Name"
-                                            Watermark="e.g., Cobra Yellow Blast"
+                                            Watermark="e.g., San Miguel"
                                             Text="{CompiledBinding SupplierName, Mode=TwoWay}">
                                         </TextBox>
                                     </StackPanel>

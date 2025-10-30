@@ -122,7 +122,6 @@
                                 <DataGrid
                                     Height="650"
                                     Margin="0,20,0,0"
-                                    IsReadOnly="True"
                                     ItemsSource="{CompiledBinding EquipmentItems}"
                                     SelectedItem="{CompiledBinding SelectedEquipment}"
                                     CanUserReorderColumns="False"
@@ -154,6 +153,7 @@
 
                                         <!-- Equipment ID -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="80"
                                             Header="ID"
@@ -161,6 +161,7 @@
 
                                         <!-- Equipment Name -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="*"
                                             MinWidth="150"
                                             Header="Brand Name"
@@ -168,6 +169,7 @@
 
                                         <!-- Category -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="130"
                                             Header="Category"
@@ -175,6 +177,7 @@
 
                                         <!-- Current Stock -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="100"
                                             Header="Current Stock"
@@ -182,6 +185,7 @@
 
                                         <!-- Purchased Price -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="160"
                                             Header="Purchased Price"
@@ -189,6 +193,7 @@
 
                                         <!-- Purchased Date -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="100"
                                             Header="Purchased Date"
@@ -196,6 +201,7 @@
 
                                         <!-- Warranty -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MinWidth="120"
                                             Header="Warranty Expiration"
@@ -203,6 +209,7 @@
 
                                         <!-- Last Maintenance -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Last Maintenance"
@@ -210,6 +217,7 @@
 
                                         <!-- Next Maintenance -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Next Maintenance"
@@ -217,6 +225,7 @@
 
                                         <!-- Condition Header Column with Custom Template -->
                                         <DataGridTemplateColumn
+                                            IsReadOnly="True"
                                             CanUserSort="False"
                                             Header="Condition"
                                             Width="120">
@@ -360,7 +369,6 @@
                                 <DataGrid
                                     MaxHeight="650"
                                     Margin="0,20,0,0"
-                                    IsReadOnly="True"
                                     ItemsSource="{CompiledBinding EquipmentItems}"
                                     SelectedItem="{CompiledBinding SelectedEquipment}"
                                     CanUserReorderColumns="False"
@@ -393,6 +401,7 @@
 
                                         <!-- Equipment ID -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="80"
                                             Header="ID"
@@ -401,6 +410,7 @@
 
                                         <!-- Equipment Name -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="*"
                                             MinWidth="100"
                                             Header="Brand Name"
@@ -409,6 +419,7 @@
 
                                         <!-- Category -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="150"
                                             Header="Category"
@@ -417,6 +428,7 @@
 
                                         <!-- Current Stock -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="100"
                                             Header="Current Stock"
@@ -425,6 +437,7 @@
 
                                         <!-- Purchased Price -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="160"
                                             Header="Purchased Price"
@@ -433,6 +446,7 @@
 
                                         <!-- Purchased Date -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Purchased Date"
@@ -441,6 +455,7 @@
 
                                         <!-- Warranty -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Warranty Expiration"
@@ -449,6 +464,7 @@
 
                                         <!-- Last Maintenance -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Last Maintenance"
@@ -457,6 +473,7 @@
 
                                         <!-- Next Maintenance -->
                                         <DataGridTextColumn
+                                            IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Next Maintenance"
@@ -465,6 +482,7 @@
 
                                         <!-- Condition Header Column with Custom Template -->
                                         <DataGridTemplateColumn
+                                            IsReadOnly="True"
                                             CanUserSort="False"
                                             Header="Condition"
                                             MaxWidth="170"
