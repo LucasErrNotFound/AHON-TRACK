@@ -481,7 +481,7 @@
 														</ItemsControl.ItemsPanel>
 														<ItemsControl.ItemTemplate>
 															<DataTemplate>
-																<shadui:Card Width="330" Height="390">
+																<shadui:Card Width="330" MaxHeight="390" VerticalAlignment="Top">
 																	<StackPanel>
 																		<shadui:CardTitle
 																			Content="{CompiledBinding Title}"
@@ -563,7 +563,7 @@
 														</ItemsControl.ItemsPanel>
 														<ItemsControl.ItemTemplate>
 															<DataTemplate>
-																<shadui:Card Width="330" Height="390">
+																<shadui:Card Width="330" MaxHeight="390" VerticalAlignment="Top">
 																	<StackPanel>
 																		<shadui:CardTitle
 																			Content="{CompiledBinding Title}"
