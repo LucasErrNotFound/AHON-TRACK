@@ -306,6 +306,8 @@
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="120"
 																					FontSize="15"
 																					FontWeight="SemiBold"
 																					Text="{CompiledBinding CustomerName}"/>
@@ -439,6 +441,7 @@
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
+																					TextWrapping="WrapWithOverflow"
 																					FontWeight="SemiBold"
 																					Text="{CompiledBinding CustomerName}"/>
 																				<TextBlock
@@ -452,7 +455,7 @@
 																		<TextBlock
 																			Grid.Column="1"
 																			VerticalAlignment="Center"
-																			HorizontalAlignment="Left"
+																			HorizontalAlignment="Center"
 																			FontSize="15"
 																			FontWeight="SemiBold"
 																			Text="{CompiledBinding ProductName}"/>
@@ -525,6 +528,8 @@
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="140"
 																					FontWeight="SemiBold"
 																					Text="{CompiledBinding ClientName}"/>
 																				<TextBlock
@@ -540,6 +545,8 @@
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left"
 																			FontSize="15"
+																			TextWrapping="WrapWithOverflow"
+																			MaxWidth="100"
 																			FontWeight="SemiBold"
 																			Text="{CompiledBinding TrainingType}"/>
 
@@ -549,6 +556,8 @@
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left"
 																			FontSize="15"
+																			TextWrapping="WrapWithOverflow"
+																			MaxWidth="100"
 																			FontWeight="SemiBold"
 																			Text="{CompiledBinding Location}"/>
 
@@ -631,6 +640,8 @@
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="90"
 																					FontWeight="SemiBold"
 																					Text="{CompiledBinding Username}"/>
 																				<TextBlock
@@ -711,6 +722,8 @@
 																					Classes="Small"
 																					FontSize="15"
 																					FontWeight="SemiBold"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="140"
 																					Text="{CompiledBinding ClientName}"/>
 																				<TextBlock
 																					Classes="Caption Muted"
@@ -726,6 +739,8 @@
 																			HorizontalAlignment="Left"
 																			FontSize="15"
 																			FontWeight="SemiBold"
+																			TextWrapping="WrapWithOverflow"
+																			MaxWidth="100"
 																			Text="{CompiledBinding TrainingType}"/>
 
 																		<!-- Location Column -->
@@ -735,6 +750,8 @@
 																			HorizontalAlignment="Left"
 																			FontSize="15"
 																			FontWeight="SemiBold"
+																			TextWrapping="WrapWithOverflow"
+																			MaxWidth="100"
 																			Text="{CompiledBinding Location}"/>
 
 																		<!-- Time Slot Column -->
@@ -817,6 +834,8 @@
 																					Classes="Small"
 																					FontSize="15"
 																					FontWeight="SemiBold"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="160"
 																					Text="{CompiledBinding Username}"/>
 																				<TextBlock
 																					Classes="Caption Muted"
@@ -834,7 +853,7 @@
 																			FontWeight="SemiBold"
 																			TextWrapping="Wrap"
 																			TextAlignment="Right"
-																			Width="150"
+																			MaxWidth="350"
 																			Foreground="{DynamicResource SuccessColor}"
 																			Text="{CompiledBinding ActionLogName}"/>
 																	</Grid>
