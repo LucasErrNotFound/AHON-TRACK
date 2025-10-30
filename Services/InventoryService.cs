@@ -120,7 +120,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT SupplierID, SupplierName 
                       FROM Suppliers 
-                      WHERE Status = 'Active'
+                      WHERE Status = 'Active' AND IsDeleted = 0
                       ORDER BY SupplierName", conn);
 
                 var suppliers = new List<SupplierDropdownModel>();
@@ -1511,7 +1511,7 @@ namespace AHON_TRACK.Services
                 return (false, $"Error: {ex.Message}", 0);
             }
         }
-        
+
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
@@ -1520,7 +1520,7 @@ namespace AHON_TRACK.Services
             {
                 // Clear callback reference
                 _notificationCallback = null;
-            
+
                 // Dispose ToastManager if it's disposable
                 _toastManager.DismissAll();
             }
