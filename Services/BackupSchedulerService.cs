@@ -15,7 +15,9 @@ namespace AHON_TRACK.Services
         private Timer? _schedulerTimer;
         private bool _isDisposed;
         private bool _isBackupInProgress;
+        private DateTime? _lastBackupAttempt; // Track when we last attempted a backup
         private const int MAX_BACKUP_RETRIES = 3;
+        private const int MIN_BACKUP_INTERVAL_MINUTES = 5; // Prevent backups within 5 minutes of each other
 
         public BackupSchedulerService(
             SettingsService settingsService,
@@ -27,7 +29,7 @@ namespace AHON_TRACK.Services
             _toastManager = toastManager;
         }
 
-        public async Task StartSchedulerAsync()
+        public async Task StartSchedulerAsync(bool performImmediateCheckOnStart = true)
         {
             // Stop any existing timer
             StopScheduler();
@@ -37,6 +39,7 @@ namespace AHON_TRACK.Services
 
             if (string.IsNullOrWhiteSpace(settings.DownloadPath))
             {
+                System.Diagnostics.Debug.WriteLine("No backup path configured, scheduler not started");
                 // No backup path configured, don't start scheduler
                 return;
             }
@@ -44,11 +47,21 @@ namespace AHON_TRACK.Services
             // Get backup frequency in days
             int frequencyDays = ParseBackupFrequency(settings.BackupFrequency);
 
-            // Check if backup is needed
-            if (await ShouldPerformBackup(settings, frequencyDays))
+            // Only check for immediate backup if explicitly requested (on app start, not on settings change)
+            if (performImmediateCheckOnStart && await ShouldPerformBackup(settings, frequencyDays))
             {
-                // Perform backup immediately
-                _ = Task.Run(() => PerformScheduledBackupAsync(settings));
+                // Only perform backup immediately if we haven't attempted one recently
+                if (!_lastBackupAttempt.HasValue ||
+                    (DateTime.Now - _lastBackupAttempt.Value).TotalMinutes >= MIN_BACKUP_INTERVAL_MINUTES)
+                {
+                    System.Diagnostics.Debug.WriteLine("Backup is due on startup, scheduling immediate backup");
+                    // Perform backup in background without awaiting
+                    _ = Task.Run(() => PerformScheduledBackupAsync(settings));
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Backup was recently attempted at {_lastBackupAttempt}, skipping immediate backup");
+                }
             }
 
             // Set up timer to check daily at midnight
@@ -56,12 +69,22 @@ namespace AHON_TRACK.Services
             var nextMidnight = now.Date.AddDays(1);
             var timeUntilMidnight = nextMidnight - now;
 
+            System.Diagnostics.Debug.WriteLine($"Scheduler started. Next check at {nextMidnight}. Frequency: {frequencyDays} days");
+
             // Create timer that fires at midnight, then every 24 hours
             _schedulerTimer = new Timer(
-                async _ => await OnTimerElapsed(),
+                TimerCallback,
                 null,
                 timeUntilMidnight,
                 TimeSpan.FromHours(24));
+        }
+
+        public async Task RestartSchedulerAsync()
+        {
+            // This method is for when settings change - it just restarts the timer
+            // without performing an immediate backup check
+            System.Diagnostics.Debug.WriteLine("Restarting scheduler due to settings change (no immediate backup)");
+            await StartSchedulerAsync(performImmediateCheckOnStart: false);
         }
 
         public void StopScheduler()
@@ -70,9 +93,37 @@ namespace AHON_TRACK.Services
             _schedulerTimer = null;
         }
 
+        private void TimerCallback(object? state)
+        {
+            // Don't await - fire and forget with error handling
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await OnTimerElapsed();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Timer callback error: {ex.Message}");
+                }
+            });
+        }
+
         private async Task OnTimerElapsed()
         {
-            if (_isBackupInProgress) return;
+            if (_isBackupInProgress)
+            {
+                System.Diagnostics.Debug.WriteLine("Backup already in progress, skipping timer event");
+                return;
+            }
+
+            // Prevent multiple rapid backup attempts
+            if (_lastBackupAttempt.HasValue &&
+                (DateTime.Now - _lastBackupAttempt.Value).TotalMinutes < MIN_BACKUP_INTERVAL_MINUTES)
+            {
+                System.Diagnostics.Debug.WriteLine("Recent backup attempt detected, skipping");
+                return;
+            }
 
             try
             {
@@ -81,7 +132,12 @@ namespace AHON_TRACK.Services
 
                 if (await ShouldPerformBackup(settings, frequencyDays))
                 {
+                    System.Diagnostics.Debug.WriteLine("Timer: Backup is due");
                     await PerformScheduledBackupAsync(settings);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Timer: No backup needed yet");
                 }
             }
             catch (Exception ex)
@@ -97,7 +153,6 @@ namespace AHON_TRACK.Services
             if (!settings.LastBackupDate.HasValue)
             {
                 System.Diagnostics.Debug.WriteLine("No LastBackupDate found, backup is due");
-                // Never backed up before
                 return true;
             }
 
@@ -118,7 +173,16 @@ namespace AHON_TRACK.Services
                 return;
             }
 
+            // Check if we attempted a backup very recently
+            if (_lastBackupAttempt.HasValue &&
+                (DateTime.Now - _lastBackupAttempt.Value).TotalMinutes < MIN_BACKUP_INTERVAL_MINUTES)
+            {
+                System.Diagnostics.Debug.WriteLine($"Backup was attempted {(DateTime.Now - _lastBackupAttempt.Value).TotalMinutes:F1} minutes ago, skipping");
+                return;
+            }
+
             _isBackupInProgress = true;
+            _lastBackupAttempt = DateTime.Now;
             int retryCount = 0;
             bool backupSuccessful = false;
 
@@ -133,7 +197,6 @@ namespace AHON_TRACK.Services
                     if (string.IsNullOrWhiteSpace(backupFolder))
                     {
                         System.Diagnostics.Debug.WriteLine("Backup folder is empty, skipping backup");
-                        // If no path configured, skip backup
                         _isBackupInProgress = false;
                         return;
                     }
@@ -215,6 +278,7 @@ namespace AHON_TRACK.Services
                         try
                         {
                             File.Delete(backupFiles[i]);
+                            System.Diagnostics.Debug.WriteLine($"Deleted old backup: {Path.GetFileName(backupFiles[i])}");
                         }
                         catch
                         {

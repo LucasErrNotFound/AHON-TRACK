@@ -132,10 +132,12 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         // Save settings
         await _settingsService.SaveSettingsAsync(_currentSettings);
 
-        // Restart the backup scheduler if available
+        // Restart the backup scheduler if available (without triggering immediate backup)
         if (_backupScheduler != null)
         {
-            await _backupScheduler.StartSchedulerAsync();
+            // Use RestartSchedulerAsync instead of StartSchedulerAsync
+            // This updates the timer but doesn't trigger an immediate backup
+            await _backupScheduler.RestartSchedulerAsync();
 
             _toastManager.CreateToast("Settings saved")
                 .WithContent($"Backup schedule updated to: {SelectedBackupFrequency}")
@@ -458,9 +460,16 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
 
         // Aggressively clear collections
         BackupFrequencyOptions?.Clear();
-
         // Drop loaded settings and any cached objects
         _currentSettings = null;
+
+        if (DownloadTextBoxControl != null)
+            DownloadTextBoxControl.Text = string.Empty;
+        if (DataRecoveryTextBoxControl != null)
+            DataRecoveryTextBoxControl.Text = string.Empty;
+
+        DownloadTextBoxControl = null;
+        DataRecoveryTextBoxControl = null;
 
         base.DisposeManagedResources();
     }
