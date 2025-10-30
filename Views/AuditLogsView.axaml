@@ -222,7 +222,7 @@
 											InitialRotation="-225"
 											MaxAngle="270"
 											MinValue="0"
-											MaxValue="100">
+											MaxValue="2000">
 											<lvc:PieChart.Series>
 												<lvc:XamlGaugeSeries
 													GaugeValue="{Binding Value}"
@@ -264,7 +264,7 @@
 											InitialRotation="-225"
 											MaxAngle="270"
 											MinValue="0"
-											MaxValue="100">
+											MaxValue="2000">
 											<lvc:PieChart.Series>
 												<lvc:XamlGaugeSeries
 													GaugeValue="{Binding Value}"
