@@ -551,6 +551,27 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
         SelectAll = ProductItems.Count > 0 && ProductItems.All(x => x.IsSelected);
     }
+    
+    public bool CanDeleteSelectedProducts
+    {
+        get
+        {            
+            var selectedProducts = ProductItems.Where(item => item.IsSelected).ToList();
+            if (selectedProducts.Count == 0) return false;
+
+            if (SelectedProduct?.Status != null &&
+                !SelectedProduct.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase) &&
+                !SelectedProduct.Status.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return selectedProducts.All(product 
+                => product.Status != null && 
+                   (product.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase) ||
+                    product.Status.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase)));
+        }
+    }
 
     private void OnProductPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -568,6 +589,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     partial void OnSelectedProductFilterItemChanged(string value)
     {
         ApplyProductFilter();
+    }
+
+    partial void OnSelectedProductChanged(ProductStock? value)
+    {
+        OnPropertyChanged(nameof(CanDeleteSelectedProducts));
     }
 
     private ProductStock MapToProductStock(ProductModel model)

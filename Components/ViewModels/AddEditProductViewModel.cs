@@ -566,7 +566,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _discountedPrice, value, true);
     }
 
-    [Range(1, 1000, ErrorMessage = "Stock must be between 1 and 1,000")]
+    [Required(ErrorMessage = "Stock must be set")]
+    [Range(0, 1000, ErrorMessage = "Stock must be between 0 and 1,000")]
     public int? CurrentStock
     {
         get => _currentStock;

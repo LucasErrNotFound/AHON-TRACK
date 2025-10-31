@@ -30,7 +30,8 @@
 
         <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
         <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
-        <converters:DateToStringConverter x:Key="DateToStringConverter" />
+        <converters:StatusAndCanDeleteSelectedConverter x:Key="StatusAndCanDeleteSelectedConverter"/>
+        <converters:StatusAndSelectedToDeleteEnabledConverter x:Key="StatusAndSelectedToDeleteEnabledConverter"/>
     </UserControl.Resources>
 
     <DockPanel LastChildFill="True">
@@ -246,7 +247,7 @@
                                             Width="*"
                                             MaxWidth="60">
                                             <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate DataType="viewModels:Equipment">
+                                                <DataTemplate DataType="viewModels:ProductStock">
                                                     <Menu>
                                                         <MenuItem
                                                             HorizontalAlignment="Center"
@@ -276,13 +277,31 @@
                                                                 Foreground="{DynamicResource DestructiveColor}"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+                                                                <MenuItem.IsEnabled>
+                                                                    <MultiBinding Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+                                                                        <!-- 1) status of the row where the menu is opened -->
+                                                                        <Binding Path="Status" />
+                                                                        <!-- 2) currently selected product's status from the viewmodel (may be null) -->
+                                                                        <Binding Path="$parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedProduct.Status" FallbackValue="{x:Null}" />
+                                                                    </MultiBinding>
+                                                                </MenuItem.IsEnabled>
+                                                            </MenuItem>
                                                             <MenuItem
                                                                 Header="Delete Selected"
                                                                 Foreground="{DynamicResource DestructiveColor}"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+                                                                <MenuItem.IsEnabled>
+                                                                    <MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+                                                                        <!-- current row's Status -->
+                                                                        <Binding Path="Status" />
+                                                                        <!-- view-model global flag -->
+                                                                        <Binding Path="$parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).CanDeleteSelectedProducts" FallbackValue="{x:Null}"/>
+                                                                    </MultiBinding>
+                                                                </MenuItem.IsEnabled>
+                                                            </MenuItem>
                                                         </MenuItem>
                                                     </Menu>
                                                 </DataTemplate>
@@ -488,7 +507,7 @@
                                         <!-- Action -->
                                         <DataGridTemplateColumn CanUserResize="False" CanUserSort="False" MaxWidth="60">
                                             <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate DataType="viewModels:Equipment">
+                                                <DataTemplate DataType="viewModels:ProductStock">
                                                     <Menu>
                                                         <MenuItem
                                                             HorizontalAlignment="Center"
@@ -518,13 +537,31 @@
                                                                 Foreground="{DynamicResource DestructiveColor}"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+                                                                <MenuItem.IsEnabled>
+                                                                    <MultiBinding Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+                                                                        <!-- 1) status of the row where the menu is opened -->
+                                                                        <Binding Path="Status" />
+                                                                        <!-- 2) currently selected product's status from the viewmodel (may be null) -->
+                                                                        <Binding Path="$parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedProduct.Status" FallbackValue="{x:Null}" />
+                                                                    </MultiBinding>
+                                                                </MenuItem.IsEnabled>
+                                                            </MenuItem>
                                                             <MenuItem
                                                                 Header="Delete Selected"
                                                                 Foreground="{DynamicResource DestructiveColor}"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+                                                                <MenuItem.IsEnabled>
+                                                                    <MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+                                                                        <!-- current row's Status -->
+                                                                        <Binding Path="Status" />
+                                                                        <!-- view-model global flag -->
+                                                                        <Binding Path="$parent[DataGrid].((viewModels:ProductStockViewModel)DataContext).CanDeleteSelectedProducts" FallbackValue="{x:Null}"/>
+                                                                    </MultiBinding>
+                                                                </MenuItem.IsEnabled>
+                                                            </MenuItem>
                                                         </MenuItem>
                                                     </Menu>
                                                 </DataTemplate>
