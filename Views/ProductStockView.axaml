@@ -57,7 +57,7 @@
                     <shadui:BreakpointViewPort>
                         <shadui:BreakpointView Breakpoint="XlAndUp">
                             <StackPanel>
-                                <Grid ColumnDefinitions="Auto Auto Auto *">
+                                <Grid ColumnDefinitions="Auto Auto Auto Auto *">
                                     <TextBox
                                         Grid.Column="0"
                                         HorizontalAlignment="Left"
@@ -84,8 +84,18 @@
                                         ItemsSource="{CompiledBinding ProductFilterItems}"
                                         SelectedItem="{CompiledBinding SelectedProductFilterItem}">
                                     </ComboBox>
-                                    <Button
+                                    <ComboBox
                                         Grid.Column="2"
+                                        Width="150"
+                                        Margin="20,0,0,0"
+                                        PlaceholderText="Status"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        ItemsSource="{CompiledBinding StatusFilterItems}"
+                                        SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
+                                    </ComboBox>
+                                    <Button
+                                        Grid.Column="3"
                                         Classes="Outline"
                                         Margin="20,0,0,0"
                                         HorizontalAlignment="Left"
@@ -102,7 +112,7 @@
                                         </StackPanel>
                                     </Button>
                                     <Button
-                                        Grid.Column="3"
+                                        Grid.Column="4"
                                         Classes="Primary"
                                         Margin="20,0,0,0"
                                         HorizontalAlignment="Right"
@@ -313,7 +323,7 @@
                         </shadui:BreakpointView>
                         <shadui:BreakpointView Breakpoint="XlAndDown">
                             <StackPanel>
-                                <Grid ColumnDefinitions="Auto Auto Auto *">
+                                <Grid ColumnDefinitions="Auto Auto Auto Auto *">
                                     <TextBox
                                         Grid.Column="0"
                                         HorizontalAlignment="Left"
@@ -323,7 +333,7 @@
                                         FontSize="13"
                                         shadui:ControlAssist.Height="40"
                                         Classes="Clearable"
-                                        Width="200">
+                                        Width="150">
                                         <TextBox.InnerRightContent>
                                             <Svg
                                                 Width="15"
@@ -333,7 +343,7 @@
                                     </TextBox>
                                     <ComboBox
                                         Grid.Column="1"
-                                        Width="100"
+                                        Width="80"
                                         Margin="20,0,0,0"
                                         PlaceholderText="Filter"
                                         HorizontalAlignment="Left"
@@ -341,8 +351,18 @@
                                         ItemsSource="{CompiledBinding ProductFilterItems}"
                                         SelectedItem="{CompiledBinding SelectedProductFilterItem}">
                                     </ComboBox>
-                                    <Button
+                                    <ComboBox
                                         Grid.Column="2"
+                                        Width="80"
+                                        Margin="20,0,0,0"
+                                        PlaceholderText="Status"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        ItemsSource="{CompiledBinding StatusFilterItems}"
+                                        SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
+                                    </ComboBox>
+                                    <Button
+                                        Grid.Column="3"
                                         Classes="Outline"
                                         Margin="20,0,0,0"
                                         HorizontalAlignment="Left"
@@ -359,7 +379,7 @@
                                         </StackPanel>
                                     </Button>
                                     <Button
-                                        Grid.Column="3"
+                                        Grid.Column="4"
                                         Classes="Primary"
                                         Margin="20,0,0,0"
                                         HorizontalAlignment="Right"
