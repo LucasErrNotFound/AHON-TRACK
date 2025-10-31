@@ -22,7 +22,10 @@ public class StatusAndCanDeleteSelectedConverter : IMultiValueConverter
         var status = statusObj as string ?? string.Empty;
         var canDelete = canDeleteObj is bool b && b;
 
-        return canDelete && status.Equals("Expired", StringComparison.OrdinalIgnoreCase);
+        return canDelete && (
+            status.Equals("Expired", StringComparison.OrdinalIgnoreCase) ||
+            status.Equals("Suspended", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     public object[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture)

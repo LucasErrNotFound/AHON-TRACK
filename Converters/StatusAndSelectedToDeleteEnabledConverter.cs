@@ -19,15 +19,17 @@ public class StatusAndSelectedToDeleteEnabledConverter : IMultiValueConverter
         var rowStatus = values[0] as string ?? string.Empty;
         var selectedStatus = values[1] as string; // may be null
 
-        if (!rowStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+        if (!rowStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase) && 
+            !rowStatus.Equals("Suspended", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        // If there's no selected member -> allow (single-delete)
+        // If there's no selected member/supplier -> allow (single-delete)
         if (string.IsNullOrEmpty(selectedStatus))
             return true;
 
-        // Only allow if the currently selected member is expired as well
-        return selectedStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase);
+        // Only allow if the currently selected member/supplier is expired as well
+        return selectedStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase) ||
+               selectedStatus.Equals("Suspended", StringComparison.OrdinalIgnoreCase);
     }
 
     public object[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture)

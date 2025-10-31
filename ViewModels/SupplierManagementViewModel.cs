@@ -518,6 +518,29 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 .ShowError();
         }
     }
+    
+    public bool CanDeleteSelectedSuppliers
+    {
+        get
+        {
+            // If there is no checked items, can't delete
+            var selectedSuppliers = SupplierItems.Where(item => item.IsSelected).ToList();
+            if (selectedSuppliers.Count == 0) return false;
+
+            // If the currently selected row is present and its status is not expired,
+            // then "Delete Selected" should be disabled when opening the menu for that row.
+            if (SelectedSupplier?.Status != null &&
+                !SelectedSupplier.Status.Equals("Suspended", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // Only allow deletion if ALL selected members are Expired
+            return selectedSuppliers.All(supplier 
+                => supplier.Status != null && 
+                   supplier.Status.Equals("Suspended", StringComparison.OrdinalIgnoreCase));
+        }
+    }
 
     private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
 
@@ -640,6 +663,11 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     partial void OnSelectedSupplierFilterItemChanged(string value)
     {
         ApplySupplierFilter();
+    }
+    
+    partial void OnSelectedSupplierChanged(Supplier? value)
+    {
+        OnPropertyChanged(nameof(CanDeleteSelectedSuppliers));
     }
     
     protected override void DisposeManagedResources()
