@@ -580,7 +580,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             posterPath = $"data:image/png;base64,{model.ProductImageBase64}";
         }
 
-        return new ProductStock
+        var productStock = new ProductStock
         {
             ID = model.ProductID,
             Name = model.ProductName ?? "",
@@ -596,6 +596,13 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             DiscountInPercentage = model.IsPercentageDiscount,
             Poster = posterPath
         };
+        
+        if (productStock.Expiry.HasValue && productStock.Expiry.Value.Date <= DateTime.Today)
+        {
+            productStock.Status = "Expired";
+        }
+    
+        return productStock;
     }
 
     protected override void DisposeManagedResources()
@@ -707,14 +714,16 @@ public partial class ProductStock : ObservableObject
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch
     {
         "in stock" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
-        "out of stock" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        "out of stock" => new SolidColorBrush(Color.FromRgb(249, 115, 22)),
+        "expired" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
         _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
     };
 
     public IBrush StatusBackground => Status?.ToLowerInvariant() switch
     {
         "in stock" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
-        "out of stock" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+        "out of stock" => new SolidColorBrush(Color.FromArgb(25, 249, 115, 22)),
+        "expired" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
     };
 
@@ -722,6 +731,7 @@ public partial class ProductStock : ObservableObject
     {
         "in stock" => "● In Stock",
         "out of stock" => "● Out of Stock",
+        "expired" => "● Expired",
         _ => Status
     };
 

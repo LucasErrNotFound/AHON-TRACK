@@ -9,6 +9,7 @@
     d:DesignWidth="1683"
     d:DesignHeight="1080"
     xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
     x:DataType="viewModel:AddEditProductViewModel"
     x:Class="AHON_TRACK.Components.AddEditProduct.AddEditProductView">
 
@@ -155,7 +156,7 @@
 					<!-- Pricing -->
 					<Grid Grid.Row="0" Grid.Column="1" RowDefinitions="* * * * *" RowSpacing="15" VerticalAlignment="Top">
 						<shadui:Card Grid.Row="0" VerticalAlignment="Top">
-							<StackPanel>
+							<StackPanel Orientation="Vertical" Spacing="-5">
 								<shadui:CardTitle Content="Pricing" />
 								<!-- Price -->
 								<NumericUpDown
@@ -223,8 +224,6 @@
                                     FormatString="N0"
                                     ShowButtonSpinner="False"
                                     Watermark="0"
-                                    Minimum="0"
-                                    Maximum="500"
                                     Value="{CompiledBinding CurrentStock, Mode=TwoWay}">
 									<NumericUpDown.InnerLeftContent>
 										<TextBlock Margin="8,0,-8,0" Text="×" />
@@ -237,10 +236,13 @@
 							<StackPanel>
 								<shadui:CardTitle Content="Expiry" />
 								<CalendarDatePicker
-                                    shadui:ControlAssist.Hint="Pick the product's expiry date (optional)"
-                                    shadui:ControlAssist.ReadOnly="True"
-                                    Margin="0,20,0,0"
-                                    SelectedDate="{CompiledBinding ProductExpiry}"/>
+									shadui:ControlAssist.Hint="Pick the product's expiry date (optional)"
+									shadui:ControlAssist.ReadOnly="True"
+									Margin="0,20,0,0"
+									IsEnabled="{CompiledBinding CanEditExpiry}"
+									DisplayDateStart="{CompiledBinding MinimumExpiryDate}"
+									SelectedDate="{CompiledBinding ProductExpiry}">
+								</CalendarDatePicker>
 							</StackPanel>
 						</shadui:Card>
 

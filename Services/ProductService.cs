@@ -74,7 +74,14 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
+                if (product.ExpiryDate.HasValue && product.ExpiryDate.Value.Date <= DateTime.Today)
+                {
+                    product.Status = "Expired";
+                }
+                else
+                {
+                    product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
+                }
 
                 // Check for duplicate SKU (including deleted ones)
                 var (existingProductId, existingIsDeleted) = await CheckDuplicateSKUAsync(conn, product.SKU);
@@ -277,7 +284,7 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     GetProductSelectQuery() +
-                    " WHERE p.ExpiryDate IS NOT NULL AND p.ExpiryDate < CAST(GETDATE() AS DATE) AND p.IsDeleted = 0 ORDER BY p.ExpiryDate DESC", conn);
+                    " WHERE p.ExpiryDate IS NOT NULL AND p.ExpiryDate <= CAST(GETDATE() AS DATE) AND p.IsDeleted = 0 ORDER BY p.ExpiryDate DESC", conn);
 
                 var products = await ReadProductsAsync(cmd);
                 return (true, "Expired products retrieved successfully.", products);
@@ -334,7 +341,14 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
+                if (product.ExpiryDate.HasValue && product.ExpiryDate.Value.Date <= DateTime.Today)
+                {
+                    product.Status = "Expired";
+                }
+                else
+                {
+                    product.Status = product.CurrentStock > 0 ? "In Stock" : "Out Of Stock";
+                }
 
                 // Get existing image
                 var existingImage = await GetExistingProductImageAsync(conn, product.ProductID);
@@ -1054,7 +1068,7 @@ namespace AHON_TRACK.Services
                     @"SELECT ProductID, ProductName, ExpiryDate
                       FROM Products
                       WHERE ExpiryDate IS NOT NULL
-                        AND ExpiryDate < GETDATE()
+                        AND ExpiryDate <= GETDATE()
                         AND IsDeleted = 0
                       ORDER BY ExpiryDate DESC", conn);
 

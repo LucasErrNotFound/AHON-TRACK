@@ -54,9 +54,14 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     [ObservableProperty]
     private Image? _productImageControl;
+    
+    [ObservableProperty]
+    private DateTime _minimumExpiryDate = DateTime.Today.AddDays(1);
 
+    public bool CanEditExpiry => !ProductExpiry.HasValue || ProductExpiry.Value.Date > DateTime.Today;
+    public DateTime TodayDate => DateTime.Today;
+    
     private bool _suppliersLoaded = false;
-
     private int? _productID;
     private string? _productName = string.Empty;
     private string? _productSKU = string.Empty;
@@ -72,7 +77,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string? _productStatus;
     private string? _productCategory;
     private string? _productSupplier;
-    private int? _productCurrentStock;
+    private int? _currentStock;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -217,7 +222,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         PopulateFormWithProductData(product);
 
-        OnPropertyChanged(nameof(ProductCurrentStock));
         OnPropertyChanged(nameof(CurrentStock));
     }
 
@@ -256,10 +260,18 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             }
 
             // ✅ FIX: Use null-coalescing to ensure 0 is treated as valid
-            int currentStock = ProductCurrentStock.HasValue ? ProductCurrentStock.Value : 0;
+            int currentStock = CurrentStock.HasValue ? CurrentStock.Value : 0;
             Console.WriteLine($"📦 Current Stock Value: {currentStock}");
 
-            string calculatedStatus = currentStock > 0 ? "In Stock" : "Out Of Stock";
+            string calculatedStatus;
+            if (ProductExpiry.HasValue && ProductExpiry.Value.Date <= DateTime.Today)
+            {
+                calculatedStatus = "Expired";
+            }
+            else
+            {
+                calculatedStatus = currentStock > 0 ? "In Stock" : "Out Of Stock";
+            }
 
             // ✅ FIX: Handle image bytes properly for update
             byte[]? imageBytesToSave = ProductImageBytes;
@@ -437,7 +449,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
         ProductSKU = product.Sku;
-        ProductCurrentStock = product.CurrentStock; // ✅ This includes 0
+        CurrentStock = product.CurrentStock; // ✅ This includes 0
 
         if (!string.IsNullOrEmpty(product.Supplier) &&
             ProductSupplierItems.Contains(product.Supplier))
@@ -554,29 +566,24 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _discountedPrice, value, true);
     }
 
-    [Range(0, 100000, ErrorMessage = "Stock must be between 0 and 100,000")]
-    public int? ProductCurrentStock
-    {
-        get => _productCurrentStock;
-        set => SetProperty(ref _productCurrentStock, value, true);
-    }
-
+    [Range(1, 1000, ErrorMessage = "Stock must be between 1 and 1,000")]
     public int? CurrentStock
     {
-        get => ProductCurrentStock;
-        set => ProductCurrentStock = value;
-    }
-
-    public string? SelectedProductStatus
-    {
-        get => _selectedProductStatusItem;
-        set => SetProperty(ref _selectedProductStatusItem, value, true);
+        get => _currentStock;
+        set => SetProperty(ref _currentStock, value, true);
     }
 
     public DateTime? ProductExpiry
     {
         get => _productExpiry;
-        set => SetProperty(ref _productExpiry, value, true);
+        set
+        {
+            if (_productExpiry != value)
+            {
+                SetProperty(ref _productExpiry, value, true);
+                OnPropertyChanged(nameof(CanEditExpiry));
+            }
+        }
     }
 
     public string? SelectedProductCategory
