@@ -147,16 +147,13 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 }).ToList();
 
                 OriginalSupplierData = suppliers;
-                CurrentFilteredSupplierData = [.. suppliers];
+                OriginalSupplierData = suppliers;
 
-                SupplierItems.Clear();
-                foreach (var supplier in suppliers)
-                {
-                    supplier.PropertyChanged += OnSupplierPropertyChanged;
-                    SupplierItems.Add(supplier);
-                }
+                // Let ApplySupplierFilter populate SupplierItems according to the current SelectedStatusFilterItem
+                ApplySupplierFilter();
 
-                TotalCount = SupplierItems.Count;
+                // Ensure selection / counts are correct after filtering
+                UpdateSupplierCounts();
 
                 if (SupplierItems.Count > 0)
                 {
@@ -189,14 +186,11 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         var sampleSupplier = GetSampleSupplierData();
         OriginalSupplierData = sampleSupplier;
-        CurrentFilteredSupplierData = [.. sampleSupplier];
 
-        SupplierItems.Clear();
-        foreach (var supplier in sampleSupplier)
-        {
-            SupplierItems.Add(supplier);
-        }
-        TotalCount = SupplierItems.Count;
+        // Use ApplySupplierFilter so the current filter is applied
+        ApplySupplierFilter();
+
+        UpdateSupplierCounts();
 
         if (SupplierItems.Count > 0)
         {

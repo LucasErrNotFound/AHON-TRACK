@@ -480,7 +480,7 @@
                                             IsReadOnly="True"
                                             CanUserSort="False"
                                             Header="Status"
-                                            MaxWidth="190"
+                                            MaxWidth="210"
                                             Width="Auto">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate DataType="viewModels:Supplier">
