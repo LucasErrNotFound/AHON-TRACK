@@ -26,6 +26,21 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 {
     [ObservableProperty]
     private string[] _equipmentFilterItems = ["All", "Strength", "Cardio", "Machines", "Accessories"];
+    
+    [ObservableProperty]
+    private string[] _conditionFilterItems = ["All", "Excellent", "Repairing", "Broken"];
+
+    [ObservableProperty]
+    private string[] _statusFilterItems = ["All", "Active", "Inactive", "Under Maintenance", "Retired", "On Loan"];
+
+    [ObservableProperty]
+    private string[] _filteredStatusFilterItems = ["All", "Active", "Inactive", "Under Maintenance", "Retired", "On Loan"];
+    
+    [ObservableProperty]
+    private string _selectedConditionFilterItem = "All";
+
+    [ObservableProperty]
+    private string _selectedStatusFilterItem = "All";
 
     [ObservableProperty]
     private string _selectedEquipmentFilterItem = "All";
@@ -80,6 +95,11 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _equipmentDialogCardViewModel = equipmentDialogCardViewModel;
         _inventoryService = inventoryService;
         _settingsService = settingsService;
+        
+        SelectedEquipmentFilterItem = "All";
+        SelectedConditionFilterItem = "All";
+        SelectedStatusFilterItem = "All";
+        FilteredStatusFilterItems = StatusFilterItems;
 
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
@@ -93,6 +113,11 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _equipmentDialogCardViewModel = new EquipmentDialogCardViewModel();
         _settingsService = new SettingsService();
         _inventoryService = null!;
+        
+        SelectedEquipmentFilterItem = "All";
+        SelectedConditionFilterItem = "All";
+        SelectedStatusFilterItem = "All";
+        FilteredStatusFilterItems = StatusFilterItems;
 
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
@@ -103,10 +128,15 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         if (IsInitialized) return;
         await LoadSettingsAsync();
+        
+        SelectedEquipmentFilterItem = "All";
+        SelectedConditionFilterItem = "All";
+        SelectedStatusFilterItem = "All";
+        FilteredStatusFilterItems = StatusFilterItems;
+        
         _ = LoadEquipmentDataAsync();
         IsInitialized = true;
     }
-
 
     private async Task LoadEquipmentDataAsync()
     {
@@ -271,19 +301,42 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     private void ApplyEquipmentFilter()
     {
         if (OriginalEquipmentData.Count == 0) return;
-        List<Equipment> filteredList;
+    
+        List<Equipment> filteredList = OriginalEquipmentData.ToList();
 
-        if (SelectedEquipmentFilterItem == "All")
+        // Apply Equipment Category filter
+        if (SelectedEquipmentFilterItem != "All")
         {
-            filteredList = OriginalEquipmentData.ToList();
-        }
-        else
-        {
-            filteredList = OriginalEquipmentData
+            filteredList = filteredList
                 .Where(equipment => equipment.Category == SelectedEquipmentFilterItem)
                 .ToList();
         }
+
+        // Apply Condition filter
+        if (SelectedConditionFilterItem != "All")
+        {
+            filteredList = filteredList
+                .Where(equipment => equipment.Condition != null && 
+                                    equipment.Condition.Equals(SelectedConditionFilterItem, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        // Apply Status filter
+        if (SelectedStatusFilterItem != "All")
+        {
+            filteredList = filteredList
+                .Where(equipment => equipment.Status != null && 
+                                    equipment.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
         CurrentFilteredEquipmentData = filteredList;
+
+        // Unsubscribe from old items
+        foreach (var item in EquipmentItems)
+        {
+            item.PropertyChanged -= OnEquipmentPropertyChanged;
+        }
 
         EquipmentItems.Clear();
         foreach (var equipment in filteredList)
@@ -291,6 +344,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             equipment.PropertyChanged += OnEquipmentPropertyChanged;
             EquipmentItems.Add(equipment);
         }
+    
         UpdateEquipmentCounts();
     }
 
@@ -328,10 +382,11 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             await Task.Delay(500);
 
             var filteredEquipments = CurrentFilteredEquipmentData.Where(equipment =>
-                equipment is { BrandName: not null, Category: not null, Condition: not null } &&
+                equipment is { BrandName: not null, Category: not null, Condition: not null, Status: not null } &&
                 (equipment.BrandName.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                  equipment.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                  equipment.Condition.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                 equipment.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                  (equipment.SupplierName?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ?? false)))
                 .ToList();
 
@@ -499,8 +554,6 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             equipment.LastMaintenance = _equipmentDialogCardViewModel.LastMaintenance;
             equipment.NextMaintenance = _equipmentDialogCardViewModel.NextMaintenance;
 
-
-
             var equipmentModel = MapToEquipmentModel(equipment);
             var (success, message) = await _inventoryService.UpdateEquipmentAsync(equipmentModel);
 
@@ -654,6 +707,32 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         }
     }
     
+    private void UpdateFilteredStatusItems()
+    {
+        if (SelectedConditionFilterItem == "All")
+        {
+            FilteredStatusFilterItems = StatusFilterItems;
+        }
+        else
+        {
+            var allowedStatuses = SelectedConditionFilterItem switch
+            {
+                "Excellent" => new[] { "All", "Active", "Inactive", "On Loan" },
+                "Repairing" => new[] { "All", "Under Maintenance", "Inactive" },
+                "Broken" => new[] { "All", "Retired", "Inactive", "Under Maintenance" },
+                _ => StatusFilterItems
+            };
+
+            FilteredStatusFilterItems = allowedStatuses;
+        
+            // Reset status if current selection is not in the filtered list
+            if (!FilteredStatusFilterItems.Contains(SelectedStatusFilterItem))
+            {
+                SelectedStatusFilterItem = "All";
+            }
+        }
+    }
+    
     public bool CanDeleteSelectedEquipments
     {
         get
@@ -702,6 +781,17 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     partial void OnSelectedEquipmentChanged(Equipment? oldValue, Equipment? newValue)
     {
         OnPropertyChanged(nameof(CanDeleteSelectedEquipments));
+    }
+    
+    partial void OnSelectedConditionFilterItemChanged(string value)
+    {
+        UpdateFilteredStatusItems();
+        ApplyEquipmentFilter();
+    }
+
+    partial void OnSelectedStatusFilterItemChanged(string value)
+    {
+        ApplyEquipmentFilter();
     }
 
     // Add to EquipmentInventoryViewModel class
