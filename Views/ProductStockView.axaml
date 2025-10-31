@@ -483,7 +483,7 @@
                                             CanUserSort="False"
                                             Header="Status"
                                             Width="Auto"
-                                            MaxWidth="170">
+                                            MaxWidth="190">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate DataType="viewModels:ProductStock">
                                                     <Border

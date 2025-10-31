@@ -167,12 +167,12 @@
                                 VerticalAlignment="Center"
                                 Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/warranty-icon.svg"/>
 							<TextBlock
-                                Text="Warranty &amp; Status"
+                                Text="Warranty, Condition &amp; Status"
                                 FontSize="15"
                                 VerticalAlignment="Center"
                                 Margin="10,0,0,0"/>
 						</StackPanel>
-						<Grid RowDefinitions="Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+						<Grid RowDefinitions="Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
 							<StackPanel Grid.Row="0">
 								<CalendarDatePicker
                                     shadui:ControlAssist.ReadOnly="True"
@@ -182,9 +182,17 @@
 							<StackPanel Grid.Row="1">
 								<ComboBox
                                     shadui:ControlAssist.Label="Condition"
-                                    PlaceholderText="Select condition"
+                                    PlaceholderText="Select its condition"
                                     ItemsSource="{CompiledBinding ConditionFilterItems}"
                                     SelectedItem="{CompiledBinding Condition, Mode=TwoWay}">
+								</ComboBox>
+							</StackPanel>
+							<StackPanel Grid.Row="2">
+								<ComboBox
+                                    shadui:ControlAssist.Label="Status"
+                                    PlaceholderText="Select its status"
+                                    ItemsSource="{CompiledBinding FilteredStatusItems}"
+                                    SelectedItem="{CompiledBinding Status, Mode=TwoWay}">
 								</ComboBox>
 							</StackPanel>
 						</Grid>

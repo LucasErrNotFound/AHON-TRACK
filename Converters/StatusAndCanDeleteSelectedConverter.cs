@@ -25,7 +25,7 @@ public class StatusAndCanDeleteSelectedConverter : IMultiValueConverter
         return canDelete && (
             status.Equals("Expired", StringComparison.OrdinalIgnoreCase) ||
             status.Equals("Suspended", StringComparison.OrdinalIgnoreCase) ||
-            status.Equals("Broken", StringComparison.OrdinalIgnoreCase) ||
+            status.Equals("Retired", StringComparison.OrdinalIgnoreCase) ||
             status.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase)
         );
     }

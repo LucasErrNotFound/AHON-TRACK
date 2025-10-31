@@ -30,7 +30,8 @@
 
         <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
         <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
-        <converters:DateToStringConverter x:Key="DateToStringConverter" />
+        <converters:StatusAndCanDeleteSelectedConverter x:Key="StatusAndCanDeleteSelectedConverter"/>
+        <converters:StatusAndSelectedToDeleteEnabledConverter x:Key="StatusAndSelectedToDeleteEnabledConverter"/>
     </UserControl.Resources>
     
     <DockPanel LastChildFill="True">
@@ -179,15 +180,15 @@
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="Auto"
-                                            MinWidth="100"
+                                            MaxWidth="100"
                                             Header="Current Stock"
                                             Binding="{CompiledBinding CurrentStock}" />
 
                                         <!-- Purchased Price -->
                                         <DataGridTextColumn
                                             IsReadOnly="True"
-                                            Width="Auto"
-                                            MinWidth="160"
+                                            Width="*"
+                                            MinWidth="120"
                                             Header="Purchased Price"
                                             Binding="{CompiledBinding FormattedPurchasedPrice}" />
 
@@ -195,7 +196,7 @@
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="Auto"
-                                            MinWidth="100"
+                                            MaxWidth="120"
                                             Header="Purchased Date"
                                             Binding="{CompiledBinding FormattedPurchasedDate}" />
 
@@ -203,7 +204,7 @@
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="Auto"
-                                            MinWidth="120"
+                                            MaxWidth="120"
                                             Header="Warranty Expiration"
                                             Binding="{CompiledBinding FormattedWarranty}" />
 
@@ -211,7 +212,7 @@
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="Auto"
-                                            MaxWidth="130"
+                                            MaxWidth="140"
                                             Header="Last Maintenance"
                                             Binding="{CompiledBinding FormattedLastMaintenance}" />
 
@@ -219,7 +220,7 @@
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="Auto"
-                                            MaxWidth="130"
+                                            MaxWidth="140"
                                             Header="Next Maintenance"
                                             Binding="{CompiledBinding FormattedNextMaintenance}" />
 
@@ -228,7 +229,8 @@
                                             IsReadOnly="True"
                                             CanUserSort="False"
                                             Header="Condition"
-                                            Width="120">
+                                            Width="*"
+                                            MinWidth="120">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate DataType="viewModels:Equipment">
                                                     <Border
@@ -240,6 +242,32 @@
                                                         <TextBlock
                                                             Text="{CompiledBinding ConditionDisplayText}"
                                                             Foreground="{CompiledBinding ConditionForeground}"
+                                                            FontSize="13"
+                                                            FontWeight="Medium"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        
+                                        <DataGridTemplateColumn
+                                            IsReadOnly="True"
+                                            CanUserSort="False"
+                                            Header="Status"
+                                            MinWidth="120"
+                                            Width="*">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="viewModels:Equipment">
+                                                    <Border
+                                                        Background="{CompiledBinding StatusBackground}"
+                                                        CornerRadius="7"
+                                                        Padding="8,4"
+                                                        Margin="5,0,0,0"
+                                                        HorizontalAlignment="Left">
+                                                        <TextBlock
+                                                            Text="{CompiledBinding StatusDisplayText}"
+                                                            Foreground="{CompiledBinding StatusForeground}"
                                                             FontSize="13"
                                                             FontWeight="Medium"
                                                             HorizontalAlignment="Center"
@@ -282,13 +310,31 @@
                                                                 Foreground="{DynamicResource DestructiveColor}"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+                                                                <MenuItem.IsEnabled>
+                                                                    <MultiBinding Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+                                                                        <!-- 1) status of the row where the menu is opened -->
+                                                                        <Binding Path="Status" />
+                                                                        <!-- 2) currently selected equipment's status from the viewmodel (may be null) -->
+                                                                        <Binding Path="$parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedEquipment.Status" FallbackValue="{x:Null}" />
+                                                                    </MultiBinding>
+                                                                </MenuItem.IsEnabled>
+                                                            </MenuItem>
                                                             <MenuItem
                                                                 Header="Delete Selected"
                                                                 Foreground="{DynamicResource DestructiveColor}"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+                                                                <MenuItem.IsEnabled>
+                                                                    <MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+                                                                        <!-- current row's Status -->
+                                                                        <Binding Path="Status" />
+                                                                        <!-- view-model global flag -->
+                                                                        <Binding Path="$parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).CanDeleteSelectedEquipments" FallbackValue="{x:Null}"/>
+                                                                    </MultiBinding>
+                                                                </MenuItem.IsEnabled>
+                                                            </MenuItem>
                                                         </MenuItem>
                                                     </Menu>
                                                 </DataTemplate>
@@ -506,9 +552,35 @@
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
+                                        
+                                        <DataGridTemplateColumn
+                                            IsReadOnly="True"
+                                            CanUserSort="False"
+                                            Header="Status"
+                                            MinWidth="130"
+                                            Width="*">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="viewModels:Equipment">
+                                                    <Border
+                                                        Background="{CompiledBinding StatusBackground}"
+                                                        CornerRadius="7"
+                                                        Padding="8,4"
+                                                        Margin="5,0,0,0"
+                                                        HorizontalAlignment="Left">
+                                                        <TextBlock
+                                                            Text="{CompiledBinding StatusDisplayText}"
+                                                            Foreground="{CompiledBinding StatusForeground}"
+                                                            FontSize="13"
+                                                            FontWeight="Medium"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
 
                                         <!-- Action -->
-                                        <DataGridTemplateColumn CanUserResize="False" CanUserSort="False" MinWidth="70">
+                                        <DataGridTemplateColumn CanUserResize="False" CanUserSort="False" MinWidth="50">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate DataType="viewModels:Equipment">
                                                     <Menu>
@@ -540,13 +612,31 @@
                                                                 Foreground="{DynamicResource DestructiveColor}"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}" />
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+                                                                <MenuItem.IsEnabled>
+                                                                    <MultiBinding Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+                                                                        <!-- 1) status of the row where the menu is opened -->
+                                                                        <Binding Path="Status" />
+                                                                        <!-- 2) currently selected equipment's status from the viewmodel (may be null) -->
+                                                                        <Binding Path="$parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedEquipment.Status" FallbackValue="{x:Null}" />
+                                                                    </MultiBinding>
+                                                                </MenuItem.IsEnabled>
+                                                            </MenuItem>
                                                             <MenuItem
                                                                 Header="Delete Selected"
                                                                 Foreground="{DynamicResource DestructiveColor}"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}"
-                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}" />
+                                                                IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+                                                                <MenuItem.IsEnabled>
+                                                                    <MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+                                                                        <!-- current row's Status -->
+                                                                        <Binding Path="Status" />
+                                                                        <!-- view-model global flag -->
+                                                                        <Binding Path="$parent[DataGrid].((viewModels:EquipmentInventoryViewModel)DataContext).CanDeleteSelectedEquipments" FallbackValue="{x:Null}"/>
+                                                                    </MultiBinding>
+                                                                </MenuItem.IsEnabled>
+                                                            </MenuItem>
                                                         </MenuItem>
                                                     </Menu>
                                                 </DataTemplate>

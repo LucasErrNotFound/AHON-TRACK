@@ -653,6 +653,25 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 .ShowError();
         }
     }
+    
+    public bool CanDeleteSelectedEquipments
+    {
+        get
+        {
+            var selectedEquipments = EquipmentItems.Where(item => item.IsSelected).ToList();
+            if (selectedEquipments.Count == 0) return false;
+
+            if (SelectedEquipment?.Status != null &&
+                !SelectedEquipment.Status.Equals("Retired", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return selectedEquipments.All(equipment 
+                => equipment.Status != null && 
+                   equipment.Status.Equals("Retired", StringComparison.OrdinalIgnoreCase));
+        }
+    }
 
     private void UpdateEquipmentCounts()
     {
@@ -679,7 +698,12 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         ApplyEquipmentFilter();
     }
-    
+
+    partial void OnSelectedEquipmentChanged(Equipment? oldValue, Equipment? newValue)
+    {
+        OnPropertyChanged(nameof(CanDeleteSelectedEquipments));
+    }
+
     // Add to EquipmentInventoryViewModel class
 
     protected override void DisposeManagedResources()

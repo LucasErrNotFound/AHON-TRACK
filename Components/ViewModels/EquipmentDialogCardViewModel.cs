@@ -9,7 +9,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
-using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Services;
 using AHON_TRACK.Validators;
@@ -26,6 +25,9 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
 
     [ObservableProperty]
     private string[] _statusFilterItems = ["Active", "Inactive", "Under Maintenance", "Retired", "On Loan"];
+    
+    [ObservableProperty]
+    private string[] _filteredStatusItems = [];
 
     // Supplier dropdown items - now contains supplier names as strings
     [ObservableProperty]
@@ -91,7 +93,17 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     public string? Condition
     {
         get => _condition;
-        set => SetProperty(ref _condition, value, true);
+        set
+        {
+            var oldValue = _condition;
+            SetProperty(ref _condition, value, true);
+        
+            if (oldValue != value)
+            {
+                UpdateFilteredStatusItems();
+                ValidateStatusSelection();
+            }
+        }
     }
 
     [Required(ErrorMessage = "Select a status")]
@@ -253,6 +265,9 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         IsEditMode = false;
         EquipmentID = 0;
         ClearAllFields();
+        
+        FilteredStatusItems = StatusFilterItems;
+        
         await LoadSuppliersAsync();
     }
 
@@ -263,6 +278,8 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         DialogDescription = "Edit gym equipment with details like brand name, category, quantity, etc.";
 
         ClearAllErrors();
+        
+        FilteredStatusItems = StatusFilterItems;
 
         EquipmentID = equipment?.ID ?? 0;
         BrandName = equipment?.BrandName;
@@ -278,6 +295,11 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
 
         // Load suppliers first
         await LoadSuppliersAsync();
+        
+        // Set condition first (this will trigger status filtering)
+        Condition = equipment?.Condition;
+        // Then set status
+        Status = equipment?.Status ?? "Active";
 
         // Set the supplier NAME (not ID) to match the XAML binding
         if (equipment?.SupplierID.HasValue == true)
@@ -362,6 +384,34 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
             IsLoadingSuppliers = false;
         }
     }
+    
+    private void UpdateFilteredStatusItems()
+    {
+        if (string.IsNullOrEmpty(Condition))
+        {
+            FilteredStatusItems = StatusFilterItems;
+            return;
+        }
+
+        var allowedStatuses = Condition switch
+        {
+            "Excellent" => new[] { "Active", "Inactive", "On Loan" },
+            "Repairing" => new[] { "Under Maintenance", "Inactive" },
+            "Broken" => new[] { "Retired", "Inactive", "Under Maintenance" },
+            _ => StatusFilterItems
+        };
+
+        FilteredStatusItems = allowedStatuses;
+    }
+
+    private void ValidateStatusSelection()
+    {
+        if (!string.IsNullOrEmpty(Status) && !FilteredStatusItems.Contains(Status))
+        {
+            // Reset to first valid option or default to Inactive
+            Status = FilteredStatusItems.FirstOrDefault() ?? "Inactive";
+        }
+    }
 
     [RelayCommand]
     private void Cancel()
@@ -399,6 +449,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         WarrantyExpiry = null;
         LastMaintenance = null;
         NextMaintenance = null;
+        FilteredStatusItems = _statusFilterItems;
         ClearAllErrors();
     }
     
