@@ -79,11 +79,11 @@
                                         Grid.Column="1"
                                         Width="150"
                                         Margin="20,0,0,0"
-                                        PlaceholderText="Filter"
+                                        PlaceholderText="Status"
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
-                                        ItemsSource="{CompiledBinding SupplierFilterItems}"
-                                        SelectedItem="{CompiledBinding SelectedSupplierFilterItem}">
+                                        ItemsSource="{CompiledBinding StatusFilterItems}"
+                                        SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
                                     </ComboBox>
                                     <Button
                                         Grid.Column="2"
@@ -331,13 +331,13 @@
                                     </TextBox>
                                     <ComboBox
                                         Grid.Column="1"
-                                        Width="100"
+                                        Width="150"
                                         Margin="20,0,0,0"
                                         PlaceholderText="Filter"
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
-                                        ItemsSource="{CompiledBinding SupplierFilterItems}"
-                                        SelectedItem="{CompiledBinding SelectedSupplierFilterItem}">
+                                        ItemsSource="{CompiledBinding StatusFilterItems}"
+                                        SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
                                     </ComboBox>
                                     <Button
                                         Grid.Column="2"

@@ -25,10 +25,10 @@ namespace AHON_TRACK.ViewModels;
 public sealed partial class SupplierManagementViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private string[] _supplierFilterItems = ["All", "Products", "Drinks", "Supplements"];
-
+    private string[] _statusFilterItems = ["All", "Active", "Inactive", "Suspended"];
+    
     [ObservableProperty]
-    private string _selectedSupplierFilterItem = "All";
+    private string _selectedStatusFilterItem = "All";
 
     [ObservableProperty]
     private ObservableCollection<Supplier> _supplierItems = [];
@@ -81,6 +81,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _supplierService = supplierService;
         _settingsService = settingsService;
 
+        SelectedStatusFilterItem = "All";
+
         _ = LoadSupplierDataFromDatabaseAsync();
         UpdateSupplierCounts();
     }
@@ -93,6 +95,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
         _settingsService = new SettingsService();
         _supplierService = null!; // This should be injected in real scenario
+        
+        SelectedStatusFilterItem = "All";
 
         _ = LoadSupplierDataFromDatabaseAsync();
         UpdateSupplierCounts();
@@ -102,6 +106,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     public async Task Initialize()
     {
         if (IsInitialized) return;
+        SelectedStatusFilterItem = "All";
+        
         await LoadSettingsAsync();
 
         if (_supplierService != null)
@@ -547,19 +553,24 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     private void ApplySupplierFilter()
     {
         if (OriginalSupplierData.Count == 0) return;
-        List<Supplier> filteredList;
+        List<Supplier> filteredList = OriginalSupplierData.ToList();
 
-        if (SelectedSupplierFilterItem == "All")
+        // Apply Status filter
+        if (SelectedStatusFilterItem != "All")
         {
-            filteredList = OriginalSupplierData.ToList();
-        }
-        else
-        {
-            filteredList = OriginalSupplierData
-                .Where(equipment => equipment.Products == SelectedSupplierFilterItem)
+            filteredList = filteredList
+                .Where(supplier => supplier.Status != null && 
+                                  supplier.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
+        
         CurrentFilteredSupplierData = filteredList;
+        
+        // Unsubscribe from old items
+        foreach (var item in SupplierItems)
+        {
+            item.PropertyChanged -= OnSupplierPropertyChanged;
+        }
 
         SupplierItems.Clear();
         foreach (var supplier in filteredList)
@@ -567,6 +578,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             supplier.PropertyChanged += OnSupplierPropertyChanged;
             SupplierItems.Add(supplier);
         }
+        
         UpdateSupplierCounts();
     }
 
@@ -660,7 +672,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         SearchSupplierCommand.Execute(null);
     }
 
-    partial void OnSelectedSupplierFilterItemChanged(string value)
+    partial void OnSelectedStatusFilterItemChanged(string value)
     {
         ApplySupplierFilter();
     }
