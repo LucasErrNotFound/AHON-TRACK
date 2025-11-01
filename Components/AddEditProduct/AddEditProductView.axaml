@@ -69,8 +69,8 @@
 									<TextBox
                                         Grid.Column="0"
                                         Classes="Clearable"
-                                        Watermark="Enter product batch number"
-                                        shadui:ControlAssist.Label="Batch Number"
+                                        Watermark="Enter product batch code"
+                                        shadui:ControlAssist.Label="Batch Code"
                                         Text="{CompiledBinding BatchCode, Mode=TwoWay}"/>
 									<ComboBox
                                         Margin="0,-4,0,0"

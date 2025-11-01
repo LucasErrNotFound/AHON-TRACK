@@ -13,7 +13,7 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message, int? ProductId)> AddProductAsync(ProductModel product);
         Task<(bool Success, string Message, List<ProductModel>? Products)> GetAllProductsAsync();
         Task<(bool Success, string Message, ProductModel? Product)> GetProductByIdAsync(int productId);
-        Task<(bool Success, string Message, ProductModel? Product)> GetProductBySKUAsync(string sku);
+        Task<(bool Success, string Message, ProductModel? Product)> GetProductByBatchCodeAsync(string sku);
         Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsByCategoryAsync(string category);
         Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsByStatusAsync(string status);
         Task<(bool Success, string Message, List<ProductModel>? Products)> GetExpiredProductsAsync();

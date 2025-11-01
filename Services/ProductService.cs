@@ -84,7 +84,7 @@ namespace AHON_TRACK.Services
                 }
 
                 // Check for duplicate SKU (including deleted ones)
-                var (existingProductId, existingIsDeleted) = await CheckDuplicateSKUAsync(conn, product.BatchCode);
+                var (existingProductId, existingIsDeleted) = await CheckDuplicateBatchCodeAsync(conn, product.BatchCode);
 
                 // If exists and deleted -> restore and update fields
                 if (existingProductId.HasValue && existingIsDeleted)
@@ -116,11 +116,11 @@ namespace AHON_TRACK.Services
             }
         }
 
-        private async Task<(int? ProductId, bool IsDeleted)> CheckDuplicateSKUAsync(SqlConnection conn, string? sku)
+        private async Task<(int? ProductId, bool IsDeleted)> CheckDuplicateBatchCodeAsync(SqlConnection conn, string? batchCode)
         {
             using var cmd = new SqlCommand(
-                "SELECT ProductID, IsDeleted FROM Products WHERE SKU = @sku", conn);
-            cmd.Parameters.AddWithValue("@sku", sku ?? (object)DBNull.Value);
+                "SELECT ProductID, IsDeleted FROM Products WHERE BatchCode = @batchCode", conn);
+            cmd.Parameters.AddWithValue("@batchCode", batchCode ?? (object)DBNull.Value);
 
             using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
@@ -141,7 +141,7 @@ namespace AHON_TRACK.Services
             const string restoreQuery = @"
                 UPDATE Products SET
                     ProductName = @productName,
-                    SKU = @sku,
+                    BatchCode = @batchCode,
                     SupplierID = @supplierID,
                     Description = @description,
                     Price = @price,
@@ -180,11 +180,11 @@ namespace AHON_TRACK.Services
             var imageBytes = await ReadImageBytesAsync(product.ProductImageFilePath);
 
             using var cmd = new SqlCommand(
-                @"INSERT INTO Products (ProductName, SKU, SupplierID, Description, 
+                @"INSERT INTO Products (ProductName, BatchCode, SupplierID, Description, 
                  Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
                  ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID, IsDeleted)
                   OUTPUT INSERTED.ProductID
-                  VALUES (@productName, @sku, @supplierID, @description,
+                  VALUES (@productName, @batchCode, @supplierID, @description,
                           @price, @discountedPrice, @isPercentageDiscount, @imagePath,
                           @expiryDate, @status, @category, @currentStock, @employeeID, 0)", conn);
 
@@ -248,12 +248,12 @@ namespace AHON_TRACK.Services
             return await GetSingleProductAsync("p.ProductID = @param AND p.IsDeleted = 0", productId);
         }
 
-        public async Task<(bool Success, string Message, ProductModel? Product)> GetProductBySKUAsync(string sku)
+        public async Task<(bool Success, string Message, ProductModel? Product)> GetProductByBatchCodeAsync(string batchCode)
         {
             if (!CanView())
                 return (false, "Insufficient permissions to view products.", null);
 
-            return await GetSingleProductAsync("p.SKU = @param AND p.IsDeleted = 0", sku ?? (object)DBNull.Value);
+            return await GetSingleProductAsync("p.BatchCode = @param AND p.IsDeleted = 0", batchCode ?? (object)DBNull.Value);
         }
 
         public async Task<(bool Success, string Message, List<ProductModel>? Products)> GetProductsByCategoryAsync(string category)
@@ -366,7 +366,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"UPDATE Products 
                       SET ProductName = @productName,
-                          SKU = @sku,
+                          BatchCode = @batchCode,
                           SupplierID = @supplierID,
                           Description = @description,
                           Price = @price,
@@ -725,7 +725,7 @@ namespace AHON_TRACK.Services
 
         private string BuildLogDescription(ProductModel product, string action, int? productId = null)
         {
-            var sb = new StringBuilder($"{action} product: '{product.ProductName}' (SKU: {product.BatchCode}");
+            var sb = new StringBuilder($"{action} product: '{product.ProductName}' (Batch Code: {product.BatchCode}");
             if (productId.HasValue)
                 sb.Append($", ID: {productId.Value}");
             sb.Append($") - Price: ₱{product.Price:N2}, Stock: {product.CurrentStock}");
@@ -740,7 +740,7 @@ namespace AHON_TRACK.Services
         }
 
         private string GetProductSelectQuery() =>
-            @"SELECT p.ProductID, p.ProductName, p.SKU, p.SupplierID, s.SupplierName, p.Description,
+            @"SELECT p.ProductID, p.ProductName, p.BatchCode, p.SupplierID, s.SupplierName, p.Description,
                      p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
                      p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
               FROM Products p
@@ -861,7 +861,7 @@ namespace AHON_TRACK.Services
             {
                 ProductID = reader.GetInt32(reader.GetOrdinal("ProductID")),
                 ProductName = reader["ProductName"]?.ToString() ?? "",
-                BatchCode = reader["SKU"]?.ToString() ?? "",
+                BatchCode = reader["BatchCode"]?.ToString() ?? "",
                 SupplierID = reader["SupplierID"] != DBNull.Value
                     ? reader.GetInt32(reader.GetOrdinal("SupplierID"))
                     : null,
@@ -872,7 +872,7 @@ namespace AHON_TRACK.Services
                     ? reader.GetDecimal(reader.GetOrdinal("DiscountedPrice"))
                     : null,
                 IsPercentageDiscount = reader["IsPercentageDiscount"] != DBNull.Value
-                    && reader.GetBoolean(reader.GetOrdinal("IsPercentageDiscount")),
+                                       && reader.GetBoolean(reader.GetOrdinal("IsPercentageDiscount")),
                 ProductImageBase64 = imageBase64,
                 ProductImageBytes = imageBytes,
                 ExpiryDate = reader["ExpiryDate"] != DBNull.Value
