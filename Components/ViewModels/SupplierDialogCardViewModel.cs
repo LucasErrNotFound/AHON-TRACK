@@ -100,29 +100,25 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
         Products = supplier?.Products;
         Status = supplier?.Status;
 
-        if (string.IsNullOrWhiteSpace(supplier?.DeliverySchedule)) return;
+        if (!string.IsNullOrWhiteSpace(supplier?.DeliverySchedule))
+        {
+            if (supplier.DeliverySchedule.Contains("day", StringComparison.OrdinalIgnoreCase))
+                SchedulePattern = "Day";
+            else if (supplier.DeliverySchedule.Contains("month", StringComparison.OrdinalIgnoreCase))
+                SchedulePattern = "Month";
 
-        if (supplier.DeliverySchedule.Contains("day", StringComparison.OrdinalIgnoreCase))
-        {
-            SchedulePattern = "Day";
+            SelectedDeliverySchedule = supplier.DeliverySchedule;
         }
-        else if (supplier.DeliverySchedule.Contains("month", StringComparison.OrdinalIgnoreCase))
-        {
-            SchedulePattern = "Month";
-        }
-        SelectedDeliverySchedule = supplier.DeliverySchedule;
 
-        if (string.IsNullOrWhiteSpace(supplier?.ContractTerms)) return;
+        if (!string.IsNullOrWhiteSpace(supplier?.ContractTerms))
+        {
+            if (supplier.ContractTerms.Contains("day", StringComparison.OrdinalIgnoreCase))
+                ContractPattern = "Day";
+            else if (supplier.ContractTerms.Contains("month", StringComparison.OrdinalIgnoreCase))
+                ContractPattern = "Month";
 
-        if (supplier.ContractTerms.Contains("day", StringComparison.OrdinalIgnoreCase))
-        {
-            ContractPattern = "Day";
+            SelectedContractTerms = supplier.ContractTerms;
         }
-        else if (supplier.ContractTerms.Contains("month", StringComparison.OrdinalIgnoreCase))
-        {
-            ContractPattern = "Month";
-        }
-        SelectedContractTerms = supplier.ContractTerms;
     }
 
     [RelayCommand]
@@ -207,7 +203,6 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
             if (_schedulePattern != value)
             {
                 _schedulePattern = value;
-                OnPropertyChanged(nameof(SchedulePattern));
                 OnPropertyChanged(nameof(IsScheduleDeliveryByDay));
                 OnPropertyChanged(nameof(IsScheduleDeliveryByMonth));
 
@@ -228,7 +223,6 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
             if (_contractPattern != value)
             {
                 _contractPattern = value;
-                OnPropertyChanged(nameof(ContractPattern));
                 OnPropertyChanged(nameof(IsContractTermsByDay));
                 OnPropertyChanged(nameof(IsContractTermsByMonth));
 
