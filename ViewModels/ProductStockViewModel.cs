@@ -257,7 +257,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1001,
                 Name = "Cobra Energy Drink",
-                BatchNumber = "1AU3OTE0923U",
+                BatchCode = "1AU3OTE0923U",
                 Description = "Yellow Blast Flavor",
                 Category = "Drinks",
                 CurrentStock = 17,
@@ -273,7 +273,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1002,
                 Name = "Gold Standard Whey Protein",
-                BatchNumber = "1AU3OTE0923U",
+                BatchCode = "1AU3OTE0923U",
                 Description = "5lbs Premium Whey Protein",
                 Category = "Supplements",
                 CurrentStock = 17,
@@ -427,7 +427,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                     (product.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                      product.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                      product.Supplier.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                     product.BatchNumber?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) == true ||
+                     product.BatchCode?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) == true ||
                      product.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
@@ -501,7 +501,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 {
                     ID = product.ID,
                     ProductName = product.Name,
-                    BatchNumber = product.BatchNumber,
+                    BatchCode = product.BatchCode,
                     Category = product.Category,
                     CurrentStock = product.CurrentStock ?? 0,
                     Price = product.Price,
@@ -647,7 +647,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         {
             ID = model.ProductID,
             Name = model.ProductName ?? "",
-            BatchNumber = model.BatchNumber ?? "",
+            BatchCode = model.BatchCode ?? "",
             Category = model.Category ?? "",
             CurrentStock = model.CurrentStock,
             Price = model.Price,
@@ -697,7 +697,7 @@ public partial class ProductStock : ObservableObject
     private string? _name;
 
     [ObservableProperty]
-    private string? _batchNumber;
+    private string? _batchCode;
 
     [ObservableProperty]
     private string? _description;

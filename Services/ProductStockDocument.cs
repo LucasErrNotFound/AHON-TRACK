@@ -147,7 +147,7 @@ public class ProductStockDocument : IDocument
             {
                 table.Cell().Element(CellStyle).Text(item.ID.ToString()).FontSize(8).SemiBold();
                 table.Cell().Element(CellStyle).Text(item.ProductName).FontSize(8);
-                table.Cell().Element(CellStyle).Text(item.BatchNumber).FontSize(8);
+                table.Cell().Element(CellStyle).Text(item.BatchCode).FontSize(8);
                 table.Cell().Element(CellStyle).Text(item.Category).FontSize(8);
                 table.Cell().Element(CellStyle).Text(item.CurrentStock).FontSize(8);
                 table.Cell().Element(CellStyle).AlignLeft().Text($"₱{item.Price:N2}").FontSize(8);

@@ -84,7 +84,7 @@ namespace AHON_TRACK.Services
                 }
 
                 // Check for duplicate SKU (including deleted ones)
-                var (existingProductId, existingIsDeleted) = await CheckDuplicateSKUAsync(conn, product.BatchNumber);
+                var (existingProductId, existingIsDeleted) = await CheckDuplicateSKUAsync(conn, product.BatchCode);
 
                 // If exists and deleted -> restore and update fields
                 if (existingProductId.HasValue && existingIsDeleted)
@@ -95,7 +95,7 @@ namespace AHON_TRACK.Services
                 // If exists and NOT deleted -> duplicate SKU warning
                 if (existingProductId.HasValue)
                 {
-                    ShowToast("Duplicate SKU", $"Product with SKU '{product.BatchNumber}' already exists.", ToastType.Warning);
+                    ShowToast("Duplicate SKU", $"Product with SKU '{product.BatchCode}' already exists.", ToastType.Warning);
                     return (false, "Product SKU already exists.", null);
                 }
 
@@ -702,7 +702,7 @@ namespace AHON_TRACK.Services
         private void AddProductParameters(SqlCommand cmd, ProductModel product)
         {
             cmd.Parameters.AddWithValue("@productName", product.ProductName ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@sku", product.BatchNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@batchCode", product.BatchCode ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@supplierID", product.SupplierID ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@description", product.Description ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@price", product.Price);
@@ -725,7 +725,7 @@ namespace AHON_TRACK.Services
 
         private string BuildLogDescription(ProductModel product, string action, int? productId = null)
         {
-            var sb = new StringBuilder($"{action} product: '{product.ProductName}' (SKU: {product.BatchNumber}");
+            var sb = new StringBuilder($"{action} product: '{product.ProductName}' (SKU: {product.BatchCode}");
             if (productId.HasValue)
                 sb.Append($", ID: {productId.Value}");
             sb.Append($") - Price: ₱{product.Price:N2}, Stock: {product.CurrentStock}");
@@ -861,7 +861,7 @@ namespace AHON_TRACK.Services
             {
                 ProductID = reader.GetInt32(reader.GetOrdinal("ProductID")),
                 ProductName = reader["ProductName"]?.ToString() ?? "",
-                BatchNumber = reader["SKU"]?.ToString() ?? "",
+                BatchCode = reader["SKU"]?.ToString() ?? "",
                 SupplierID = reader["SupplierID"] != DBNull.Value
                     ? reader.GetInt32(reader.GetOrdinal("SupplierID"))
                     : null,

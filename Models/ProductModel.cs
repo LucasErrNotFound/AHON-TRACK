@@ -9,7 +9,7 @@ namespace AHON_TRACK.Models
     {
         public int ProductID { get; set; }
         public string? ProductName { get; set; }
-        public string? BatchNumber { get; set; }
+        public string? BatchCode { get; set; }
 
         // ✅ CHANGED: Store SupplierID instead of supplier name
         public int? SupplierID { get; set; }

@@ -64,7 +64,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private bool _suppliersLoaded = false;
     private int? _productID;
     private string? _productName = string.Empty;
-    private string? _batchNumber = string.Empty;
+    private string? _batchCode = string.Empty;
     private string? _productDescription = string.Empty;
     private DateTime? _productExpiry;
     private Image? _productImage;
@@ -280,7 +280,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             {
                 ProductID = ProductID ?? 0,
                 ProductName = ProductName ?? "",
-                BatchNumber = BatchNumber ?? "",
+                BatchCode = BatchCode ?? "",
                 SupplierID = supplierIdToSave,
                 Description = ProductDescription,
                 Price = ProductPrice ?? 0,
@@ -448,7 +448,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductExpiry = product.Expiry;
         IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
-        BatchNumber = product.BatchNumber;
+        BatchCode = product.BatchCode;
         CurrentStock = product.CurrentStock; // ✅ This includes 0
 
         if (!string.IsNullOrEmpty(product.Supplier) &&
@@ -534,13 +534,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _productName, value, true);
     }
 
-    [Required(ErrorMessage = "Batch Number is required")]
+    [Required(ErrorMessage = "Batch Code is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4-25 characters long")]
     [MaxLength(25, ErrorMessage = "Must not exceed 25 characters")]
-    public string? BatchNumber
+    public string? BatchCode
     {
-        get => _batchNumber;
-        set => SetProperty(ref _batchNumber, value, true);
+        get => _batchCode;
+        set => SetProperty(ref _batchCode, value, true);
     }
 
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
