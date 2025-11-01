@@ -446,7 +446,7 @@ namespace AHON_TRACK.Services
                         ShowWarningToast("Already Deleted", $"{employeeName} has already been deleted.");
                         return (false, "Employee is already deleted.");
                     }
-                    
+
                     var employeeStatus = await GetEmployeeStatusAsync(conn, transaction, employeeId);
                     if (string.Equals(employeeStatus, "Active", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(employeeStatus, "Inactive", StringComparison.OrdinalIgnoreCase))
@@ -492,7 +492,7 @@ namespace AHON_TRACK.Services
                 return (false, $"Error: {ex.Message}");
             }
         }
-        
+
         private async Task<string> GetEmployeeStatusAsync(SqlConnection conn, SqlTransaction transaction, int employeeId)
         {
             using var cmd = new SqlCommand(
@@ -509,19 +509,20 @@ namespace AHON_TRACK.Services
 
         public async Task<(bool Success, string Message, int? EmployeeId, string? Role)> AuthenticateUserAsync(string username, string password)
         {
+            SqlConnection? conn = null;
             try
             {
-                using var conn = new SqlConnection(_connectionString);
+                conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
                 // Try Admin
                 const string adminQuery = @"
-    SELECT a.AdminID, a.Password, e.FirstName, e.LastName, e.Status
-    FROM Admins a
-    INNER JOIN Employees e ON a.AdminID = e.EmployeeID
-    WHERE a.Username = @Username 
-    AND a.IsDeleted = 0 
-    AND e.IsDeleted = 0";
+SELECT a.AdminID, a.Password, e.FirstName, e.LastName, e.Status
+FROM Admins a
+INNER JOIN Employees e ON a.AdminID = e.EmployeeID
+WHERE a.Username = @Username 
+AND a.IsDeleted = 0 
+AND e.IsDeleted = 0";
 
                 using (var adminCmd = new SqlCommand(adminQuery, conn))
                 {
@@ -532,17 +533,17 @@ namespace AHON_TRACK.Services
                     {
                         string hashedPassword = adminReader.GetString(1);
                         string status = adminReader.GetString(4);
+                        int employeeId = adminReader.GetInt32(0);
+
+                        adminReader.Close();
 
                         if (PasswordHelper.VerifyPassword(password, hashedPassword))
                         {
                             if (status != "Active")
                             {
-                                await LogActionAsync(conn, "Login", $"Admin '{username}' attempted to log in (inactive account).", false);
+                                await RecordFailedLoginAttemptAsync(conn, username);
                                 return (false, "Account is not active.", null, null);
                             }
-
-                            int employeeId = adminReader.GetInt32(0);
-                            adminReader.Close();
 
                             using var updateLoginCmd = new SqlCommand(
                                 "UPDATE Admins SET LastLogin = GETDATE() WHERE AdminID = @AdminID", conn);
@@ -552,14 +553,13 @@ namespace AHON_TRACK.Services
                             CurrentUserModel.UserId = employeeId;
                             CurrentUserModel.Username = username;
                             CurrentUserModel.Role = "Admin";
-                            await LogActionAsync(conn, "Login", $"Admin '{username}' logged in successfully.", true);
+                            await LogActionAsync(conn, "Login", $"Admin '{username}' logged in successfully.", true, null);
 
                             return (true, "Login successful.", employeeId, "Admin");
                         }
                         else
                         {
-                            adminReader.Close();
-                            await LogActionAsync(conn, "Login", $"Admin '{username}' failed login (wrong password).", false);
+                            await RecordFailedLoginAttemptAsync(conn, username);
                             return (false, "Invalid username or password.", null, null);
                         }
                     }
@@ -567,12 +567,12 @@ namespace AHON_TRACK.Services
 
                 // Try Coach
                 const string coachQuery = @"
-    SELECT c.CoachID, c.Password, e.FirstName, e.LastName, e.Status
-    FROM Coach c
-    INNER JOIN Employees e ON c.CoachID = e.EmployeeID
-    WHERE c.Username = @Username 
-    AND c.IsDeleted = 0 
-    AND e.IsDeleted = 0";
+SELECT c.CoachID, c.Password, e.FirstName, e.LastName, e.Status
+FROM Coach c
+INNER JOIN Employees e ON c.CoachID = e.EmployeeID
+WHERE c.Username = @Username 
+AND c.IsDeleted = 0 
+AND e.IsDeleted = 0";
 
                 using (var coachCmd = new SqlCommand(coachQuery, conn))
                 {
@@ -583,17 +583,17 @@ namespace AHON_TRACK.Services
                     {
                         string hashedPassword = coachReader.GetString(1);
                         string status = coachReader.GetString(4);
+                        int employeeId = coachReader.GetInt32(0);
+
+                        coachReader.Close();
 
                         if (PasswordHelper.VerifyPassword(password, hashedPassword))
                         {
                             if (status != "Active")
                             {
-                                await LogActionAsync(conn, "Login", $"Coach '{username}' attempted to log in (inactive account).", false);
+                                await RecordFailedLoginAttemptAsync(conn, username);
                                 return (false, "Account is not active.", null, null);
                             }
-
-                            int employeeId = coachReader.GetInt32(0);
-                            coachReader.Close();
 
                             using var updateLoginCmd = new SqlCommand(
                                 "UPDATE Coach SET LastLogin = GETDATE() WHERE CoachID = @CoachID", conn);
@@ -603,14 +603,13 @@ namespace AHON_TRACK.Services
                             CurrentUserModel.UserId = employeeId;
                             CurrentUserModel.Username = username;
                             CurrentUserModel.Role = "Coach";
-                            await LogActionAsync(conn, "Login", $"Coach '{username}' logged in successfully.", true);
+                            await LogActionAsync(conn, "Login", $"Coach '{username}' logged in successfully.", true, null);
 
                             return (true, "Login successful.", employeeId, "Coach");
                         }
                         else
                         {
-                            coachReader.Close();
-                            await LogActionAsync(conn, "Login", $"Coach '{username}' failed login (wrong password).", false);
+                            await RecordFailedLoginAttemptAsync(conn, username);
                             return (false, "Invalid username or password.", null, null);
                         }
                     }
@@ -618,12 +617,12 @@ namespace AHON_TRACK.Services
 
                 // Try Staff
                 const string staffQuery = @"
-    SELECT s.StaffID, s.Password, e.FirstName, e.LastName, e.Status
-    FROM Staffs s
-    INNER JOIN Employees e ON s.StaffID = e.EmployeeID
-    WHERE s.Username = @Username 
-    AND s.IsDeleted = 0 
-    AND e.IsDeleted = 0";
+SELECT s.StaffID, s.Password, e.FirstName, e.LastName, e.Status
+FROM Staffs s
+INNER JOIN Employees e ON s.StaffID = e.EmployeeID
+WHERE s.Username = @Username 
+AND s.IsDeleted = 0 
+AND e.IsDeleted = 0";
 
                 using (var staffCmd = new SqlCommand(staffQuery, conn))
                 {
@@ -634,17 +633,17 @@ namespace AHON_TRACK.Services
                     {
                         string hashedPassword = staffReader.GetString(1);
                         string status = staffReader.GetString(4);
+                        int employeeId = staffReader.GetInt32(0);
+
+                        staffReader.Close();
 
                         if (PasswordHelper.VerifyPassword(password, hashedPassword))
                         {
                             if (status != "Active")
                             {
-                                await LogActionAsync(conn, "Login", $"Staff '{username}' attempted to log in (inactive account).", false);
+                                await RecordFailedLoginAttemptAsync(conn, username);
                                 return (false, "Account is not active.", null, null);
                             }
-
-                            int employeeId = staffReader.GetInt32(0);
-                            staffReader.Close();
 
                             using var updateLoginCmd = new SqlCommand(
                                 "UPDATE Staffs SET LastLogin = GETDATE() WHERE StaffID = @StaffID", conn);
@@ -654,26 +653,31 @@ namespace AHON_TRACK.Services
                             CurrentUserModel.UserId = employeeId;
                             CurrentUserModel.Username = username;
                             CurrentUserModel.Role = "Staff";
-                            await LogActionAsync(conn, "Login", $"Staff '{username}' logged in successfully.", true);
+                            await LogActionAsync(conn, "Login", $"Staff '{username}' logged in successfully.", true, null);
 
                             return (true, "Login successful.", employeeId, "Staff");
                         }
                         else
                         {
-                            staffReader.Close();
-                            await LogActionAsync(conn, "Login", $"Staff '{username}' failed login (wrong password).", false);
+                            await RecordFailedLoginAttemptAsync(conn, username);
                             return (false, "Invalid username or password.", null, null);
                         }
                     }
                 }
 
-                await LogActionAsync(conn, "Login", $"Unknown username '{username}' attempted to log in.", false);
+                // Unknown username
+                await RecordFailedLoginAttemptAsync(conn, username);
                 return (false, "Invalid username or password.", null, null);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AuthenticateUserAsync Error: {ex}");
+                Debug.WriteLine($"AuthenticateUserAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}", null, null);
+            }
+            finally
+            {
+                conn?.Close();
+                conn?.Dispose();
             }
         }
 
@@ -1492,7 +1496,7 @@ namespace AHON_TRACK.Services
 
         #endregion
 
-        #region LOGIN LOCKOUT MANAGEMENT
+        #region LOGIN LOCKOUT MANAGEMENT (GLOBAL)
 
         public async Task<(bool IsLocked, int AttemptsLeft, string Message)> CheckLockoutStatusAsync(string username)
         {
@@ -1502,51 +1506,97 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-    SELECT FailedLoginAttempts, LockedOutUntil
-    FROM LoginAttempts
-    WHERE Username = @Username";
+SELECT FailedLoginAttempts, LockedOutUntil, LastAttemptedUsername
+FROM GlobalLockout
+WHERE Id = 1";
 
                 using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Username", username);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
                     int attempts = reader.GetInt32(0);
                     DateTime? lockedUntil = reader.IsDBNull(1) ? null : reader.GetDateTime(1);
+                    string? lastUsername = reader.IsDBNull(2) ? null : reader.GetString(2);
 
                     // Check if currently locked out
                     if (lockedUntil.HasValue && lockedUntil.Value > DateTime.Now)
                     {
                         var timeRemaining = lockedUntil.Value - DateTime.Now;
-                        string message = timeRemaining.TotalMinutes >= 1
-                            ? $"Account locked. Try again in {Math.Ceiling(timeRemaining.TotalMinutes)} minute(s)."
-                            : $"Account locked. Try again in less than a minute.";
+                        string message;
+
+                        if (timeRemaining.TotalHours >= 1)
+                        {
+                            message = $"All accounts locked. Try again in {Math.Ceiling(timeRemaining.TotalHours)} hour(s).";
+                        }
+                        else if (timeRemaining.TotalMinutes >= 1)
+                        {
+                            message = $"All accounts locked. Try again in {Math.Ceiling(timeRemaining.TotalMinutes)} minute(s).";
+                        }
+                        else
+                        {
+                            message = $"All accounts locked. Try again in less than a minute.";
+                        }
 
                         return (true, 0, message);
                     }
 
-                    // Check if max attempts reached (3)
-                    if (attempts >= 3)
+                    // Check if max attempts reached (5)
+                    if (attempts >= 5)
                     {
-                        return (true, 0, "Account locked due to too many failed attempts.");
+                        return (true, 0, "All accounts locked due to too many failed login attempts.");
                     }
 
                     // Return remaining attempts
-                    int attemptsLeft = Math.Max(0, 3 - attempts);
-                    return (false, attemptsLeft, $"{attemptsLeft} attempt(s) remaining");
+                    int attemptsLeft = Math.Max(0, 5 - attempts);
+                    string attemptsMessage = attemptsLeft <= 2
+                        ? $"⚠️ WARNING: Only {attemptsLeft} attempt(s) remaining before ALL accounts lock!"
+                        : $"{attemptsLeft} attempt(s) remaining";
+
+                    return (false, attemptsLeft, attemptsMessage);
                 }
 
-                // No record found - user has 3 attempts
-                return (false, 3, "3 attempt(s) remaining");
+                // No record found - return default
+                return (false, 5, "5 attempt(s) remaining");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"CheckLockoutStatusAsync Error: {ex}");
-                return (false, 3, "Unable to verify lockout status");
+                return (false, 5, "Unable to verify lockout status");
             }
         }
 
+        // Private overload that accepts an existing connection (for use inside AuthenticateUserAsync)
+        private async Task RecordFailedLoginAttemptAsync(SqlConnection conn, string username)
+        {
+            try
+            {
+                const string updateQuery = @"
+UPDATE GlobalLockout
+SET 
+    FailedLoginAttempts = FailedLoginAttempts + 1,
+    LastAttemptDate = GETDATE(),
+    LastAttemptedUsername = @Username,
+    LockedOutUntil = CASE 
+        WHEN FailedLoginAttempts + 1 >= 5 THEN DATEADD(HOUR, 1, GETDATE())
+        ELSE LockedOutUntil 
+    END
+WHERE Id = 1";
+
+                using var updateCmd = new SqlCommand(updateQuery, conn);
+                updateCmd.Parameters.AddWithValue("@Username", username ?? (object)DBNull.Value);
+                await updateCmd.ExecuteNonQueryAsync();
+
+                Debug.WriteLine($"✓ Failed login recorded for username: '{username}'");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"✗ RecordFailedLoginAttemptAsync Error: {ex.Message}");
+                Debug.WriteLine($"   Stack trace: {ex.StackTrace}");
+            }
+        }
+
+        // Public version that creates its own connection (for external calls)
         public async Task RecordFailedLoginAttemptAsync(string username)
         {
             try
@@ -1554,38 +1604,28 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                const string query = @"
-    MERGE LoginAttempts AS target
-    USING (SELECT @Username AS Username) AS source
-    ON target.Username = source.Username
-    WHEN MATCHED THEN
-        UPDATE SET 
-            FailedLoginAttempts = FailedLoginAttempts + 1,
-            LastAttemptDate = GETDATE(),
-            LockedOutUntil = CASE 
-                WHEN FailedLoginAttempts + 1 >= 3 THEN DATEADD(MINUTE, 1, GETDATE())
-                ELSE LockedOutUntil 
-            END
-    WHEN NOT MATCHED THEN
-        INSERT (Username, FailedLoginAttempts, LastAttemptDate, CreatedDate)
-        VALUES (@Username, 1, GETDATE(), GETDATE());";
+                const string updateQuery = @"
+UPDATE GlobalLockout
+SET 
+    FailedLoginAttempts = FailedLoginAttempts + 1,
+    LastAttemptDate = GETDATE(),
+    LastAttemptedUsername = @Username,
+    LockedOutUntil = CASE 
+        WHEN FailedLoginAttempts + 1 >= 5 THEN DATEADD(HOUR, 1, GETDATE())
+        ELSE LockedOutUntil 
+    END
+WHERE Id = 1";
 
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Username", username);
-                await cmd.ExecuteNonQueryAsync();
+                using var updateCmd = new SqlCommand(updateQuery, conn);
+                updateCmd.Parameters.AddWithValue("@Username", username ?? (object)DBNull.Value);
+                await updateCmd.ExecuteNonQueryAsync();
 
-                // Get the updated attempt count for logging
-                const string countQuery = "SELECT FailedLoginAttempts FROM LoginAttempts WHERE Username = @Username";
-                using var countCmd = new SqlCommand(countQuery, conn);
-                countCmd.Parameters.AddWithValue("@Username", username);
-                var attempts = await countCmd.ExecuteScalarAsync();
-
-                await LogActionAsync(conn, "Login",
-                    $"Failed login attempt #{attempts} recorded for username '{username}'.", false);
+                Debug.WriteLine($"✓ Public - Failed login recorded for username: '{username}'");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"RecordFailedLoginAttemptAsync Error: {ex}");
+                Debug.WriteLine($"✗ Public RecordFailedLoginAttemptAsync Error: {ex.Message}");
+                Debug.WriteLine($"   Stack trace: {ex.StackTrace}");
             }
         }
 
@@ -1597,21 +1637,16 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-            UPDATE LoginAttempts
-            SET FailedLoginAttempts = 0,
-                LockedOutUntil = NULL,
-                LastAttemptDate = GETDATE()
-            WHERE Username = @Username";
+UPDATE GlobalLockout
+SET FailedLoginAttempts = 0,
+    LockedOutUntil = NULL,
+    LastAttemptDate = GETDATE(),
+    LastAttemptedUsername = @Username
+WHERE Id = 1";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Username", username);
-                int rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
-                {
-                    await LogActionAsync(conn, "Login",
-                        $"Login attempts reset for username '{username}' after successful login.", true);
-                }
+                await cmd.ExecuteNonQueryAsync();
             }
             catch (Exception ex)
             {
@@ -1627,24 +1662,51 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-            UPDATE LoginAttempts
-            SET FailedLoginAttempts = 0,
-                LockedOutUntil = NULL,
-                LastAttemptDate = GETDATE()
-            WHERE FailedLoginAttempts > 0 OR LockedOutUntil IS NOT NULL";
+UPDATE GlobalLockout
+SET FailedLoginAttempts = 0,
+    LockedOutUntil = NULL,
+    LastAttemptDate = GETDATE()
+WHERE Id = 1";
 
                 using var cmd = new SqlCommand(query, conn);
-                int unlockedCount = await cmd.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync();
 
-                await LogActionAsync(conn, "Unlock",
-                    $"Master unlock performed. {unlockedCount} account(s) unlocked.", true);
+                // Log master unlock
+                await LogMasterUnlockAsync(conn);
 
-                Debug.WriteLine($"Master unlock: {unlockedCount} accounts unlocked");
+                Debug.WriteLine($"Master unlock: Global lockout cleared");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"UnlockAllAccountsAsync Error: {ex}");
                 throw;
+            }
+        }
+
+        // Helper method for logging master unlock
+        private async Task LogMasterUnlockAsync(SqlConnection conn)
+        {
+            try
+            {
+                using var logCmd = new SqlCommand(
+                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+              VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)",
+                    conn);
+
+                logCmd.Parameters.AddWithValue("@username", "Master Key");
+                logCmd.Parameters.AddWithValue("@role", "System");
+                logCmd.Parameters.AddWithValue("@actionType", "Unlock");
+                logCmd.Parameters.AddWithValue("@description", "Master unlock performed. Global lockout cleared.");
+                logCmd.Parameters.AddWithValue("@success", true);
+                logCmd.Parameters.AddWithValue("@employeeID", (object)DBNull.Value);
+
+                await logCmd.ExecuteNonQueryAsync();
+
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LogMasterUnlockAsync] Error: {ex.Message}");
             }
         }
 

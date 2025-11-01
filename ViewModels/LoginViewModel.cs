@@ -233,8 +233,8 @@ public partial class LoginViewModel : ViewModelBase
     {
         try
         {
-            // Record failed attempt in database
-            await _employeeService.RecordFailedLoginAttemptAsync(Username);
+            // Don't record here - it's already done in AuthenticateUserAsync
+            // await _employeeService.RecordFailedLoginAttemptAsync(Username); ← REMOVE THIS LINE
 
             // Get updated lockout status
             var (isLocked, attemptsLeft, lockoutInfo) = await _employeeService.CheckLockoutStatusAsync(Username);
@@ -244,21 +244,21 @@ public partial class LoginViewModel : ViewModelBase
             if (isLocked)
             {
                 IsLockedOut = true;
-                LockoutMessage = $"🔒 Account locked: {lockoutInfo}\nContact administrator for unlock credentials.";
+                LockoutMessage = $"🔒 ALL ACCOUNTS LOCKED: {lockoutInfo}\nContact administrator for unlock credentials.";
 
-                ToastManager.CreateToast("Account Locked")
-                    .WithContent($"Too many failed attempts.\n{lockoutInfo}\n\nUse master unlock to regain access.")
+                ToastManager.CreateToast("All Accounts Locked")
+                    .WithContent($"Too many failed login attempts.\n{lockoutInfo}\n\nUse master unlock to regain access.")
                     .WithDelay(10)
                     .DismissOnClick()
                     .ShowError();
 
-                Debug.WriteLine($"Account '{Username}' locked at {DateTime.Now}");
+                Debug.WriteLine($"Global lockout triggered at {DateTime.Now} (last attempt: '{Username}')");
             }
             else
             {
                 string warningMessage = attemptsLeft <= 2
-                    ? $"Invalid username or password.\n⚠️ WARNING: Only {attemptsLeft} attempt(s) remaining!"
-                    : $"Invalid username or password.\nAttempts remaining: {attemptsLeft}";
+                    ? $"Invalid username or password.\n⚠️ CRITICAL: Only {attemptsLeft} attempt(s) remaining before ALL ACCOUNTS LOCK!"
+                    : $"Invalid username or password.\n{attemptsLeft} attempt(s) remaining (global)";
 
                 ToastManager.CreateToast("Login Failed")
                     .WithContent(warningMessage)
@@ -266,7 +266,7 @@ public partial class LoginViewModel : ViewModelBase
                     .DismissOnClick()
                     .ShowError();
 
-                Debug.WriteLine($"Failed login for '{Username}'. Attempts remaining: {attemptsLeft}");
+                Debug.WriteLine($"Failed login for '{Username}'. Global attempts remaining: {attemptsLeft}");
             }
         }
         catch (Exception ex)
@@ -311,7 +311,7 @@ public partial class LoginViewModel : ViewModelBase
         }
         currentWindow?.Close();
         DisposeManagedResources();
-        
+
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -322,7 +322,7 @@ public partial class LoginViewModel : ViewModelBase
         _loginCts?.Cancel();
         _loginCts?.Dispose();
         _loginCts = null;
-        
+
         Password = string.Empty;
         Username = string.Empty;
 

@@ -965,30 +965,50 @@ namespace AHON_TRACK.Services
                 {
                     foreach (var equipmentId in equipmentIds)
                     {
-                        // Get equipment name
-                        var name = await GetEquipmentNameByIdAsync(conn, equipmentId);
-                        if (name != "Unknown Equipment")
+                        // Get equipment name first (before deletion)
+                        using var nameCmd = new SqlCommand(
+                            "SELECT EquipmentName FROM Equipment WHERE EquipmentID = @equipmentID AND IsDeleted = 0",
+                            conn, transaction);
+                        nameCmd.Parameters.AddWithValue("@equipmentID", equipmentId);
+
+                        var name = await nameCmd.ExecuteScalarAsync();
+                        if (name != null && name != DBNull.Value)
                         {
-                            equipmentNames.Add(name);
+                            equipmentNames.Add(name.ToString());
                         }
 
                         // Soft delete equipment
                         using var deleteCmd = new SqlCommand(
-                            "UPDATE Equipment SET IsDeleted = 1 WHERE EquipmentID = @equipmentID AND IsDeleted = 0", conn, transaction);
+                            "UPDATE Equipment SET IsDeleted = 1 WHERE EquipmentID = @equipmentID AND IsDeleted = 0",
+                            conn, transaction);
                         deleteCmd.Parameters.AddWithValue("@equipmentID", equipmentId);
                         deletedCount += await deleteCmd.ExecuteNonQueryAsync();
                     }
 
-                    await LogActionAsync(conn, "DELETE",
-                        $"Deleted {deletedCount} equipment items: {string.Join(", ", equipmentNames)}", true);
+                    // Log the action within the same transaction
+                    if (deletedCount > 0)
+                    {
+                        using var logCmd = new SqlCommand(
+                            @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+                      VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @employeeID)",
+                            conn, transaction);
+
+                        logCmd.Parameters.AddWithValue("@username", CurrentUserModel.Username ?? (object)DBNull.Value);
+                        logCmd.Parameters.AddWithValue("@role", CurrentUserModel.Role ?? (object)DBNull.Value);
+                        logCmd.Parameters.AddWithValue("@actionType", "DELETE");
+                        logCmd.Parameters.AddWithValue("@description",
+                            $"Deleted {deletedCount} equipment items: {string.Join(", ", equipmentNames)}");
+                        logCmd.Parameters.AddWithValue("@success", true);
+                        logCmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                        await logCmd.ExecuteNonQueryAsync();
+                    }
 
                     transaction.Commit();
 
-                    /*   _toastManager?.CreateToast("Equipment Deleted")
-                           .WithContent($"Successfully deleted {deletedCount} equipment item(s).")
-                           .DismissOnClick()
-                           .ShowSuccess(); */
+                    DashboardEventService.Instance.NotifyRecentLogsUpdated(); // Notify after commit
                     DashboardEventService.Instance.NotifyEquipmentDeleted();
+
                     return (true, $"Successfully deleted {deletedCount} equipment item(s).", deletedCount);
                 }
                 catch
@@ -999,6 +1019,16 @@ namespace AHON_TRACK.Services
             }
             catch (SqlException ex)
             {
+                // Log failure outside of transaction
+                try
+                {
+                    using var conn = new SqlConnection(_connectionString);
+                    await conn.OpenAsync();
+                    await LogActionAsync(conn, "DELETE",
+                        $"Failed to delete multiple equipment - SQL Error: {ex.Message}", false);
+                }
+                catch { }
+
                 _toastManager?.CreateToast("Database Error")
                     .WithContent($"Failed to delete equipment: {ex.Message}")
                     .DismissOnClick()
@@ -1007,6 +1037,16 @@ namespace AHON_TRACK.Services
             }
             catch (Exception ex)
             {
+                // Log failure outside of transaction
+                try
+                {
+                    using var conn = new SqlConnection(_connectionString);
+                    await conn.OpenAsync();
+                    await LogActionAsync(conn, "DELETE",
+                        $"Failed to delete multiple equipment - Error: {ex.Message}", false);
+                }
+                catch { }
+
                 _toastManager?.CreateToast("Error")
                     .WithContent($"An unexpected error occurred: {ex.Message}")
                     .DismissOnClick()
