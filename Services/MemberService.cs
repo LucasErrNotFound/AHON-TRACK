@@ -368,42 +368,50 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-                    SELECT 
-                        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname,
-                        LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
-                        m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil,
-                        m.PackageID, p.PackageName, m.Status, m.PaymentMethod, m.ProfilePicture, m.DateJoined,
-                        (SELECT TOP 1 CheckIn FROM MemberCheckIns 
-                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                         ORDER BY CheckIn DESC) AS LastCheckIn,
-                        (SELECT TOP 1 CheckOut FROM MemberCheckIns 
-                         WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                         ORDER BY CheckOut DESC) AS LastCheckOut,
-                        (SELECT TOP 1 
-                            CASE 
-                                WHEN s.ProductID IS NOT NULL THEN pr.ProductName
-                                WHEN s.PackageID IS NOT NULL THEN pk.PackageName
-                                ELSE 'Unknown'
-                            END
-                         FROM Sales s
-                         LEFT JOIN Products pr ON s.ProductID = pr.ProductID
-                         LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
-                         WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-                         ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
-                        (SELECT TOP 1 SaleDate FROM Sales 
-                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                         ORDER BY SaleDate DESC) AS RecentPurchaseDate,
-                        (SELECT TOP 1 Quantity FROM Sales 
-                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                         ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
-                    FROM Members m
-                    LEFT JOIN Packages p ON m.PackageID = p.PackageID
-                    WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
-                    ORDER BY Name";
-
+                            SELECT 
+                                m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname,
+                                LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
+                                m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil,
+                                m.PackageID, p.PackageName, 
+                                CASE 
+                                    WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
+                                    WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
+                                    ELSE m.Status
+                                END AS Status,
+                                m.PaymentMethod, m.ProfilePicture, m.DateJoined,
+                                (SELECT TOP 1 CheckIn FROM MemberCheckIns 
+                                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                                 ORDER BY CheckIn DESC) AS LastCheckIn,
+                                (SELECT TOP 1 CheckOut FROM MemberCheckIns 
+                                 WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                                 ORDER BY CheckOut DESC) AS LastCheckOut,
+                                (SELECT TOP 1 
+                                    CASE 
+                                        WHEN s.ProductID IS NOT NULL THEN pr.ProductName
+                                        WHEN s.PackageID IS NOT NULL THEN pk.PackageName
+                                        ELSE 'Unknown'
+                                    END
+                                 FROM Sales s
+                                 LEFT JOIN Products pr ON s.ProductID = pr.ProductID
+                                 LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
+                                 WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+                                 ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+                                (SELECT TOP 1 SaleDate FROM Sales 
+                                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                                 ORDER BY SaleDate DESC) AS RecentPurchaseDate,
+                                (SELECT TOP 1 Quantity FROM Sales 
+                                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                                 ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
+                            FROM Members m
+                            LEFT JOIN Packages p ON m.PackageID = p.PackageID
+                            WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
+                            ORDER BY Name";
+                
                 var members = new List<ManageMemberModel>();
 
                 using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@ExpirationThreshold", EXPIRATION_THRESHOLD_DAYS);
+                
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
@@ -440,39 +448,45 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-                    SELECT 
-                        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
-                        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, p.PackageName,
-                        m.Status, m.PaymentMethod, m.RegisteredByEmployeeID, m.DateJoined,
-                        (SELECT TOP 1 CheckIn FROM MemberCheckIns 
-                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                         ORDER BY CheckIn DESC) AS LastCheckIn,
-                        (SELECT TOP 1 CheckOut FROM MemberCheckIns 
-                         WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                         ORDER BY CheckOut DESC) AS LastCheckOut,
-                        (SELECT TOP 1 
-                            CASE 
-                                WHEN s.ProductID IS NOT NULL THEN pr.ProductName
-                                WHEN s.PackageID IS NOT NULL THEN pk.PackageName
-                                ELSE 'Unknown'
-                            END
-                         FROM Sales s
-                         LEFT JOIN Products pr ON s.ProductID = pr.ProductID
-                         LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
-                         WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-                         ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
-                        (SELECT TOP 1 SaleDate FROM Sales 
-                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                         ORDER BY SaleDate DESC) AS RecentPurchaseDate,
-                        (SELECT TOP 1 Quantity FROM Sales 
-                         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                         ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
-                    FROM Members m
-                    LEFT JOIN Packages p ON m.PackageID = p.PackageID
-                    WHERE m.MemberID = @Id AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
+            SELECT 
+                m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
+                m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, p.PackageName,
+                CASE 
+                    WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
+                    WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
+                    ELSE m.Status
+                END AS Status,
+                m.PaymentMethod, m.RegisteredByEmployeeID, m.DateJoined,
+                (SELECT TOP 1 CheckIn FROM MemberCheckIns 
+                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                 ORDER BY CheckIn DESC) AS LastCheckIn,
+                (SELECT TOP 1 CheckOut FROM MemberCheckIns 
+                 WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                 ORDER BY CheckOut DESC) AS LastCheckOut,
+                (SELECT TOP 1 
+                    CASE 
+                        WHEN s.ProductID IS NOT NULL THEN pr.ProductName
+                        WHEN s.PackageID IS NOT NULL THEN pk.PackageName
+                        ELSE 'Unknown'
+                    END
+                 FROM Sales s
+                 LEFT JOIN Products pr ON s.ProductID = pr.ProductID
+                 LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
+                 WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+                 ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+                (SELECT TOP 1 SaleDate FROM Sales 
+                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                 ORDER BY SaleDate DESC) AS RecentPurchaseDate,
+                (SELECT TOP 1 Quantity FROM Sales 
+                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                 ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
+            FROM Members m
+            LEFT JOIN Packages p ON m.PackageID = p.PackageID
+            WHERE m.MemberID = @Id AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", memberId);
+                cmd.Parameters.AddWithValue("@ExpirationThreshold", EXPIRATION_THRESHOLD_DAYS);
 
                 using var reader = await cmd.ExecuteReaderAsync();
 

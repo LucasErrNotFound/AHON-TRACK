@@ -32,7 +32,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     private string _selectedSortFilterItem = "By newest to oldest";
 
     [ObservableProperty]
-    private string[] _statusFilterItems = ["All", "Active", "Expired"];
+    private string[] _statusFilterItems = ["All", "Active", "Near Expiry", "Expired"];
 
     [ObservableProperty]
     private string _selectedStatusFilterItem = "All";
@@ -125,6 +125,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 .Equals(status, StringComparison.OrdinalIgnoreCase));
 
     public bool IsActiveVisible => SelectedMember?.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ?? false;
+    public bool IsNearExpiryVisible => SelectedMember?.Status.Equals("near expiry", StringComparison.OrdinalIgnoreCase) ?? false;
     public bool IsExpiredVisible => SelectedMember?.Status.Equals("expired", StringComparison.OrdinalIgnoreCase) ?? false;
     public bool HasSelectedMember => SelectedMember is not null;
 
@@ -196,6 +197,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     {
         OnPropertyChanged(nameof(IsActiveVisible));
         OnPropertyChanged(nameof(IsExpiredVisible));
+        OnPropertyChanged(nameof(IsNearExpiryVisible));
         OnPropertyChanged(nameof(HasSelectedMember));
         OnPropertyChanged(nameof(IsDeleteButtonEnabled));
         OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
@@ -1274,6 +1276,7 @@ public partial class ManageMembersItem : ObservableObject
     public IBrush StatusForeground => Status.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500
+        "near expiry" => new SolidColorBrush(Color.FromRgb(249, 115, 22)),     // Orange-500
         "expired" => new SolidColorBrush(Color.FromRgb(239, 68, 68)), // Red-500
         _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
     };
@@ -1281,6 +1284,7 @@ public partial class ManageMembersItem : ObservableObject
     public IBrush StatusBackground => Status.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
+        "near expiry" => new SolidColorBrush(Color.FromArgb(25, 249, 115, 22)),     // Orange-500 with alpha
         "expired" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))           // Default Gray-500 with alpha
     };
@@ -1288,6 +1292,7 @@ public partial class ManageMembersItem : ObservableObject
     public string StatusDisplayText => Status.ToLowerInvariant() switch
     {
         "active" => "● Active",
+        "near expiry" => "● Near Expiry",
         "expired" => "● Expired",
         _ => Status
     };

@@ -532,6 +532,20 @@
 																		Foreground="{DynamicResource SuccessColor}" />
 																</Border>
 																<Border
+																	IsVisible="{CompiledBinding IsNearExpiryVisible}"
+																	Background="{DynamicResource WarningColor10}"
+																	Padding="10,5,10,5"
+																	BorderThickness="1"
+																	BorderBrush="{DynamicResource WarningColor60}"
+																	CornerRadius="5"
+																	HorizontalAlignment="Right">
+																	<TextBlock
+																		Text="Near Expiry"
+																		FontSize="16"
+																		FontWeight="SemiBold"
+																		Foreground="{DynamicResource WarningColor}" />
+																</Border>
+																<Border
 																	IsVisible="{CompiledBinding IsExpiredVisible}"
 																	Background="{DynamicResource DestructiveColor10}"
 																	Padding="10,5,10,5"
@@ -1083,6 +1097,20 @@
 																		FontSize="16"
 																		FontWeight="SemiBold"
 																		Foreground="{DynamicResource SuccessColor}" />
+																</Border>
+																<Border
+																	IsVisible="{CompiledBinding IsNearExpiryVisible}"
+																	Background="{DynamicResource WarningColor10}"
+																	Padding="10,5,10,5"
+																	BorderThickness="1"
+																	BorderBrush="{DynamicResource WarningColor60}"
+																	CornerRadius="5"
+																	HorizontalAlignment="Right">
+																	<TextBlock
+																		Text="Near Expiry"
+																		FontSize="16"
+																		FontWeight="SemiBold"
+																		Foreground="{DynamicResource WarningColor}" />
 																</Border>
 																<Border
 																	IsVisible="{CompiledBinding IsExpiredVisible}"
