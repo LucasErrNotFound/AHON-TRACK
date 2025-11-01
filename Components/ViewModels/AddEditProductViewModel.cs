@@ -64,7 +64,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private bool _suppliersLoaded = false;
     private int? _productID;
     private string? _productName = string.Empty;
-    private string? _productSKU = string.Empty;
+    private string? _batchNumber = string.Empty;
     private string? _productDescription = string.Empty;
     private DateTime? _productExpiry;
     private Image? _productImage;
@@ -280,7 +280,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             {
                 ProductID = ProductID ?? 0,
                 ProductName = ProductName ?? "",
-                SKU = ProductSKU ?? "",
+                BatchNumber = BatchNumber ?? "",
                 SupplierID = supplierIdToSave,
                 Description = ProductDescription,
                 Price = ProductPrice ?? 0,
@@ -448,7 +448,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductExpiry = product.Expiry;
         IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
-        ProductSKU = product.Sku;
+        BatchNumber = product.BatchNumber;
         CurrentStock = product.CurrentStock; // ✅ This includes 0
 
         if (!string.IsNullOrEmpty(product.Supplier) &&
@@ -534,14 +534,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _productName, value, true);
     }
 
-    [Required(ErrorMessage = "Product SKU is required")]
-    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
-    [MinLength(8, ErrorMessage = "Must be at least 8-12 characters long")]
-    [MaxLength(12, ErrorMessage = "Must not exceed 12 characters")]
-    public string? ProductSKU
+    [Required(ErrorMessage = "Batch Number is required")]
+    [MinLength(4, ErrorMessage = "Must be at least 4-25 characters long")]
+    [MaxLength(25, ErrorMessage = "Must not exceed 25 characters")]
+    public string? BatchNumber
     {
-        get => _productSKU;
-        set => SetProperty(ref _productSKU, value, true);
+        get => _batchNumber;
+        set => SetProperty(ref _batchNumber, value, true);
     }
 
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
@@ -552,7 +551,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     }
 
     [Required(ErrorMessage = "Price must be set")]
-    [Range(20, 5000, ErrorMessage = "Price must be between 20 and 5,000")]
+    [Range(5, 5000, ErrorMessage = "Price must be between 5 and 5,000")]
     public decimal? ProductPrice
     {
         get => _price;

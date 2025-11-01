@@ -176,13 +176,13 @@
                                             Header="Product Name"
                                             Binding="{CompiledBinding Name}" />
 
-                                        <!-- SKU -->
+                                        <!-- Batch Number -->
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="*"
                                             MinWidth="150"
-                                            Header="SKU"
-                                            Binding="{CompiledBinding Sku}" />
+                                            Header="Batch Number"
+                                            Binding="{CompiledBinding BatchNumber}" />
 
                                         <!-- Category -->
                                         <DataGridTextColumn
@@ -449,13 +449,13 @@
                                             Header="Product Name"
                                             Binding="{CompiledBinding Name}" />
 
-                                        <!-- SKU -->
+                                        <!-- Batch Number -->
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="*"
                                             MinWidth="140"
-                                            Header="SKU"
-                                            Binding="{CompiledBinding Sku}" />
+                                            Header="Batch Number"
+                                            Binding="{CompiledBinding BatchNumber}" />
 
                                         <!-- Category -->
                                         <DataGridTextColumn

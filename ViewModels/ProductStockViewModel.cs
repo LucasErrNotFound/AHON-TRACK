@@ -257,7 +257,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1001,
                 Name = "Cobra Energy Drink",
-                Sku = "1AU3OTE0923U",
+                BatchNumber = "1AU3OTE0923U",
                 Description = "Yellow Blast Flavor",
                 Category = "Drinks",
                 CurrentStock = 17,
@@ -273,7 +273,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1002,
                 Name = "Gold Standard Whey Protein",
-                Sku = "1AU3OTE0923U",
+                BatchNumber = "1AU3OTE0923U",
                 Description = "5lbs Premium Whey Protein",
                 Category = "Supplements",
                 CurrentStock = 17,
@@ -427,7 +427,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                     (product.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                      product.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                      product.Supplier.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                     product.Sku?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) == true ||
+                     product.BatchNumber?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) == true ||
                      product.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
@@ -501,7 +501,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 {
                     ID = product.ID,
                     ProductName = product.Name,
-                    Sku = product.Sku,
+                    BatchNumber = product.BatchNumber,
                     Category = product.Category,
                     CurrentStock = product.CurrentStock ?? 0,
                     Price = product.Price,
@@ -516,8 +516,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             await using var stream = await pdfFile.OpenWriteAsync();
 
             // Both cannot be enabled at the same time. Disable one of them 
-            document.GeneratePdf(stream); // Generate the PDF
-                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+            // document.GeneratePdf(stream); // Generate the PDF
+            await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
 
             _toastManager.CreateToast("Product stock list exported successfully")
                 .WithContent($"Product stock list has been saved to {pdfFile.Name}")
@@ -647,7 +647,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         {
             ID = model.ProductID,
             Name = model.ProductName ?? "",
-            Sku = model.SKU ?? "",
+            BatchNumber = model.BatchNumber ?? "",
             Category = model.Category ?? "",
             CurrentStock = model.CurrentStock,
             Price = model.Price,
@@ -697,7 +697,7 @@ public partial class ProductStock : ObservableObject
     private string? _name;
 
     [ObservableProperty]
-    private string? _sku;
+    private string? _batchNumber;
 
     [ObservableProperty]
     private string? _description;

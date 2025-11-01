@@ -111,7 +111,7 @@ public class ProductStockDocument : IDocument
             table.ColumnsDefinition(columns =>
             {
                 columns.ConstantColumn(30);
-                columns.RelativeColumn(70);
+                columns.RelativeColumn(50);
                 columns.ConstantColumn(70);
                 columns.RelativeColumn(50);
                 columns.ConstantColumn(50);
@@ -125,7 +125,7 @@ public class ProductStockDocument : IDocument
             {
                 header.Cell().Element(CellStyle).Text("ID").FontSize(10);
                 header.Cell().Element(CellStyle).Text("Product Name").FontSize(10);
-                header.Cell().Element(CellStyle).Text("SKU").FontSize(10);
+                header.Cell().Element(CellStyle).Text("Batch Number").FontSize(10);
                 header.Cell().Element(CellStyle).AlignLeft().Text("Category").FontSize(10);
                 header.Cell().Element(CellStyle).Text("Current Stock").FontSize(10);
                 header.Cell().Element(CellStyle).Text("Price").FontSize(10);
@@ -147,7 +147,7 @@ public class ProductStockDocument : IDocument
             {
                 table.Cell().Element(CellStyle).Text(item.ID.ToString()).FontSize(8).SemiBold();
                 table.Cell().Element(CellStyle).Text(item.ProductName).FontSize(8);
-                table.Cell().Element(CellStyle).Text(item.Sku).FontSize(8);
+                table.Cell().Element(CellStyle).Text(item.BatchNumber).FontSize(8);
                 table.Cell().Element(CellStyle).Text(item.Category).FontSize(8);
                 table.Cell().Element(CellStyle).Text(item.CurrentStock).FontSize(8);
                 table.Cell().Element(CellStyle).AlignLeft().Text($"₱{item.Price:N2}").FontSize(8);
