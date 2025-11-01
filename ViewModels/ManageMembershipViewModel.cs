@@ -120,7 +120,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 Equals(status, StringComparison.OrdinalIgnoreCase));
 
     public bool IsRenewButtonEnabled =>
-        !new[] { "Active" }
+        !new[] { "Active", "Near Expiry" }
             .Any(status => SelectedMember is not null && SelectedMember.Status
                 .Equals(status, StringComparison.OrdinalIgnoreCase));
 
@@ -461,12 +461,11 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         {
             SelectedStatusFilterItem = "All";
             SelectedSortFilterItem = "By ID";
-            CurrentFilteredData = OriginalMemberData.OrderBy(m => m.ID).ToList();
+            CurrentFilteredData = OriginalMemberData.OrderBy(m => int.TryParse(m.ID, out var id) ? id : 0).ToList();
             RefreshMemberItems(CurrentFilteredData);
             return;
         }
 
-        // First apply status filter to get the base filtered data
         List<ManageMembersItem> baseFilteredData;
         if (SelectedStatusFilterItem == "All")
         {
@@ -475,20 +474,20 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         else
         {
             baseFilteredData = OriginalMemberData
-                .Where(member => member.Status == SelectedStatusFilterItem)
+                .Where(member => member.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
-        // Then apply sorting to the filtered data
         List<ManageMembersItem> sortedList = SelectedSortFilterItem switch
         {
-            "By ID" => baseFilteredData.OrderBy(m => m.ID).ToList(),
+            "By ID" => baseFilteredData.OrderBy(m => int.TryParse(m.ID, out var id) ? id : 0).ToList(),
             "Names by A-Z" => baseFilteredData.OrderBy(m => m.Name).ToList(),
             "Names by Z-A" => baseFilteredData.OrderByDescending(m => m.Name).ToList(),
-            "By newest to oldest" => baseFilteredData.OrderByDescending(m => m.DateJoined).ToList(),
-            "By oldest to newest" => baseFilteredData.OrderBy(m => m.DateJoined).ToList(),
-            _ => baseFilteredData.ToList()
+            "By newest to oldest" => baseFilteredData.OrderByDescending(m => m.DateJoined ?? DateTime.MinValue).ToList(),
+            "By oldest to newest" => baseFilteredData.OrderBy(m => m.DateJoined ?? DateTime.MinValue).ToList(),
+            _ => baseFilteredData.OrderByDescending(m => m.DateJoined ?? DateTime.MinValue).ToList()
         };
+
         CurrentFilteredData = sortedList;
         RefreshMemberItems(sortedList);
     }
@@ -505,20 +504,19 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         else
         {
             filteredList = OriginalMemberData
-                .Where(member => member.Status == SelectedStatusFilterItem)
+                .Where(member => member.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
-        // Apply current sorting to the filtered data
         List<ManageMembersItem> sortedList = SelectedSortFilterItem switch
         {
-            "By ID" => filteredList.OrderBy(m => m.ID).ToList(),
+            "By ID" => filteredList.OrderBy(m => int.TryParse(m.ID, out var id) ? id : 0).ToList(),
             "Names by A-Z" => filteredList.OrderBy(m => m.Name).ToList(),
             "Names by Z-A" => filteredList.OrderByDescending(m => m.Name).ToList(),
-            "By newest to oldest" => filteredList.OrderByDescending(m => m.Validity).ToList(),
-            "By oldest to newest" => filteredList.OrderBy(m => m.Validity).ToList(),
+            "By newest to oldest" => filteredList.OrderByDescending(m => m.DateJoined ?? DateTime.MinValue).ToList(),
+            "By oldest to newest" => filteredList.OrderBy(m => m.DateJoined ?? DateTime.MinValue).ToList(),
             "Reset Data" => filteredList.ToList(),
-            _ => filteredList.ToList()
+            _ => filteredList.OrderByDescending(m => m.DateJoined ?? DateTime.MinValue).ToList() // Default to newest to oldest
         };
 
         CurrentFilteredData = sortedList;
