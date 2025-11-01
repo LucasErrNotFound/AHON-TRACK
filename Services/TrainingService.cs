@@ -648,14 +648,14 @@ WHERE TrainingID = @TrainingID";
             if (scheduleId.HasValue)
                 return scheduleId;
 
-            // Check for overlap
+            /* Check for overlap -- CONFLICT CHECKER
             if (await HasScheduleOverlapAsync(connection, transaction, coachId, date, start, end))
             {
                 ShowToast("Conflict Detected",
                     $"Coach already has a schedule overlapping this time slot ({start:hh\\:mm tt}–{end:hh\\:mm tt}).",
                     ToastType.Warning);
                 return null;
-            }
+            } */
 
             // Create new schedule
             return await CreateCoachScheduleAsync(connection, transaction, coachId, date, start, end);
@@ -699,7 +699,7 @@ WHERE TrainingID = @TrainingID";
 
             return null;
         }
-
+        /* -- Time Conflict checker --
         private async Task<bool> HasScheduleOverlapAsync(SqlConnection connection, SqlTransaction transaction,
             int coachId, DateTime date, DateTime start, DateTime end)
         {
@@ -719,7 +719,7 @@ WHERE TrainingID = @TrainingID";
 
             var result = await cmd.ExecuteScalarAsync();
             return result != null && result != DBNull.Value;
-        }
+        } */
 
         private async Task<int?> CreateCoachScheduleAsync(SqlConnection connection, SqlTransaction transaction,
             int coachId, DateTime date, DateTime start, DateTime end)
