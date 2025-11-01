@@ -402,12 +402,12 @@
 																FontSize="16"
 																FontWeight="SemiBold" />
 															<TextBlock
-																Text="{Binding SelectedMember.LastCheckInDisplay}"
+																Text="{CompiledBinding SelectedMember.LastCheckInDisplay}"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
 															<TextBlock
-																Text="{Binding SelectedMember.LastCheckInTimeDisplay}"
+																Text="{CompiledBinding SelectedMember.LastCheckInTimeDisplay}"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
@@ -416,14 +416,18 @@
 															<TextBlock
 																Text="Recent Purchase"
 																FontSize="16"
+																TextAlignment="Right"
 																FontWeight="SemiBold" />
 															<TextBlock
-																Text="{Binding SelectedMember.RecentPurchaseDisplay}"
+																Text="{CompiledBinding SelectedMember.RecentPurchaseDisplay}"
+																TextAlignment="Right"
+																TextWrapping="WrapWithOverflow"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
 															<TextBlock
-																Text="{Binding SelectedMember.RecentPurchaseTimeDisplay}"
+																Text="{CompiledBinding SelectedMember.RecentPurchaseTimeDisplay}"
+																TextAlignment="Right"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
@@ -435,12 +439,12 @@
 															FontSize="16"
 															FontWeight="SemiBold" />
 														<TextBlock
-															Text="{Binding SelectedMember.LastCheckOutDisplay}"
+															Text="{CompiledBinding SelectedMember.LastCheckOutDisplay}"
 															Classes="Muted"
 															FontSize="16"
 															FontWeight="Regular" />
 														<TextBlock
-															Text="{Binding SelectedMember.LastCheckOutTimeDisplay}"
+															Text="{CompiledBinding SelectedMember.LastCheckOutTimeDisplay}"
 															Classes="Muted"
 															FontSize="16"
 															FontWeight="Regular" />
@@ -474,7 +478,9 @@
 																FontSize="16"
 																FontWeight="SemiBold" />
 															<TextBlock
-																Text="{Binding SelectedMember.MembershipStartDisplay}"
+																Text="{CompiledBinding SelectedMember.MembershipStartDisplay}"
+																TextAlignment="Right"
+																TextWrapping="WrapWithOverflow"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
@@ -482,12 +488,15 @@
 														<StackPanel HorizontalAlignment="Right" Grid.Column="1">
 															<TextBlock
 																Text="Member Type"
+																TextAlignment="Right"
+																TextWrapping="WrapWithOverflow"
 																FontSize="16"
 																FontWeight="SemiBold" />
 															<TextBlock
 																Text="{CompiledBinding SelectedMember.AvailedPackages, FallbackValue='Regular'}"
+																TextAlignment="Right"
+																TextWrapping="WrapWithOverflow"
 																Width="100"
-																TextWrapping="Wrap"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
