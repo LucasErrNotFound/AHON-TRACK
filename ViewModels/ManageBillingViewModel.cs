@@ -62,6 +62,12 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private bool _isLoadingInvoices;
+    
+    [ObservableProperty]
+    private DateTime _selectedActivityDate = DateTime.Today;
+
+    [ObservableProperty]
+    private ObservableCollection<RecentActivity> _filteredRecentActivities = [];
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -129,6 +135,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         }
         LoadPackageOptionsAsync();
         UpdateInvoiceDataCounts();
+        FilterRecentActivitiesByDate();
         IsInitialized = true;
     }
 
@@ -198,6 +205,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                         : "avares://AHON_TRACK/Assets/MainWindowView/user.png"
                 });
             }
+            FilterRecentActivitiesByDate();
         }
         catch (Exception ex)
         {
@@ -272,6 +280,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         var sampleData = GetSampleSalesData();
         RecentActivity = new ObservableCollection<RecentActivity>(sampleData);
+        FilterRecentActivitiesByDate();
     }
 
     private void LoadInvoiceData()
@@ -611,7 +620,6 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         };
     }
 
-
     private void FilterInvoiceDataByPackageAndDate()
     {
         var filteredInvoiceData = OriginalInvoiceData
@@ -628,6 +636,26 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             InvoiceList.Add(invoice);
         }
         UpdateInvoiceDataCounts();
+    }
+    
+    private void FilterRecentActivitiesByDate()
+    {
+        if (RecentActivities == null || RecentActivities.Count == 0)
+        {
+            FilteredRecentActivities.Clear();
+            return;
+        }
+
+        var filtered = RecentActivities
+            .Where(activity => activity.PurchaseDate.HasValue && 
+                               activity.PurchaseDate.Value.Date == SelectedActivityDate.Date)
+            .ToList();
+
+        FilteredRecentActivities.Clear();
+        foreach (var activity in filtered)
+        {
+            FilteredRecentActivities.Add(activity);
+        }
     }
 
     private void UpdateInvoiceDataCounts()
@@ -669,6 +697,11 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         _ = LoadInvoicesFromDatabaseAsync();
     }
+    
+    partial void OnSelectedActivityDateChanged(DateTime value)
+    {
+        FilterRecentActivitiesByDate();
+    }
 
     protected override void DisposeManagedResources()
     {
@@ -692,6 +725,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         CurrentInvoiceData.Clear();
         PackageOptions.Clear();
         RecentActivities.Clear();
+        FilteredRecentActivities.Clear();
     }
 }
 

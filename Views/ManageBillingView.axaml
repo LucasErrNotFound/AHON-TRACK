@@ -72,7 +72,7 @@
 												HorizontalAlignment="Right"
 												Margin="0,-20"
 												shadui:ControlAssist.Label="Date Today"
-												SelectedDate="{x:Static system:DateTime.Today}"
+												SelectedDate="{Binding SelectedActivityDate}"
 												IsEnabled="False" />
 										</Grid>
 										<shadui:BreakpointViewPort>
@@ -93,7 +93,7 @@
 															</Interaction.Behaviors>
 															<ItemsControl
 																Margin="40,0,24,24"
-																ItemsSource="{CompiledBinding RecentActivity}">
+																ItemsSource="{CompiledBinding FilteredRecentActivities}">
 
 																<!-- Define the item container style -->
 																<ItemsControl.ItemsPanel>
@@ -187,7 +187,7 @@
 															</Interaction.Behaviors>
 															<ItemsControl
 																Margin="40,0,24,24"
-																ItemsSource="{CompiledBinding RecentActivity}">
+																ItemsSource="{CompiledBinding FilteredRecentActivities}">
 
 																<!-- Define the item container style -->
 																<ItemsControl.ItemsPanel>
