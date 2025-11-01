@@ -123,7 +123,6 @@ namespace AHON_TRACK.Services
               DeliverySchedule = @deliverySchedule,
               DeliveryPattern = @deliveryPattern,
               ContractTerms = @contractTerms,
-              ContractPattern = @contractPattern,
               UpdatedAt = GETDATE()
           WHERE SupplierID = @supplierId", conn);
 
@@ -137,12 +136,10 @@ namespace AHON_TRACK.Services
         {
             using var cmd = new SqlCommand(
                 @"INSERT INTO Suppliers (SupplierName, ContactPerson, Email, PhoneNumber, Products, Status, 
-                                  DeliverySchedule, DeliveryPattern, ContractTerms, ContractPattern, 
-                                  AddedByEmployeeID, IsDeleted) 
+                                  DeliverySchedule, DeliveryPattern, ContractTerms, AddedByEmployeeID, IsDeleted) 
           OUTPUT INSERTED.SupplierID
           VALUES (@supplierName, @contactPerson, @email, @phoneNumber, @products, @status, 
-                  @deliverySchedule, @deliveryPattern, @contractTerms, @contractPattern, 
-                  @employeeID, 0)", conn);
+                  @deliverySchedule, @deliveryPattern, @contractTerms, @employeeID, 0)", conn);
 
             cmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@status", supplier.Status ?? "Active");
@@ -160,8 +157,9 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@products", supplier.Products ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@deliverySchedule", supplier.DeliverySchedule ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@deliveryPattern", supplier.DeliveryPattern ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@contractTerms", supplier.ContractTerms ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@contractPattern", supplier.ContractPattern ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@contractTerms", supplier.ContractTerms.HasValue 
+                ? (object)supplier.ContractTerms.Value 
+                : DBNull.Value);
         }
 
         #endregion
@@ -183,7 +181,7 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Products, Status,
-                     DeliverySchedule, DeliveryPattern, ContractTerms, ContractPattern
+                     DeliverySchedule, DeliveryPattern, ContractTerms
               FROM Suppliers 
               WHERE IsDeleted = 0
               ORDER BY SupplierName", conn);
@@ -222,7 +220,7 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Products, Status,
-                     DeliverySchedule, DeliveryPattern, ContractTerms, ContractPattern
+                     DeliverySchedule, DeliveryPattern, ContractTerms
               FROM Suppliers 
               WHERE SupplierID = @supplierId AND IsDeleted = 0", conn);
 
@@ -291,8 +289,7 @@ namespace AHON_TRACK.Services
                 Status = reader.GetString(6),
                 DeliverySchedule = reader.IsDBNull(7) ? null : reader.GetString(7),
                 DeliveryPattern = reader.IsDBNull(8) ? null : reader.GetString(8),
-                ContractTerms = reader.IsDBNull(9) ? null : reader.GetString(9),
-                ContractPattern = reader.IsDBNull(10) ? null : reader.GetString(10),
+                ContractTerms = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
                 IsSelected = false
             };
         }
@@ -378,7 +375,6 @@ namespace AHON_TRACK.Services
               DeliverySchedule = @deliverySchedule,
               DeliveryPattern = @deliveryPattern,
               ContractTerms = @contractTerms,
-              ContractPattern = @contractPattern,
               UpdatedAt = GETDATE()
           WHERE SupplierID = @supplierId", conn);
 

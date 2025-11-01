@@ -214,7 +214,7 @@
                                             Width="Auto"
                                             MinWidth="130"
                                             Header="Contract Terms"
-                                            Binding="{CompiledBinding ContractTerms}" />
+                                            Binding="{CompiledBinding FormattedContractTerms}" />
 
                                         <!-- Status -->
                                         <DataGridTemplateColumn
@@ -473,7 +473,7 @@
                                             Width="Auto"
                                             MaxWidth="130"
                                             Header="Contract Terms"
-                                            Binding="{CompiledBinding ContractTerms}" />
+                                            Binding="{CompiledBinding FormattedContractTerms}" />
 
                                         <!-- Status -->
                                         <DataGridTemplateColumn

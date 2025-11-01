@@ -152,7 +152,9 @@ public class SupplierDocument : IDocument
                 table.Cell().Element(CellStyle).Text(item.PhoneNumber).FontSize(9);
                 table.Cell().Element(CellStyle).Text(item.Products).FontSize(9);
                 table.Cell().Element(CellStyle).Text(item.DeliverySchedule).FontSize(9);
-                table.Cell().Element(CellStyle).Text(item.ContractTerms).FontSize(9);
+                table.Cell().Element(CellStyle)
+                    .Text(item.ContractTerms.HasValue ? item.ContractTerms.Value.ToString("MM/dd/yy") : string.Empty)
+                    .FontSize(8);
                 table.Cell().Element(CellStyle).AlignLeft().Text(item.Status).FontSize(9);
                 
                 /* This might be the delivery schedule thingy

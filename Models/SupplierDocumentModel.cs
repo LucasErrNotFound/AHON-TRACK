@@ -23,6 +23,6 @@ public class SupplierItem
     public string? PhoneNumber { get; set; } = string.Empty;
     public string? Products { get; set; } = string.Empty;
     public string? DeliverySchedule { get; set; } = string.Empty;
-    public string? ContractTerms { get; set; } = string.Empty;
+    public DateTime? ContractTerms { get; set; }
     public string? Status { get; set; } = string.Empty;
 }

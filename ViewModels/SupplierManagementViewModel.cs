@@ -272,8 +272,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Status = _supplierDialogCardViewModel.Status ?? "Active",
                     DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
                     DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
-                    ContractTerms = _supplierDialogCardViewModel.ContractTerms,
-                    ContractPattern = _supplierDialogCardViewModel.ContractPattern
+                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
                 };
 
                 var result = await _supplierService.AddSupplierAsync(newSupplier);
@@ -318,8 +317,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Status = _supplierDialogCardViewModel.Status ?? "Active",
                     DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
                     DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
-                    ContractTerms = _supplierDialogCardViewModel.ContractTerms,
-                    ContractPattern = _supplierDialogCardViewModel.ContractPattern
+                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
                 };
 
                 var result = await _supplierService.UpdateSupplierAsync(updatedSupplier);
@@ -715,13 +713,15 @@ public partial class Supplier : ObservableObject
     private string? _deliverySchedule;
 
     [ObservableProperty]
-    private string? _contractTerms;
+    private DateTime? _contractTerms;
 
     [ObservableProperty]
     private string? _status;
 
     [ObservableProperty]
     private bool _isSelected;
+    
+    public string FormattedContractTerms => ContractTerms.HasValue ? $"{ContractTerms.Value:MM/dd/yyyy}" : string.Empty;
 
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch
     {

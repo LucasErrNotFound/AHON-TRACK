@@ -137,7 +137,7 @@
                             <Grid Grid.Row="3" ColumnDefinitions="* Auto">
                                 <StackPanel Grid.Column="0" HorizontalAlignment="Left">
                                     <ComboBox
-                                        shadui:ControlAssist.Label="Delivery Schedule"
+                                        shadui:ControlAssist.Label="Delivery Schedule (Optional)"
                                         PlaceholderText="Set Schedule"
                                         Width="250"
                                         ItemsSource="{CompiledBinding DeliveryScheduleItems}"
@@ -152,24 +152,12 @@
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>
-                            <Grid Grid.Row="4" ColumnDefinitions="* Auto">
-                                <StackPanel Grid.Column="0" HorizontalAlignment="Left">
-                                    <ComboBox
-                                        shadui:ControlAssist.Label="Contract Terms"
-                                        PlaceholderText="Set Contract"
-                                        Width="250"
-                                        ItemsSource="{CompiledBinding ContractTermsItems}"
-                                        SelectedItem="{CompiledBinding SelectedContractTerms}">
-                                    </ComboBox>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Contract Pattern" Classes="LabelField"/>
-                                    <StackPanel Orientation="Horizontal" Margin="10,10,0,0" Spacing="20">
-                                        <RadioButton Content="Day" GroupName="ContractPattern" Classes="FormRadio" IsChecked="{CompiledBinding IsContractTermsByDay}"/>
-                                        <RadioButton Content="Month" GroupName="ContractPattern" Classes="FormRadio" IsChecked="{CompiledBinding IsContractTermsByMonth}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Grid>
+                            <StackPanel Grid.Row="4">
+                                <CalendarDatePicker
+                                    shadui:ControlAssist.Label="Contract Terms (Optional)"
+                                    shadui:ControlAssist.ReadOnly="True"
+                                    SelectedDate="{CompiledBinding ContractTerms}"/>
+                            </StackPanel>
                             <StackPanel Grid.Row="5">
                                 <ComboBox
                                     shadui:ControlAssist.Label="Status"

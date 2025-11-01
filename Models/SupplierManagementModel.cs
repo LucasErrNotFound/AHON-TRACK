@@ -1,4 +1,6 @@
-﻿namespace AHON_TRACK.Models;
+﻿using System;
+
+namespace AHON_TRACK.Models;
 
 public class SupplierManagementModel
 {
@@ -11,7 +13,7 @@ public class SupplierManagementModel
     public string? Status { get; set; }
     public string? DeliverySchedule { get; set; }
     public string? DeliveryPattern { get; set; }
-    public string? ContractTerms { get; set; }
+    public DateTime? ContractTerms { get; set; }
     public string? ContractPattern { get; set; }
     public bool IsSelected { get; set; }
     public int AddedByEmployeeID { get; set; }
