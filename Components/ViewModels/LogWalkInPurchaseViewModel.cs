@@ -105,13 +105,16 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         try
         {
             System.Diagnostics.Debug.WriteLine("📡 Calling GetAvailablePackagesForWalkInAsync...");
-            var packages = await _walkInService.GetAvailablePackagesForWalkInAsync();
+
+            // Pass the selected walk-in type to filter packages
+            var packages = await _walkInService.GetAvailablePackagesForWalkInAsync(SelectedWalkInTypeItem);
             System.Diagnostics.Debug.WriteLine($"📦 Received {packages?.Count ?? 0} packages");
 
             if (packages == null || packages.Count == 0)
             {
                 System.Diagnostics.Debug.WriteLine("⚠️ No packages returned from database");
                 SpecializedPackageItems = new[] { "None" };
+                SelectedSpecializedPackageItem = "None"; // Reset selection
                 return;
             }
 
@@ -126,6 +129,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
             SpecializedPackageItems = packageNames.ToArray();
             System.Diagnostics.Debug.WriteLine($"✅ SpecializedPackageItems updated with {SpecializedPackageItems.Length} items");
+
+            // Reset selected package when packages change
+            SelectedSpecializedPackageItem = "None";
 
             // Force UI update
             OnPropertyChanged(nameof(SpecializedPackageItems));
@@ -244,6 +250,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             }
             OnPropertyChanged(nameof(SpecializedPackageQuantity));
             OnPropertyChanged(nameof(SessionQuantity));
+
+            _ = LoadAvailablePackagesAsync();
 
             _ = CheckFreeTrialEligibilityAsync();
         }

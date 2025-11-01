@@ -420,7 +420,7 @@ namespace AHON_TRACK.Services
             }
         }
 
-        public async Task<List<SellingModel>> GetAvailablePackagesForWalkInAsync()
+        public async Task<List<SellingModel>> GetAvailablePackagesForWalkInAsync(string? walkInType = null)
         {
             var packages = new List<SellingModel>();
 
@@ -437,14 +437,44 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = @"
-                    SELECT PackageID, PackageName, Description, Price, Duration, Features, 
-                           Discount, DiscountType, DiscountFor, DiscountedPrice, ValidFrom, ValidTo
-                    FROM Packages
-                    WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
-                    AND IsDeleted = 0
-                    AND (Duration LIKE '%One-time Only%' AND Duration LIKE '%one-time only%')
-                    ORDER BY Price ASC";
+                string query;
+
+                if (walkInType == "Regular")
+                {
+                    // For Regular: Only show "One-time Only" packages
+                    query = @"
+                SELECT PackageID, PackageName, Description, Price, Duration, Features, 
+                       Discount, DiscountType, DiscountFor, DiscountedPrice, ValidFrom, ValidTo
+                FROM Packages
+                WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
+                AND IsDeleted = 0
+                AND Duration LIKE '%One-time Only%'
+                ORDER BY Price ASC";
+                }
+                else if (walkInType == "Free Trial")
+                {
+                    // For Free Trial: Show all packages except those with "Month"
+                    query = @"
+                SELECT PackageID, PackageName, Description, Price, Duration, Features, 
+                       Discount, DiscountType, DiscountFor, DiscountedPrice, ValidFrom, ValidTo
+                FROM Packages
+                WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
+                AND IsDeleted = 0
+                AND Duration NOT LIKE '%Month%'
+                ORDER BY Price ASC";
+                }
+                else
+                {
+                    // Default: Show all non-monthly packages
+                    query = @"
+                SELECT PackageID, PackageName, Description, Price, Duration, Features, 
+                       Discount, DiscountType, DiscountFor, DiscountedPrice, ValidFrom, ValidTo
+                FROM Packages
+                WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
+                AND IsDeleted = 0
+                AND Duration NOT LIKE '%Month%'
+                ORDER BY Price ASC";
+                }
 
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
