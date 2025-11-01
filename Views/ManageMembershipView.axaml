@@ -475,11 +475,12 @@
 														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
 															<TextBlock
 																Text="Membership Start"
+																TextAlignment="Left"
 																FontSize="16"
 																FontWeight="SemiBold" />
 															<TextBlock
 																Text="{CompiledBinding SelectedMember.MembershipStartDisplay}"
-																TextAlignment="Right"
+																TextAlignment="Left"
 																TextWrapping="WrapWithOverflow"
 																Classes="Muted"
 																FontSize="16"
@@ -488,7 +489,7 @@
 														<StackPanel HorizontalAlignment="Right" Grid.Column="1">
 															<TextBlock
 																Text="Member Type"
-																TextAlignment="Right"
+																TextAlignment="Left"
 																TextWrapping="WrapWithOverflow"
 																FontSize="16"
 																FontWeight="SemiBold" />
@@ -947,14 +948,17 @@
 															<TextBlock
 																Text="Check-in"
 																FontSize="16"
+																TextAlignment="Left"
 																FontWeight="SemiBold" />
 															<TextBlock
-																Text="{Binding SelectedMember.LastCheckInDisplay}"
+																Text="{CompiledBinding SelectedMember.LastCheckInDisplay}"
+																TextAlignment="Left"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
 															<TextBlock
-																Text="{Binding SelectedMember.LastCheckInTimeDisplay}"
+																Text="{CompiledBinding SelectedMember.LastCheckInTimeDisplay}"
+																TextAlignment="Left"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
@@ -982,15 +986,18 @@
 													<StackPanel Grid.Row="1" HorizontalAlignment="Left" Margin="20,0">
 														<TextBlock
 															Text="Check-out"
+															TextAlignment="Left"
 															FontSize="16"
 															FontWeight="SemiBold" />
 														<TextBlock
-															Text="{Binding SelectedMember.LastCheckOutDisplay}"
+															Text="{CompiledBinding SelectedMember.LastCheckOutDisplay}"
+															TextAlignment="Left"
 															Classes="Muted"
 															FontSize="16"
 															FontWeight="Regular" />
 														<TextBlock
-															Text="{Binding SelectedMember.LastCheckOutTimeDisplay}"
+															Text="{CompiledBinding SelectedMember.LastCheckOutTimeDisplay}"
+															TextAlignment="Left"
 															Classes="Muted"
 															FontSize="16"
 															FontWeight="Regular" />
@@ -1021,10 +1028,12 @@
 														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
 															<TextBlock
 																Text="Membership Start"
+																TextAlignment="Left"
 																FontSize="16"
 																FontWeight="SemiBold" />
 															<TextBlock
-																Text="{Binding SelectedMember.MembershipStartDisplay}"
+																Text="{CompiledBinding SelectedMember.MembershipStartDisplay}"
+																TextAlignment="Left"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />
@@ -1049,10 +1058,12 @@
 														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
 															<TextBlock
 																Text="Membership End"
+																TextAlignment="Left"
 																FontSize="16"
 																FontWeight="SemiBold" />
 															<TextBlock
 																Text="{CompiledBinding SelectedMember.Validity, Converter={StaticResource DateToStringConverter}, FallbackValue='July 13, 2025'}"
+																TextAlignment="Left"
 																Classes="Muted"
 																FontSize="16"
 																FontWeight="Regular" />

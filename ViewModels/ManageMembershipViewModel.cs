@@ -29,7 +29,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     ];
 
     [ObservableProperty]
-    private string _selectedSortFilterItem = "By ID";
+    private string _selectedSortFilterItem = "By newest to oldest";
 
     [ObservableProperty]
     private string[] _statusFilterItems = ["All", "Active", "Expired"];
@@ -263,9 +263,10 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
                 ApplyMemberStatusFilter();
                 ApplyMemberSort();
+                await _memberService.ShowMemberExpirationAlertsAsync();
                 return; // Successfully loaded from database
             }
-            else if (!result.Success)
+            if (!result.Success)
             {
                 Debug.WriteLine($"[ManageMembership] Failed to load members: {result.Message}");
                 _toastManager?.CreateToast("Database Error")
@@ -482,8 +483,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             "By ID" => baseFilteredData.OrderBy(m => m.ID).ToList(),
             "Names by A-Z" => baseFilteredData.OrderBy(m => m.Name).ToList(),
             "Names by Z-A" => baseFilteredData.OrderByDescending(m => m.Name).ToList(),
-            "By newest to oldest" => baseFilteredData.OrderByDescending(m => m.Validity).ToList(),
-            "By oldest to newest" => baseFilteredData.OrderBy(m => m.Validity).ToList(),
+            "By newest to oldest" => baseFilteredData.OrderByDescending(m => m.DateJoined).ToList(),
+            "By oldest to newest" => baseFilteredData.OrderBy(m => m.DateJoined).ToList(),
             _ => baseFilteredData.ToList()
         };
         CurrentFilteredData = sortedList;
