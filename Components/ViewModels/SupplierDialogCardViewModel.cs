@@ -31,6 +31,12 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     private string? _selectedDeliverySchedule;
 
     [ObservableProperty]
+    private DateTime _minimumContractDate = DateTime.Today.AddDays(1);
+    
+    [ObservableProperty]
+    private bool _isContractTermsEnabled = true;
+    
+    [ObservableProperty]
     private bool _isEditMode = false;
 
     public string? DeliveryPattern => SchedulePattern;
@@ -43,6 +49,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     private string? _schedulePattern = "Month";
     private DateTime? _contractTerms;
     private string? _status = string.Empty;
+    private bool _isUpdatingContractTerms = false;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -72,9 +79,11 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
         ClearAllFields();
         DialogTitle = "Add Supplier Contact";
         DialogDescription = "Register new supplier with their contact to maintain reliable supply management";
+        StatusFilterItems = ["Active", "Inactive", "Suspended"];
         Status = "Active";
         IsStatusEnabled = false;
         IsEditMode = false;
+        IsContractTermsEnabled = true;
     }
 
     public void InitializeForEditMode(Supplier? supplier)
@@ -90,8 +99,14 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
         Email = supplier?.Email;
         PhoneNumber = supplier?.PhoneNumber;
         Products = supplier?.Products;
-        Status = supplier?.Status;
         ContractTerms = supplier?.ContractTerms;
+        
+        StatusFilterItems = ["Active", "Suspended"];
+        Status = string.Equals(supplier?.Status, "Inactive", StringComparison.OrdinalIgnoreCase) 
+            ? "Active" 
+            : supplier?.Status;
+        
+        IsContractTermsEnabled = !string.Equals(supplier?.Status, "Suspended", StringComparison.OrdinalIgnoreCase);
 
         if (!string.IsNullOrWhiteSpace(supplier?.DeliverySchedule))
         {
@@ -116,6 +131,16 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
         ValidateAllProperties();
 
         if (HasErrors) return;
+        
+        if (ContractTerms.HasValue)
+        {
+            var today = DateTime.Today;
+            if (ContractTerms.Value.Date <= today && Status?.Equals("Active", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                Status = "Inactive";
+            }
+        }
+        
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
 
@@ -128,6 +153,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
         Products = string.Empty;
         Status = string.Empty;
         SelectedDeliverySchedule = string.Empty;
+        ContractTerms = null;
 
         ClearAllErrors();
     }
@@ -200,7 +226,36 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     public DateTime? ContractTerms
     {
         get => _contractTerms;
-        set => SetProperty(ref _contractTerms, value, true);
+        set
+        {
+            if (_isUpdatingContractTerms) return;
+        
+            var oldValue = _contractTerms;
+        
+            if (oldValue == value) return;
+        
+            SetProperty(ref _contractTerms, value);
+        
+            if (IsEditMode && value.HasValue && oldValue != value)
+            {
+                var tomorrow = DateTime.Today.AddDays(1);
+            
+                if (string.Equals(_status, "Inactive", StringComparison.OrdinalIgnoreCase) && 
+                    value.Value.Date >= tomorrow)
+                {
+                    _isUpdatingContractTerms = true;
+                    try
+                    {
+                        Status = "Active";
+                        _contractTerms = null;
+                    }
+                    finally
+                    {
+                        _isUpdatingContractTerms = false;
+                    }
+                }
+            }
+        }
     }
 
     public bool IsScheduleDeliveryByDay
@@ -219,7 +274,11 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     public string? Status
     {
         get => _status;
-        set => SetProperty(ref _status, value, true);
+        set
+        {
+            SetProperty(ref _status, value, true);
+            IsContractTermsEnabled = !string.Equals(value, "Suspended", StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     public string? DeliverySchedule => SelectedDeliverySchedule;

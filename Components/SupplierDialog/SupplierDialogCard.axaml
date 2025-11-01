@@ -154,8 +154,10 @@
                             </Grid>
                             <StackPanel Grid.Row="4">
                                 <CalendarDatePicker
-                                    shadui:ControlAssist.Label="Contract Terms (Optional)"
+                                    shadui:ControlAssist.Label="Contract Terms Until (Optional)"
                                     shadui:ControlAssist.ReadOnly="True"
+                                    IsEnabled="{CompiledBinding IsContractTermsEnabled}"
+                                    DisplayDateStart="{CompiledBinding MinimumContractDate}"
                                     SelectedDate="{CompiledBinding ContractTerms}"/>
                             </StackPanel>
                             <StackPanel Grid.Row="5">

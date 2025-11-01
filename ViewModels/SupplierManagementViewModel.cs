@@ -147,7 +147,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 }).ToList();
 
                 OriginalSupplierData = suppliers;
-                OriginalSupplierData = suppliers;
+                
+                await CheckAndUpdateSupplierStatusesAsync();
 
                 // Let ApplySupplierFilter populate SupplierItems according to the current SelectedStatusFilterItem
                 ApplySupplierFilter();
@@ -306,6 +307,22 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
+                var newContractTerms = _supplierDialogCardViewModel.ContractTerms;
+                var currentStatus = _supplierDialogCardViewModel.Status ?? "Active";
+            
+                if (newContractTerms.HasValue)
+                {
+                    var today = DateTime.Today;
+                    if (newContractTerms.Value.Date <= today && currentStatus.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentStatus = "Inactive";
+                    }
+                    else if (newContractTerms.Value.Date > today && currentStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentStatus = "Active";
+                    }
+                }
+
                 var updatedSupplier = new SupplierManagementModel
                 {
                     SupplierID = supplier.ID ?? 0,
@@ -314,10 +331,10 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Email = _supplierDialogCardViewModel.Email,
                     PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
                     Products = _supplierDialogCardViewModel.Products,
-                    Status = _supplierDialogCardViewModel.Status ?? "Active",
+                    Status = currentStatus,
                     DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
                     DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
-                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
+                    ContractTerms = newContractTerms
                 };
 
                 var result = await _supplierService.UpdateSupplierAsync(updatedSupplier);
@@ -641,6 +658,53 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 .DismissOnClick()
                 .WithDelay(6)
                 .ShowSuccess();
+        }
+    }
+    
+    private async Task CheckAndUpdateSupplierStatusesAsync()
+    {
+        var today = DateTime.Today;
+        var suppliersToUpdate = new List<Supplier>();
+
+        foreach (var supplier in OriginalSupplierData)
+        {
+            if (supplier.ContractTerms.HasValue && supplier.Status != null)
+            {
+                if (supplier.ContractTerms.Value.Date <= today && 
+                    supplier.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                {
+                    suppliersToUpdate.Add(supplier);
+                }
+                else if (supplier.ContractTerms.Value.Date > today && 
+                         supplier.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
+                {
+                    suppliersToUpdate.Add(supplier);
+                }
+            }
+        }
+
+        foreach (var supplier in suppliersToUpdate)
+        {
+            if (supplier.ID.HasValue)
+            {
+                var newStatus = supplier.ContractTerms!.Value.Date <= today ? "Inactive" : "Active";
+            
+                var updatedSupplier = new SupplierManagementModel
+                {
+                    SupplierID = supplier.ID.Value,
+                    SupplierName = supplier.Name,
+                    ContactPerson = supplier.ContactPerson,
+                    Email = supplier.Email,
+                    PhoneNumber = supplier.PhoneNumber,
+                    Products = supplier.Products,
+                    Status = newStatus,
+                    DeliverySchedule = supplier.DeliverySchedule,
+                    ContractTerms = supplier.ContractTerms
+                };
+
+                await _supplierService.UpdateSupplierAsync(updatedSupplier);
+                supplier.Status = newStatus;
+            }
         }
     }
 
