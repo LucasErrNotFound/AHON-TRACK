@@ -112,8 +112,8 @@ public class SupplierDocument : IDocument
             {
                 columns.ConstantColumn(30);
                 columns.RelativeColumn(55);
-                columns.ConstantColumn(75);
-                columns.RelativeColumn(70);
+                columns.ConstantColumn(60);
+                columns.RelativeColumn(80);
                 columns.RelativeColumn(45);
                 columns.RelativeColumn(50);
                 columns.RelativeColumn(40);
