@@ -31,7 +31,7 @@ namespace AHON_TRACK.Services
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 // Total Revenue for current period
                 string revenueQuery = @"
@@ -44,7 +44,7 @@ namespace AHON_TRACK.Services
                 {
                     cmd.Parameters.AddWithValue("@From", fromDate);
                     cmd.Parameters.AddWithValue("@To", toDate);
-                    summary.TotalRevenue = Convert.ToDouble(await cmd.ExecuteScalarAsync());
+                    summary.TotalRevenue = Convert.ToDouble(await cmd.ExecuteScalarAsync().ConfigureAwait(false));
                 }
 
                 // Member Subscriptions (new members in period)
@@ -58,7 +58,7 @@ namespace AHON_TRACK.Services
                 {
                     cmd.Parameters.AddWithValue("@From", fromDate);
                     cmd.Parameters.AddWithValue("@To", toDate);
-                    summary.MemberSubscriptions = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                    summary.MemberSubscriptions = Convert.ToInt32(await cmd.ExecuteScalarAsync().ConfigureAwait(false));
                 }
 
                 // Sales Count
@@ -72,7 +72,7 @@ namespace AHON_TRACK.Services
                 {
                     cmd.Parameters.AddWithValue("@From", fromDate);
                     cmd.Parameters.AddWithValue("@To", toDate);
-                    summary.SalesCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                    summary.SalesCount = Convert.ToInt32(await cmd.ExecuteScalarAsync().ConfigureAwait(false));
                 }
 
                 // Active Now - Count currently checked in (CheckIn NOT NULL and CheckOut IS NULL)
@@ -92,7 +92,7 @@ namespace AHON_TRACK.Services
 
                 using (var cmd = new SqlCommand(activeQuery, conn))
                 {
-                    summary.ActiveNow = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                    summary.ActiveNow = Convert.ToInt32(await cmd.ExecuteScalarAsync().ConfigureAwait(false));
                 }
             }
             catch (Exception ex)
@@ -117,8 +117,8 @@ namespace AHON_TRACK.Services
                 var previousFrom = currentFrom.AddDays(-duration - 1);
                 var previousTo = currentFrom.AddDays(-1);
 
-                var currentSummary = await GetDashboardSummaryAsync(currentFrom, currentTo);
-                var previousSummary = await GetDashboardSummaryAsync(previousFrom, previousTo);
+                var currentSummary = await GetDashboardSummaryAsync(currentFrom, currentTo).ConfigureAwait(false);
+                var previousSummary = await GetDashboardSummaryAsync(previousFrom, previousTo).ConfigureAwait(false);
 
                 // Calculate growth percentages
                 growth.RevenueGrowth = CalculateGrowthPercentage(
@@ -160,7 +160,7 @@ namespace AHON_TRACK.Services
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 // Current active - Currently checked in (CheckOut IS NULL)
                 string currentQuery = @"
@@ -180,7 +180,7 @@ namespace AHON_TRACK.Services
                 int currentActive;
                 using (var cmd = new SqlCommand(currentQuery, conn))
                 {
-                    currentActive = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                    currentActive = Convert.ToInt32(await cmd.ExecuteScalarAsync().ConfigureAwait(false));
                 }
 
                 // Active count from 1 hour ago
@@ -202,7 +202,7 @@ namespace AHON_TRACK.Services
                 int oneHourAgoActive;
                 using (var cmd = new SqlCommand(oneHourAgoQuery, conn))
                 {
-                    oneHourAgoActive = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                    oneHourAgoActive = Convert.ToInt32(await cmd.ExecuteScalarAsync().ConfigureAwait(false));
                 }
 
                 // Calculate hourly growth percentage
@@ -248,7 +248,7 @@ namespace AHON_TRACK.Services
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
             SELECT TOP (@TopN)
@@ -280,9 +280,9 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@TopN", topN);
 
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
 
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     Bitmap avatar;
                     string customerType = reader["CustomerType"]?.ToString() ?? "Unknown";
@@ -330,7 +330,7 @@ namespace AHON_TRACK.Services
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 // Get current month's total sales
                 string query = @"
@@ -342,9 +342,9 @@ namespace AHON_TRACK.Services
               AND YEAR(SaleDate) = YEAR(GETDATE());";
 
                 using var cmd = new SqlCommand(query, conn);
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
 
-                if (await reader.ReadAsync())
+                if (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     int count = Convert.ToInt32(reader["OrderCount"]);
                     decimal total = Convert.ToDecimal(reader["TotalAmount"]);
@@ -367,7 +367,7 @@ namespace AHON_TRACK.Services
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
             SELECT DISTINCT YEAR(SaleDate) AS Year 
@@ -376,9 +376,9 @@ namespace AHON_TRACK.Services
             ORDER BY Year DESC;";
 
                 using var cmd = new SqlCommand(query, conn);
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
 
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     years.Add(Convert.ToInt32(reader["Year"]));
                 }
@@ -406,7 +406,7 @@ namespace AHON_TRACK.Services
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
             SELECT 
@@ -420,8 +420,8 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Year", year);
 
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     int month = Convert.ToInt32(reader["Month"]); // 1-12
                     int total = reader["TotalSales"] == DBNull.Value
@@ -454,7 +454,7 @@ namespace AHON_TRACK.Services
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
 SELECT TOP (@TopN)
@@ -475,9 +475,9 @@ ORDER BY t.ScheduledDate ASC, t.ScheduledTimeStart ASC;";
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@TopN", topN);
 
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
 
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     // Default avatar
                     string avatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
@@ -511,7 +511,7 @@ ORDER BY t.ScheduledDate ASC, t.ScheduledTimeStart ASC;";
             {
                 // Get the actual count of upcoming sessions
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string countQuery = @"
 SELECT COUNT(*) 
@@ -520,21 +520,15 @@ WHERE ScheduledDate >= CAST(GETDATE() AS DATE)
   AND (Attendance = 'Pending' OR Attendance IS NULL);";
 
                 using var cmd = new SqlCommand(countQuery, conn);
-                var result = await cmd.ExecuteScalarAsync();
+                var result = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
                 int count = Convert.ToInt32(result);
 
-                if (count == 0)
+                return count switch
                 {
-                    return "You have 0 upcoming training schedules this week";
-                }
-                else if (count == 1)
-                {
-                    return "You have 1 upcoming training schedule";
-                }
-                else
-                {
-                    return $"You have {count} upcoming training schedules";
-                }
+                    0 => "You have 0 upcoming training schedules this week",
+                    1 => "You have 1 upcoming training schedule",
+                    _ => $"You have {count} upcoming training schedules"
+                };
             }
             catch (Exception ex)
             {
@@ -552,18 +546,12 @@ WHERE ScheduledDate >= CAST(GETDATE() AS DATE)
             {
                 int count = sessions?.Count() ?? 0;
 
-                if (count == 0)
+                return count switch
                 {
-                    return "You have 0 upcoming training schedules this week";
-                }
-                else if (count == 1)
-                {
-                    return "You have 1 upcoming training schedule";
-                }
-                else
-                {
-                    return $"You have {count} upcoming training schedules";
-                }
+                    0 => "You have 0 upcoming training schedules this week",
+                    1 => "You have 1 upcoming training schedule",
+                    _ => $"You have {count} upcoming training schedules"
+                };
             }
             catch
             {
@@ -582,7 +570,7 @@ WHERE ScheduledDate >= CAST(GETDATE() AS DATE)
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
 SELECT TOP (@TopN)
@@ -598,9 +586,9 @@ ORDER BY sl.LogDateTime DESC;";
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@TopN", topN);
 
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
 
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     DateTime logDateTime = (DateTime)reader["LogDateTime"];
                     string formattedDate = logDateTime.ToString("MM/dd/yyyy hh:mm tt");
@@ -647,7 +635,7 @@ ORDER BY sl.LogDateTime DESC;";
         {
             try
             {
-                var logs = await GetRecentLogsAsync(topN);
+                var logs = await GetRecentLogsAsync(topN).ConfigureAwait(false);
                 return $"You have {logs.Count()} recent action logs today";
             }
             catch (Exception ex)
@@ -682,7 +670,7 @@ ORDER BY sl.LogDateTime DESC;";
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 var queryBuilder = new System.Text.StringBuilder(@"
             SELECT ");
@@ -721,9 +709,9 @@ ORDER BY sl.LogDateTime DESC;";
                 if (!string.IsNullOrEmpty(position) && position != "All")
                     cmd.Parameters.AddWithValue("@Position", position);
 
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
 
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     Bitmap? profilePicture = null;
 
@@ -776,7 +764,7 @@ ORDER BY sl.LogDateTime DESC;";
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
             SELECT DISTINCT CAST(LogDateTime AS DATE) AS LogDate
@@ -785,9 +773,9 @@ ORDER BY sl.LogDateTime DESC;";
             ORDER BY LogDate DESC;";
 
                 using var cmd = new SqlCommand(query, conn);
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
 
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     dates.Add((DateTime)reader["LogDate"]);
                 }
@@ -815,7 +803,7 @@ ORDER BY sl.LogDateTime DESC;";
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
             SELECT COUNT(*) 
@@ -825,7 +813,7 @@ ORDER BY sl.LogDateTime DESC;";
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Date", date.Date);
 
-                var result = await cmd.ExecuteScalarAsync();
+                var result = await cmd.ExecuteScalarAsync().ConfigureAwait(false);
                 return Convert.ToInt32(result);
             }
             catch (Exception ex)
@@ -843,7 +831,7 @@ ORDER BY sl.LogDateTime DESC;";
             try
             {
                 using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
+                await conn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
             SELECT COUNT(*) AS TodayCount
@@ -851,9 +839,9 @@ ORDER BY sl.LogDateTime DESC;";
             WHERE CAST(LogDateTime AS DATE) = CAST(GETDATE() AS DATE);";
 
                 using var cmd = new SqlCommand(query, conn);
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
 
-                if (await reader.ReadAsync())
+                if (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     int count = Convert.ToInt32(reader["TodayCount"]);
                     return $"You have {count} audit log{(count != 1 ? "s" : "")} today";

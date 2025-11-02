@@ -315,36 +315,35 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     {
         try
         {
+            // Synchronous initialization that must happen first
             InitializeAxes();
 
+            // Phase 1: Load available years (required for chart)
             await InitializeAvailableYears();
-            await InitializeChart();
-            await InitializeSalesData();
-            await InitializeTrainingSessionsData();
-            await RefreshRecentLogs();
-            await LoadDashboardSummary();
 
-            DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
-            {
-                await RefreshRecentLogs();
-            };
-            DashboardEventService.Instance.ChartDataUpdated += async (s, e) =>
-            {
-                await UpdateChartDataFromTable(); // Direct chart refresh
-            };
-            DashboardEventService.Instance.SalesUpdated += async (s, e) =>
-            {
-                await LoadSalesFromDatabaseAsync();
-                await LoadDashboardSummary();
+            // Phase 2: Parallel execution of independent data loads
+            var chartTask = InitializeChart();
+            var salesTask = InitializeSalesData();
+            var sessionsTask = InitializeTrainingSessionsData();
+            var logsTask = RefreshRecentLogs();
+            var summaryTask = LoadDashboardSummary();
 
-            };
-            DashboardEventService.Instance.CheckinAdded += async (s, e) => await LoadDashboardSummary();
-            DashboardEventService.Instance.CheckoutAdded += async (s, e) => await LoadDashboardSummary();
-            DashboardEventService.Instance.TrainingSessionsUpdated += async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
+            // Wait for all tasks to complete
+            await Task.WhenAll(
+                chartTask,
+                salesTask,
+                sessionsTask,
+                logsTask,
+                summaryTask
+            ).ConfigureAwait(false);
+
+            // Event subscriptions (must happen after all data is loaded)
+            SubscribeToEvents();
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+            _toastManager?.CreateToast($"Failed to load dashboard: {ex.Message}");
+            Console.WriteLine($"Dashboard initialization error: {ex.Message}\n{ex.StackTrace}");
         }
     }
 
@@ -370,17 +369,44 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     private async Task InitializeSalesData()
     {
-        await LoadSalesFromDatabaseAsync();
+        try
+        {
+            await LoadSalesFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading sales data: {ex.Message}");
+            // Initialize with empty data to prevent null reference issues
+            RecentSales ??= new ObservableCollection<SalesItem>();
+        }
     }
 
     private async Task InitializeTrainingSessionsData()
     {
-        await LoadTrainingSessionsFromDatabaseAsync();
+        try
+        {
+            await LoadTrainingSessionsFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading training sessions: {ex.Message}");
+            // Initialize with empty data to prevent null reference issues
+            UpcomingTrainingSessions ??= new ObservableCollection<TrainingSession>();
+        }
     }
 
     public async Task RefreshRecentLogs()
     {
-        await LoadRecentLogsFromDatabaseAsync();
+        try
+        {
+            await LoadRecentLogsFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading recent logs: {ex.Message}");
+            // Initialize with empty data to prevent null reference issues
+            RecentLogs ??= new ObservableCollection<RecentLog>();
+        }
     }
 
     private void InitializeAxes()
@@ -418,7 +444,16 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     private async Task InitializeChart()
     {
-        await UpdateChartDataFromTable();
+        try
+        {
+            await UpdateChartDataFromTable();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing chart: {ex.Message}");
+            // Initialize with empty series to prevent UI issues
+            Series ??= Array.Empty<ISeries>();
+        }
     }
 
     #endregion
@@ -670,10 +705,53 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     #endregion
+    
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+    
+        _recentLogsHandler = async (s, e) => await RefreshRecentLogs();
+        _chartDataHandler = async (s, e) => await UpdateChartDataFromTable();
+        _salesHandler = async (s, e) =>
+        {
+            await LoadSalesFromDatabaseAsync();
+            await LoadDashboardSummary();
+        };
+        _checkinHandler = async (s, e) => await LoadDashboardSummary();
+        _checkoutHandler = async (s, e) => await LoadDashboardSummary();
+        _trainingHandler = async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
+    
+        eventService.RecentLogsUpdated += _recentLogsHandler;
+        eventService.ChartDataUpdated += _chartDataHandler;
+        eventService.SalesUpdated += _salesHandler;
+        eventService.CheckinAdded += _checkinHandler;
+        eventService.CheckoutAdded += _checkoutHandler;
+        eventService.TrainingSessionsUpdated += _trainingHandler;
+    }
+    
+    private void UnsubscribeFromEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+    
+        if (_recentLogsHandler != null)
+            eventService.RecentLogsUpdated -= _recentLogsHandler;
+        if (_chartDataHandler != null)
+            eventService.ChartDataUpdated -= _chartDataHandler;
+        if (_salesHandler != null)
+            eventService.SalesUpdated -= _salesHandler;
+        if (_checkinHandler != null)
+            eventService.CheckinAdded -= _checkinHandler;
+        if (_checkoutHandler != null)
+            eventService.CheckoutAdded -= _checkoutHandler;
+        if (_trainingHandler != null)
+            eventService.TrainingSessionsUpdated -= _trainingHandler;
+    }
 
     protected override void DisposeManagedResources()
     {
         // CRITICAL: Unsubscribe from events FIRST
+        UnsubscribeFromEvents();
+        
         var eventService = DashboardEventService.Instance;
         eventService.RecentLogsUpdated -= async (s, e) => await RefreshRecentLogs();
         eventService.ChartDataUpdated -= async (s, e) => await UpdateChartDataFromTable();
@@ -712,4 +790,11 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         base.DisposeManagedResources();
         ForceGarbageCollection();
     }
+    
+    private EventHandler? _recentLogsHandler;
+    private EventHandler? _chartDataHandler;
+    private EventHandler? _salesHandler;
+    private EventHandler? _checkinHandler;
+    private EventHandler? _checkoutHandler;
+    private EventHandler? _trainingHandler;
 }
