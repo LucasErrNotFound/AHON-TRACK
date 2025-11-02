@@ -92,6 +92,15 @@ namespace AHON_TRACK.Services
                         return (false, "Member already exists.", null);
                     }
 
+                    // ✅ CHECK AND MIGRATE WALK-IN CUSTOMER BEFORE CREATING NEW MEMBER
+                    var migratedWalkInId = await CheckAndMigrateWalkInCustomerEnhancedAsync(conn, transaction, member);
+                    if (migratedWalkInId.HasValue)
+                    {
+                        Debug.WriteLine($"[AddMemberAsync] Successfully migrated walk-in customer {migratedWalkInId.Value} to member");
+                        // Optional: You could also notify the dashboard about the migration
+                        DashboardEventService.Instance.NotifyPopulationDataChanged();
+                    }
+
                     int memberId = await InsertNewMemberAsync(conn, transaction, member);
 
                     if (member.PackageID.HasValue && member.PackageID.Value > 0)
@@ -103,6 +112,16 @@ namespace AHON_TRACK.Services
                     transaction.Commit();
 
                     DashboardEventService.Instance.NotifyMemberAdded();
+
+                    // Show appropriate success message
+                    if (migratedWalkInId.HasValue)
+                    {
+                        _toastManager?.CreateToast("Member Added & Migrated")
+                            .WithContent($"{member.FirstName} {member.LastName} registered as member (walk-in record archived).")
+                            .DismissOnClick()
+                            .ShowSuccess();
+                    }
+
                     return (true, "Member added successfully.", memberId);
                 }
                 catch
@@ -406,12 +425,12 @@ namespace AHON_TRACK.Services
                             LEFT JOIN Packages p ON m.PackageID = p.PackageID
                             WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
                             ORDER BY Name";
-                
+
                 var members = new List<ManageMemberModel>();
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@ExpirationThreshold", EXPIRATION_THRESHOLD_DAYS);
-                
+
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
@@ -1216,7 +1235,7 @@ namespace AHON_TRACK.Services
         }
 
         #endregion
-        
+
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
@@ -1225,7 +1244,7 @@ namespace AHON_TRACK.Services
             {
                 // Clear callback reference
                 _notificationCallback = null;
-            
+
                 // Dispose ToastManager if it's disposable
                 _toastManager.DismissAll();
             }
@@ -1361,6 +1380,173 @@ namespace AHON_TRACK.Services
 
             return !isSessionBased;
         }
+
+        #region WALK-IN TO MEMBER MIGRATION
+
+        /// <summary>
+        /// Checks if a walk-in customer exists with matching details and soft deletes them
+        /// when converting to a member
+        /// </summary>
+        private async Task<int?> CheckAndMigrateWalkInCustomerAsync(
+            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
+        {
+            try
+            {
+                // First, check if a matching walk-in customer exists
+                const string checkQuery = @"
+            SELECT CustomerID 
+            FROM WalkInCustomers 
+            WHERE FirstName = @FirstName 
+                AND LastName = @LastName 
+                AND Age = @Age
+                AND (IsDeleted = 0 OR IsDeleted IS NULL)";
+
+                using var checkCmd = new SqlCommand(checkQuery, conn, transaction);
+                checkCmd.Parameters.AddWithValue("@FirstName", member.FirstName ?? (object)DBNull.Value);
+                checkCmd.Parameters.AddWithValue("@LastName", member.LastName ?? (object)DBNull.Value);
+                checkCmd.Parameters.AddWithValue("@Age", member.Age ?? (object)DBNull.Value);
+
+                var result = await checkCmd.ExecuteScalarAsync();
+
+                if (result == null || result == DBNull.Value)
+                {
+                    Debug.WriteLine("[CheckAndMigrateWalkInCustomerAsync] No matching walk-in customer found");
+                    return null;
+                }
+
+                int walkInCustomerId = Convert.ToInt32(result);
+
+                // Soft delete the walk-in customer
+                const string deleteQuery = @"
+            UPDATE WalkInCustomers 
+            SET IsDeleted = 1 
+            WHERE CustomerID = @CustomerID";
+
+                using var deleteCmd = new SqlCommand(deleteQuery, conn, transaction);
+                deleteCmd.Parameters.AddWithValue("@CustomerID", walkInCustomerId);
+
+                int rowsAffected = await deleteCmd.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    Debug.WriteLine($"[CheckAndMigrateWalkInCustomerAsync] Migrated walk-in customer {walkInCustomerId} to member");
+                    await LogActionAsync(conn, transaction, "MIGRATION",
+                        $"Migrated walk-in customer {member.FirstName} {member.LastName} (ID: {walkInCustomerId}) to member", true);
+
+                    // Show success notification
+                    _toastManager?.CreateToast("Walk-in Customer Migrated")
+                        .WithContent($"{member.FirstName} {member.LastName} has been converted from walk-in to member.")
+                        .DismissOnClick()
+                        .ShowInfo();
+
+                    return walkInCustomerId;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CheckAndMigrateWalkInCustomerAsync] Error: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Enhanced version that also checks contact number for better matching
+        /// </summary>
+        private async Task<int?> CheckAndMigrateWalkInCustomerEnhancedAsync(
+            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
+        {
+            try
+            {
+                // Check with contact number if available
+                string checkQuery;
+
+                if (!string.IsNullOrWhiteSpace(member.ContactNumber))
+                {
+                    checkQuery = @"
+                SELECT CustomerID, FirstName, LastName, Age, ContactNumber 
+                FROM WalkInCustomers 
+                WHERE FirstName = @FirstName 
+                    AND LastName = @LastName 
+                    AND Age = @Age
+                    AND ContactNumber = @ContactNumber
+                    AND (IsDeleted = 0 OR IsDeleted IS NULL)";
+                }
+                else
+                {
+                    checkQuery = @"
+                SELECT CustomerID, FirstName, LastName, Age, ContactNumber 
+                FROM WalkInCustomers 
+                WHERE FirstName = @FirstName 
+                    AND LastName = @LastName 
+                    AND Age = @Age
+                    AND (IsDeleted = 0 OR IsDeleted IS NULL)";
+                }
+
+                using var checkCmd = new SqlCommand(checkQuery, conn, transaction);
+                checkCmd.Parameters.AddWithValue("@FirstName", member.FirstName ?? (object)DBNull.Value);
+                checkCmd.Parameters.AddWithValue("@LastName", member.LastName ?? (object)DBNull.Value);
+                checkCmd.Parameters.AddWithValue("@Age", member.Age ?? (object)DBNull.Value);
+
+                if (!string.IsNullOrWhiteSpace(member.ContactNumber))
+                {
+                    checkCmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber);
+                }
+
+                using var reader = await checkCmd.ExecuteReaderAsync();
+
+                if (!await reader.ReadAsync())
+                {
+                    Debug.WriteLine("[CheckAndMigrateWalkInCustomerEnhancedAsync] No matching walk-in customer found");
+                    return null;
+                }
+
+                int walkInCustomerId = reader.GetInt32(0);
+                string walkInFirstName = reader.GetString(1);
+                string walkInLastName = reader.GetString(2);
+                int walkInAge = reader.GetInt32(3);
+                string walkInContact = reader.IsDBNull(4) ? "N/A" : reader.GetString(4);
+
+                reader.Close();
+
+                // Soft delete the walk-in customer
+                const string deleteQuery = @"
+            UPDATE WalkInCustomers 
+            SET IsDeleted = 1 
+            WHERE CustomerID = @CustomerID";
+
+                using var deleteCmd = new SqlCommand(deleteQuery, conn, transaction);
+                deleteCmd.Parameters.AddWithValue("@CustomerID", walkInCustomerId);
+
+                int rowsAffected = await deleteCmd.ExecuteNonQueryAsync();
+
+                if (rowsAffected > 0)
+                {
+                    Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] Successfully migrated walk-in customer {walkInCustomerId}");
+                    Debug.WriteLine($"  Details: {walkInFirstName} {walkInLastName}, Age: {walkInAge}, Contact: {walkInContact}");
+
+                    await LogActionAsync(conn, transaction, "MIGRATION",
+                        $"Migrated walk-in customer {walkInFirstName} {walkInLastName} (ID: {walkInCustomerId}, Age: {walkInAge}) to member", true);
+
+                    _toastManager?.CreateToast("Walk-in Customer Migrated")
+                        .WithContent($"{walkInFirstName} {walkInLastName} has been successfully converted from walk-in to member.")
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    return walkInCustomerId;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] Error: {ex.Message}");
+                return null;
+            }
+        }
+
+        #endregion
 
         #endregion
     }

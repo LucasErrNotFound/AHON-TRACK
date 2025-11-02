@@ -7,6 +7,7 @@ using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -64,6 +65,42 @@ namespace AHON_TRACK.Services
 
                 try
                 {
+                    // ✅ STRICT CHECK: Block if FirstName + LastName matches ANY active member
+                    var (isActiveMember, isExpiredMember, memberId, memberName, multipleMatches) =
+                        await CheckMemberStatusAsync(conn, transaction, walkIn);
+
+                    if (isActiveMember)
+                    {
+                        // BLOCK: Active member detected
+                        string blockMessage = $"❌ Cannot register as walk-in.\n\n" +
+                            $"'{walkIn.FirstName} {walkIn.LastName}' matches an active member:\n" +
+                            $"• Member: {memberName} (ID: {memberId})\n\n" +
+                            $"Please use the MEMBER CHECK-IN system instead.";
+
+                        ShowWarningToast("Active Member Detected", blockMessage);
+
+                        await LogActionAsync(conn, transaction, "BLOCKED",
+                            $"Walk-in blocked - {walkIn.FirstName} {walkIn.LastName} (Age: {walkIn.Age}) matches active member {memberName} (ID: {memberId})", true);
+
+                        transaction.Commit();
+                        return (false, $"Active member '{memberName}' detected. Use member check-in system.", null);
+                    }
+
+                    // If expired/inactive member found, notify but allow
+                    if (isExpiredMember)
+                    {
+                        string expiredMessage = multipleMatches != null && multipleMatches.Count > 1
+                            ? $"Found {multipleMatches.Count} expired member records with this name. Allowing walk-in registration."
+                            : $"{memberName}'s membership has expired. Allowing walk-in registration.";
+
+                        Debug.WriteLine($"[AddWalkInCustomerAsync] {expiredMessage}");
+                        _toastManager?.CreateToast("Expired Member Detected")
+                            .WithContent(expiredMessage)
+                            .DismissOnClick()
+                            .ShowInfo();
+                    }
+
+                    // Continue with existing walk-in logic
                     var (existingId, existingType) = await GetExistingCustomerAsync(conn, transaction, walkIn);
 
                     if (existingId.HasValue)
@@ -89,11 +126,19 @@ namespace AHON_TRACK.Services
                     }
 
                     await CreateCheckInRecordAsync(conn, transaction, customerId);
-                    await LogActionAsync(conn, transaction, "CREATE",
-                        $"Registered walk-in customer: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) with {walkIn.WalkInPackage}", true);
+
+                    string logMessage = isExpiredMember
+                        ? $"Registered expired member as walk-in: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) - Previous Member ID: {memberId}"
+                        : $"Registered walk-in customer: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) with {walkIn.WalkInPackage}";
+
+                    await LogActionAsync(conn, transaction, "CREATE", logMessage, true);
 
                     transaction.Commit();
                     NotifyDashboardEvents();
+
+                    ShowSuccessToast("Walk-in Registered",
+                        $"{walkIn.FirstName} {walkIn.LastName} checked in successfully.");
+
                     return (true, "Walk-in customer registered and checked in successfully.", customerId);
                 }
                 catch
@@ -806,6 +851,112 @@ namespace AHON_TRACK.Services
             {
                 Console.WriteLine($"[GetPackageStatisticsAsync] {ex.Message}");
                 return (false, null);
+            }
+        }
+
+        #endregion
+
+        #region MEMBER STATUS VALIDATION
+
+        /// <summary>
+        /// STRICT VALIDATION: Checks if FirstName + LastName matches ANY active member
+        /// If match found, blocks walk-in registration completely
+        /// </summary>
+        private async Task<(bool IsActiveMember, bool IsExpiredMember, int? MemberId, string? MemberName, List<string>? MultipleMatches)> CheckMemberStatusAsync(
+    SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn)
+        {
+            try
+            {
+                const string query = @"
+    SELECT 
+        m.MemberID, 
+        m.Firstname, 
+        m.MiddleInitial,
+        m.Lastname,
+        m.ContactNumber,
+        m.Age,
+        m.Status,
+        m.ValidUntil,
+        CASE 
+            WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 1
+            ELSE 0
+        END AS IsExpired
+    FROM Members m
+    WHERE m.FirstName = @FirstName 
+        AND m.LastName = @LastName 
+        AND m.Age = @Age
+        AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
+    ORDER BY 
+        CASE 
+            WHEN m.Status = 'Active' THEN 1
+            WHEN m.ValidUntil >= CAST(GETDATE() AS DATE) THEN 2
+            ELSE 3
+        END,
+        m.DateJoined DESC";
+
+                using var cmd = new SqlCommand(query, conn, transaction);
+                cmd.Parameters.AddWithValue("@FirstName", walkIn.FirstName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@LastName", walkIn.LastName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Age", walkIn.Age); // ✅ Added age parameter
+
+                var matches = new List<(int MemberId, string MemberName, string Status, bool IsExpired, int Age, string Contact)>();
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    int memberId = reader.GetInt32(0);
+                    string firstName = reader.GetString(1);
+                    string middleInitial = reader.IsDBNull(2) ? "" : reader.GetString(2);
+                    string lastName = reader.GetString(3);
+                    string contactNumber = reader.IsDBNull(4) ? "N/A" : reader.GetString(4);
+                    int age = reader.IsDBNull(5) ? 0 : reader.GetInt32(5);
+                    string status = reader.IsDBNull(6) ? "Active" : reader.GetString(6);
+                    bool isExpired = reader.GetInt32(8) == 1;
+
+                    string memberName = string.IsNullOrWhiteSpace(middleInitial)
+                        ? $"{firstName} {lastName}"
+                        : $"{firstName} {middleInitial}. {lastName}";
+
+                    matches.Add((memberId, memberName, status, isExpired, age, contactNumber));
+
+                    Debug.WriteLine($"[CheckMemberStatusAsync] Found member match: {memberName}");
+                    Debug.WriteLine($"  ID: {memberId}, Age: {age}, Contact: {contactNumber}");
+                    Debug.WriteLine($"  Walk-in Age: {walkIn.Age} ✅ AGES MATCH");
+                    Debug.WriteLine($"  Status: {status}, Expired: {isExpired}");
+                }
+
+                if (matches.Count == 0)
+                {
+                    Debug.WriteLine("[CheckMemberStatusAsync] ✓ No member matches found (name + age) - allowing walk-in");
+                    return (false, false, null, null, null);
+                }
+
+                // Check each match for active status
+                foreach (var match in matches)
+                {
+                    bool isActive = !match.IsExpired &&
+                                   !match.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase) &&
+                                   !match.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase);
+
+                    if (isActive)
+                    {
+                        Debug.WriteLine($"[CheckMemberStatusAsync] ❌ BLOCKING - Active member found: {match.MemberName} (ID: {match.MemberId}, Age: {match.Age})");
+                        return (true, false, match.MemberId, match.MemberName, null);
+                    }
+                }
+
+                // All matches are expired/inactive - allow walk-in but notify
+                var firstMatch = matches.First();
+                Debug.WriteLine($"[CheckMemberStatusAsync] ⚠️ Allowing - All matches are expired/inactive (Age: {firstMatch.Age})");
+
+                return (false, true, firstMatch.MemberId, firstMatch.MemberName,
+                        matches.Count > 1 ? matches.Select(m => m.MemberName).ToList() : null);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CheckMemberStatusAsync] Error: {ex.Message}");
+                return (false, false, null, null, null);
             }
         }
 
