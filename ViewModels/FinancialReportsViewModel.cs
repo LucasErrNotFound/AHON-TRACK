@@ -180,7 +180,6 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         }
     }
 
-    // Replace the UpdateFinancialBreakdownChart method in FinancialReportsViewModel
     private void UpdateFinancialBreakdownChart()
     {
         if (RevenueSeriesCollection.Length == 0)
@@ -198,6 +197,9 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
 
             var total = stackedSeries.Values.Sum();
 
+            // Skip categories with zero or NaN totals
+            if (double.IsNaN(total) || total <= 0) continue;
+
             // Extract the actual SKColor from the series
             var skColor = SKColors.Gray; // Default
             if (stackedSeries.Fill is SolidColorPaint solidPaint)
@@ -211,9 +213,16 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         // Calculate grand total for percentage calculation
         var grandTotal = categoryTotals.Sum(ct => ct.Total);
 
+        // Only create pie chart data if there's actual data
+        if (grandTotal <= 0 || double.IsNaN(grandTotal))
+        {
+            FinancialBreakdownPieDataCollection = [];
+            return;
+        }
+
         // Create pie chart data with the correct percentages
         FinancialBreakdownPieDataCollection = categoryTotals
-            .Where(ct => ct.Total > 0)
+            .Where(ct => ct.Total > 0 && !double.IsNaN(ct.Total))
             .Select(ct => new FinancialBreakdownPieData(
                 ct.Name,
                 ct.Total,
@@ -221,7 +230,6 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
                 grandTotal))
             .ToArray();
     }
-
 
     private async Task UpdateRevenueChartAsync()
     {
@@ -313,8 +321,8 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
                     Name = localPackageType,
                     Fill = new SolidColorPaint(skColor),
                     Stroke = null,
-                    XToolTipLabelFormatter = point =>
-                        $"{localPackageType}: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})"
+                  /*  XToolTipLabelFormatter = point =>
+                        $"{localPackageType}: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})" */
                 });
             }
 
@@ -557,16 +565,23 @@ public class FinancialBreakdownPieData
         // Convert SKColor to hex string
         Color = $"#{skColor.Red:X2}{skColor.Green:X2}{skColor.Blue:X2}";
 
-        // Calculate percentage
-        Percentage = grandTotal > 0 ? (value / grandTotal) * 100 : 0;
+        // Calculate percentage with NaN safety
+        Percentage = (grandTotal > 0 && !double.IsNaN(grandTotal) && !double.IsNaN(value))
+            ? (value / grandTotal) * 100
+            : 0;
 
         // Set IsTotal to true for all items (since they're all category totals)
         IsTotal = true;
 
-        // Format percentage label
-        Formatter = point => $"{Percentage:F1}%";
+        // Format percentage label with NaN check
+        Formatter = point => double.IsNaN(Percentage) ? "0.0%" : $"{Percentage:F1}%";
 
-        // Format tooltip
-        ToolTipFormatter = point => $"{Name}: ₱{Value:N0} ({Percentage:F1}%)";
+        // Format tooltip with NaN check
+        ToolTipFormatter = point =>
+        {
+            var percentStr = double.IsNaN(Percentage) ? "0.0" : $"{Percentage:F1}";
+            var valueStr = double.IsNaN(Value) ? "0" : $"{Value:N0}";
+            return $"{Name}: ₱{valueStr} ({percentStr}%)";
+        };
     }
 }
