@@ -67,7 +67,7 @@ namespace AHON_TRACK.Services
             {
                 decimal totalAmount = 0;
                 int totalTransactions = 0;
-                bool anyDiscountApplied = false; // Track if any discount was applied
+                bool anyDiscountApplied = false;
 
                 foreach (var item in cartItems)
                 {
@@ -77,7 +77,7 @@ namespace AHON_TRACK.Services
 
                     if (hasDiscount)
                     {
-                        anyDiscountApplied = true; // Mark that at least one discount was applied
+                        anyDiscountApplied = true;
                     }
 
                     await RecordSaleAsync(item, customer, employeeId, itemTotal, conn, transaction);
@@ -90,7 +90,7 @@ namespace AHON_TRACK.Services
                 transaction.Commit();
 
                 await LogSuccessfulPayment(conn, customer, totalAmount, paymentMethod, cartItems);
-                ShowPaymentSuccess(totalAmount, paymentMethod, cartItems, anyDiscountApplied); // Pass the discount flag
+                ShowPaymentSuccess(totalAmount, paymentMethod, cartItems, anyDiscountApplied);
 
                 return true;
             }
@@ -124,46 +124,20 @@ namespace AHON_TRACK.Services
             return (itemTotal, discountApplied);
         }
 
-        private async Task<(decimal itemTotal, bool discountApplied)> ApplyPackageDiscount(SellingModel item, CustomerModel customer, SqlConnection conn, SqlTransaction transaction)
+        private async Task<(decimal itemTotal, bool discountApplied)> ApplyPackageDiscount(
+    SellingModel item,
+    CustomerModel customer,
+    SqlConnection conn,
+    SqlTransaction transaction)
         {
-            string query = @"SELECT Discount, DiscountType, DiscountFor, ValidFrom, ValidTo FROM Packages WHERE PackageID = @PackageID";
-
-            using var cmd = new SqlCommand(query, conn, transaction);
-            cmd.Parameters.AddWithValue("@PackageID", item.SellingID);
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                decimal discountValue = reader["Discount"] != DBNull.Value ? Convert.ToDecimal(reader["Discount"]) : 0;
-                string discountType = reader["DiscountType"]?.ToString()?.Trim() ?? "none";
-                string discountFor = reader["DiscountFor"]?.ToString()?.Trim() ?? "All";
-                DateTime? validFrom = reader["ValidFrom"] != DBNull.Value ? Convert.ToDateTime(reader["ValidFrom"]) : null;
-                DateTime? validTo = reader["ValidTo"] != DBNull.Value ? Convert.ToDateTime(reader["ValidTo"]) : null;
-
-                bool isValidDate = (!validFrom.HasValue || DateTime.Now >= validFrom) &&
-                                   (!validTo.HasValue || DateTime.Now <= validTo);
-
-                bool isEligibleCustomer =
-                    discountFor.Equals("All", StringComparison.OrdinalIgnoreCase) ||
-                    (customer.CustomerType.Equals("Member", StringComparison.OrdinalIgnoreCase) &&
-                     discountFor.Equals("Gym Members", StringComparison.OrdinalIgnoreCase));
-
-                if (isValidDate && isEligibleCustomer && discountValue > 0 && discountType != "none")
-                {
-                    decimal discountAmount = discountType.Equals("percentage", StringComparison.OrdinalIgnoreCase)
-                        ? item.Price * (discountValue / 100m)
-                        : discountValue;
-
-                    return ((item.Price - discountAmount) * item.Quantity, true); // Discount applied
-                }
-            }
-
-            return (item.Price * item.Quantity, false); // No discount applied
+            return (item.Price * item.Quantity, false);
         }
 
-        private async Task<(decimal itemTotal, bool discountApplied)> ApplyProductDiscount(SellingModel item, SqlConnection conn, SqlTransaction transaction)
+
+        private async Task<(decimal itemTotal, bool discountApplied)> ApplyProductDiscount(
+    SellingModel item, SqlConnection conn, SqlTransaction transaction)
         {
-            string query = @"SELECT Price, DiscountedPrice, IsPercentageDiscount FROM Products WHERE ProductID = @ProductID";
+            string query = @"SELECT Price, DiscountedPrice FROM Products WHERE ProductID = @ProductID";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@ProductID", item.SellingID);
@@ -171,19 +145,36 @@ namespace AHON_TRACK.Services
             using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
-                decimal price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0;
-                decimal discountValue = reader["DiscountedPrice"] != DBNull.Value ? Convert.ToDecimal(reader["DiscountedPrice"]) : 0;
-                bool isPercentage = reader["IsPercentageDiscount"] != DBNull.Value && Convert.ToBoolean(reader["IsPercentageDiscount"]);
+                decimal dbPrice = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0;
+                decimal dbDiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? Convert.ToDecimal(reader["DiscountedPrice"]) : 0;
 
-                if (discountValue > 0 && isPercentage)
+                decimal finalPrice = dbPrice;
+                bool hasDiscount = false;
+
+                // ✅ Only apply discount if DiscountedPrice is between 0 and 100 (percentage)
+                if (dbDiscountedPrice > 0 && dbDiscountedPrice <= 100)
                 {
-                    decimal finalPrice = price - (price * (discountValue / 100m));
-                    return (Math.Max(0, finalPrice * item.Quantity), true); // Discount applied
+                    finalPrice = dbPrice - (dbPrice * (dbDiscountedPrice / 100));
+                    hasDiscount = true;
                 }
+                // ✅ Or if DiscountedPrice is less than dbPrice (absolute discounted value)
+                else if (dbDiscountedPrice > 0 && dbDiscountedPrice < dbPrice)
+                {
+                    finalPrice = dbDiscountedPrice;
+                    hasDiscount = true;
+                }
+
+                await reader.CloseAsync();
+
+                // ✅ Return total using the correctly computed price
+                decimal itemTotal = finalPrice * item.Quantity;
+                return (itemTotal, hasDiscount);
             }
 
-            return (item.Price * item.Quantity, false); // No discount applied
+            // Fallback
+            return (item.Price * item.Quantity, false);
         }
+
 
         private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, SqlConnection conn, SqlTransaction transaction)
         {
@@ -248,7 +239,6 @@ namespace AHON_TRACK.Services
             }
             else if (item.Category == CategoryConstants.GymPackage)
             {
-                // Add debugging here
                 System.Diagnostics.Debug.WriteLine($"Customer Type: {customer.CustomerType}, ID: {customer.CustomerID}");
 
                 if (customer.CustomerType == CategoryConstants.Member)
@@ -302,8 +292,7 @@ namespace AHON_TRACK.Services
                 durationStr = result?.ToString()?.Trim()?.ToLower() ?? "";
             }
 
-            // Calculate sessions to add - directly parse from duration string
-            int sessionsToAdd = item.Quantity; // Default: 1 session per quantity
+            int sessionsToAdd = item.Quantity;
 
             var parts = durationStr.Split(' ');
             if (parts.Length > 0 && int.TryParse(parts[0], out int parsed))
@@ -312,9 +301,9 @@ namespace AHON_TRACK.Services
             }
 
             string checkExisting = @"
-        SELECT SessionID, SessionsLeft 
-        FROM MemberSessions 
-        WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
+                SELECT SessionID, SessionsLeft 
+                FROM MemberSessions 
+                WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
 
             int? existingSessionId = null;
 
@@ -352,8 +341,7 @@ namespace AHON_TRACK.Services
                 durationStr = result?.ToString()?.Trim()?.ToLower() ?? "";
             }
 
-            // Calculate sessions to add - directly parse from duration string
-            int sessionsToAdd = item.Quantity; // Default: 1 session per quantity
+            int sessionsToAdd = item.Quantity;
 
             var parts = durationStr.Split(' ');
             if (parts.Length > 0 && int.TryParse(parts[0], out int parsed))
@@ -362,9 +350,9 @@ namespace AHON_TRACK.Services
             }
 
             string checkExisting = @"
-        SELECT SessionID, SessionsLeft 
-        FROM WalkInSessions 
-        WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
+                SELECT SessionID, SessionsLeft 
+                FROM WalkInSessions 
+                WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
 
             int? existingSessionId = null;
 
@@ -419,9 +407,9 @@ namespace AHON_TRACK.Services
         private async Task UpdateExistingWalkInSessionAsync(int sessionId, int sessionsToAdd, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
-        UPDATE WalkInSessions 
-        SET SessionsLeft = SessionsLeft + @NewSessions
-        WHERE SessionID = @SessionID;";
+                UPDATE WalkInSessions 
+                SET SessionsLeft = SessionsLeft + @NewSessions
+                WHERE SessionID = @SessionID;";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@SessionID", sessionId);
@@ -442,9 +430,9 @@ namespace AHON_TRACK.Services
         private async Task CreateNewWalkInSessionAsync(int customerId, int packageId, int sessions, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
-        INSERT INTO WalkInSessions (CustomerID, PackageID, SessionsLeft, StartDate)
-        VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());
-        SELECT SCOPE_IDENTITY();";
+                INSERT INTO WalkInSessions (CustomerID, PackageID, SessionsLeft, StartDate)
+                VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());
+                SELECT SCOPE_IDENTITY();";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@CustomerID", customerId);
@@ -505,27 +493,45 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 string query = @"
-                    SELECT PackageID, PackageName, Description, Price, Duration, Features
-                    FROM Packages
-                    WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
-                        AND IsDeleted = 0
-                        AND Duration LIKE '%Session%'";
+            SELECT PackageID, PackageName, Description, Price, Duration, Features,
+                   Discount, DiscountType, DiscountFor, ValidFrom, ValidTo, DiscountedPrice
+            FROM Packages
+            WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
+                AND IsDeleted = 0
+                AND Duration LIKE '%Session%'";
 
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
                 {
+                    decimal price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0;
+                    decimal discountValue = reader["Discount"] != DBNull.Value ? Convert.ToDecimal(reader["Discount"]) : 0;
+
+                    // ✅ FIX: DiscountedPrice from DB is ALREADY the final discounted price
+                    decimal discountedPriceFromDb = reader["DiscountedPrice"] != DBNull.Value ? Convert.ToDecimal(reader["DiscountedPrice"]) : 0;
+
+                    string discountType = reader["DiscountType"]?.ToString()?.Trim() ?? "none";
+                    string discountFor = reader["DiscountFor"]?.ToString()?.Trim() ?? "All";
+
+                    // ✅ Check if discount is valid (discounted price must be less than original and greater than 0)
+                    bool hasDiscount = discountedPriceFromDb > 0 && discountedPriceFromDb < price;
+
                     packages.Add(new SellingModel
                     {
                         SellingID = reader.GetInt32(reader.GetOrdinal("PackageID")),
                         Title = reader["PackageName"]?.ToString() ?? string.Empty,
                         Description = reader["Description"]?.ToString() ?? string.Empty,
                         Category = CategoryConstants.GymPackage,
-                        Price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0,
+                        Price = price,  // ✅ Original price: ₱520
                         Stock = 999,
                         ImagePath = null,
-                        Features = reader["Features"]?.ToString() ?? string.Empty
+                        Features = reader["Features"]?.ToString() ?? string.Empty,
+                        DiscountedPrice = discountedPriceFromDb,  // ✅ Already discounted: ₱416
+                        HasDiscount = hasDiscount,
+                        DiscountValue = discountValue,  // This is just for display (e.g., "20% OFF")
+                        DiscountType = discountType,
+                        DiscountFor = discountFor
                     });
                 }
             }
@@ -553,26 +559,41 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 string query = @"
-                    SELECT ProductID, ProductName, Description, Category, Price, CurrentStock, ProductImagePath
-                    FROM Products 
-                    WHERE Status = 'In Stock' 
-                        AND CurrentStock > 0 
-                        AND IsDeleted = 0;";
+            SELECT ProductID, ProductName, Description, Category, Price, CurrentStock, ProductImagePath,
+                   DiscountedPrice
+            FROM Products 
+            WHERE Status = 'In Stock' 
+                AND CurrentStock > 0 
+                AND IsDeleted = 0;";
 
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
                 {
+                    decimal price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0;
+                    decimal discountedPriceFromDb = reader["DiscountedPrice"] != DBNull.Value ? Convert.ToDecimal(reader["DiscountedPrice"]) : 0;
+
+                    // ✅ KEY FIX: Check if there's a valid discount
+                    // Discount is valid if discountedPrice exists, is greater than 0, AND is less than original price
+                    bool hasDiscount = discountedPriceFromDb > 0 && discountedPriceFromDb < price;
+
+                    // ✅ If there's a discount, use the discounted price; otherwise use original
+                    decimal finalPrice = hasDiscount ? discountedPriceFromDb : price;
+
                     products.Add(new SellingModel
                     {
                         SellingID = reader.GetInt32(reader.GetOrdinal("ProductID")),
                         Title = reader["ProductName"]?.ToString() ?? string.Empty,
                         Description = reader["Description"]?.ToString() ?? string.Empty,
                         Category = reader["Category"]?.ToString() ?? CategoryConstants.Product,
-                        Price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0,
+                        Price = price,  // ✅ Original price: ₱1,500
                         Stock = reader["CurrentStock"] != DBNull.Value ? Convert.ToInt32(reader["CurrentStock"]) : 0,
-                        ImagePath = reader["ProductImagePath"] != DBNull.Value ? (byte[])reader["ProductImagePath"] : null
+                        ImagePath = reader["ProductImagePath"] != DBNull.Value ? (byte[])reader["ProductImagePath"] : null,
+                        DiscountedPrice = finalPrice,  // ✅ Final price to charge: ₱750
+                        HasDiscount = hasDiscount,  // ✅ true if discount exists
+                        DiscountValue = 0,  // Not needed for products
+                        DiscountType = hasDiscount ? "fixed" : "none"  // Not needed for products
                     });
                 }
             }
@@ -677,7 +698,7 @@ namespace AHON_TRACK.Services
                         s.Quantity,
                         CASE 
                             WHEN s.ProductID IS NOT NULL THEN p.ProductName
-                            WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
+WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                             ELSE 'Unknown Item'
                         END AS ItemName,
                         CASE 
@@ -834,7 +855,7 @@ namespace AHON_TRACK.Services
             ShowSuccess("Payment Successful", $"Transaction completed. Total: ₱{totalAmount:N2} via {paymentMethod}");
 
             // Only show discount toast if a discount was actually applied
-            if (discountApplied)
+            /*if (discountApplied)
             {
                 bool hasPackageDiscount = cartItems.Any(i => i.Category == CategoryConstants.GymPackage);
                 bool hasProductDiscount = cartItems.Any(i => i.Category == CategoryConstants.Product);
@@ -846,7 +867,7 @@ namespace AHON_TRACK.Services
                         : "Product discounts applied successfully.";
 
                 ShowSuccess("Discount Applied", message);
-            }
+            }*/
         }
 
         private async Task LogSuccessfulPayment(SqlConnection conn, CustomerModel customer, decimal totalAmount, string paymentMethod, List<SellingModel> cartItems)

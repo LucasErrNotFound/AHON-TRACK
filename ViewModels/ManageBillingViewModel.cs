@@ -62,7 +62,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private bool _isLoadingInvoices;
-    
+
     [ObservableProperty]
     private DateTime _selectedActivityDate = DateTime.Today;
 
@@ -637,7 +637,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         }
         UpdateInvoiceDataCounts();
     }
-    
+
     private void FilterRecentActivitiesByDate()
     {
         if (RecentActivities == null || RecentActivities.Count == 0)
@@ -647,7 +647,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         }
 
         var filtered = RecentActivities
-            .Where(activity => activity.PurchaseDate.HasValue && 
+            .Where(activity => activity.PurchaseDate.HasValue &&
                                activity.PurchaseDate.Value.Date == SelectedActivityDate.Date)
             .ToList();
 
@@ -697,7 +697,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         _ = LoadInvoicesFromDatabaseAsync();
     }
-    
+
     partial void OnSelectedActivityDateChanged(DateTime value)
     {
         FilterRecentActivitiesByDate();
@@ -779,10 +779,39 @@ public partial class Package : ObservableObject
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public int Price { get; set; }
-    public int DiscountedPrice { get; set; } // Add this
-    public string FormattedPrice => IsDiscountChecked
+    public int DiscountedPrice { get; set; }
+
+    // ADD THIS PROPERTY to know if discount should be displayed:
+    public bool HasDiscount => IsDiscountChecked && DiscountedPrice > 0 && DiscountedPrice < Price;
+
+    // UPDATE THIS to use HasDiscount:
+    public string FormattedPrice => HasDiscount
         ? $"₱{DiscountedPrice:N2}"
-        : $"₱{Price:N2}"; // Show discounted price when discount is active
+        : $"₱{Price:N2}";
+
+    // ADD THIS for strikethrough original price:
+    public string? OriginalPriceFormatted => HasDiscount
+        ? $"₱{Price:N2}"
+        : null;
+
+    // ADD THIS for discount badge:
+    public string DiscountBadge
+    {
+        get
+        {
+            if (!HasDiscount || !DiscountValue.HasValue) return string.Empty;
+
+            if (SelectedDiscountType?.Equals("percentage", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return $"{DiscountValue}% OFF";
+            }
+            else
+            {
+                return $"₱{DiscountValue} OFF";
+            }
+        }
+    }
+
     public string Duration { get; set; } = string.Empty;
     public List<string> Features { get; set; } = [];
     public bool IsDiscountChecked { get; set; }

@@ -19,5 +19,11 @@ namespace AHON_TRACK.Models
         public byte[]? ImagePath { get; set; }
         public decimal TotalPrice => Price * Quantity;
         public string? Features { get; set; }
+
+        public decimal DiscountedPrice { get; set; }
+        public bool HasDiscount { get; set; }
+        public decimal DiscountValue { get; set; }
+        public string? DiscountType { get; set; }
+        public string? DiscountFor { get; set; }
     }
 }

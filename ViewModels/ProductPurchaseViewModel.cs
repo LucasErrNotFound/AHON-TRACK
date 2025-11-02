@@ -53,10 +53,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     private List<Product> _currentProductList = [];
 
     [ObservableProperty]
-    private ObservableCollection<Package> _packageList = [];
+    private ObservableCollection<PurchasePackage> _packageList = [];  // ✅ Changed from Package
 
     [ObservableProperty]
-    private List<Package> _originalPackageList = [];
+    private List<PurchasePackage> _originalPackageList = [];
 
     [ObservableProperty]
     private string _customerSearchStringResult = string.Empty;
@@ -276,29 +276,48 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private Product ConvertToProduct(SellingModel selling)
     {
+        // ✅ KEY: Store both original price and discounted price separately
         return new Product
         {
             ID = selling.SellingID,
             Title = selling.Title ?? string.Empty,
             Description = selling.Description ?? string.Empty,
             Category = selling.Category ?? string.Empty,
-            Price = (int)selling.Price,
+            Price = (int)selling.Price,  // ✅ Original: ₱1,500
             StockCount = selling.Stock,
-            Poster = selling.ImagePath != null ? new Bitmap(new MemoryStream(selling.ImagePath)) : null
+            Poster = selling.ImagePath != null ? new Bitmap(new MemoryStream(selling.ImagePath)) : null,
+            DiscountedPrice = selling.DiscountedPrice,  // ✅ Final: ₱750
+            HasDiscount = selling.HasDiscount  // ✅ true
         };
     }
 
-    private Package ConvertToPackage(SellingModel selling)
+    private PurchasePackage ConvertToPackage(SellingModel selling)
     {
-        return new Package
+        var package = new PurchasePackage
         {
             PackageId = selling.SellingID,
             Title = selling.Title ?? string.Empty,
-            Description = selling.Description ?? string.Empty,
+            Description = selling.Description ?? string.Empty,  // ✅ ADD THIS - or fetch from DB if separate field
+            BasePrice = (int)selling.Price,
+            BaseDiscountedPrice = (int)selling.DiscountedPrice,
             Price = (int)selling.Price,
+            DiscountedPrice = (int)selling.DiscountedPrice,
+            DiscountValue = selling.DiscountValue > 0 ? (int?)selling.DiscountValue : null,
+            DiscountType = selling.DiscountType ?? string.Empty,
+            DiscountFor = selling.DiscountFor ?? "All",
             IsAddedToCart = false,
-            Features = selling.Features?.Split('|').ToList() ?? new List<string>()
+            Features = selling.Features?.Split('|').ToList() ?? new List<string>(),
+            IsDiscountChecked = selling.HasDiscount,  // ✅ ADD THIS
+            SelectedDiscountFor = selling.DiscountFor ?? "All",  // ✅ ADD THIS
+            SelectedDiscountType = selling.DiscountType ?? string.Empty  // ✅ ADD THIS
         };
+
+        if (SelectedCustomer != null)
+        {
+            package.UpdatePriceForCustomer(SelectedCustomer.CustomerType);
+        }
+
+        return package;
     }
 
     private async Task LoadProductsFromDatabaseAsync()
@@ -636,7 +655,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         if (item is Product product)
         {
-            // Check if already in cart
             var existingItem = CartItems.FirstOrDefault(c =>
                 c.ItemType == CartItemType.Product && c.SellingID == product.ID);
 
@@ -648,6 +666,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 return;
             }
 
+            decimal priceToUse = product.HasDiscount ? product.DiscountedPrice : product.Price;
+
             cartItem = new CartItem
             {
                 Id = Guid.NewGuid(),
@@ -655,7 +675,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 ItemType = CartItemType.Product,
                 Title = product.Title,
                 Description = product.Description,
-                Price = product.Price,
+                Price = priceToUse,
                 MaxQuantity = product.StockCount,
                 Quantity = 1,
                 Poster = product.Poster,
@@ -663,7 +683,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             };
             product.IsAddedToCart = true;
         }
-        else if (item is Package package)
+        else if (item is PurchasePackage package)  // ✅ Changed from Package
         {
             var existingItem = CartItems.FirstOrDefault(c =>
                 c.ItemType == CartItemType.Package && c.SellingID == package.PackageId);
@@ -676,6 +696,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 return;
             }
 
+            // ✅ Use the current display price (already adjusted for customer eligibility)
+            decimal priceToUse = package.HasDiscount ? package.DiscountedPrice : package.Price;
+
+            System.Diagnostics.Debug.WriteLine($"🛒 Adding {package.Title} to cart at ₱{priceToUse} (HasDiscount: {package.HasDiscount})");
+
             cartItem = new CartItem
             {
                 Id = Guid.NewGuid(),
@@ -683,11 +708,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 ItemType = CartItemType.Package,
                 Title = package.Title,
                 Description = package.Description,
-                Price = package.Price,
+                Price = priceToUse,
                 MaxQuantity = 999,
                 Quantity = 1,
                 Poster = null,
-                SourcePackage = package
+                SourcePurchasePackage = package  // ✅ Changed property name
             };
             package.IsAddedToCart = true;
         }
@@ -709,16 +734,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         if (cartItem.SourceProduct != null)
             cartItem.SourceProduct.IsAddedToCart = false;
 
-        if (cartItem.SourcePackage != null)
-            cartItem.SourcePackage.IsAddedToCart = false;
+        if (cartItem.SourcePurchasePackage != null)  // ✅ Changed
+            cartItem.SourcePurchasePackage.IsAddedToCart = false;
 
         cartItem.PropertyChanged -= OnCartItemPropertyChanged;
         CartItems.Remove(cartItem);
         UpdateCartTotals();
         UpdateCartEmptyState();
     }
-
-    //
 
     [RelayCommand]
     private async Task PaymentAsync()
@@ -817,8 +840,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             if (cartItem.SourceProduct != null)
                 cartItem.SourceProduct.IsAddedToCart = false;
 
-            if (cartItem.SourcePackage != null)
-                cartItem.SourcePackage.IsAddedToCart = false;
+            if (cartItem.SourcePurchasePackage != null)  // ✅ Changed
+                cartItem.SourcePurchasePackage.IsAddedToCart = false;
 
             cartItem.PropertyChanged -= OnCartItemPropertyChanged;
         }
@@ -871,8 +894,40 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     partial void OnSelectedCustomerChanged(Customer? value)
     {
+        System.Diagnostics.Debug.WriteLine($"✅ Customer changed: {value?.CustomerType}");
+
         CustomerFullName = value != null ? $"{value.FirstName} {value.LastName}" : "Customer Name";
         UpdateCartEmptyState();
+
+        // ✅ Update all packages in the display list
+        foreach (var package in PackageList)
+        {
+            package.UpdatePriceForCustomer(value?.CustomerType);
+        }
+
+        // ✅ Update packages in the original list (for filtering)
+        foreach (var package in OriginalPackageList)
+        {
+            package.UpdatePriceForCustomer(value?.CustomerType);
+        }
+
+        // ✅ Update packages already in cart
+        foreach (var cartItem in CartItems.Where(c => c.ItemType == CartItemType.Package).ToList())
+        {
+            if (cartItem.SourcePurchasePackage != null)  // ✅ Changed
+            {
+                cartItem.SourcePurchasePackage.UpdatePriceForCustomer(value?.CustomerType);
+
+                // Update cart item price
+                decimal newPrice = cartItem.SourcePurchasePackage.HasDiscount
+                    ? cartItem.SourcePurchasePackage.DiscountedPrice
+                    : cartItem.SourcePurchasePackage.Price;
+
+                cartItem.Price = newPrice;
+            }
+        }
+
+        UpdateCartTotals();
         OnPropertyChanged(nameof(IsPaymentPossible));
     }
 
@@ -1063,7 +1118,33 @@ public partial class Product : ObservableObject
     [ObservableProperty]
     private bool _isAddedToCart;
 
-    public string FormattedPrice => $"₱{Price:N2}";
+    // NEW: Discount properties
+    [ObservableProperty]
+    private decimal _discountedPrice;
+
+    [ObservableProperty]
+    private bool _hasDiscount;
+
+    public decimal FinalPrice
+    {
+        get
+        {
+            if (HasDiscount && DiscountedPrice > 0)
+            {
+                var discountAmount = Price * (DiscountedPrice / 100);
+                return Price - discountAmount;
+            }
+            return Price;
+        }
+    }
+
+    public string FormattedPrice => $"₱{FinalPrice:N2}";
+
+    // NEW: Show original price with strikethrough if discounted
+    public string? OriginalPriceFormatted => HasDiscount
+        ? $"₱{Price:N2}"
+        : null;
+
     public string FormattedStockCount => $"{StockCount} Left";
 
     public IBrush StockForeground => StockCount switch
@@ -1098,6 +1179,197 @@ public partial class Product : ObservableObject
     partial void OnPriceChanged(int value)
     {
         OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPriceFormatted));
+        OnPropertyChanged(nameof(FinalPrice));
+    }
+
+    partial void OnDiscountedPriceChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPriceFormatted));
+        OnPropertyChanged(nameof(FinalPrice));
+    }
+
+    partial void OnHasDiscountChanged(bool value)
+    {
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPriceFormatted));
+        OnPropertyChanged(nameof(FinalPrice));
+    }
+}
+
+public partial class PurchasePackage : ObservableObject
+{
+    public int PackageId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Duration { get; set; } = string.Empty;  // ✅ ADD THIS
+
+    // ✅ Store original prices from database
+    private int _basePrice;
+    private int _baseDiscountedPrice;
+    private string? _discountFor;
+
+    public int BasePrice
+    {
+        get => _basePrice;
+        set
+        {
+            _basePrice = value;
+            OnPropertyChanged();
+            UpdateDisplayPrices();
+        }
+    }
+
+    public int BaseDiscountedPrice
+    {
+        get => _baseDiscountedPrice;
+        set
+        {
+            _baseDiscountedPrice = value;
+            OnPropertyChanged();
+            UpdateDisplayPrices();
+        }
+    }
+
+    public string? DiscountFor
+    {
+        get => _discountFor;
+        set
+        {
+            _discountFor = value;
+            OnPropertyChanged();
+            UpdateDisplayPrices();
+        }
+    }
+
+    // Current customer type
+    private string? _currentCustomerType;
+
+    [ObservableProperty]
+    private int _price;
+
+    [ObservableProperty]
+    private int _discountedPrice;
+
+    // ✅ ADD THESE for XAML compatibility
+    public bool IsDiscountChecked { get; set; }
+    public string SelectedDiscountFor { get; set; } = string.Empty;
+    public string SelectedDiscountType { get; set; } = string.Empty;
+    public DateOnly? DiscountValidFrom { get; set; }
+    public DateOnly? DiscountValidTo { get; set; }
+    public int Id { get; set; }
+
+    public bool HasDiscount => DiscountedPrice > 0 && DiscountedPrice < Price;
+
+    public string FormattedPrice => HasDiscount
+        ? $"₱{DiscountedPrice:N2}"
+        : $"₱{Price:N2}";
+
+    public string? OriginalPriceFormatted => HasDiscount
+        ? $"₱{Price:N2}"
+        : null;
+
+    public string DiscountBadge
+    {
+        get
+        {
+            if (!HasDiscount || !DiscountValue.HasValue) return string.Empty;
+            if (DiscountType?.Equals("percentage", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return $"{DiscountValue}% OFF";
+            }
+            else
+            {
+                return $"₱{DiscountValue} OFF";
+            }
+        }
+    }
+
+    public List<string> Features { get; set; } = [];
+    public int? DiscountValue { get; set; }
+    public string? DiscountType { get; set; }
+
+    [ObservableProperty]
+    private bool _isAddedToCart;
+
+    /// <summary>
+    /// ✅ Updates package price based on customer eligibility
+    /// </summary>
+    public void UpdatePriceForCustomer(string? customerType)
+    {
+        _currentCustomerType = customerType;
+        UpdateDisplayPrices();
+    }
+
+    private void UpdateDisplayPrices()
+    {
+        // Check if customer is eligible for discount
+        bool isEligible = IsCustomerEligibleForDiscount(_currentCustomerType);
+
+        if (!isEligible)
+        {
+            // Customer NOT eligible - show full price
+            Price = BasePrice;
+            DiscountedPrice = 0;
+        }
+        else
+        {
+            // Customer IS eligible - show discounted price
+            Price = BasePrice;
+            DiscountedPrice = BaseDiscountedPrice;
+        }
+
+        // Notify UI
+        OnPropertyChanged(nameof(Price));
+        OnPropertyChanged(nameof(DiscountedPrice));
+        OnPropertyChanged(nameof(HasDiscount));
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPriceFormatted));
+        OnPropertyChanged(nameof(DiscountBadge));
+
+        System.Diagnostics.Debug.WriteLine(
+            $"📦 {Title}: Customer={_currentCustomerType ?? "None"}, " +
+            $"DiscountFor={DiscountFor}, Eligible={isEligible}, " +
+            $"Price=₱{Price}, Discounted=₱{DiscountedPrice}");
+    }
+
+    private bool IsCustomerEligibleForDiscount(string? customerType)
+    {
+        // No customer selected
+        if (string.IsNullOrEmpty(customerType)) return false;
+
+        // No valid discount
+        if (BaseDiscountedPrice <= 0 || BaseDiscountedPrice >= BasePrice) return false;
+
+        // Check eligibility based on DiscountFor field
+        if (string.IsNullOrEmpty(DiscountFor) || DiscountFor.Equals("All", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (DiscountFor.Equals("Gym Members", StringComparison.OrdinalIgnoreCase) &&
+            customerType.Equals(CategoryConstants.Member, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (DiscountFor.Equals("Walk-ins", StringComparison.OrdinalIgnoreCase) &&
+            customerType.Equals(CategoryConstants.WalkIn, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+
+    partial void OnPriceChanged(int value)
+    {
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPriceFormatted));
+        OnPropertyChanged(nameof(HasDiscount));
+    }
+
+    partial void OnDiscountedPriceChanged(int value)
+    {
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPriceFormatted));
+        OnPropertyChanged(nameof(HasDiscount));
+        OnPropertyChanged(nameof(DiscountBadge));
     }
 }
 
@@ -1131,10 +1403,25 @@ public partial class CartItem : ObservableObject
     private Bitmap? _poster;
 
     public Product? SourceProduct { get; set; }
-    public Package? SourcePackage { get; set; }
+    public PurchasePackage? SourcePurchasePackage { get; set; }  // ✅ Changed from SourcePackage
 
-    public decimal TotalPrice => Price * Quantity;
-    public string FormattedPrice => $"₱{Price:N2}";
+    public decimal EffectivePrice
+    {
+        get
+        {
+            if (SourceProduct is not null && SourceProduct.HasDiscount && SourceProduct.DiscountedPrice > 0)
+            {
+                var discountAmount = SourceProduct.Price * (SourceProduct.DiscountedPrice / 100);
+                return SourceProduct.Price - discountAmount;
+            }
+
+            return Price;
+        }
+    }
+
+    public decimal TotalPrice => EffectivePrice * Quantity;
+
+    public string FormattedPrice => $"₱{EffectivePrice:N2}";
     public string FormattedTotalPrice => $"₱{TotalPrice:N2}";
 
     private static Bitmap? _defaultProductBitmap;
@@ -1153,7 +1440,7 @@ public partial class CartItem : ObservableObject
             {
                 // Default bitmap remains null if image fails to load
             }
-            return DefaultProductBitmap;
+            return _defaultProductBitmap!;
         }
     }
 
@@ -1177,7 +1464,6 @@ public partial class CartItem : ObservableObject
         OnPropertyChanged(nameof(FormattedTotalPrice));
     }
 }
-
 
 public enum CartItemType
 {
