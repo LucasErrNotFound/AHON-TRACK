@@ -262,7 +262,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 Category = "Drinks",
                 CurrentStock = 17,
                 Price = 35,
-                DiscountInPercentage = true,
                 DiscountedPrice = 5,
                 Supplier = "San Miguel",
                 Expiry = today.AddYears(6).AddDays(32),
@@ -277,7 +276,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 Description = "5lbs Premium Whey Protein",
                 Category = "Supplements",
                 CurrentStock = 17,
-                DiscountInPercentage = true,
                 DiscountedPrice = 50,
                 Price = 2500,
                 Supplier = "Optimum",
@@ -714,9 +712,6 @@ public partial class ProductStock : ObservableObject
     private decimal? _discountedPrice;
 
     [ObservableProperty]
-    private bool _discountInPercentage;
-
-    [ObservableProperty]
     private string? _supplier;
 
     [ObservableProperty]
@@ -737,12 +732,8 @@ public partial class ProductStock : ObservableObject
         {
             if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
             {
-                if (DiscountInPercentage)
-                {
-                    var discountAmount = Price * (DiscountedPrice.Value / 100);
-                    return Price - discountAmount;
-                }
-                return DiscountedPrice.Value;
+                var discountAmount = Price * (DiscountedPrice.Value / 100);
+                return Price - discountAmount;
             }
             return Price;
         }
@@ -762,9 +753,7 @@ public partial class ProductStock : ObservableObject
         {
             if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
             {
-                return DiscountInPercentage
-                    ? $"{DiscountedPrice:N0}% OFF"
-                    : $"₱{DiscountedPrice:N2} OFF";
+                return $"{DiscountedPrice:N0}% OFF";
             }
             return string.Empty;
         }
@@ -813,13 +802,6 @@ public partial class ProductStock : ObservableObject
         OnPropertyChanged(nameof(FinalPrice));
         OnPropertyChanged(nameof(FormattedPrice));
         OnPropertyChanged(nameof(OriginalPrice));
-        OnPropertyChanged(nameof(DiscountDisplay));
-    }
-
-    partial void OnDiscountInPercentageChanged(bool value)
-    {
-        OnPropertyChanged(nameof(FinalPrice));
-        OnPropertyChanged(nameof(FormattedPrice));
         OnPropertyChanged(nameof(DiscountDisplay));
     }
 }
