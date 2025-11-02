@@ -560,7 +560,8 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
                     new ColumnSeries<int>
                     {
                         Values = data,
-                        Fill = new SolidColorPaint(SKColors.DarkSlateBlue),
+                        Fill = new SolidColorPaint(SKColors.DodgerBlue),
+                        Stroke = new SolidColorPaint(SKColors.Red),
                         MaxBarWidth = 45,
                         Name = $"{selectedYear} Sales"
                     }

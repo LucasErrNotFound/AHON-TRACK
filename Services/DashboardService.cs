@@ -441,7 +441,6 @@ namespace AHON_TRACK.Services
         }
 
         #endregion
-        // Add this to your DashboardService.cs file (or wherever IDashboardService is implemented)
 
         #region TRAINING SESSIONS
 
