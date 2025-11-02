@@ -115,7 +115,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
 
     [Required(ErrorMessage = "Package name is required")]
     [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
-    [MinLength(5, ErrorMessage = "Must be at least 5 characters long")]
+    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(25, ErrorMessage = "Must not exceed 25 characters")]
     public string PackageName
     {
@@ -242,6 +242,7 @@ public partial class AddNewPackageDialogCardViewModel : ViewModelBase, INavigabl
         }
     }
 
+    [Required(ErrorMessage = "End date is required.")]
     [EndDateValidation(nameof(ValidFrom), ErrorMessage = "End date should happen after the start date")]
     public DateOnly? ValidTo
     {

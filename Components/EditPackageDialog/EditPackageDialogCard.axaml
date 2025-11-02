@@ -227,7 +227,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="1">
                         <CalendarDatePicker
-                            shadui:ControlAssist.Label="Valid Until (optional)"
+                            shadui:ControlAssist.Label="Valid Until"
                             shadui:ControlAssist.ReadOnly="True"
                             HorizontalAlignment="Right"
                             Width="200"
