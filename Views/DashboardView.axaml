@@ -227,22 +227,17 @@
 														DockPanel.Dock="Top"
 														FontSize="17"
 														FontWeight="Bold"
-														Text="2025 Sales Overview"/>
-													<ComboBox
+														Text="{CompiledBinding SelectedYearDisplay}" />
+													<DatePicker
 														Margin="20,-35,30,0"
 														HorizontalAlignment="Right"
-														HorizontalContentAlignment="Center"
-														Width="100"
+														VerticalAlignment="Center"
+														Width="120"
 														DockPanel.Dock="Top"
-														ItemsSource="{CompiledBinding AvailableYears}"
-														SelectedIndex="{CompiledBinding SelectedYearIndex}">
-														<ComboBoxItem>2025</ComboBoxItem>
-														<ComboBoxItem>2026</ComboBoxItem>
-														<ComboBoxItem>2027</ComboBoxItem>
-														<ComboBoxItem>2028</ComboBoxItem>
-														<ComboBoxItem>2029</ComboBoxItem>
-														<ComboBoxItem>2030</ComboBoxItem>
-													</ComboBox>
+														DayVisible="False" 
+														MonthVisible="False" 
+														YearFormat="yyyy"
+														SelectedDate="{CompiledBinding SelectedDate}" />
 													<avalonia:CartesianChart
 														Height="445"
 														Name="CartesianChart1"
@@ -361,22 +356,17 @@
 														DockPanel.Dock="Top"
 														FontSize="17"
 														FontWeight="Bold"
-														Text="2025 Sales Overview"/>
-													<ComboBox
+														Text="{CompiledBinding SelectedYearDisplay}"/>
+													<DatePicker
 														Margin="20,-35,30,0"
 														HorizontalAlignment="Right"
-														HorizontalContentAlignment="Center"
-														Width="100"
+														VerticalAlignment="Center"
+														Width="120"
 														DockPanel.Dock="Top"
-														ItemsSource="{CompiledBinding AvailableYears}"
-														SelectedIndex="{CompiledBinding SelectedYearIndex}">
-														<ComboBoxItem>2025</ComboBoxItem>
-														<ComboBoxItem>2026</ComboBoxItem>
-														<ComboBoxItem>2027</ComboBoxItem>
-														<ComboBoxItem>2028</ComboBoxItem>
-														<ComboBoxItem>2029</ComboBoxItem>
-														<ComboBoxItem>2030</ComboBoxItem>
-													</ComboBox>
+														DayVisible="False" 
+														MonthVisible="False" 
+														YearFormat="yyyy"
+														SelectedDate="{CompiledBinding SelectedDate}" />
 													<avalonia:CartesianChart
 														Height="445"
 														Name="CartesianChart2"

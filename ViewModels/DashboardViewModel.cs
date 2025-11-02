@@ -40,9 +40,12 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     private ObservableCollection<TrainingSession> _upcomingTrainingSessions = [];
     private ObservableCollection<RecentLog> _recentLogs = [];
     private ObservableCollection<Notification> _notifications = [];
+    private DateTimeOffset? _selectedDate;
     private string _salesSummary = "You made 0 sales this month.";
     private string _trainingSessionsSummary = "You have 0 upcoming training schedules this week";
     private string _recentLogsSummary = "You have 0 recent action logs today";
+    
+    public string SelectedYearDisplay => _selectedDate?.Year + " Sales Overview";
 
     public event EventHandler RecentLogsUpdated;
     public void NotifyRecentLogsUpdated() => RecentLogsUpdated?.Invoke(this, EventArgs.Empty);
@@ -50,6 +53,20 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     #endregion
 
     #region Public Properties
+    
+    public DateTimeOffset? SelectedDate
+    {
+        get => _selectedDate;
+        set
+        {
+            if (_selectedDate != value)
+            {
+                _selectedDate = value;
+                OnPropertyChanged();
+                _ = UpdateChartDataFromTable();
+            }
+        }
+    }
 
     public ObservableCollection<int> AvailableYears
     {
@@ -127,14 +144,13 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     public int SelectedYearIndex
     {
-        get => _selectedYearIndex;
         set
         {
             if (_selectedYearIndex != value)
             {
                 _selectedYearIndex = value;
                 OnPropertyChanged();
-                UpdateChartData();
+                _ = UpdateChartDataFromTable();
             }
         }
     }
@@ -257,8 +273,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         {
             if (ActiveNowGrowth >= 0)
                 return $"+{ActiveNowGrowth}% an hour ago";
-            else
-                return $"{ActiveNowGrowth}% an hour ago";
+            return $"{ActiveNowGrowth}% an hour ago";
         }
     }
 
@@ -309,16 +324,13 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             await RefreshRecentLogs();
             await LoadDashboardSummary();
 
-            // await _inventoryService.ShowEquipmentAlertsAsync();
-            // await _productService.ShowProductAlertsAsync();
-
             DashboardEventService.Instance.RecentLogsUpdated += async (s, e) =>
             {
                 await RefreshRecentLogs();
             };
             DashboardEventService.Instance.ChartDataUpdated += async (s, e) =>
             {
-                await UpdateChartData(); // Direct chart refresh
+                await UpdateChartDataFromTable(); // Direct chart refresh
             };
             DashboardEventService.Instance.SalesUpdated += async (s, e) =>
             {
@@ -345,6 +357,8 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
             if (AvailableYears.Count > 0)
             {
+                var firstYear = AvailableYears[0];
+                SelectedDate = new DateTimeOffset(new DateTime(firstYear, 1, 1));
                 SelectedYearIndex = 0;
             }
         }
@@ -368,8 +382,6 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     {
         await LoadRecentLogsFromDatabaseAsync();
     }
-
-
 
     private void InitializeAxes()
     {
@@ -406,7 +418,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     private async Task InitializeChart()
     {
-        await UpdateChartData();
+        await UpdateChartDataFromTable();
     }
 
     #endregion
@@ -532,76 +544,15 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     }
     #endregion
 
-    #region CRUD Operations for Sales
-
-    public void AddSale(SalesItem newSale)
-    {
-        RecentSales.Insert(0, newSale);
-        UpdateSalesSummary();
-    }
-
-    public void RemoveSale(SalesItem sale)
-    {
-        RecentSales.Remove(sale);
-        UpdateSalesSummary();
-    }
-
-    #endregion
-
-    #region CRUD Operations for Training Sessions
-
-    public void AddTrainingSession(TrainingSession newSession)
-    {
-        var sessionsList = UpcomingTrainingSessions.ToList();
-        var insertIndex = 0;
-
-        for (int i = 0; i < sessionsList.Count; i++)
-        {
-            if (newSession.Date < sessionsList[i].Date)
-            {
-                insertIndex = i;
-                break;
-            }
-            insertIndex = i + 1;
-        }
-
-        UpcomingTrainingSessions.Insert(insertIndex, newSession);
-        UpdateTrainingSessionsSummary();
-    }
-
-    public void RemoveTrainingSession(TrainingSession session)
-    {
-        UpcomingTrainingSessions.Remove(session);
-        UpdateTrainingSessionsSummary();
-    }
-
-    #endregion
-
-    #region CRUD Operations for Recent Logs
-
-    public void AddRecentLog(RecentLog newLog)
-    {
-        RecentLogs.Insert(0, newLog);
-        UpdateRecentLogsSummary();
-    }
-
-    public void RemoveRecentLog(RecentLog log)
-    {
-        RecentLogs.Remove(log);
-        UpdateRecentLogsSummary();
-    }
-
-    #endregion
-
     #region Chart Operations
 
-    private async Task UpdateChartData()
+    private async Task UpdateChartDataFromTable()
     {
-        if (_selectedYearIndex >= 0 && _selectedYearIndex < AvailableYears.Count)
+        if (_selectedDate.HasValue)
         {
             try
             {
-                int selectedYear = AvailableYears[_selectedYearIndex];
+                int selectedYear = _selectedDate.Value.Year;
                 var data = await _dashboardService.GetSalesDataForYearAsync(selectedYear);
 
                 Series =
@@ -614,29 +565,14 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
                         Name = $"{selectedYear} Sales"
                     }
                 ];
+            
+                // Update the title display
+                OnPropertyChanged(nameof(SelectedYearDisplay));
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error loading chart data: {ex.Message}");
             }
-        }
-    }
-
-    public async Task AddYear(int year)
-    {
-        if (!AvailableYears.Contains(year))
-        {
-            var insertIndex = AvailableYears.Count;
-            for (int i = 0; i < AvailableYears.Count; i++)
-            {
-                if (AvailableYears[i] < year)
-                {
-                    insertIndex = i;
-                    break;
-                }
-            }
-
-            AvailableYears.Insert(insertIndex, year);
         }
     }
 
@@ -734,14 +670,12 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
 
     #endregion
 
-    // Add to DashboardViewModel class
-
     protected override void DisposeManagedResources()
     {
         // CRITICAL: Unsubscribe from events FIRST
         var eventService = DashboardEventService.Instance;
         eventService.RecentLogsUpdated -= async (s, e) => await RefreshRecentLogs();
-        eventService.ChartDataUpdated -= async (s, e) => await UpdateChartData();
+        eventService.ChartDataUpdated -= async (s, e) => await UpdateChartDataFromTable();
         eventService.SalesUpdated -= async (s, e) =>
         {
             await LoadSalesFromDatabaseAsync();
@@ -767,6 +701,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         RecentLogs?.Clear();
         Notifications?.Clear();
         AvailableYears?.Clear();
+        SelectedDate = null;
 
         // Clear chart data
         Series = Array.Empty<ISeries>();
