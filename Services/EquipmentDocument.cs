@@ -153,7 +153,7 @@ public class EquipmentDocument : IDocument
                 table.Cell().Element(CellStyle).Text(item.BrandName).FontSize(8);
                 table.Cell().Element(CellStyle).Text(item.Category).FontSize(8);
                 table.Cell().Element(CellStyle).Text(item.Supplier).FontSize(8);
-                table.Cell().Element(CellStyle).Text(item.CurrentStock).FontSize(8);
+                table.Cell().Element(CellStyle).Text(item.Quantity).FontSize(8);
                 table.Cell().Element(CellStyle).AlignLeft().Text($"₱{item.PurchasedPrice:N2}").FontSize(8);
                 
                 table.Cell().Element(CellStyle)

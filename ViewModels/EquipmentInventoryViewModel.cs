@@ -201,7 +201,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             ID = model.EquipmentID,
             BrandName = model.EquipmentName,
             Category = model.Category,
-            CurrentStock = model.CurrentStock,
+            Quantity = model.Quantity,
             SupplierID = model.SupplierID,  // Store the ID
             SupplierName = model.SupplierName,  // Display name from JOIN
             PurchasedPrice = model.PurchasePrice,
@@ -224,7 +224,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             EquipmentID = equipment.ID,
             EquipmentName = equipment.BrandName ?? string.Empty,
             Category = equipment.Category ?? string.Empty,
-            CurrentStock = equipment.CurrentStock ?? 0,
+            Quantity = equipment.Quantity ?? 0,
             SupplierID = equipment.SupplierID,  // Use the ID, not the name
             PurchasePrice = equipment.PurchasedPrice,
             PurchaseDate = equipment.PurchasedDate,
@@ -263,7 +263,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             {
                 EquipmentName = _equipmentDialogCardViewModel.BrandName ?? string.Empty,
                 Category = _equipmentDialogCardViewModel.Category ?? string.Empty,
-                CurrentStock = _equipmentDialogCardViewModel.CurrentStock ?? 0,
+                Quantity = _equipmentDialogCardViewModel.Quantity ?? 0,
                 SupplierID = _equipmentDialogCardViewModel.SupplierID,  // Now using SupplierID
                 PurchasePrice = _equipmentDialogCardViewModel.PurchasePrice,
                 PurchaseDate = _equipmentDialogCardViewModel.PurchasedDate,
@@ -462,7 +462,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                     BrandName = equipment.BrandName,
                     Category = equipment.Category,
                     Supplier = equipment.SupplierName,
-                    CurrentStock = equipment.CurrentStock ?? 0,
+                    Quantity = equipment.Quantity ?? 0,
                     PurchasedPrice = (int?)equipment.PurchasedPrice ?? 0,
                     PurchasedDate = equipment.PurchasedDate,
                     Warranty = equipment.Warranty,
@@ -543,7 +543,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             // Update the equipment object with values from dialog
             equipment.BrandName = _equipmentDialogCardViewModel.BrandName;
             equipment.Category = _equipmentDialogCardViewModel.Category;
-            equipment.CurrentStock = _equipmentDialogCardViewModel.CurrentStock;
+            equipment.Quantity = _equipmentDialogCardViewModel.Quantity;
             equipment.SupplierID = _equipmentDialogCardViewModel.SupplierID;  // Update SupplierID
             equipment.SupplierName = _equipmentDialogCardViewModel.Supplier;  // Use Supplier instead of SelectedSupplier
             equipment.PurchasedPrice = _equipmentDialogCardViewModel.PurchasePrice;
@@ -831,7 +831,7 @@ public partial class Equipment : ObservableObject
     private string? _supplierName;  // Display name from JOIN
 
     [ObservableProperty]
-    private int? _currentStock;
+    private int? _quantity;
 
     [ObservableProperty]
     private decimal? _purchasedPrice;

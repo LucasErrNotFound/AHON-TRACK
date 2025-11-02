@@ -1,14 +1,11 @@
 ﻿using AHON_TRACK.Models;
 using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
-using AHON_TRACK.ViewModels;
 using Microsoft.Data.SqlClient;
 using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Notification = AHON_TRACK.Models.Notification;
 
@@ -210,7 +207,7 @@ namespace AHON_TRACK.Services
                         UPDATE Equipment SET 
                             IsDeleted = 0,
                             Category = @category,
-                            CurrentStock = @currentStock,
+                            Quantity = @quantity,
                             PurchaseDate = @purchaseDate,
                             PurchasePrice = @purchasePrice,
                             SupplierID = @supplierId,
@@ -225,7 +222,7 @@ namespace AHON_TRACK.Services
                     using var restoreCmd = new SqlCommand(restoreQuery, connection);
                     restoreCmd.Parameters.AddWithValue("@equipmentID", existingId.Value);
                     restoreCmd.Parameters.AddWithValue("@category", equipment.Category ?? (object)DBNull.Value);
-                    restoreCmd.Parameters.AddWithValue("@currentStock", equipment.CurrentStock);
+                    restoreCmd.Parameters.AddWithValue("@quantity", equipment.Quantity);
                     restoreCmd.Parameters.AddWithValue("@purchaseDate", (object)equipment.PurchaseDate ?? DBNull.Value);
                     restoreCmd.Parameters.AddWithValue("@purchasePrice", (object)equipment.PurchasePrice ?? DBNull.Value);
                     restoreCmd.Parameters.AddWithValue("@supplierId", (object)equipment.SupplierID ?? DBNull.Value);
@@ -281,12 +278,12 @@ namespace AHON_TRACK.Services
 
                 // Insert new equipment
                 const string insertQuery = @"
-                    INSERT INTO Equipment (EquipmentName, Category, CurrentStock, 
+                    INSERT INTO Equipment (EquipmentName, Category, Quantity, 
                                           PurchaseDate, PurchasePrice, SupplierID, WarrantyExpiry, 
                                           Condition, Status, LastMaintenance, NextMaintenance, 
                                           AddedByEmployeeID, IsDeleted)
                     OUTPUT INSERTED.EquipmentID
-                    VALUES (@equipmentName, @category, @currentStock, 
+                    VALUES (@equipmentName, @category, @quantity, 
                             @purchaseDate, @purchasePrice, @supplierId, @warrantyExpiry, 
                             @condition, @status, @lastMaintenance, @nextMaintenance, 
                             @employeeID, 0)";
@@ -294,7 +291,7 @@ namespace AHON_TRACK.Services
                 using var command = new SqlCommand(insertQuery, connection);
                 command.Parameters.AddWithValue("@equipmentName", equipment.EquipmentName ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@category", equipment.Category ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@currentStock", equipment.CurrentStock);
+                command.Parameters.AddWithValue("@quantity", equipment.Quantity);
                 command.Parameters.AddWithValue("@purchaseDate", (object)equipment.PurchaseDate ?? DBNull.Value);
                 command.Parameters.AddWithValue("@purchasePrice", (object)equipment.PurchasePrice ?? DBNull.Value);
                 command.Parameters.AddWithValue("@supplierId", (object)equipment.SupplierID ?? DBNull.Value);
@@ -384,7 +381,7 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 const string query = @"
-                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.CurrentStock, 
+                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.Quantity, 
                            e.PurchaseDate, e.PurchasePrice, e.SupplierID, s.SupplierName,
                            e.WarrantyExpiry, e.Condition, e.Status, 
                            e.LastMaintenance, e.NextMaintenance
@@ -403,7 +400,7 @@ namespace AHON_TRACK.Services
                         EquipmentID = reader["EquipmentID"] != DBNull.Value ? reader.GetInt32("EquipmentID") : 0,
                         EquipmentName = reader["EquipmentName"]?.ToString() ?? "",
                         Category = reader["Category"]?.ToString() ?? "",
-                        CurrentStock = reader["CurrentStock"] != DBNull.Value ? reader.GetInt32("CurrentStock") : 0,
+                        Quantity = reader["Quantity"] != DBNull.Value ? reader.GetInt32("Quantity") : 0,
                         PurchaseDate = reader["PurchaseDate"] != DBNull.Value ? reader.GetDateTime("PurchaseDate") : null,
                         PurchasePrice = reader["PurchasePrice"] != DBNull.Value ? reader.GetDecimal("PurchasePrice") : null,
                         SupplierID = reader["SupplierID"] != DBNull.Value ? reader.GetInt32("SupplierID") : null,
@@ -441,7 +438,7 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 const string query = @"
-                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.CurrentStock, 
+                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.Quantity, 
                            e.PurchaseDate, e.PurchasePrice, e.SupplierID, s.SupplierName,
                            e.WarrantyExpiry, e.Condition, e.Status, 
                            e.LastMaintenance, e.NextMaintenance
@@ -460,7 +457,7 @@ namespace AHON_TRACK.Services
                         EquipmentID = reader["EquipmentID"] != DBNull.Value ? reader.GetInt32("EquipmentID") : 0,
                         EquipmentName = reader["EquipmentName"]?.ToString() ?? "",
                         Category = reader["Category"]?.ToString() ?? "",
-                        CurrentStock = reader["CurrentStock"] != DBNull.Value ? reader.GetInt32("CurrentStock") : 0,
+                        Quantity = reader["Quantity"] != DBNull.Value ? reader.GetInt32("Quantity") : 0,
                         PurchaseDate = reader["PurchaseDate"] != DBNull.Value ? reader.GetDateTime("PurchaseDate") : null,
                         PurchasePrice = reader["PurchasePrice"] != DBNull.Value ? reader.GetDecimal("PurchasePrice") : null,
                         SupplierID = reader["SupplierID"] != DBNull.Value ? reader.GetInt32("SupplierID") : null,
@@ -497,7 +494,7 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 const string query = @"
-                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.CurrentStock, 
+                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.Quantity, 
                            e.PurchaseDate, e.PurchasePrice, e.SupplierID, s.SupplierName,
                            e.WarrantyExpiry, e.Condition, e.Status, 
                            e.LastMaintenance, e.NextMaintenance
@@ -517,7 +514,7 @@ namespace AHON_TRACK.Services
                         EquipmentID = reader["EquipmentID"] != DBNull.Value ? reader.GetInt32("EquipmentID") : 0,
                         EquipmentName = reader["EquipmentName"]?.ToString() ?? "",
                         Category = reader["Category"]?.ToString() ?? "",
-                        CurrentStock = reader["CurrentStock"] != DBNull.Value ? reader.GetInt32("CurrentStock") : 0,
+                        Quantity = reader["Quantity"] != DBNull.Value ? reader.GetInt32("Quantity") : 0,
                         PurchaseDate = reader["PurchaseDate"] != DBNull.Value ? reader.GetDateTime("PurchaseDate") : null,
                         PurchasePrice = reader["PurchasePrice"] != DBNull.Value ? reader.GetDecimal("PurchasePrice") : null,
                         SupplierID = reader["SupplierID"] != DBNull.Value ? reader.GetInt32("SupplierID") : null,
@@ -556,7 +553,7 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 const string query = @"
-                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.CurrentStock, 
+                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.Quantity, 
                            e.PurchaseDate, e.PurchasePrice, e.SupplierID, s.SupplierName,
                            e.WarrantyExpiry, e.Condition, e.Status, 
                            e.LastMaintenance, e.NextMaintenance
@@ -578,7 +575,7 @@ namespace AHON_TRACK.Services
                         EquipmentID = reader["EquipmentID"] != DBNull.Value ? reader.GetInt32("EquipmentID") : 0,
                         EquipmentName = reader["EquipmentName"]?.ToString() ?? "",
                         Category = reader["Category"]?.ToString() ?? "",
-                        CurrentStock = reader["CurrentStock"] != DBNull.Value ? reader.GetInt32("CurrentStock") : 0,
+                        Quantity = reader["Quantity"] != DBNull.Value ? reader.GetInt32("Quantity") : 0,
                         PurchaseDate = reader["PurchaseDate"] != DBNull.Value ? reader.GetDateTime("PurchaseDate") : null,
                         PurchasePrice = reader["PurchasePrice"] != DBNull.Value ? reader.GetDecimal("PurchasePrice") : null,
                         SupplierID = reader["SupplierID"] != DBNull.Value ? reader.GetInt32("SupplierID") : null,
@@ -617,7 +614,7 @@ namespace AHON_TRACK.Services
                 await connection.OpenAsync();
 
                 const string query = @"
-                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.CurrentStock, 
+                    SELECT e.EquipmentID, e.EquipmentName, e.Category, e.Quantity, 
                            e.PurchaseDate, e.PurchasePrice, e.SupplierID, s.SupplierName,
                            e.WarrantyExpiry, e.Condition, e.Status, 
                            e.LastMaintenance, e.NextMaintenance
@@ -637,7 +634,7 @@ namespace AHON_TRACK.Services
                         EquipmentID = reader["EquipmentID"] != DBNull.Value ? reader.GetInt32("EquipmentID") : 0,
                         EquipmentName = reader["EquipmentName"]?.ToString() ?? "",
                         Category = reader["Category"]?.ToString() ?? "",
-                        CurrentStock = reader["CurrentStock"] != DBNull.Value ? reader.GetInt32("CurrentStock") : 0,
+                        Quantity = reader["Quantity"] != DBNull.Value ? reader.GetInt32("Quantity") : 0,
                         PurchaseDate = reader["PurchaseDate"] != DBNull.Value ? reader.GetDateTime("PurchaseDate") : null,
                         PurchasePrice = reader["PurchasePrice"] != DBNull.Value ? reader.GetDecimal("PurchasePrice") : null,
                         SupplierID = reader["SupplierID"] != DBNull.Value ? reader.GetInt32("SupplierID") : null,
@@ -677,7 +674,7 @@ namespace AHON_TRACK.Services
                 UPDATE Equipment SET 
                     EquipmentName = @equipmentName,
                     Category = @category,
-                    CurrentStock = @currentStock,
+                    Quantity = @quantity,
                     PurchaseDate = @purchaseDate,
                     PurchasePrice = @purchasePrice,
                     SupplierID = @supplierId,
@@ -730,7 +727,7 @@ namespace AHON_TRACK.Services
                 command.Parameters.AddWithValue("@equipmentID", equipment.EquipmentID);
                 command.Parameters.AddWithValue("@equipmentName", equipment.EquipmentName ?? (object)DBNull.Value);
                 command.Parameters.AddWithValue("@category", equipment.Category ?? (object)DBNull.Value);
-                command.Parameters.AddWithValue("@currentStock", equipment.CurrentStock);
+                command.Parameters.AddWithValue("@quantity", equipment.Quantity);
                 command.Parameters.AddWithValue("@purchaseDate", (object)equipment.PurchaseDate ?? DBNull.Value);
                 command.Parameters.AddWithValue("@purchasePrice", (object)equipment.PurchasePrice ?? DBNull.Value);
                 command.Parameters.AddWithValue("@supplierId", (object)equipment.SupplierID ?? DBNull.Value);
@@ -1063,7 +1060,6 @@ namespace AHON_TRACK.Services
         {
             try
             {
-                var lowStockCount = await GetLowStockCountAsync();
                 var maintenanceDueCount = await GetMaintenanceDueCountAsync();
                 var warrantyExpiringCount = await GetWarrantyExpiringCountAsync();
                 var conditionAlertCount = await GetConditionAlertCountAsync();
@@ -1128,25 +1124,6 @@ namespace AHON_TRACK.Services
                         DateAndTime = DateTime.Now
                     });
                 }
-
-                if (lowStockCount > 0)
-                {
-                    var title = "Low Stock Alert";
-                    var message = $"{lowStockCount} equipment item(s) have low stock (≤5 units)!";
-
-                    _toastManager?.CreateToast(title)
-                        .WithContent(message)
-                        .DismissOnClick()
-                        .ShowWarning();
-
-                    notifyCallback?.Invoke(new Notification
-                    {
-                        Type = NotificationType.Warning,
-                        Title = title,
-                        Message = message,
-                        DateAndTime = DateTime.Now
-                    });
-                }
             }
             catch (Exception ex)
             {
@@ -1166,16 +1143,13 @@ namespace AHON_TRACK.Services
                 summary.ConditionAlertItems = await GetConditionAlertItemsAsync(conn);
                 summary.ConditionAlertCount = summary.ConditionAlertItems.Count;
 
-                summary.LowStockItems = await GetLowStockItemsAsync(conn);
-                summary.LowStockCount = summary.LowStockItems.Count;
-
                 summary.MaintenanceDueItems = await GetMaintenanceDueItemsAsync(conn);
                 summary.MaintenanceDueCount = summary.MaintenanceDueItems.Count;
 
                 summary.WarrantyExpiringItems = await GetWarrantyExpiringItemsAsync(conn);
                 summary.WarrantyExpiringCount = summary.WarrantyExpiringItems.Count;
 
-                summary.TotalAlerts = summary.ConditionAlertCount + summary.LowStockCount +
+                summary.TotalAlerts = summary.ConditionAlertCount + 
                                       summary.MaintenanceDueCount + summary.WarrantyExpiringCount;
             }
             catch (Exception ex)
@@ -1189,27 +1163,6 @@ namespace AHON_TRACK.Services
         #endregion
 
         #region Private Helper Methods
-
-        private async Task<int> GetLowStockCountAsync()
-        {
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                using var cmd = new SqlCommand(
-                    @"SELECT COUNT(*) FROM Equipment 
-              WHERE CurrentStock <= 5 
-              AND Status = 'Active'
-              AND IsDeleted = 0", conn);
-
-                return (int)await cmd.ExecuteScalarAsync();
-            }
-            catch
-            {
-                return 0;
-            }
-        }
 
         private async Task<int> GetMaintenanceDueCountAsync()
         {
@@ -1275,41 +1228,6 @@ namespace AHON_TRACK.Services
             {
                 return 0;
             }
-        }
-
-        private async Task<List<EquipmentAlertItem>> GetLowStockItemsAsync(SqlConnection conn)
-        {
-            var items = new List<EquipmentAlertItem>();
-
-            try
-            {
-                using var cmd = new SqlCommand(
-                    @"SELECT EquipmentID, EquipmentName, CurrentStock 
-              FROM Equipment 
-              WHERE CurrentStock <= 5 
-              AND Status = 'Active'
-              AND IsDeleted = 0
-              ORDER BY CurrentStock ASC", conn);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    items.Add(new EquipmentAlertItem
-                    {
-                        EquipmentID = reader.GetInt32(0),
-                        EquipmentName = reader.GetString(1),
-                        AlertType = "Low Stock",
-                        AlertSeverity = "Warning",
-                        Details = $"Current stock: {reader.GetInt32(2)} units"
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[GetLowStockItemsAsync] Error: {ex.Message}");
-            }
-
-            return items;
         }
 
         private async Task<List<EquipmentAlertItem>> GetMaintenanceDueItemsAsync(SqlConnection conn)
@@ -1400,7 +1318,7 @@ namespace AHON_TRACK.Services
             try
             {
                 using var cmd = new SqlCommand(
-                    @"SELECT EquipmentID, EquipmentName, Condition, CurrentStock 
+                    @"SELECT EquipmentID, EquipmentName, Condition, Quantity 
               FROM Equipment 
               WHERE (Condition = 'Repairing' OR Condition = 'Broken')
               AND Status = 'Active'
@@ -1417,7 +1335,7 @@ namespace AHON_TRACK.Services
                 while (await reader.ReadAsync())
                 {
                     var condition = reader.GetString(2);
-                    var currentStock = reader.GetInt32(3);
+                    var quantity = reader.GetInt32(3);
                     var severity = condition.Equals("Broken", StringComparison.OrdinalIgnoreCase) ? "Error" : "Warning";
                     var icon = condition.Equals("Broken", StringComparison.OrdinalIgnoreCase) ? "🔴" : "🟠";
 
@@ -1427,7 +1345,7 @@ namespace AHON_TRACK.Services
                         EquipmentName = reader.GetString(1),
                         AlertType = "Condition Alert",
                         AlertSeverity = severity,
-                        Details = $"{icon} {condition} - {currentStock} unit(s) affected"
+                        Details = $"{icon} {condition} - {quantity} unit(s) affected"
                     });
                 }
             }
@@ -1507,7 +1425,7 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT ISNULL(SUM(PurchasePrice * CurrentStock), 0) as TotalValue
+                    @"SELECT ISNULL(SUM(PurchasePrice * Quantity), 0) as TotalValue
                       FROM Equipment
                       WHERE PurchasePrice IS NOT NULL AND IsDeleted = 0", conn);
 
@@ -1515,36 +1433,6 @@ namespace AHON_TRACK.Services
                 var totalValue = result != DBNull.Value ? Convert.ToDecimal(result) : 0;
 
                 return (true, "Total value calculated successfully.", totalValue);
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Error: {ex.Message}", 0);
-            }
-        }
-
-        public async Task<(bool Success, string Message, int LowStockCount)> GetLowStockEquipmentCountAsync(int threshold = 5)
-        {
-            if (!CanView())
-            {
-                return (false, "Insufficient permissions.", 0);
-            }
-
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                using var cmd = new SqlCommand(
-                    @"SELECT COUNT(*) FROM Equipment 
-                      WHERE CurrentStock <= @threshold 
-                      AND Status = 'Active'
-                      AND IsDeleted = 0", conn);
-
-                cmd.Parameters.AddWithValue("@threshold", threshold);
-
-                var count = (int)await cmd.ExecuteScalarAsync();
-
-                return (true, "Low stock count retrieved successfully.", count);
             }
             catch (Exception ex)
             {
@@ -1588,11 +1476,9 @@ namespace AHON_TRACK.Services
     {
         public int TotalAlerts { get; set; }
         public int ConditionAlertCount { get; set; }  // NEW
-        public int LowStockCount { get; set; }
         public int MaintenanceDueCount { get; set; }
         public int WarrantyExpiringCount { get; set; }
         public List<EquipmentAlertItem> ConditionAlertItems { get; set; } = new List<EquipmentAlertItem>();  // NEW
-        public List<EquipmentAlertItem> LowStockItems { get; set; } = new List<EquipmentAlertItem>();
         public List<EquipmentAlertItem> MaintenanceDueItems { get; set; } = new List<EquipmentAlertItem>();
         public List<EquipmentAlertItem> WarrantyExpiringItems { get; set; } = new List<EquipmentAlertItem>();
     }

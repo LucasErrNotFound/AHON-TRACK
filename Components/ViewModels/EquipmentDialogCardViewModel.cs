@@ -54,7 +54,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private string? _condition = string.Empty;
     private string? _status = "Active";
     private string? _supplier = string.Empty;  // This binds to XAML
-    private int? _currentStock;
+    private int? _quantity;
     private decimal? _purchasePrice;
     private DateTime? _purchaseDate;
     private DateTime? _warrantyExpiry;
@@ -146,12 +146,12 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         }
     }
 
-    [Required(ErrorMessage = "Stock is required")]
-    [Range(0, 500, ErrorMessage = "Stock must be between 0 and 500")]
-    public int? CurrentStock
+    [Required(ErrorMessage = "Quantity is required")]
+    [Range(0, 500, ErrorMessage = "Quantity must be between 0 and 500")]
+    public int? Quantity 
     {
-        get => _currentStock;
-        set => SetProperty(ref _currentStock, value, true);
+        get => _quantity;
+        set => SetProperty(ref _quantity, value, true);
     }
 
     [Required(ErrorMessage = "Price is required")]
@@ -286,7 +286,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         Category = equipment?.Category;
         Condition = equipment?.Condition;
         Status = equipment?.Status ?? "Active";
-        CurrentStock = equipment?.CurrentStock;
+        Quantity = equipment?.Quantity;
         PurchasePrice = equipment?.PurchasedPrice;
         PurchasedDate = equipment?.PurchasedDate;
         WarrantyExpiry = equipment?.Warranty;
@@ -443,13 +443,13 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         Condition = string.Empty;
         Status = "Active";
         Supplier = string.Empty;
-        CurrentStock = null;
+        Quantity = null;
         PurchasePrice = null;
         PurchasedDate = null;
         WarrantyExpiry = null;
         LastMaintenance = null;
         NextMaintenance = null;
-        FilteredStatusItems = _statusFilterItems;
+        FilteredStatusItems = StatusFilterItems;
         ClearAllErrors();
     }
     
