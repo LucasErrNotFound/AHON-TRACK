@@ -154,7 +154,7 @@
 
 					<!-- Column 2 -->
 					<!-- Pricing -->
-					<Grid Grid.Row="0" Grid.Column="1" RowDefinitions="* * * * *" RowSpacing="15" VerticalAlignment="Top">
+					<Grid Grid.Row="0" Grid.Column="1" RowDefinitions="* * * * *" RowSpacing="25" VerticalAlignment="Top">
 						<shadui:Card Grid.Row="0" VerticalAlignment="Top">
 							<StackPanel Orientation="Vertical" Spacing="-5">
 								<shadui:CardTitle Content="Pricing" />
@@ -177,40 +177,18 @@
                                     Margin="0,30,0,0"
                                     shadui:ControlAssist.Label="Discounted Price (Optional)"
                                     Classes="Clearable"
-                                    FormatString="{CompiledBinding DiscountFormat}"
+                                    FormatString="N0"
                                     ShowButtonSpinner="False"
+                                    Minimum="0"
+                                    Maximum="100"
                                     Watermark="0"
                                     Value="{CompiledBinding ProductDiscountedPrice, Mode=TwoWay}">
 									<NumericUpDown.InnerLeftContent>
 										<TextBlock
                                             Margin="8,0,-8,0"
-                                            Text="{CompiledBinding DiscountSymbol}" />
+                                            Text="%" />
 									</NumericUpDown.InnerLeftContent>
 								</NumericUpDown>
-								<Separator Margin="0,10,0,10"/>
-								<StackPanel
-                                    Orientation="Horizontal"
-                                    Spacing="8"
-                                    Margin="10,0,0,0"
-                                    VerticalAlignment="Center"
-                                    HorizontalAlignment="Left">
-									<ToggleSwitch
-                                        shadui:ToggleSwitchAssist.RightAlignedContent="True"
-                                        IsChecked="{CompiledBinding IsPercentageModeOn, Mode=TwoWay}">
-										<ToggleSwitch.OnContent>
-											<TextBlock
-                                                VerticalAlignment="Center"
-                                                FontSize="13"
-                                                Text="Percentage Mode On" />
-										</ToggleSwitch.OnContent>
-										<ToggleSwitch.OffContent>
-											<TextBlock
-                                                VerticalAlignment="Center"
-                                                FontSize="13"
-                                                Text="Percentage Mode Off" />
-										</ToggleSwitch.OffContent>
-									</ToggleSwitch>
-								</StackPanel>
 							</StackPanel>
 						</shadui:Card>
 

@@ -20,7 +20,6 @@ namespace AHON_TRACK.Models
         public string? Description { get; set; }
         public decimal Price { get; set; }
         public decimal? DiscountedPrice { get; set; }
-        public bool IsPercentageDiscount { get; set; }
         public string? ProductImageFilePath { get; set; }
         public string? ProductImageBase64 { get; set; }
         public byte[]? ProductImageBytes { get; set; }
@@ -37,46 +36,13 @@ namespace AHON_TRACK.Models
             {
                 if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
                 {
-                    if (IsPercentageDiscount)
-                    {
-                        return Price - (Price * (DiscountedPrice.Value / 100));
-                    }
-                    return DiscountedPrice.Value;
+                    return Price - Price * (DiscountedPrice.Value / 100);
                 }
                 return Price;
             }
         }
 
-        // Check if product is expired
-        public bool IsExpired
-        {
-            get
-            {
-                return ExpiryDate.HasValue && ExpiryDate.Value < DateTime.Today;
-            }
-        }
-
         // Check if discount is active
-        public bool HasDiscount
-        {
-            get
-            {
-                return DiscountedPrice.HasValue && DiscountedPrice.Value > 0;
-            }
-        }
-
-        // Get discount amount
-        public decimal DiscountAmount
-        {
-            get
-            {
-                if (!HasDiscount) return 0;
-                if (IsPercentageDiscount)
-                {
-                    return Price * (DiscountedPrice.Value / 100);
-                }
-                return Price - DiscountedPrice.Value;
-            }
-        }
+        public bool HasDiscount => DiscountedPrice.HasValue && DiscountedPrice.Value > 0;
     }
 }

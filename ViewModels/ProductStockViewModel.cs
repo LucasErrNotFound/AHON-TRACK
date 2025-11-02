@@ -656,7 +656,6 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             Status = model.Status ?? "",
             Description = model.Description ?? "",
             DiscountedPrice = model.DiscountedPrice,
-            DiscountInPercentage = model.IsPercentageDiscount,
             Poster = posterPath
         };
         
@@ -743,10 +742,7 @@ public partial class ProductStock : ObservableObject
                     var discountAmount = Price * (DiscountedPrice.Value / 100);
                     return Price - discountAmount;
                 }
-                else
-                {
-                    return DiscountedPrice.Value;
-                }
+                return DiscountedPrice.Value;
             }
             return Price;
         }

@@ -44,9 +44,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private byte[]? _productImageBytes;
 
     [ObservableProperty]
-    private bool _isPercentageModeOn;
-
-    [ObservableProperty]
     private bool _isSaving;
 
     [ObservableProperty]
@@ -85,9 +82,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private readonly IProductService _productService;
     private readonly ISupplierService _supplierService;
     private bool _disposed = false;
-
-    public string DiscountSymbol => IsPercentageModeOn ? "%" : "₱";
-    public string DiscountFormat => IsPercentageModeOn ? "N2" : "N0";
 
     public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IProductService productService, ISupplierService supplierService)
     {
@@ -285,7 +279,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 Description = ProductDescription,
                 Price = ProductPrice ?? 0,
                 DiscountedPrice = ProductDiscountedPrice,
-                IsPercentageDiscount = IsPercentageModeOn,
                 ProductImageFilePath = _productImageFilePath,
                 ProductImageBytes = imageBytesToSave, // ✅ Pass the image bytes
                 ExpiryDate = ProductExpiry,
@@ -446,7 +439,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductDescription = product.Description;
         ProductPrice = product.Price;
         ProductExpiry = product.Expiry;
-        IsPercentageModeOn = product.DiscountInPercentage;
         ProductDiscountedPrice = product.DiscountedPrice;
         BatchCode = product.BatchCode;
         CurrentStock = product.CurrentStock; // ✅ This includes 0
@@ -558,7 +550,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _price, value, true);
     }
 
-    [Range(1, 15000, ErrorMessage = "Price must be between 1 and 15,000")]
+    [Range(0, 100, ErrorMessage = "Percentage must be between 0 and 100")]
     public decimal? ProductDiscountedPrice
     {
         get => _discountedPrice;
@@ -608,12 +600,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     {
         get => _productImageFilePath;
         set => SetProperty(ref _productImageFilePath, value, true);
-    }
-
-    partial void OnIsPercentageModeOnChanged(bool value)
-    {
-        OnPropertyChanged(nameof(DiscountSymbol));
-        OnPropertyChanged(nameof(DiscountFormat));
     }
 
     protected override void DisposeManagedResources()

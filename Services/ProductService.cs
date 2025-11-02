@@ -146,7 +146,6 @@ namespace AHON_TRACK.Services
                     Description = @description,
                     Price = @price,
                     DiscountedPrice = @discountedPrice,
-                    IsPercentageDiscount = @isPercentageDiscount,
                     ProductImagePath = @imagePath,
                     ExpiryDate = @expiryDate,
                     Status = @status,
@@ -181,11 +180,11 @@ namespace AHON_TRACK.Services
 
             using var cmd = new SqlCommand(
                 @"INSERT INTO Products (ProductName, BatchCode, SupplierID, Description, 
-                 Price, DiscountedPrice, IsPercentageDiscount, ProductImagePath,
+                 Price, DiscountedPrice, ProductImagePath,
                  ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID, IsDeleted)
                   OUTPUT INSERTED.ProductID
                   VALUES (@productName, @batchCode, @supplierID, @description,
-                          @price, @discountedPrice, @isPercentageDiscount, @imagePath,
+                          @price, @discountedPrice, @imagePath,
                           @expiryDate, @status, @category, @currentStock, @employeeID, 0)", conn);
 
             AddProductParameters(cmd, product);
@@ -371,7 +370,6 @@ namespace AHON_TRACK.Services
                           Description = @description,
                           Price = @price,
                           DiscountedPrice = @discountedPrice,
-                          IsPercentageDiscount = @isPercentageDiscount,
                           ProductImagePath = @imagePath,
                           ExpiryDate = @expiryDate,
                           Status = @status,
@@ -707,7 +705,6 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@description", product.Description ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@price", product.Price);
             cmd.Parameters.AddWithValue("@discountedPrice", product.DiscountedPrice ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@isPercentageDiscount", product.IsPercentageDiscount);
             cmd.Parameters.AddWithValue("@expiryDate", product.ExpiryDate ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@status", product.Status);
             cmd.Parameters.AddWithValue("@category", product.Category ?? "None");
@@ -732,7 +729,7 @@ namespace AHON_TRACK.Services
 
             if (product.HasDiscount)
             {
-                sb.Append($", Discount: {product.DiscountedPrice}{(product.IsPercentageDiscount ? "%" : " fixed")}");
+                sb.Append($", Discount: {product.DiscountedPrice}");
                 sb.Append($", Final Price: ₱{product.FinalPrice:N2}");
             }
 
@@ -741,7 +738,7 @@ namespace AHON_TRACK.Services
 
         private string GetProductSelectQuery() =>
             @"SELECT p.ProductID, p.ProductName, p.BatchCode, p.SupplierID, s.SupplierName, p.Description,
-                     p.Price, p.DiscountedPrice, p.IsPercentageDiscount, p.ProductImagePath,
+                     p.Price, p.DiscountedPrice, p.ProductImagePath,
                      p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
               FROM Products p
               LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID";
@@ -871,8 +868,6 @@ namespace AHON_TRACK.Services
                 DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value
                     ? reader.GetDecimal(reader.GetOrdinal("DiscountedPrice"))
                     : null,
-                IsPercentageDiscount = reader["IsPercentageDiscount"] != DBNull.Value
-                                       && reader.GetBoolean(reader.GetOrdinal("IsPercentageDiscount")),
                 ProductImageBase64 = imageBase64,
                 ProductImageBytes = imageBytes,
                 ExpiryDate = reader["ExpiryDate"] != DBNull.Value
