@@ -196,13 +196,13 @@
                                             Header="Category"
                                             Binding="{CompiledBinding Category}" />
 
-                                        <!-- Current Stock -->
+                                        <!-- Quantity -->
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="100"
-                                            Header="Current Stock"
-                                            Binding="{CompiledBinding CurrentStock}" />
+                                            Header="Quantity"
+                                            Binding="{CompiledBinding Quantity}" />
 
                                         <!-- Purchased Price -->
                                         <DataGridTextColumn
@@ -512,14 +512,14 @@
                                             FontSize="13"
                                             Binding="{CompiledBinding Category}" />
 
-                                        <!-- Current Stock -->
+                                        <!-- Quantity -->
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="Auto"
                                             MaxWidth="100"
-                                            Header="Current Stock"
+                                            Header="Quantity"
                                             FontSize="13"
-                                            Binding="{CompiledBinding CurrentStock}" />
+                                            Binding="{CompiledBinding Quantity}" />
 
                                         <!-- Purchased Price -->
                                         <DataGridTextColumn

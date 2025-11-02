@@ -5,7 +5,7 @@ public class EquipmentModel
     public int EquipmentID { get; set; }
     public string EquipmentName { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
-    public int CurrentStock { get; set; }
+    public int Quantity { get; set; }
     public DateTime? PurchaseDate { get; set; }
     public decimal? PurchasePrice { get; set; }
 
@@ -23,7 +23,6 @@ public class EquipmentModel
 
     // UI Helper Properties
     public bool IsSelected { get; set; }
-    public bool IsLowStock => CurrentStock <= 5;
     public bool NeedsMaintenance => NextMaintenance.HasValue && NextMaintenance.Value <= DateTime.Now.AddDays(7);
     public bool IsWarrantyExpiring => WarrantyExpiry.HasValue && WarrantyExpiry.Value <= DateTime.Now.AddDays(30);
     public bool IsWarrantyExpired => WarrantyExpiry.HasValue && WarrantyExpiry.Value < DateTime.Now;
@@ -46,8 +45,6 @@ public class EquipmentModel
         "On Loan" => "info",
         _ => "default"
     };
-
-    public decimal TotalValue => (PurchasePrice ?? 0) * CurrentStock;
 
     public int DaysUntilNextMaintenance
     {

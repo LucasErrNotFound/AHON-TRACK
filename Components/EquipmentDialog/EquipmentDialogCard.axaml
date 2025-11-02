@@ -100,12 +100,12 @@
 							</StackPanel>
 							<StackPanel Grid.Row="2">
 								<NumericUpDown
-                                    shadui:ControlAssist.Label="Current Stock"
+                                    shadui:ControlAssist.Label="Quantity"
                                     Classes="Clearable"
                                     FormatString="N0"
                                     ShowButtonSpinner="False"
                                     Watermark="0"
-                                    Value="{CompiledBinding CurrentStock, Mode=TwoWay}">
+                                    Value="{CompiledBinding Quantity, Mode=TwoWay}">
 									<NumericUpDown.InnerLeftContent>
 										<TextBlock Margin="8,0,-8,0" Text="×" />
 									</NumericUpDown.InnerLeftContent>
