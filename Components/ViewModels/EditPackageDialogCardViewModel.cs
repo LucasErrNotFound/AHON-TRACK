@@ -223,7 +223,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     public string DiscountFormat => SelectedDiscountTypeItem == "Percentage (%)" ? "N0" : "N2";
 
     [Required(ErrorMessage = "Discount value must be set")]
-    [Range(1, 100, ErrorMessage = "Discount value must be between 1 and 100")]
+    [Range(0, 100, ErrorMessage = "Discount value must be between 0 and 100")]
     public int? DiscountValue
     {
         get => _discountValue;
