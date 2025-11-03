@@ -625,7 +625,7 @@ WHERE TrainingID = @TrainingID";
         private async Task<bool> CheckDailyCapacityAsync(SqlConnection connection, SqlTransaction transaction, int coachId, DateTime date)
         {
             const string query = @"
-    SELECT COUNT(DISTINCT CONCAT(t.FirstName, '|', t.LastName, '|', t.ContactNumber))
+    SELECT COUNT(DISTINCT CONCAT(t.FirstName, '|', t.LastName, '|', t.ContactNumber, '|', t.CustomerType))
     FROM Trainings t
     WHERE t.AssignedCoach = (
         SELECT (e.FirstName + ' ' + e.LastName)
