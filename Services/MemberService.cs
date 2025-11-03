@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Notification = AHON_TRACK.Models.Notification;
 
@@ -386,45 +387,69 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
+                // Replace the query in GetMembersAsync method in MemberService.cs
+
                 const string query = @"
-                            SELECT 
-                                m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname,
-                                LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
-                                m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil,
-                                m.PackageID, p.PackageName, 
-                                CASE 
-                                    WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
-                                    WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
-                                    ELSE m.Status
-                                END AS Status,
-                                m.PaymentMethod, m.ProfilePicture, m.DateJoined,
-                                (SELECT TOP 1 CheckIn FROM MemberCheckIns 
-                                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                                 ORDER BY CheckIn DESC) AS LastCheckIn,
-                                (SELECT TOP 1 CheckOut FROM MemberCheckIns 
-                                 WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                                 ORDER BY CheckOut DESC) AS LastCheckOut,
-                                (SELECT TOP 1 
-                                    CASE 
-                                        WHEN s.ProductID IS NOT NULL THEN pr.ProductName
-                                        WHEN s.PackageID IS NOT NULL THEN pk.PackageName
-                                        ELSE 'Unknown'
-                                    END
-                                 FROM Sales s
-                                 LEFT JOIN Products pr ON s.ProductID = pr.ProductID
-                                 LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
-                                 WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-                                 ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
-                                (SELECT TOP 1 SaleDate FROM Sales 
-                                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                                 ORDER BY SaleDate DESC) AS RecentPurchaseDate,
-                                (SELECT TOP 1 Quantity FROM Sales 
-                                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                                 ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
-                            FROM Members m
-                            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-                            WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
-                            ORDER BY Name";
+    SELECT 
+        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname,
+        LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
+        m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil,
+        m.PackageID, 
+        
+        -- Get gym membership package name
+        p.PackageName AS GymPackageName,
+        
+        -- Get all session-based packages the member has (with sessions left > 0)
+        STUFF((
+            SELECT ', ' + pkg.PackageName
+            FROM MemberSessions ms
+            INNER JOIN Packages pkg ON ms.PackageID = pkg.PackageID
+            WHERE ms.CustomerID = m.MemberID 
+                AND ms.SessionsLeft > 0
+                AND (ms.IsDeleted = 0 OR ms.IsDeleted IS NULL)
+                AND (pkg.IsDeleted = 0 OR pkg.IsDeleted IS NULL)
+            FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS SessionPackages,
+        
+        CASE 
+            WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
+            WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
+            ELSE m.Status
+        END AS Status,
+        
+        m.PaymentMethod, m.ProfilePicture, m.DateJoined,
+        
+        (SELECT TOP 1 CheckIn FROM MemberCheckIns 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY CheckIn DESC) AS LastCheckIn,
+        
+        (SELECT TOP 1 CheckOut FROM MemberCheckIns 
+         WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY CheckOut DESC) AS LastCheckOut,
+        
+        (SELECT TOP 1 
+            CASE 
+                WHEN s.ProductID IS NOT NULL THEN pr.ProductName
+                WHEN s.PackageID IS NOT NULL THEN pk.PackageName
+                ELSE 'Unknown'
+            END
+         FROM Sales s
+         LEFT JOIN Products pr ON s.ProductID = pr.ProductID
+         LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
+         WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+         ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+        
+        (SELECT TOP 1 SaleDate FROM Sales 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY SaleDate DESC) AS RecentPurchaseDate,
+        
+        (SELECT TOP 1 Quantity FROM Sales 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
+    
+    FROM Members m
+    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+    WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
+    ORDER BY Name";
 
                 var members = new List<ManageMemberModel>();
 
@@ -467,41 +492,63 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-            SELECT 
-                m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
-                m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, p.PackageName,
-                CASE 
-                    WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
-                    WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
-                    ELSE m.Status
-                END AS Status,
-                m.PaymentMethod, m.RegisteredByEmployeeID, m.DateJoined,
-                (SELECT TOP 1 CheckIn FROM MemberCheckIns 
-                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY CheckIn DESC) AS LastCheckIn,
-                (SELECT TOP 1 CheckOut FROM MemberCheckIns 
-                 WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY CheckOut DESC) AS LastCheckOut,
-                (SELECT TOP 1 
-                    CASE 
-                        WHEN s.ProductID IS NOT NULL THEN pr.ProductName
-                        WHEN s.PackageID IS NOT NULL THEN pk.PackageName
-                        ELSE 'Unknown'
-                    END
-                 FROM Sales s
-                 LEFT JOIN Products pr ON s.ProductID = pr.ProductID
-                 LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
-                 WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-                 ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
-                (SELECT TOP 1 SaleDate FROM Sales 
-                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY SaleDate DESC) AS RecentPurchaseDate,
-                (SELECT TOP 1 Quantity FROM Sales 
-                 WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                 ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
-            FROM Members m
-            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-            WHERE m.MemberID = @Id AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
+    SELECT 
+        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
+        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, 
+        
+        -- Get gym membership package name
+        p.PackageName AS GymPackageName,
+        
+        -- Get all session-based packages (with sessions left > 0)
+        STUFF((
+            SELECT ', ' + pkg.PackageName
+            FROM MemberSessions ms
+            INNER JOIN Packages pkg ON ms.PackageID = pkg.PackageID
+            WHERE ms.CustomerID = m.MemberID 
+                AND ms.SessionsLeft > 0
+                AND (ms.IsDeleted = 0 OR ms.IsDeleted IS NULL)
+                AND (pkg.IsDeleted = 0 OR pkg.IsDeleted IS NULL)
+            FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS SessionPackages,
+        
+        CASE 
+            WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
+            WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
+            ELSE m.Status
+        END AS Status,
+        
+        m.PaymentMethod, m.RegisteredByEmployeeID, m.DateJoined,
+        
+        (SELECT TOP 1 CheckIn FROM MemberCheckIns 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY CheckIn DESC) AS LastCheckIn,
+        
+        (SELECT TOP 1 CheckOut FROM MemberCheckIns 
+         WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY CheckOut DESC) AS LastCheckOut,
+        
+        (SELECT TOP 1 
+            CASE 
+                WHEN s.ProductID IS NOT NULL THEN pr.ProductName
+                WHEN s.PackageID IS NOT NULL THEN pk.PackageName
+                ELSE 'Unknown'
+            END
+         FROM Sales s
+         LEFT JOIN Products pr ON s.ProductID = pr.ProductID
+         LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
+         WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+         ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+        
+        (SELECT TOP 1 SaleDate FROM Sales 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY SaleDate DESC) AS RecentPurchaseDate,
+        
+        (SELECT TOP 1 Quantity FROM Sales 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
+    
+    FROM Members m
+    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+    WHERE m.MemberID = @Id AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", memberId);
@@ -593,6 +640,33 @@ namespace AHON_TRACK.Services
 
         private ManageMemberModel MapMemberFromReader(SqlDataReader reader, bool includeRegisteredBy = false)
         {
+            int baseIndex = includeRegisteredBy ? 0 : 1; // Skip "Name" column if not includeRegisteredBy
+
+            // Get gym membership package name
+            string gymPackageName = reader.IsDBNull(11) ? null : reader.GetString(11);
+
+            // Get session-based package names
+            string sessionPackages = reader.IsDBNull(12) ? null : reader.GetString(12);
+
+            // Combine gym membership and session packages
+            string combinedPackages;
+            if (!string.IsNullOrEmpty(gymPackageName) && !string.IsNullOrEmpty(sessionPackages))
+            {
+                combinedPackages = $"{gymPackageName}, {sessionPackages}";
+            }
+            else if (!string.IsNullOrEmpty(gymPackageName))
+            {
+                combinedPackages = gymPackageName;
+            }
+            else if (!string.IsNullOrEmpty(sessionPackages))
+            {
+                combinedPackages = sessionPackages;
+            }
+            else
+            {
+                combinedPackages = "None";
+            }
+
             var member = new ManageMemberModel
             {
                 MemberID = reader.GetInt32(0),
@@ -606,24 +680,27 @@ namespace AHON_TRACK.Services
                 DateOfBirth = reader.IsDBNull(includeRegisteredBy ? 8 : 8) ? null : reader.GetDateTime(includeRegisteredBy ? 8 : 8),
                 ValidUntil = reader.IsDBNull(includeRegisteredBy ? 9 : 9) ? null : reader.GetDateTime(includeRegisteredBy ? 9 : 9).ToString("MMM dd, yyyy"),
                 PackageID = reader.IsDBNull(includeRegisteredBy ? 10 : 10) ? null : reader.GetInt32(includeRegisteredBy ? 10 : 10),
-                MembershipType = reader.IsDBNull(includeRegisteredBy ? 11 : 11) ? "None" : reader.GetString(includeRegisteredBy ? 11 : 11),
-                Status = reader.IsDBNull(includeRegisteredBy ? 12 : 12) ? "Active" : reader.GetString(includeRegisteredBy ? 12 : 12),
-                PaymentMethod = reader.IsDBNull(includeRegisteredBy ? 13 : 13) ? string.Empty : reader.GetString(includeRegisteredBy ? 13 : 13),
-                AvatarBytes = reader.IsDBNull(includeRegisteredBy ? 5 : 14) ? null : (byte[])reader[includeRegisteredBy ? 5 : 14],
-                AvatarSource = reader.IsDBNull(includeRegisteredBy ? 5 : 14)
+
+                // Use combined packages
+                MembershipType = combinedPackages,
+
+                Status = reader.IsDBNull(includeRegisteredBy ? 13 : 13) ? "Active" : reader.GetString(includeRegisteredBy ? 13 : 13),
+                PaymentMethod = reader.IsDBNull(includeRegisteredBy ? 14 : 14) ? string.Empty : reader.GetString(includeRegisteredBy ? 14 : 14),
+                AvatarBytes = reader.IsDBNull(includeRegisteredBy ? 5 : 15) ? null : (byte[])reader[includeRegisteredBy ? 5 : 15],
+                AvatarSource = reader.IsDBNull(includeRegisteredBy ? 5 : 15)
                     ? ImageHelper.GetDefaultAvatar()
-                    : ImageHelper.BytesToBitmap((byte[])reader[includeRegisteredBy ? 5 : 14]),
-                DateJoined = reader.IsDBNull(includeRegisteredBy ? 15 : 15) ? null : reader.GetDateTime(includeRegisteredBy ? 15 : 15),
-                LastCheckIn = reader.IsDBNull(16) ? null : reader.GetDateTime(16),
-                LastCheckOut = reader.IsDBNull(17) ? null : reader.GetDateTime(17),
-                RecentPurchaseItem = reader.IsDBNull(18) ? null : reader.GetString(18),
-                RecentPurchaseDate = reader.IsDBNull(19) ? null : reader.GetDateTime(19),
-                RecentPurchaseQuantity = reader.IsDBNull(20) ? null : reader.GetInt32(20)
+                    : ImageHelper.BytesToBitmap((byte[])reader[includeRegisteredBy ? 5 : 15]),
+                DateJoined = reader.IsDBNull(includeRegisteredBy ? 16 : 16) ? null : reader.GetDateTime(includeRegisteredBy ? 16 : 16),
+                LastCheckIn = reader.IsDBNull(17) ? null : reader.GetDateTime(17),
+                LastCheckOut = reader.IsDBNull(18) ? null : reader.GetDateTime(18),
+                RecentPurchaseItem = reader.IsDBNull(19) ? null : reader.GetString(19),
+                RecentPurchaseDate = reader.IsDBNull(20) ? null : reader.GetDateTime(20),
+                RecentPurchaseQuantity = reader.IsDBNull(21) ? null : reader.GetInt32(21)
             };
 
             if (includeRegisteredBy)
             {
-                member.RegisteredByEmployeeID = reader.IsDBNull(14) ? 0 : reader.GetInt32(14);
+                member.RegisteredByEmployeeID = reader.IsDBNull(15) ? 0 : reader.GetInt32(15);
             }
 
             return member;
@@ -1380,19 +1457,129 @@ namespace AHON_TRACK.Services
 
             return !isSessionBased;
         }
+        #endregion
 
         #region WALK-IN TO MEMBER MIGRATION
 
         /// <summary>
-        /// Checks if a walk-in customer exists with matching details and soft deletes them
-        /// when converting to a member
+        /// STRICT MATCHING: Checks if FirstName + LastName matches ANY walk-in customer
+        /// Migrates ALL matching walk-in records (soft delete) when person becomes a member
+        /// </summary>
+        private async Task<int?> CheckAndMigrateWalkInCustomerEnhancedAsync(
+            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
+        {
+            try
+            {
+                // STRICT QUERY: Match by FirstName + LastName only
+                // This ensures ANY walk-in with the same name gets migrated
+                const string checkQuery = @"
+            SELECT CustomerID, FirstName, LastName, Age, ContactNumber, WalkinType 
+            FROM WalkInCustomers 
+            WHERE FirstName = @FirstName 
+                AND LastName = @LastName 
+                AND (IsDeleted = 0 OR IsDeleted IS NULL)
+            ORDER BY CustomerID DESC";
+
+                using var checkCmd = new SqlCommand(checkQuery, conn, transaction);
+                checkCmd.Parameters.AddWithValue("@FirstName", member.FirstName ?? (object)DBNull.Value);
+                checkCmd.Parameters.AddWithValue("@LastName", member.LastName ?? (object)DBNull.Value);
+
+                var walkInMatches = new List<(int CustomerId, string FirstName, string LastName, int Age, string Contact, string Type)>();
+
+                using var reader = await checkCmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    int customerId = reader.GetInt32(0);
+                    string firstName = reader.GetString(1);
+                    string lastName = reader.GetString(2);
+                    int age = reader.IsDBNull(3) ? 0 : reader.GetInt32(3);
+                    string contact = reader.IsDBNull(4) ? "N/A" : reader.GetString(4);
+                    string type = reader.IsDBNull(5) ? "Unknown" : reader.GetString(5);
+
+                    walkInMatches.Add((customerId, firstName, lastName, age, contact, type));
+
+                    Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] Found walk-in match:");
+                    Debug.WriteLine($"  CustomerID: {customerId}");
+                    Debug.WriteLine($"  Name: {firstName} {lastName}");
+                    Debug.WriteLine($"  Age: {age}, Contact: {contact}, Type: {type}");
+                }
+
+                reader.Close();
+
+                if (walkInMatches.Count == 0)
+                {
+                    Debug.WriteLine("[CheckAndMigrateWalkInCustomerEnhancedAsync] No matching walk-in customers found");
+                    return null;
+                }
+
+                // MIGRATE ALL MATCHING WALK-IN RECORDS
+                int totalMigrated = 0;
+                var migratedIds = new List<int>();
+
+                foreach (var match in walkInMatches)
+                {
+                    const string deleteQuery = @"
+                UPDATE WalkInCustomers 
+                SET IsDeleted = 1 
+                WHERE CustomerID = @CustomerID";
+
+                    using var deleteCmd = new SqlCommand(deleteQuery, conn, transaction);
+                    deleteCmd.Parameters.AddWithValue("@CustomerID", match.CustomerId);
+
+                    int rowsAffected = await deleteCmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        totalMigrated++;
+                        migratedIds.Add(match.CustomerId);
+
+                        Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] ✅ Migrated walk-in {match.CustomerId}");
+                    }
+                }
+
+                if (totalMigrated > 0)
+                {
+                    // LOG THE MIGRATION
+                    string migrationDetails = totalMigrated == 1
+                        ? $"Migrated walk-in customer {member.FirstName} {member.LastName} (ID: {migratedIds[0]}) to member"
+                        : $"Migrated {totalMigrated} walk-in records for {member.FirstName} {member.LastName} (IDs: {string.Join(", ", migratedIds)}) to member";
+
+                    await LogActionAsync(conn, transaction, "MIGRATION", migrationDetails, true);
+
+                    // SHOW SUCCESS TOAST
+                    string toastMessage = totalMigrated == 1
+                        ? $"{member.FirstName} {member.LastName} has been successfully converted from walk-in to member."
+                        : $"{member.FirstName} {member.LastName} - {totalMigrated} walk-in record(s) have been archived and converted to member.";
+
+                    _toastManager?.CreateToast("Walk-in Customer Migrated")
+                        .WithContent(toastMessage)
+                        .DismissOnClick()
+                        .ShowSuccess();
+
+                    Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] ✅ Successfully migrated {totalMigrated} walk-in record(s)");
+
+                    return migratedIds.FirstOrDefault();
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] Error: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Basic version - kept for backward compatibility
+        /// Matches by FirstName + LastName + Age
         /// </summary>
         private async Task<int?> CheckAndMigrateWalkInCustomerAsync(
             SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
         {
             try
             {
-                // First, check if a matching walk-in customer exists
                 const string checkQuery = @"
             SELECT CustomerID 
             FROM WalkInCustomers 
@@ -1416,7 +1603,6 @@ namespace AHON_TRACK.Services
 
                 int walkInCustomerId = Convert.ToInt32(result);
 
-                // Soft delete the walk-in customer
                 const string deleteQuery = @"
             UPDATE WalkInCustomers 
             SET IsDeleted = 1 
@@ -1433,7 +1619,6 @@ namespace AHON_TRACK.Services
                     await LogActionAsync(conn, transaction, "MIGRATION",
                         $"Migrated walk-in customer {member.FirstName} {member.LastName} (ID: {walkInCustomerId}) to member", true);
 
-                    // Show success notification
                     _toastManager?.CreateToast("Walk-in Customer Migrated")
                         .WithContent($"{member.FirstName} {member.LastName} has been converted from walk-in to member.")
                         .DismissOnClick()
@@ -1450,103 +1635,6 @@ namespace AHON_TRACK.Services
                 return null;
             }
         }
-
-        /// <summary>
-        /// Enhanced version that also checks contact number for better matching
-        /// </summary>
-        private async Task<int?> CheckAndMigrateWalkInCustomerEnhancedAsync(
-            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
-        {
-            try
-            {
-                // Check with contact number if available
-                string checkQuery;
-
-                if (!string.IsNullOrWhiteSpace(member.ContactNumber))
-                {
-                    checkQuery = @"
-                SELECT CustomerID, FirstName, LastName, Age, ContactNumber 
-                FROM WalkInCustomers 
-                WHERE FirstName = @FirstName 
-                    AND LastName = @LastName 
-                    AND Age = @Age
-                    AND ContactNumber = @ContactNumber
-                    AND (IsDeleted = 0 OR IsDeleted IS NULL)";
-                }
-                else
-                {
-                    checkQuery = @"
-                SELECT CustomerID, FirstName, LastName, Age, ContactNumber 
-                FROM WalkInCustomers 
-                WHERE FirstName = @FirstName 
-                    AND LastName = @LastName 
-                    AND Age = @Age
-                    AND (IsDeleted = 0 OR IsDeleted IS NULL)";
-                }
-
-                using var checkCmd = new SqlCommand(checkQuery, conn, transaction);
-                checkCmd.Parameters.AddWithValue("@FirstName", member.FirstName ?? (object)DBNull.Value);
-                checkCmd.Parameters.AddWithValue("@LastName", member.LastName ?? (object)DBNull.Value);
-                checkCmd.Parameters.AddWithValue("@Age", member.Age ?? (object)DBNull.Value);
-
-                if (!string.IsNullOrWhiteSpace(member.ContactNumber))
-                {
-                    checkCmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber);
-                }
-
-                using var reader = await checkCmd.ExecuteReaderAsync();
-
-                if (!await reader.ReadAsync())
-                {
-                    Debug.WriteLine("[CheckAndMigrateWalkInCustomerEnhancedAsync] No matching walk-in customer found");
-                    return null;
-                }
-
-                int walkInCustomerId = reader.GetInt32(0);
-                string walkInFirstName = reader.GetString(1);
-                string walkInLastName = reader.GetString(2);
-                int walkInAge = reader.GetInt32(3);
-                string walkInContact = reader.IsDBNull(4) ? "N/A" : reader.GetString(4);
-
-                reader.Close();
-
-                // Soft delete the walk-in customer
-                const string deleteQuery = @"
-            UPDATE WalkInCustomers 
-            SET IsDeleted = 1 
-            WHERE CustomerID = @CustomerID";
-
-                using var deleteCmd = new SqlCommand(deleteQuery, conn, transaction);
-                deleteCmd.Parameters.AddWithValue("@CustomerID", walkInCustomerId);
-
-                int rowsAffected = await deleteCmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
-                {
-                    Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] Successfully migrated walk-in customer {walkInCustomerId}");
-                    Debug.WriteLine($"  Details: {walkInFirstName} {walkInLastName}, Age: {walkInAge}, Contact: {walkInContact}");
-
-                    await LogActionAsync(conn, transaction, "MIGRATION",
-                        $"Migrated walk-in customer {walkInFirstName} {walkInLastName} (ID: {walkInCustomerId}, Age: {walkInAge}) to member", true);
-
-                    _toastManager?.CreateToast("Walk-in Customer Migrated")
-                        .WithContent($"{walkInFirstName} {walkInLastName} has been successfully converted from walk-in to member.")
-                        .DismissOnClick()
-                        .ShowSuccess();
-
-                    return walkInCustomerId;
-                }
-
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] Error: {ex.Message}");
-                return null;
-            }
-        }
-
-        #endregion
 
         #endregion
     }
