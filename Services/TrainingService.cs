@@ -22,8 +22,8 @@ namespace AHON_TRACK.Services
         private readonly ToastManager _toastManager;
 
         // Constants
-        private const int MAX_DAILY_SESSIONS = 8;
-        private const int MAX_SCHEDULE_CAPACITY = 8;
+        private const int MAX_DAILY_SESSIONS = 20;
+        private const int MAX_SCHEDULE_CAPACITY = 20;
         private const string DEFAULT_CUSTOMER_TYPE = "Member";
         private const string DEFAULT_ATTENDANCE = "Pending";
 
