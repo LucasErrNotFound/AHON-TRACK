@@ -1,5 +1,4 @@
 using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Models;
 using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media;
@@ -7,13 +6,11 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
-using Microsoft.IdentityModel.Tokens;
 using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -28,6 +25,12 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     [ObservableProperty]
     private string _selectedPackageFilterItem = "All";
+    
+    [ObservableProperty]
+    private string[] _coachFilterItems = [];
+
+    [ObservableProperty]
+    private string _selectedCoachFilterItem = "All Coaches";
 
     [ObservableProperty]
     private DateTime _selectedDate = DateTime.Today;
@@ -70,6 +73,9 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     [ObservableProperty]
     private string _upcomingScheduleChangeText = string.Empty;
+    
+    [ObservableProperty]
+    private bool _isLoadingCoaches;
 
     [ObservableProperty]
     private ObservableCollection<ScheduledPerson> _scheduledPeople = [];
@@ -95,6 +101,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
         SubscribeToEvents();
         _ = LoadTrainingsAsync();
+        _ = LoadCoachesAsync();
         UpdateScheduledPeopleCounts();
     }
 
@@ -108,6 +115,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _trainingService = null!;
 
         SubscribeToEvents();
+        _ = LoadCoachesAsync();
         UpdateScheduledPeopleCounts();
     }
 
@@ -117,6 +125,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         if (IsInitialized) return;
         SubscribeToEvents();
         _ = LoadTrainingsAsync();
+        _ = LoadCoachesAsync();
         UpdateScheduledPeopleCounts();
         IsInitialized = true;
     }
@@ -128,18 +137,10 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         eventService.ScheduleAdded += OnTrainingDataChanged;
         eventService.ScheduleUpdated += OnTrainingDataChanged;
         eventService.MemberUpdated += OnTrainingDataChanged;
-    }
-
-    private void OnTrainingDataChanged(object? sender, EventArgs e)
-    {
-        try
-        {
-            _ = LoadTrainingsAsync();
-        }
-        catch (Exception ex)
-        {
-            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
-        }
+        
+        eventService.EmployeeAdded += OnCoachDataChanged;
+        eventService.EmployeeUpdated += OnCoachDataChanged;
+        eventService.EmployeeDeleted += OnCoachDataChanged;
     }
 
     private void UpdateDashboardStatistics()
@@ -238,7 +239,47 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         UpdateDashboardStatistics();
         IsLoading = false;
     }
+    
+    private async Task LoadCoachesAsync()
+    {
+        if (_trainingService == null) return;
 
+        IsLoadingCoaches = true;
+
+        try
+        {
+            var coaches = await _trainingService.GetCoachNamesAsync();
+
+            var coachNames = coaches
+                .Where(c => !string.IsNullOrEmpty(c.FullName))
+                .OrderBy(c => c.FullName)
+                .Select(c => c.FullName)
+                .ToList();
+
+            coachNames.Insert(0, "All Coaches");
+
+            CoachFilterItems = coachNames.ToArray();
+
+            if (string.IsNullOrEmpty(SelectedCoachFilterItem))
+            {
+                SelectedCoachFilterItem = "All Coaches";
+            }
+        }
+        catch (Exception ex)
+        {
+            CoachFilterItems = ["All Coaches"];
+            SelectedCoachFilterItem = "All Coaches";
+
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to load coaches: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsLoadingCoaches = false;
+        }
+    }
 
     private void LoadSampleData()
     {
@@ -246,7 +287,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         OriginalScheduledPeople = scheduledClients;
         FilterDataByPackageAndDate();
     }
-
 
     private List<ScheduledPerson> CreateSampleData()
     {
@@ -427,6 +467,14 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
                 .ToList();
         }
 
+        // Add coach filtering
+        if (!string.IsNullOrEmpty(SelectedCoachFilterItem) && SelectedCoachFilterItem != "All Coaches")
+        {
+            filteredScheduledData = filteredScheduledData
+                .Where(w => w.AssignedCoach == SelectedCoachFilterItem)
+                .ToList();
+        }
+
         CurrentScheduledPeople = filteredScheduledData;
         ScheduledPeople.Clear();
 
@@ -457,6 +505,23 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     {
         FilterDataByPackageAndDate();
     }
+    
+    private void OnTrainingDataChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            _ = LoadTrainingsAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+    }
+    
+    partial void OnSelectedCoachFilterItemChanged(string value)
+    {
+        FilterDataByPackageAndDate();
+    }
 
     private void UpdateScheduledPeopleCounts()
     {
@@ -464,6 +529,18 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         TotalCount = ScheduledPeople.Count;
 
         SelectAll = ScheduledPeople.Count > 0 && ScheduledPeople.All(x => x.IsSelected);
+    }
+    
+    private async void OnCoachDataChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            await LoadCoachesAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to reload coaches: {ex.Message}");
+        }
     }
 
     protected override void DisposeManagedResources()
@@ -474,6 +551,10 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         eventService.ScheduleAdded -= OnTrainingDataChanged;
         eventService.ScheduleUpdated -= OnTrainingDataChanged;
         eventService.MemberUpdated -= OnTrainingDataChanged;
+        
+        eventService.EmployeeAdded -= OnCoachDataChanged;
+        eventService.EmployeeUpdated -= OnCoachDataChanged;
+        eventService.EmployeeDeleted -= OnCoachDataChanged;
 
         // Unsubscribe from property changed events
         foreach (var schedule in ScheduledPeople)
@@ -485,6 +566,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         ScheduledPeople.Clear();
         OriginalScheduledPeople.Clear();
         CurrentScheduledPeople.Clear();
+        CoachFilterItems = [];
     }
 }
 
