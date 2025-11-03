@@ -61,6 +61,13 @@ namespace AHON_TRACK.Services
                 return (false, "Insufficient permissions to add packages.", null);
             }
 
+            var validation = ValidateDiscount(package.price, package.discount, package.discountType);
+            if (!validation.IsValid)
+            {
+                ShowErrorToast("Invalid Discount", validation.ErrorMessage);
+                return (false, validation.ErrorMessage, null);
+            }
+
             try
             {
                 using var conn = new SqlConnection(_connectionString);
@@ -276,6 +283,13 @@ namespace AHON_TRACK.Services
             if (!CanUpdate())
             {
                 ShowAccessDeniedToast("update package information", "Only administrators and managers can");
+                return false;
+            }
+
+            var validation = ValidateDiscount(package.price, package.discount, package.discountType);
+            if (!validation.IsValid)
+            {
+                ShowErrorToast("Invalid Discount", validation.ErrorMessage);
                 return false;
             }
 
@@ -621,6 +635,48 @@ namespace AHON_TRACK.Services
                                 .Select(f => f.Trim())
                                 .Where(f => !string.IsNullOrWhiteSpace(f))
                                 .ToList();
+        }
+
+        private (bool IsValid, string ErrorMessage) ValidateDiscount(decimal price, decimal discount, string discountType)
+        {
+            // Check for negative discount
+            if (discount < 0)
+            {
+                return (false, "Discount cannot be negative.");
+            }
+
+            // No validation needed if no discount
+            if (discount == 0)
+            {
+                return (true, string.Empty);
+            }
+
+            // Validate based on discount type
+            if (string.IsNullOrWhiteSpace(discountType))
+            {
+                return (false, "Discount type must be specified when discount is applied.");
+            }
+
+            if (discountType.Equals(DISCOUNT_TYPE_PERCENTAGE, StringComparison.OrdinalIgnoreCase))
+            {
+                if (discount > 100)
+                {
+                    return (false, "Percentage discount cannot exceed 100%.");
+                }
+            }
+            else if (discountType.Equals(DISCOUNT_TYPE_FIXED, StringComparison.OrdinalIgnoreCase))
+            {
+                if (discount > price)
+                {
+                    return (false, $"Fixed discount (₱{discount:N2}) cannot exceed the package price (₱{price:N2}).");
+                }
+            }
+            else
+            {
+                return (false, "Invalid discount type. Must be 'Percentage' or 'Fixed'.");
+            }
+
+            return (true, string.Empty);
         }
 
         private decimal CalculateDiscountedPrice(decimal originalPrice, decimal discount, string discountType)

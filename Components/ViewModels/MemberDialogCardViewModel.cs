@@ -425,7 +425,10 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 ValidUntil = MemberValidUntil?.ToString("MMM dd, yyyy"),
                 MembershipType = MemberPackages,
                 PackageID = _memberPackageId,
-                Status = MemberStatus
+                Status = MemberStatus,
+                ProfilePicture = ProfileImage,
+                AvatarBytes = ProfileImage,
+                AvatarSource = ProfileImageSource
             };
 
             if (_memberService != null)

@@ -22,8 +22,8 @@ namespace AHON_TRACK.Services
         private readonly ToastManager _toastManager;
 
         // Constants
-        private const int MAX_DAILY_SESSIONS = 8;
-        private const int MAX_SCHEDULE_CAPACITY = 8;
+        private const int MAX_DAILY_SESSIONS = 20;
+        private const int MAX_SCHEDULE_CAPACITY = 20;
         private const string DEFAULT_CUSTOMER_TYPE = "Member";
         private const string DEFAULT_ATTENDANCE = "Pending";
 
@@ -102,7 +102,17 @@ namespace AHON_TRACK.Services
                     if (!await CheckDailyCapacityAsync(connection, transaction, coachId.Value, training.scheduledDate))
                     {
                         ShowToast("Coach Limit Reached",
-                            $"Coach {training.assignedCoach} has already reached {MAX_DAILY_SESSIONS} sessions for {training.scheduledDate:MMM dd}.",
+                            $"Coach {training.assignedCoach} has already reached {MAX_DAILY_SESSIONS} unique trainees for {training.scheduledDate:MMM dd}.",
+                            ToastType.Warning);
+                        return false;
+                    }
+
+                    // Check for duplicate package booking
+                    if (await CheckDuplicateBookingAsync(connection, transaction, training.customerID, training.packageID,
+                        training.scheduledDate, training.scheduledTimeStart, training.scheduledTimeEnd))
+                    {
+                        ShowToast("Package Already Used",
+                            $"{training.firstName} {training.lastName} has already consumed this package today.",
                             ToastType.Warning);
                         return false;
                     }
@@ -625,19 +635,44 @@ WHERE TrainingID = @TrainingID";
         private async Task<bool> CheckDailyCapacityAsync(SqlConnection connection, SqlTransaction transaction, int coachId, DateTime date)
         {
             const string query = @"
-            SELECT SUM(CurrentCapacity)
-            FROM CoachSchedule
-            WHERE CoachID = @CoachID 
-             AND ScheduledDate = @Date 
-              AND IsDeleted = 0";
+    SELECT COUNT(DISTINCT CONCAT(t.FirstName, '|', t.LastName, '|', t.ContactNumber))
+    FROM Trainings t
+    WHERE t.AssignedCoach = (
+        SELECT (e.FirstName + ' ' + e.LastName)
+        FROM Coach c
+        INNER JOIN Employees e ON c.CoachID = e.EmployeeID
+        WHERE c.CoachID = @CoachID
+    )
+    AND t.ScheduledDate = @Date";
 
             using var cmd = new SqlCommand(query, connection, transaction);
             cmd.Parameters.AddWithValue("@CoachID", coachId);
             cmd.Parameters.AddWithValue("@Date", date.Date);
 
             var result = await cmd.ExecuteScalarAsync();
-            int totalToday = result != DBNull.Value ? Convert.ToInt32(result) : 0;
-            return totalToday < MAX_DAILY_SESSIONS;
+            int uniqueTraineesToday = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            return uniqueTraineesToday < MAX_DAILY_SESSIONS;
+        }
+
+        private async Task<bool> CheckDuplicateBookingAsync(SqlConnection connection, SqlTransaction transaction,
+            int customerID, int packageID, DateTime scheduledDate, DateTime scheduledTimeStart, DateTime scheduledTimeEnd)
+        {
+            const string query = @"
+    SELECT COUNT(*)
+    FROM Trainings
+    WHERE CustomerID = @CustomerID
+      AND PackageID = @PackageID
+      AND ScheduledDate = @ScheduledDate
+      AND Attendance IN ('Pending', 'Present')"; // Only check active/upcoming sessions
+
+            using var cmd = new SqlCommand(query, connection, transaction);
+            cmd.Parameters.AddWithValue("@CustomerID", customerID);
+            cmd.Parameters.AddWithValue("@PackageID", packageID);
+            cmd.Parameters.AddWithValue("@ScheduledDate", scheduledDate.Date);
+
+            var result = await cmd.ExecuteScalarAsync();
+            int count = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            return count > 0; // Returns true if package already used that day
         }
 
         private async Task<int?> GetOrCreateScheduleAsync(SqlConnection connection, SqlTransaction transaction,
@@ -648,14 +683,14 @@ WHERE TrainingID = @TrainingID";
             if (scheduleId.HasValue)
                 return scheduleId;
 
-            // Check for overlap
+            /*// Check for overlap
             if (await HasScheduleOverlapAsync(connection, transaction, coachId, date, start, end))
             {
                 ShowToast("Conflict Detected",
                     $"Coach already has a schedule overlapping this time slot ({start:hh\\:mm tt}–{end:hh\\:mm tt}).",
                     ToastType.Warning);
                 return null;
-            }
+            }*/
 
             // Create new schedule
             return await CreateCoachScheduleAsync(connection, transaction, coachId, date, start, end);
@@ -699,7 +734,7 @@ WHERE TrainingID = @TrainingID";
 
             return null;
         }
-
+        /*
         private async Task<bool> HasScheduleOverlapAsync(SqlConnection connection, SqlTransaction transaction,
             int coachId, DateTime date, DateTime start, DateTime end)
         {
@@ -719,7 +754,7 @@ WHERE TrainingID = @TrainingID";
 
             var result = await cmd.ExecuteScalarAsync();
             return result != null && result != DBNull.Value;
-        }
+        }*/
 
         private async Task<int?> CreateCoachScheduleAsync(SqlConnection connection, SqlTransaction transaction,
             int coachId, DateTime date, DateTime start, DateTime end)
