@@ -189,6 +189,7 @@
                             HorizontalAlignment="Left"
                             shadui:ControlAssist.Label="Discount Type"
                             ItemsSource="{CompiledBinding DiscountTypeItems}"
+                            IsEnabled="False"
                             SelectedItem="{CompiledBinding SelectedDiscountTypeItem, Mode=TwoWay}" />
                     </StackPanel>
                     <StackPanel Grid.Row="0" Grid.Column="1">
@@ -197,6 +198,8 @@
                             shadui:ControlAssist.Label="Discount Value"
                             Classes="Clearable"
                             FormatString="{CompiledBinding DiscountFormat}"
+                            Minimum="0"
+                            Maximum="100"
                             ShowButtonSpinner="False"
                             Watermark="0"
                             VerticalAlignment="Center"
