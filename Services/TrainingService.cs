@@ -102,7 +102,17 @@ namespace AHON_TRACK.Services
                     if (!await CheckDailyCapacityAsync(connection, transaction, coachId.Value, training.scheduledDate))
                     {
                         ShowToast("Coach Limit Reached",
-                            $"Coach {training.assignedCoach} has already reached {MAX_DAILY_SESSIONS} sessions for {training.scheduledDate:MMM dd}.",
+                            $"Coach {training.assignedCoach} has already reached {MAX_DAILY_SESSIONS} unique trainees for {training.scheduledDate:MMM dd}.",
+                            ToastType.Warning);
+                        return false;
+                    }
+
+                    // Check for duplicate package booking
+                    if (await CheckDuplicateBookingAsync(connection, transaction, training.customerID, training.packageID,
+                        training.scheduledDate, training.scheduledTimeStart, training.scheduledTimeEnd))
+                    {
+                        ShowToast("Package Already Used",
+                            $"{training.firstName} {training.lastName} has already consumed this package today.",
                             ToastType.Warning);
                         return false;
                     }
@@ -625,7 +635,7 @@ WHERE TrainingID = @TrainingID";
         private async Task<bool> CheckDailyCapacityAsync(SqlConnection connection, SqlTransaction transaction, int coachId, DateTime date)
         {
             const string query = @"
-    SELECT COUNT(DISTINCT CONCAT(t.FirstName, '|', t.LastName, '|', t.ContactNumber, '|', t.CustomerType))
+    SELECT COUNT(DISTINCT CONCAT(t.FirstName, '|', t.LastName, '|', t.ContactNumber))
     FROM Trainings t
     WHERE t.AssignedCoach = (
         SELECT (e.FirstName + ' ' + e.LastName)
@@ -642,6 +652,27 @@ WHERE TrainingID = @TrainingID";
             var result = await cmd.ExecuteScalarAsync();
             int uniqueTraineesToday = result != DBNull.Value ? Convert.ToInt32(result) : 0;
             return uniqueTraineesToday < MAX_DAILY_SESSIONS;
+        }
+
+        private async Task<bool> CheckDuplicateBookingAsync(SqlConnection connection, SqlTransaction transaction,
+            int customerID, int packageID, DateTime scheduledDate, DateTime scheduledTimeStart, DateTime scheduledTimeEnd)
+        {
+            const string query = @"
+    SELECT COUNT(*)
+    FROM Trainings
+    WHERE CustomerID = @CustomerID
+      AND PackageID = @PackageID
+      AND ScheduledDate = @ScheduledDate
+      AND Attendance IN ('Pending', 'Present')"; // Only check active/upcoming sessions
+
+            using var cmd = new SqlCommand(query, connection, transaction);
+            cmd.Parameters.AddWithValue("@CustomerID", customerID);
+            cmd.Parameters.AddWithValue("@PackageID", packageID);
+            cmd.Parameters.AddWithValue("@ScheduledDate", scheduledDate.Date);
+
+            var result = await cmd.ExecuteScalarAsync();
+            int count = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            return count > 0; // Returns true if package already used that day
         }
 
         private async Task<int?> GetOrCreateScheduleAsync(SqlConnection connection, SqlTransaction transaction,
