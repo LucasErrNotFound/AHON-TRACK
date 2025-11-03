@@ -625,19 +625,23 @@ WHERE TrainingID = @TrainingID";
         private async Task<bool> CheckDailyCapacityAsync(SqlConnection connection, SqlTransaction transaction, int coachId, DateTime date)
         {
             const string query = @"
-            SELECT SUM(CurrentCapacity)
-            FROM CoachSchedule
-            WHERE CoachID = @CoachID 
-             AND ScheduledDate = @Date 
-              AND IsDeleted = 0";
+    SELECT COUNT(DISTINCT CONCAT(t.FirstName, '|', t.LastName, '|', t.ContactNumber))
+    FROM Trainings t
+    WHERE t.AssignedCoach = (
+        SELECT (e.FirstName + ' ' + e.LastName)
+        FROM Coach c
+        INNER JOIN Employees e ON c.CoachID = e.EmployeeID
+        WHERE c.CoachID = @CoachID
+    )
+    AND t.ScheduledDate = @Date";
 
             using var cmd = new SqlCommand(query, connection, transaction);
             cmd.Parameters.AddWithValue("@CoachID", coachId);
             cmd.Parameters.AddWithValue("@Date", date.Date);
 
             var result = await cmd.ExecuteScalarAsync();
-            int totalToday = result != DBNull.Value ? Convert.ToInt32(result) : 0;
-            return totalToday < MAX_DAILY_SESSIONS;
+            int uniqueTraineesToday = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            return uniqueTraineesToday < MAX_DAILY_SESSIONS;
         }
 
         private async Task<int?> GetOrCreateScheduleAsync(SqlConnection connection, SqlTransaction transaction,
