@@ -23,7 +23,14 @@ namespace AHON_TRACK.ViewModels;
 public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private string[] _productFilterItems = [CategoryConstants.Supplements, CategoryConstants.Drinks, CategoryConstants.Equipment, CategoryConstants.GymPackage];
+    private string[] _productFilterItems = [
+        CategoryConstants.Supplements, 
+        CategoryConstants.Drinks, 
+        CategoryConstants.Equipment, 
+        CategoryConstants.GymPackage,
+        CategoryConstants.Merchandise,
+        CategoryConstants.Apparel
+    ];
 
     [ObservableProperty]
     private string _selectedProductFilterItem = CategoryConstants.Supplements;

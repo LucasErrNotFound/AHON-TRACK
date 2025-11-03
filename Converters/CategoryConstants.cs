@@ -16,6 +16,8 @@ namespace AHON_TRACK.Converters
         public const string Supplements = "Supplements";
         public const string Drinks = "Drinks";
         public const string Equipment = "Products";
+        public const string Apparel = "Apparel";
+        public const string Merchandise = "Merchandise";
 
         // Customer types
         public const string Member = "Member";
