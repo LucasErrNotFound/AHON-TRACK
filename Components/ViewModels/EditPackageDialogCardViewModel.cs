@@ -18,7 +18,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
 {
     [ObservableProperty]
     private string[] _discountTypeItems = ["Percentage (%)", "Fixed Amount (₱)"];
-    private string _selectedDiscountTypeItem = "Percentage (%)";
+    private string _selectedDiscountTypeItem = "Fixed Amount (₱)";
 
     [ObservableProperty]
     private string[] _discountForItems = ["All", "Walk-ins", "Gym Members"];
@@ -134,7 +134,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     }
 
     [Required(ErrorMessage = "Price must be set")]
-    [Range(0, 5000, ErrorMessage = "Price must be between 0 and 5,000")]
+    [Range(20, 10000, ErrorMessage = "Price must be between 20 and 10,000")]
     public decimal? Price
     {
         get => _price;
@@ -223,7 +223,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     public string DiscountFormat => SelectedDiscountTypeItem == "Percentage (%)" ? "N0" : "N2";
 
     [Required(ErrorMessage = "Discount value must be set")]
-    [Range(0, 100, ErrorMessage = "Discount value must be between 0 and 100")]
+    [Range(0, 10000, ErrorMessage = "Discount value must be between 0 and 10,000")]
     public int? DiscountValue
     {
         get => _discountValue;

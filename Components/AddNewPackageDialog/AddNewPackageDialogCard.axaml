@@ -198,7 +198,6 @@
                             ShowButtonSpinner="False"
                             Watermark="0"
                             Minimum="0"
-                            Maximum="100"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Right"
                             Value="{CompiledBinding DiscountValue, Mode=TwoWay}">

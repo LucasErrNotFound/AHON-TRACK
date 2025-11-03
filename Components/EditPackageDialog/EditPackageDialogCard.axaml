@@ -199,7 +199,6 @@
                             Classes="Clearable"
                             FormatString="{CompiledBinding DiscountFormat}"
                             Minimum="0"
-                            Maximum="100"
                             ShowButtonSpinner="False"
                             Watermark="0"
                             VerticalAlignment="Center"
