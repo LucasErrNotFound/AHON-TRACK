@@ -64,8 +64,7 @@ namespace AHON_TRACK.Services
                 throw new ArgumentNullException(nameof(training));
 
             var duration = training.scheduledTimeEnd - training.scheduledTimeStart;
-            const int MIN_DURATION_MINUTES = 30;
-
+            const int MIN_DURATION_MINUTES = 60;
             if (duration.TotalMinutes < MIN_DURATION_MINUTES)
             {
                 ShowToast("Invalid Schedule Duration",
@@ -73,7 +72,6 @@ namespace AHON_TRACK.Services
                     ToastType.Warning);
                 return false;
             }
-
             if (duration.TotalMinutes <= 0)
             {
                 ShowToast("Invalid Time Range",
