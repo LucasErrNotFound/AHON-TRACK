@@ -19,5 +19,6 @@ namespace AHON_TRACK.Services.Interface
 
         // Load for coach assignment
         Task<List<(int CoachID, string FullName, string Username)>> GetCoachNamesAsync();
+        Task<List<string>> GetPackageNamesAsync();
     }
 }

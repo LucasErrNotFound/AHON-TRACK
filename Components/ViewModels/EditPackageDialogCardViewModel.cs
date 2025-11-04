@@ -25,7 +25,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     private string _selectedDiscountForItem = "All";
 
     [ObservableProperty]
-    private string[] _durationItems = ["/Month", "/Session", "/One-time only"];
+    private string[] _durationItems = ["/Month", "/Session", "/One-time only", "/Per day"];
     private string _selectedDurationItem = string.Empty;
 
     private int _packageId;
@@ -395,7 +395,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             validTo = validToDate
         };
     }
-    
+
     protected override void DisposeManagedResources()
     {
         // Clear strings and fields

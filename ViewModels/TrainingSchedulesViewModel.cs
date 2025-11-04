@@ -21,11 +21,14 @@ namespace AHON_TRACK.ViewModels;
 public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
-    private string[] _packageFilterItems = ["All", "Boxing", "Muay Thai", "Crossfit"];
+    private string[] _packageFilterItems = ["All"];
 
     [ObservableProperty]
     private string _selectedPackageFilterItem = "All";
-    
+
+    [ObservableProperty]
+    private bool _isLoadingPackages;
+
     [ObservableProperty]
     private string[] _coachFilterItems = [];
 
@@ -73,7 +76,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     [ObservableProperty]
     private string _upcomingScheduleChangeText = string.Empty;
-    
+
     [ObservableProperty]
     private bool _isLoadingCoaches;
 
@@ -102,6 +105,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         SubscribeToEvents();
         _ = LoadTrainingsAsync();
         _ = LoadCoachesAsync();
+        _ = LoadPackagesAsync();
         UpdateScheduledPeopleCounts();
     }
 
@@ -137,10 +141,14 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         eventService.ScheduleAdded += OnTrainingDataChanged;
         eventService.ScheduleUpdated += OnTrainingDataChanged;
         eventService.MemberUpdated += OnTrainingDataChanged;
-        
+
         eventService.EmployeeAdded += OnCoachDataChanged;
         eventService.EmployeeUpdated += OnCoachDataChanged;
         eventService.EmployeeDeleted += OnCoachDataChanged;
+        eventService.PackageAdded += OnPackageDataChanged;
+        eventService.PackageUpdated += OnPackageDataChanged;
+        eventService.PackageDeleted += OnPackageDataChanged;
+
     }
 
     private void UpdateDashboardStatistics()
@@ -199,6 +207,56 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         }
     }
 
+    private async Task LoadPackagesAsync()
+    {
+        if (_trainingService == null) return;
+
+        IsLoadingPackages = true;
+
+        try
+        {
+            var packages = await _trainingService.GetPackageNamesAsync();
+
+            // Add "All" at the beginning, then add the package names
+            var packageList = new List<string> { "All" };
+            packageList.AddRange(packages.Where(p => !string.IsNullOrEmpty(p)).OrderBy(p => p));
+
+            PackageFilterItems = packageList.ToArray();
+
+            // Reset selection if current selection is no longer valid
+            if (!PackageFilterItems.Contains(SelectedPackageFilterItem))
+            {
+                SelectedPackageFilterItem = "All";
+            }
+        }
+        catch (Exception ex)
+        {
+            PackageFilterItems = ["All"];
+            SelectedPackageFilterItem = "All";
+
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to load packages: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsLoadingPackages = false;
+        }
+    }
+
+    private void OnPackageDataChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            _ = LoadPackagesAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to reload packages: {ex.Message}");
+        }
+    }
+
     public async Task LoadTrainingsAsync()
     {
         IsLoading = true;
@@ -239,7 +297,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         UpdateDashboardStatistics();
         IsLoading = false;
     }
-    
+
     private async Task LoadCoachesAsync()
     {
         if (_trainingService == null) return;
@@ -505,7 +563,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     {
         FilterDataByPackageAndDate();
     }
-    
+
     private void OnTrainingDataChanged(object? sender, EventArgs e)
     {
         try
@@ -517,7 +575,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
     }
-    
+
     partial void OnSelectedCoachFilterItemChanged(string value)
     {
         FilterDataByPackageAndDate();
@@ -530,7 +588,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
         SelectAll = ScheduledPeople.Count > 0 && ScheduledPeople.All(x => x.IsSelected);
     }
-    
+
     private async void OnCoachDataChanged(object? sender, EventArgs e)
     {
         try
@@ -551,10 +609,14 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         eventService.ScheduleAdded -= OnTrainingDataChanged;
         eventService.ScheduleUpdated -= OnTrainingDataChanged;
         eventService.MemberUpdated -= OnTrainingDataChanged;
-        
+
         eventService.EmployeeAdded -= OnCoachDataChanged;
         eventService.EmployeeUpdated -= OnCoachDataChanged;
         eventService.EmployeeDeleted -= OnCoachDataChanged;
+
+        eventService.PackageAdded += OnPackageDataChanged;
+        eventService.PackageUpdated += OnPackageDataChanged;
+        eventService.PackageDeleted += OnPackageDataChanged;
 
         // Unsubscribe from property changed events
         foreach (var schedule in ScheduledPeople)

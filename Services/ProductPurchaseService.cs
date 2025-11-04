@@ -498,7 +498,7 @@ namespace AHON_TRACK.Services
             FROM Packages
             WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
                 AND IsDeleted = 0
-                AND Duration LIKE '%Session%'";
+                AND Duration LIKE '%Session%' OR Duration LIKE '%One-time Only%'";
 
                 using var cmd = new SqlCommand(query, conn);
                 using var reader = await cmd.ExecuteReaderAsync();

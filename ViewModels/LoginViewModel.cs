@@ -49,7 +49,12 @@ public partial class LoginViewModel : ViewModelBase
     public string Username
     {
         get => _username;
-        set => SetProperty(ref _username, value, true);
+        set
+        {
+            SetProperty(ref _username, value, false);
+            ValidateProperty(value, nameof(Username));
+            SignInCommand.NotifyCanExecuteChanged();
+        }
     }
 
     private string _password = string.Empty;
@@ -59,7 +64,12 @@ public partial class LoginViewModel : ViewModelBase
     public string Password
     {
         get => _password;
-        set => SetProperty(ref _password, value, true);
+        set
+        {
+            SetProperty(ref _password, value, false);
+            ValidateProperty(value, nameof(Password));
+            SignInCommand.NotifyCanExecuteChanged();
+        }
     }
 
     private string _lockoutMessage = string.Empty;
