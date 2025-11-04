@@ -409,6 +409,49 @@ ORDER BY e.FirstName";
             return coaches;
         }
 
+        public async Task<List<string>> GetPackageNamesAsync()
+        {
+            if (!CanView())
+            {
+                ShowAccessDeniedToast("view packages");
+                return new List<string>();
+            }
+
+            var packages = new List<string>();
+
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
+                const string query = @"
+SELECT DISTINCT PackageName 
+FROM Packages 
+WHERE Duration LIKE '%Session%' OR Duration LIKE '%One-time Only%'
+  AND IsDeleted = 0
+ORDER BY PackageName";
+
+                using var command = new SqlCommand(query, connection);
+                using var reader = await command.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    var packageName = reader.GetString(0);
+                    if (!string.IsNullOrWhiteSpace(packageName))
+                    {
+                        packages.Add(packageName);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowToast("Database Error", $"Failed to load packages: {ex.Message}", ToastType.Error, 5);
+                Debug.WriteLine($"GetPackageNamesAsync Error: {ex}");
+            }
+
+            return packages;
+        }
+
         #endregion
 
         #region UPDATE

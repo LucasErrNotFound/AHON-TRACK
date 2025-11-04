@@ -493,7 +493,7 @@ namespace AHON_TRACK.Services
                 FROM Packages
                 WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
                 AND IsDeleted = 0
-                AND Duration LIKE '%One-time Only%'
+                AND Duration LIKE '%Per day%'
                 ORDER BY Price ASC";
                 }
                 else if (walkInType == "Free Trial")
