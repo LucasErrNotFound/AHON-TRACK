@@ -204,7 +204,7 @@
                                         <DataGridTextColumn
                                             IsReadOnly="True"
                                             Width="Auto"
-                                            MinWidth="130"
+                                            MaxWidth="140"
                                             Header="Delivery Schedule"
                                             Binding="{CompiledBinding DeliverySchedule}" />
 

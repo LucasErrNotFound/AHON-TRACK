@@ -142,6 +142,12 @@
                                     RowBackground="{DynamicResource CardBackgroundColor}"
                                     HeadersVisibility="Column"
                                     Margin="0">
+                                    
+                                    <DataGrid.Styles>
+                                        <Style Selector="TextBlock">
+                                            <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+                                        </Style>
+                                    </DataGrid.Styles>
 
                                     <DataGrid.Resources>
                                         <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
@@ -469,6 +475,12 @@
                                     RowBackground="{DynamicResource CardBackgroundColor}"
                                     HeadersVisibility="Column"
                                     Margin="0">
+                                    
+                                    <DataGrid.Styles>
+                                        <Style Selector="TextBlock">
+                                            <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+                                        </Style>
+                                    </DataGrid.Styles>
 
                                     <DataGrid.Resources>
                                         <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
