@@ -55,7 +55,8 @@ namespace AHON_TRACK.Services
         private bool CanUpdate()
         {
             return CurrentUserModel.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true ||
-                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true;
+                   CurrentUserModel.Role?.Equals("Staff", StringComparison.OrdinalIgnoreCase) == true ||
+                   CurrentUserModel.Role?.Equals("Coach", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private bool CanDelete()
@@ -1149,7 +1150,7 @@ namespace AHON_TRACK.Services
                 summary.WarrantyExpiringItems = await GetWarrantyExpiringItemsAsync(conn);
                 summary.WarrantyExpiringCount = summary.WarrantyExpiringItems.Count;
 
-                summary.TotalAlerts = summary.ConditionAlertCount + 
+                summary.TotalAlerts = summary.ConditionAlertCount +
                                       summary.MaintenanceDueCount + summary.WarrantyExpiringCount;
             }
             catch (Exception ex)
