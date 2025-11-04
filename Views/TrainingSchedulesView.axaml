@@ -299,6 +299,10 @@
                                             Width="160"
                                             ItemsSource="{CompiledBinding PackageFilterItems}"
                                             SelectedItem="{CompiledBinding SelectedPackageFilterItem, Mode=TwoWay}" />
+                                        <ComboBox
+                                            Width="160"
+                                            ItemsSource="{CompiledBinding CoachFilterItems}"
+                                            SelectedItem="{CompiledBinding SelectedCoachFilterItem, Mode=TwoWay}" />
                                         <Button
                                             Classes="Primary"
                                             Padding="30,0"
