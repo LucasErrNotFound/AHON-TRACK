@@ -14,7 +14,7 @@ namespace AHON_TRACK.Converters
     {
         public static Bitmap GetDefaultAvatar()
         {
-            var uri = new Uri("avares://AHON_TRACK/Assets/MainWindowView/user.png");
+            var uri = new Uri("avares://AHON_TRACK/Assets/ManageEmployeesView/default-profile-picture.png");
             using var stream = AssetLoader.Open(uri);
             return new Bitmap(stream);
         }
