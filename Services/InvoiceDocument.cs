@@ -115,6 +115,7 @@ public class InvoiceDocument : IDocument
                 columns.RelativeColumn(10);
                 columns.ConstantColumn(50);
                 columns.ConstantColumn(70);
+                columns.ConstantColumn(70);
                 columns.ConstantColumn(85);
             });
 
@@ -125,6 +126,7 @@ public class InvoiceDocument : IDocument
                 header.Cell().Element(CellStyle).Text("Item");
                 header.Cell().Element(CellStyle).AlignLeft().Text("Qty");
                 header.Cell().Element(CellStyle).AlignLeft().Text("Amount");
+                header.Cell().Element(CellStyle).AlignLeft().Text("Payment Method");
                 header.Cell().Element(CellStyle).AlignRight().Text("Purchased Date");
 
                 static IContainer CellStyle(IContainer container)
@@ -144,6 +146,7 @@ public class InvoiceDocument : IDocument
                 table.Cell().Element(CellStyle).Text(item.PurchasedItem).FontSize(10);
                 table.Cell().Element(CellStyle).AlignLeft().Text(item.Quantity.ToString()).FontSize(10);
                 table.Cell().Element(CellStyle).AlignLeft().Text($"₱{item.Amount:N2}").FontSize(10);
+                table.Cell().Element(CellStyle).AlignLeft().Text($"{item.PaymentMethod}").FontSize(10);
                 table.Cell().Element(CellStyle).AlignRight().Text(item.DatePurchased.ToString("MMM dd, yyyy")).FontSize(10);
 
                 static IContainer CellStyle(IContainer container)

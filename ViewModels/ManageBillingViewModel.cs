@@ -240,6 +240,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 CustomerName = i.CustomerName,
                 PurchasedItem = i.PurchasedItem,
                 Quantity = i.Quantity,  // Already int from InvoiceModel
+                PaymentMethod = i.PaymentMethod,
                 Amount = (int)Math.Round(i.Amount),  // Round decimal to int
                 DatePurchased = i.DatePurchased
             }).ToList();
@@ -415,6 +416,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                     PurchasedItem = invoice.PurchasedItem,
                     Quantity = invoice.Quantity ?? 0,
                     Amount = invoice.Amount ?? 0,
+                    PaymentMethod = invoice.PaymentMethod,
                     DatePurchased = invoice.DatePurchased ?? DateTime.Today
                 }).ToList()
             };
@@ -762,6 +764,9 @@ public partial class Invoices : ObservableObject
 
     [ObservableProperty]
     private int? _amount;
+    
+    [ObservableProperty]
+    private string _paymentMethod = string.Empty;
 
     [ObservableProperty]
     private string _status = string.Empty;

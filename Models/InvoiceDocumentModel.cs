@@ -20,6 +20,7 @@ public class InvoiceItem
     public int ID { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string PurchasedItem { get; set; } = string.Empty;
+    public string PaymentMethod { get; set; } = string.Empty;
     public int Quantity { get; set; }
     public decimal Amount { get; set; }
     public DateTime DatePurchased { get; set; }
