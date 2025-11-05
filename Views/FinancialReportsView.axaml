@@ -100,7 +100,6 @@
 								Title="Total Revenue"
 								CardBackground="{StaticResource GreenGradient}"
 								Foreground="White"
-								Hint="{CompiledBinding RevenueGrowthPercent, StringFormat='+{0}% from last month'}"
 								Value="{CompiledBinding TotalRevenue, StringFormat='+₱{0:N0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -114,7 +113,6 @@
 								Title="Sales"
 								CardBackground="{StaticResource BlueGradient}"
 								Foreground="White"
-								Hint="{CompiledBinding SalesGrowthPercent, StringFormat='+{0}% from last month'}"
 								Value="{CompiledBinding Sales, StringFormat='+{0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -127,7 +125,6 @@
 								Title="Gym Package Revenue"
 								CardBackground="{StaticResource PurpleGradient}"
 								Foreground="White"
-								Hint="{CompiledBinding GymPackageGrowthPercent, StringFormat='+{0}% from last month'}"
 								Value="{CompiledBinding GymPackageRevenue, StringFormat='+{0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -140,7 +137,6 @@
 								Title="Walk-In/Membership Revenue"
 								CardBackground="{StaticResource OrangeGradient}"
 								Foreground="White"
-								Hint="{Binding WalkInGrowthPercent, StringFormat='+{0}% since last month'}"
 								Value="{CompiledBinding WalkInMember, StringFormat='+{0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -191,7 +187,6 @@
 								Title="Total Revenue"
 								CardBackground="{StaticResource GreenGradient}"
 								Foreground="White"
-								Hint="{CompiledBinding RevenueGrowthPercent, StringFormat='+{0}% from last month'}"
 								Value="{CompiledBinding TotalRevenue, StringFormat='+₱{0:N0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -205,7 +200,6 @@
 								Title="Sales"
 								CardBackground="{StaticResource BlueGradient}"
 								Foreground="White"
-								Hint="{CompiledBinding SalesGrowthPercent, StringFormat='+{0}% from last month'}"
 								Value="{CompiledBinding Sales, StringFormat='+{0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -218,7 +212,6 @@
 								Title="Gym Package Revenue"
 								CardBackground="{StaticResource PurpleGradient}"
 								Foreground="White"
-								Hint="{CompiledBinding GymPackageGrowthPercent, StringFormat='+{0}% from last month'}"
 								Value="{CompiledBinding GymPackageRevenue, StringFormat='+{0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -231,7 +224,6 @@
 								Title="Walk-In/Membership Revenue"
 								CardBackground="{StaticResource OrangeGradient}"
 								Foreground="White"
-								Hint="{Binding WalkInGrowthPercent, StringFormat='+{0}% since last month'}"
 								Value="{CompiledBinding WalkInMember, StringFormat='+{0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
