@@ -7,6 +7,7 @@ using Microsoft.Data.SqlClient;
 using ShadUI;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -80,7 +81,7 @@ namespace AHON_TRACK.Services
                         anyDiscountApplied = true;
                     }
 
-                    await RecordSaleAsync(item, customer, employeeId, itemTotal, conn, transaction);
+                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, conn, transaction);
                     await RecordPurchaseAsync(item, customer, itemTotal, conn, transaction);
                     await HandleInventoryAndSessionsAsync(item, customer, conn, transaction);
                 }
@@ -176,12 +177,12 @@ namespace AHON_TRACK.Services
         }
 
 
-        private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, SqlConnection conn, SqlTransaction transaction)
+        private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, string paymentMethod, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
-                INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, RecordedBy)
-                VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @RecordedBy);
-                SELECT SCOPE_IDENTITY();";
+        INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, PaymentMethod, RecordedBy)
+        VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @PaymentMethod, @RecordedBy);
+        SELECT SCOPE_IDENTITY();";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@SaleDate", DateTime.Now);
@@ -191,6 +192,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@MemberID", customer.CustomerType == CategoryConstants.Member ? (object)customer.CustomerID : DBNull.Value);
             cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
             cmd.Parameters.AddWithValue("@Amount", itemTotal);
+            cmd.Parameters.AddWithValue("@PaymentMethod", paymentMethod ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@RecordedBy", employeeId);
 
             await cmd.ExecuteScalarAsync();
@@ -756,49 +758,65 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
         public async Task<List<InvoiceModel>> GetInvoicesByDateAsync(DateTime date)
         {
             var invoices = new List<InvoiceModel>();
-
             if (!CanView())
             {
                 ShowError("Access Denied", "You do not have permission to view invoice data.");
                 return invoices;
             }
-
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
-
                 string query = @"
-                    SELECT 
-                        s.SaleID,
-                        CASE 
-                            WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
-                            WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
-                            ELSE 'Unknown Customer'
-                        END AS CustomerName,
-                        CASE 
-                            WHEN s.ProductID IS NOT NULL THEN p.ProductName
-                            WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
-                            ELSE 'Unknown Item'
-                        END AS PurchasedItem,
-                        s.Quantity,
-                        s.Amount,
-                        s.SaleDate
-                    FROM Sales s
-                    LEFT JOIN Products p ON s.ProductID = p.ProductID
-                    LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
-                    LEFT JOIN Members m ON s.MemberID = m.MemberID
-                    LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
-                    WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
-                    ORDER BY s.SaleDate DESC;";
-
+            SELECT 
+    s.SaleID,
+    CASE 
+        WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
+        WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
+        ELSE 'Unknown Customer'
+    END AS CustomerName,
+    CASE 
+        WHEN s.ProductID IS NOT NULL THEN p.ProductName
+        WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
+        ELSE 'Unknown Item'
+    END AS PurchasedItem,
+    s.Quantity,
+    s.Amount,
+    COALESCE(
+        s.PaymentMethod,  -- First priority: payment method from Sales table
+        CASE 
+            WHEN s.MemberID IS NOT NULL THEN m.PaymentMethod  -- Second: from Members
+            WHEN s.CustomerID IS NOT NULL THEN wc.PaymentMethod  -- Third: from WalkInCustomers
+            ELSE NULL
+        END,
+        'Unknown'  -- Fallback if all are NULL
+    ) AS PaymentMethod,
+    s.SaleDate
+FROM Sales s
+LEFT JOIN Products p ON s.ProductID = p.ProductID
+LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
+LEFT JOIN Members m ON s.MemberID = m.MemberID
+LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
+WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
+ORDER BY s.SaleDate DESC;";
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@SelectedDate", date.Date);
-
                 using var reader = await cmd.ExecuteReaderAsync();
-
+                int recordCount = 0;
                 while (await reader.ReadAsync())
                 {
+                    recordCount++;
+
+                    // Debug: Log each record's data
+                    Debug.WriteLine($"--- Record {recordCount} ---");
+                    Debug.WriteLine($"SaleID: {reader.GetInt32(reader.GetOrdinal("SaleID"))}");
+                    Debug.WriteLine($"CustomerName: {reader["CustomerName"]?.ToString() ?? "NULL"}");
+                    Debug.WriteLine($"PurchasedItem: {reader["PurchasedItem"]?.ToString() ?? "NULL"}");
+                    Debug.WriteLine($"Quantity: {reader.GetInt32(reader.GetOrdinal("Quantity"))}");
+                    Debug.WriteLine($"Amount: {reader.GetDecimal(reader.GetOrdinal("Amount"))}");
+                    Debug.WriteLine($"PaymentMethod: {reader["PaymentMethod"]?.ToString() ?? "NULL"}");
+                    Debug.WriteLine($"SaleDate: {reader.GetDateTime(reader.GetOrdinal("SaleDate"))}");
+
                     invoices.Add(new InvoiceModel
                     {
                         ID = reader.GetInt32(reader.GetOrdinal("SaleID")),
@@ -806,15 +824,20 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                         PurchasedItem = reader["PurchasedItem"]?.ToString() ?? "Unknown",
                         Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
                         Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
+                        PaymentMethod = reader["PaymentMethod"]?.ToString() ?? "Unknown",
                         DatePurchased = reader.GetDateTime(reader.GetOrdinal("SaleDate"))
                     });
                 }
+
+                // Debug: Log total records found
+                Debug.WriteLine($"Total invoices found: {recordCount}");
             }
             catch (Exception ex)
             {
+                // Debug: Log the full exception
+                Debug.WriteLine($"ERROR in GetInvoicesByDateAsync: {ex.ToString()}");
                 ShowError("Database Error", $"Error loading invoices: {ex.Message}");
             }
-
             return invoices;
         }
 

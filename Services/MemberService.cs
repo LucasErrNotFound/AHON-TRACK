@@ -599,10 +599,7 @@ namespace AHON_TRACK.Services
                     FROM Packages
                     WHERE GETDATE() BETWEEN ValidFrom AND ValidTo 
                     AND IsDeleted = 0
-                    AND Duration NOT LIKE '%One-time Only%' 
-                    AND Duration NOT LIKE '%One time Only%' 
-                    AND Duration NOT LIKE '%Session%'
-                    AND Duration NOT LIKE '%session%'
+                    AND DURATION LIKE '%Month%'
                     ORDER BY Price ASC";
 
                 using var cmd = new SqlCommand(query, conn);
