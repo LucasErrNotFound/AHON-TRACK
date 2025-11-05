@@ -1,4 +1,5 @@
-using System.ComponentModel;
+using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
@@ -9,27 +10,47 @@ using ShadUI;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private string[] _statusFilterItems = ["Active", "Inactive", "Suspended"];
-    
+
+    [ObservableProperty] 
+    private bool _isStatusEnabled;
+
     [ObservableProperty]
     private string _dialogTitle = "Add Supplier Contact";
 
     [ObservableProperty]
     private string _dialogDescription = "Register new supplier with their contact to maintain reliable supply management";
+
+    [ObservableProperty]
+    private ObservableCollection<string> _deliveryScheduleItems = [];
+
+    [ObservableProperty]
+    private string? _selectedDeliverySchedule;
+
+    [ObservableProperty]
+    private DateTime _minimumContractDate = DateTime.Today.AddDays(1);
     
-    [ObservableProperty] 
+    [ObservableProperty]
+    private bool _isContractTermsEnabled = true;
+    
+    [ObservableProperty]
     private bool _isEditMode = false;
-    
+
+    public string? DeliveryPattern => SchedulePattern;
+
     private string? _supplierName = string.Empty;
     private string? _contactPerson = string.Empty;
     private string? _email = string.Empty;
     private string? _phoneNumber = string.Empty;
     private string? _products = string.Empty;
+    private string? _schedulePattern = "Month";
+    private DateTime? _contractTerms;
     private string? _status = string.Empty;
-    
+    private bool _isUpdatingContractTerms = false;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -39,6 +60,8 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+
+        PopulateDeliveryScheduleItems();
     }
 
     public SupplierDialogCardViewModel()
@@ -46,20 +69,27 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+
+        PopulateDeliveryScheduleItems();
     }
 
     [AvaloniaHotReload]
     public void Initialize()
-    { 
+    {
+        ClearAllFields();
         DialogTitle = "Add Supplier Contact";
         DialogDescription = "Register new supplier with their contact to maintain reliable supply management";
+        StatusFilterItems = ["Active", "Inactive", "Suspended"];
+        Status = "Active";
+        IsStatusEnabled = false;
         IsEditMode = false;
-        ClearAllFields();
+        IsContractTermsEnabled = true;
     }
 
     public void InitializeForEditMode(Supplier? supplier)
     {
         IsEditMode = true;
+        IsStatusEnabled = true;
         DialogTitle = "Edit Existing Supplier Contact";
         DialogDescription = "Edit existing supplier with their contact to maintain latest details";
         ClearAllFields();
@@ -69,7 +99,24 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         Email = supplier?.Email;
         PhoneNumber = supplier?.PhoneNumber;
         Products = supplier?.Products;
-        Status = supplier?.Status;
+        ContractTerms = supplier?.ContractTerms;
+        
+        StatusFilterItems = ["Active", "Suspended"];
+        Status = string.Equals(supplier?.Status, "Inactive", StringComparison.OrdinalIgnoreCase) 
+            ? "Active" 
+            : supplier?.Status;
+        
+        IsContractTermsEnabled = !string.Equals(supplier?.Status, "Suspended", StringComparison.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(supplier?.DeliverySchedule))
+        {
+            if (supplier.DeliverySchedule.Contains("day", StringComparison.OrdinalIgnoreCase))
+                SchedulePattern = "Day";
+            else if (supplier.DeliverySchedule.Contains("month", StringComparison.OrdinalIgnoreCase))
+                SchedulePattern = "Month";
+
+            SelectedDeliverySchedule = supplier.DeliverySchedule;
+        }
     }
 
     [RelayCommand]
@@ -77,16 +124,26 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     {
         _dialogManager.Close(this);
     }
-    
+
     [RelayCommand]
     private void AddSupplier()
     {
         ValidateAllProperties();
-        
+
         if (HasErrors) return;
+        
+        if (ContractTerms.HasValue)
+        {
+            var today = DateTime.Today;
+            if (ContractTerms.Value.Date <= today && Status?.Equals("Active", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                Status = "Inactive";
+            }
+        }
+        
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
-    
+
     private void ClearAllFields()
     {
         SupplierName = string.Empty;
@@ -95,11 +152,14 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         PhoneNumber = string.Empty;
         Products = string.Empty;
         Status = string.Empty;
-        
+        SelectedDeliverySchedule = string.Empty;
+        ContractTerms = null;
+
         ClearAllErrors();
     }
-    
+
     [Required(ErrorMessage = "Supplier name is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string? SupplierName
@@ -107,8 +167,9 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _supplierName;
         set => SetProperty(ref _supplierName, value, true);
     }
-    
+
     [Required(ErrorMessage = "Contact person is required")]
+    [RegularExpression("^[a-zA-Z ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string? ContactPerson
@@ -116,7 +177,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _contactPerson;
         set => SetProperty(ref _contactPerson, value, true);
     }
-    
+
     [Required(ErrorMessage = "Email is required")]
     [EmailValidation]
     public string? Email
@@ -124,7 +185,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _email;
         set => SetProperty(ref _email, value, true);
     }
-    
+
     [Required(ErrorMessage = "Phone number is required")]
     [RegularExpression(@"^09\d{9}$", ErrorMessage = "Contact number must start with 09 and be 11 digits long")]
     public string? PhoneNumber
@@ -132,20 +193,145 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         get => _phoneNumber;
         set => SetProperty(ref _phoneNumber, value, true);
     }
-    
+
     [Required(ErrorMessage = "Products is required")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string? Products 
+    public string? Products
     {
         get => _products;
         set => SetProperty(ref _products, value, true);
     }
-    
+
+    public string? SchedulePattern
+    {
+        get => _schedulePattern;
+        set
+        {
+            if (_schedulePattern != value)
+            {
+                _schedulePattern = value;
+                OnPropertyChanged(nameof(IsScheduleDeliveryByDay));
+                OnPropertyChanged(nameof(IsScheduleDeliveryByMonth));
+
+                // Repopulate items when pattern changes
+                PopulateDeliveryScheduleItems();
+
+                // Clear selection when switching patterns
+                SelectedDeliverySchedule = null;
+            }
+        }
+    }
+
+    public DateTime? ContractTerms
+    {
+        get => _contractTerms;
+        set
+        {
+            if (_isUpdatingContractTerms) return;
+        
+            var oldValue = _contractTerms;
+        
+            if (oldValue == value) return;
+        
+            SetProperty(ref _contractTerms, value);
+        
+            if (IsEditMode && value.HasValue && oldValue != value)
+            {
+                var tomorrow = DateTime.Today.AddDays(1);
+            
+                if (string.Equals(_status, "Inactive", StringComparison.OrdinalIgnoreCase) && 
+                    value.Value.Date >= tomorrow)
+                {
+                    _isUpdatingContractTerms = true;
+                    try
+                    {
+                        Status = "Active";
+                        _contractTerms = null;
+                    }
+                    finally
+                    {
+                        _isUpdatingContractTerms = false;
+                    }
+                }
+            }
+        }
+    }
+
+    public bool IsScheduleDeliveryByDay
+    {
+        get => SchedulePattern == "Day";
+        set { if (value) SchedulePattern = "Day"; }
+    }
+
+    public bool IsScheduleDeliveryByMonth
+    {
+        get => SchedulePattern == "Month";
+        set { if (value) SchedulePattern = "Month"; }
+    }
+
     [Required(ErrorMessage = "Select a status")]
     public string? Status
     {
         get => _status;
-        set => SetProperty(ref _status, value, true);
+        set
+        {
+            SetProperty(ref _status, value, true);
+            IsContractTermsEnabled = !string.Equals(value, "Suspended", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    public string? DeliverySchedule => SelectedDeliverySchedule;
+
+    private void PopulateDeliveryScheduleItems()
+    {
+        DeliveryScheduleItems.Clear();
+
+        if (SchedulePattern == "Day")
+        {
+            DeliveryScheduleItems.Add("everyday");
+            for (int i = 2; i <= 30; i++)
+            {
+                DeliveryScheduleItems.Add($"every {i} days");
+            }
+        }
+        else
+        {
+            DeliveryScheduleItems.Add("every 1 month");
+            for (int i = 2; i <= 12; i++)
+            {
+                DeliveryScheduleItems.Add($"every {i} months");
+            }
+        }
+    }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Wipe out lightweight/static arrays
+        StatusFilterItems = [];
+
+        // Clear UI/dialog text
+        DialogTitle = string.Empty;
+        DialogDescription = string.Empty;
+
+        // Clear and replace collections to drop references
+        DeliveryScheduleItems?.Clear();
+        DeliveryScheduleItems = [];
+
+        // Clear selections/flags
+        SelectedDeliverySchedule = null;
+        IsEditMode = false;
+
+        // Aggressively drop field data
+        _supplierName = null;
+        _contactPerson = null;
+        _email = null;
+        _phoneNumber = null;
+        _products = null;
+        _schedulePattern = null;
+        _status = null;
+
+        // Let base do any additional cleanup
+        base.DisposeManagedResources();
     }
 }

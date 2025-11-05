@@ -18,7 +18,7 @@ public class ProductItem
 {
     public int ID { get; set; }
     public string? ProductName { get; set; } = string.Empty;
-    public string? Sku { get; set; } = string.Empty;
+    public string? BatchCode { get; set; } = string.Empty;
     public string? Category { get; set; } = string.Empty;
     public int CurrentStock { get; set; }
     public decimal Price { get; set; }

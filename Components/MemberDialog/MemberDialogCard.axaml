@@ -10,44 +10,44 @@
     Width="950"
     MaxHeight="580"
     x:Class="AHON_TRACK.Components.MemberDialog.MemberDialogCard">
-    
-    <Design.DataContext>
-        <viewModel:MemberDialogCardViewModel/>
-    </Design.DataContext>
 
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
-        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
-        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36"/>
+	<Design.DataContext>
+		<viewModel:MemberDialogCardViewModel/>
+	</Design.DataContext>
 
-        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
-        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75"/>
-        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
-        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
-    </UserControl.Resources>
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70"/>
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36"/>
 
-    <UserControl.Styles>
-        <Style Selector="TextBlock.h4">
-            <Setter Property="FontSize" Value="18"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-        </Style>
-        <Style Selector="TextBlock.Muted">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-        </Style>
-        <Style Selector="TextBlock.LabelField">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-        </Style>
-        <Style Selector="RadioButton.FormRadio">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Regular"/>
-            <Setter Property="Margin" Value="0,0,15,0"/>
-        </Style>
-    </UserControl.Styles>
-    
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36"/>
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75"/>
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50"/>
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10"/>
+	</UserControl.Resources>
+
+	<UserControl.Styles>
+		<Style Selector="TextBlock.h4">
+			<Setter Property="FontSize" Value="18"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="Margin" Value="0,0,0,5"/>
+		</Style>
+		<Style Selector="TextBlock.Muted">
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Margin" Value="0,0,0,5"/>
+		</Style>
+		<Style Selector="TextBlock.LabelField">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Margin" Value="0,0,0,5"/>
+		</Style>
+		<Style Selector="RadioButton.FormRadio">
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="FontWeight" Value="Regular"/>
+			<Setter Property="Margin" Value="0,0,15,0"/>
+		</Style>
+	</UserControl.Styles>
+
 	<Border
 		Background="{DynamicResource BackgroundColor}"
 		BorderBrush="{DynamicResource BorderColor}"
@@ -136,7 +136,7 @@
 									Name="MemberProfileImage"
 									Stretch="UniformToFill"
 									IsVisible="True"
-									Source="avares://AHON_TRACK/Assets/ManageMembershipView/default-profile-picture.png"/>
+									Source="{CompiledBinding ProfileImageSource}"/>
 								<!-- Profile image placeholder -->
 							</Border>
 							<Button

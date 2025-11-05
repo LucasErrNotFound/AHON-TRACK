@@ -1,36 +1,38 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
+using AHON_TRACK.Models;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged 
+public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
     private string[] _discountTypeItems = ["Percentage (%)", "Fixed Amount (₱)"];
-    private string _selectedDiscountTypeItem = "Percentage (%)";
-    
+    private string _selectedDiscountTypeItem = "Fixed Amount (₱)";
+
     [ObservableProperty]
     private string[] _discountForItems = ["All", "Walk-ins", "Gym Members"];
     private string _selectedDiscountForItem = "All";
-    
-    [ObservableProperty] 
-    private string[] _durationItems = ["/Month", "/Session", "/One-time only"];
+
+    [ObservableProperty]
+    private string[] _durationItems = ["/Month", "/Session", "/One-time only", "/Per day"];
     private string _selectedDurationItem = string.Empty;
-    
+
+    private int _packageId;
     private string _packageName = string.Empty;
     private string _description = string.Empty;
-    private int? _price;
-    
+    private decimal? _price;
+
     private string _featureDescription1 = string.Empty;
     private string _featureDescription2 = string.Empty;
     private string _featureDescription3 = string.Empty;
@@ -43,10 +45,10 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
 
     private DateOnly? _validFrom;
     private DateOnly? _validTo;
-    
+
     public bool IsDiscountEnabled => EnableDiscount;
     public bool IsDeleteAction { get; private set; }
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -69,23 +71,23 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     public void Initialize()
     {
     }
-    
+
     [RelayCommand]
     private void Cancel()
     {
         _dialogManager.Close(this);
     }
-    
+
     [RelayCommand]
     private void Delete()
     {
         IsDeleteAction = true;
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
-    
+
     [RelayCommand]
     private void SaveDetails()
-    {        
+    {
         ValidateAllProperties();
 
         if (EnableDiscount)
@@ -105,17 +107,23 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         IsDeleteAction = false;
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
-    
-    
+
+    public int PackageId
+    {
+        get => _packageId;
+        set => SetProperty(ref _packageId, value, true);
+    }
+
     [Required(ErrorMessage = "Package name is required")]
-    [MinLength(5, ErrorMessage = "Must be at least 5 characters long")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
+    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(25, ErrorMessage = "Must not exceed 25 characters")]
-    public string PackageName 
+    public string PackageName
     {
         get => _packageName;
         set => SetProperty(ref _packageName, value, true);
     }
-    
+
     [Required(ErrorMessage = "Description is required")]
     [MinLength(6, ErrorMessage = "Must be at least 6 characters long")]
     [MaxLength(45, ErrorMessage = "Must not exceed 45 characters")]
@@ -124,15 +132,15 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         get => _description;
         set => SetProperty(ref _description, value, true);
     }
-    
+
     [Required(ErrorMessage = "Price must be set")]
-    [Range(0, 5000, ErrorMessage = "Price must be between 0 and 5,000")]
-    public int? Price
+    [Range(20, 10000, ErrorMessage = "Price must be between 20 and 10,000")]
+    public decimal? Price
     {
         get => _price;
         set => SetProperty(ref _price, value, true);
     }
-    
+
     [Required(ErrorMessage = "Select its Duration")]
     public string SelectedDurationItem
     {
@@ -146,30 +154,28 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         get => _featureDescription1;
         set => SetProperty(ref _featureDescription1, value, true);
     }
-    
-    
+
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription2
     {
         get => _featureDescription2;
         set => SetProperty(ref _featureDescription2, value, true);
     }
-    
-    
+
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription3
     {
         get => _featureDescription3;
         set => SetProperty(ref _featureDescription3, value, true);
     }
-    
+
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription4
     {
         get => _featureDescription4;
         set => SetProperty(ref _featureDescription4, value, true);
     }
-    
+
     [MaxLength(37, ErrorMessage = "Must not exceed 37 characters")]
     public string FeatureDescription5
     {
@@ -189,13 +195,13 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             DiscountValue = null;
             ValidFrom = null;
             ValidTo = null;
-                    
+
             ClearErrors(nameof(DiscountValue));
             ClearErrors(nameof(ValidFrom));
             ClearErrors(nameof(ValidTo));
         }
     }
-    
+
     public string SelectedDiscountTypeItem
     {
         get => _selectedDiscountTypeItem;
@@ -210,14 +216,14 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     public string SelectedDiscountForItem
     {
         get => _selectedDiscountForItem;
-        set =>  SetProperty(ref _selectedDiscountForItem, value, true);
+        set => SetProperty(ref _selectedDiscountForItem, value, true);
     }
-    
+
     public string DiscountSymbol => SelectedDiscountTypeItem == "Percentage (%)" ? "%" : "₱";
     public string DiscountFormat => SelectedDiscountTypeItem == "Percentage (%)" ? "N0" : "N2";
-    
+
     [Required(ErrorMessage = "Discount value must be set")]
-    [Range(1, 100, ErrorMessage = "Discount value must be between 1 and 100")]
+    [Range(0, 10000, ErrorMessage = "Discount value must be between 0 and 10,000")]
     public int? DiscountValue
     {
         get => _discountValue;
@@ -226,7 +232,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
 
     [Required(ErrorMessage = "Start date is required.")]
     [StartDateValidation(nameof(ValidTo), ErrorMessage = "Start date must happen before the end date")]
-    public DateOnly? ValidFrom 
+    public DateOnly? ValidFrom
     {
         get => _validFrom;
         set
@@ -235,7 +241,8 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             ValidateProperty(ValidTo, nameof(ValidTo));
         }
     }
-    
+
+    [Required(ErrorMessage = "End date is required.")]
     [EndDateValidation(nameof(ValidFrom), ErrorMessage = "End date should happen after the start date")]
     public DateOnly? ValidTo
     {
@@ -246,14 +253,14 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
             ValidateProperty(ValidFrom, nameof(ValidFrom));
         }
     }
-    
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected new virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-    
+
     protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return false;
@@ -280,7 +287,7 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
         ValidTo = null;
         ClearAllErrors();
     }
-    
+
     public decimal? GetFormattedValue() => GetFormattedValue(DiscountValue);
     public string GetDisplayValue() => GetDisplayValue(DiscountValue);
 
@@ -293,62 +300,121 @@ public partial class EditPackageDialogCardViewModel : ViewModelBase, INavigable,
     private string GetDisplayValue(int? value)
     {
         if (!value.HasValue) return string.Empty;
-    
-        return SelectedDiscountTypeItem == "Percentage (%)" 
-            ? $"{value.Value}%" 
+
+        return SelectedDiscountTypeItem == "Percentage (%)"
+            ? $"{value.Value}%"
             : $"₱{value.Value:N2}";
     }
-    
+
     public void PopulateFromPackage(Package package)
     {
+        PackageId = package.PackageId;
         PackageName = package.Title;
         Description = package.Description;
-
         Price = package.Price;
-    
-        SelectedDurationItem = package.PriceUnit;
-    
+        SelectedDurationItem = package.Duration; // Now uses SelectedDurationItem from main
+
         // Populate features (up to 5)
         FeatureDescription1 = package.Features.Count > 0 ? package.Features[0] : string.Empty;
         FeatureDescription2 = package.Features.Count > 1 ? package.Features[1] : string.Empty;
         FeatureDescription3 = package.Features.Count > 2 ? package.Features[2] : string.Empty;
         FeatureDescription4 = package.Features.Count > 3 ? package.Features[3] : string.Empty;
         FeatureDescription5 = package.Features.Count > 4 ? package.Features[4] : string.Empty;
-    
-        // Reset discount settings when editing existing package
+
+        // Populate discount settings
         EnableDiscount = package.IsDiscountChecked;
         DiscountValue = package.DiscountValue;
         SelectedDiscountForItem = package.SelectedDiscountFor;
-        SelectedDiscountTypeItem = package.SelectedDiscountType;
+        if (!string.IsNullOrEmpty(package.SelectedDiscountType))
+        {
+            SelectedDiscountTypeItem = package.SelectedDiscountType.ToLower() switch
+            {
+                "percentage" => "Percentage (%)",
+                "fixed" => "Fixed Amount (₱)",
+                _ => "Percentage (%)"
+            };
+        }
+        else
+        {
+            SelectedDiscountTypeItem = "Percentage (%)";
+        }
         ValidFrom = package.DiscountValidFrom;
         ValidTo = package.DiscountValidTo;
-    
+
         ClearAllErrors();
     }
-    
-    public Package ToPackageOption()
+
+    public PackageModel ToPackageModel(int packageId)
     {
-        var features = new List<string>();
-    
-        if (!string.IsNullOrWhiteSpace(FeatureDescription1)) features.Add(FeatureDescription1);
-        if (!string.IsNullOrWhiteSpace(FeatureDescription2)) features.Add(FeatureDescription2);
-        if (!string.IsNullOrWhiteSpace(FeatureDescription3)) features.Add(FeatureDescription3);
-        if (!string.IsNullOrWhiteSpace(FeatureDescription4)) features.Add(FeatureDescription4);
-        if (!string.IsNullOrWhiteSpace(FeatureDescription5)) features.Add(FeatureDescription5);
-    
-        return new Package
+        // Get discount information
+        decimal discountAmount = 0;
+        string discountType = "none";
+        string discountFor = "";
+        decimal originalPrice = Price ?? 0;
+        decimal discountedPrice = originalPrice;
+
+        if (EnableDiscount && DiscountValue.HasValue)
         {
-            Title = PackageName,
-            Description = Description,
-            Price = Price ?? 0,
-            PriceUnit = SelectedDurationItem,
-            Features = features,
-            IsDiscountChecked = EnableDiscount,
-            DiscountValue = DiscountValue,
-            SelectedDiscountFor = SelectedDiscountForItem,
-            SelectedDiscountType = SelectedDiscountTypeItem,
-            DiscountValidFrom = ValidFrom,
-            DiscountValidTo = ValidTo   
+            discountAmount = DiscountValue.Value;
+            discountType = SelectedDiscountTypeItem == "Percentage (%)" ? "percentage" : "fixed";
+            discountFor = SelectedDiscountForItem;
+
+            // Calculate discounted price
+            if (discountType == "percentage")
+            {
+                discountedPrice = originalPrice - (originalPrice * discountAmount / 100);
+            }
+            else // fixed amount
+            {
+                discountedPrice = originalPrice - discountAmount;
+                if (discountedPrice < 0) discountedPrice = 0;
+            }
+        }
+
+        // Convert DateOnly to DateTime
+        DateTime validFromDate = ValidFrom?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Now;
+        DateTime validToDate = ValidTo?.ToDateTime(TimeOnly.MinValue) ?? DateTime.Now.AddDays(365);
+
+        return new PackageModel
+        {
+            packageID = packageId,
+            packageName = PackageName?.Trim() ?? string.Empty,
+            description = Description?.Trim() ?? string.Empty,
+            price = originalPrice,
+            duration = SelectedDurationItem?.Trim() ?? string.Empty, // Now uses SelectedDurationItem
+            features1 = FeatureDescription1?.Trim() ?? string.Empty,
+            features2 = FeatureDescription2?.Trim() ?? string.Empty,
+            features3 = FeatureDescription3?.Trim() ?? string.Empty,
+            features4 = FeatureDescription4?.Trim() ?? string.Empty,
+            features5 = FeatureDescription5?.Trim() ?? string.Empty,
+            discount = discountAmount,
+            discountType = discountType,
+            discountFor = discountFor,
+            discountedPrice = discountedPrice,
+            validFrom = validFromDate,
+            validTo = validToDate
         };
+    }
+
+    protected override void DisposeManagedResources()
+    {
+        // Clear strings and fields
+        PackageName = string.Empty;
+        Description = string.Empty;
+        Price = null;
+        SelectedDurationItem = string.Empty;
+
+        FeatureDescription1 = string.Empty;
+        FeatureDescription2 = string.Empty;
+        FeatureDescription3 = string.Empty;
+        FeatureDescription4 = string.Empty;
+        FeatureDescription5 = string.Empty;
+
+        // Clear arrays
+        DiscountTypeItems = [];
+        DiscountForItems = [];
+        DurationItems = [];
+
+        base.DisposeManagedResources();
     }
 }

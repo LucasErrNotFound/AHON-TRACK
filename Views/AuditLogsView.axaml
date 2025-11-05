@@ -11,239 +11,431 @@
     mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
     x:DataType="viewModels:AuditLogsViewModel"
     x:Class="AHON_TRACK.Views.AuditLogsView">
-    
-    <Design.DataContext>
-        <viewModels:AuditLogsViewModel />
-    </Design.DataContext>
-    
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
-        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
-        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
 
-        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
-        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
-        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
-        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+	<Design.DataContext>
+		<viewModels:AuditLogsViewModel />
+	</Design.DataContext>
 
-        <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
-        <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
-        <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
 
-        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
-        <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
-        <converters:DateToStringConverter x:Key="DateToStringConverter" />
-        <converters:StringToPaintConverter x:Key="StringToPaintConverter" />
-    </UserControl.Resources>
-    
-    <DockPanel LastChildFill="True">
-        <StackPanel
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+		<SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
+		<SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
+		<SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+
+		<converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+		<converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
+		<converters:DateToStringConverter x:Key="DateToStringConverter" />
+		<converters:StringToPaintConverter x:Key="StringToPaintConverter" />
+	</UserControl.Resources>
+
+	<DockPanel LastChildFill="True">
+		<StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
             Margin="{StaticResource PageMargin}"
             DockPanel.Dock="Top">
-            <TextBlock
+			<TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
                 Text="Audit Logs"
                 Margin="90,30,0,0" />
-            <TextBlock
+			<TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
                 Text="Restricted access panel for administrators to monitor system activity, user actions, and security events"
                 TextWrapping="Wrap"
                 Margin="90,0" />
-        </StackPanel>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Interaction.Behaviors>
-                <scroll:VerticalScrollViewerAnimatedBehavior />
-            </Interaction.Behaviors>
-            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
-                <Grid RowDefinitions="* *" ColumnDefinitions="3.3* *" ColumnSpacing="30">
-                    <Grid Grid.Row="0" Grid.Column="0">
-                        <shadui:Card MaxHeight="845">
-                            <StackPanel Orientation="Vertical" Spacing="15">
-                                <Grid ColumnDefinitions="Auto Auto Auto *" ColumnSpacing="10">
-                                    <TextBox
-                                        Grid.Column="0"
-                                        Width="400"
-                                        HorizontalAlignment="Left"
-                                        shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingAuditLogs}"
-                                        Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
-                                        shadui:ControlAssist.Height="40"
-                                        Classes="Clearable"
-                                        FontSize="15"
-                                        Watermark="Search logs...">
-                                    </TextBox>
-                                    <ComboBox
-                                        Grid.Column="1"
-                                        Width="180"
-                                        shadui:ControlAssist.Height="40"
-                                        VerticalAlignment="Center"
-                                        ItemsSource="{CompiledBinding SortFilterItems}"
-                                        SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
-                                    <ComboBox
-                                        Grid.Column="2"
-                                        Width="100"
-                                        shadui:ControlAssist.Height="40"
-                                        VerticalAlignment="Center"
-                                        ItemsSource="{CompiledBinding SortPositionItems}"
-                                        SelectedItem="{CompiledBinding SelectedSortPositionItem}" />
-                                    <Button 
-                                        HorizontalAlignment="Right"
-                                        Grid.Column="3"
-                                        Classes="Primary"
-                                        Command="{CompiledBinding DownloadAuditLogsCommand}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Svg
-                                                Width="20"
-                                                Height="20"
-                                                Path="avares://AHON_TRACK/Assets/AuditLogsView/download-icon.svg"
-                                                VerticalAlignment="Center"
-                                                Margin="0,0,8,0"/>
-                                            <TextBlock Text="Download Logs (PDF)" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                                <DataGrid
-                                    MaxHeight="740"
-                                    CanUserReorderColumns="False"
-                                    CanUserSortColumns="False"
-                                    GridLinesVisibility="All"
-                                    HeadersVisibility="Column"
-                                    SelectionMode="Single"
-                                    Background="{DynamicResource CardBackgroundColor}"
-                                    RowBackground="{DynamicResource CardBackgroundColor}"
-                                    ItemsSource="{CompiledBinding AuditLogs}"
-                                    Margin="0">
-                                    
-                                    <DataGrid.Styles>
-                                        <Style Selector="TextBlock">
-                                            <Setter Property="TextWrapping" Value="WrapWithOverflow" />
-                                        </Style>
-                                    </DataGrid.Styles>
-                                    
-                                    <DataGrid.Resources>
-                                        <converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
-                                    </DataGrid.Resources>
-                                    
-                                    <DataGrid.Columns>
-                                        <!--ID Header Column-->
-                                        <DataGridTextColumn
-                                            Binding="{CompiledBinding ID}"
-                                            CanUserSort="False"
-                                            Header="ID"
-                                            IsReadOnly="True"
-                                            FontSize="15"
-                                            MinWidth="80"/>
-                                        
-                                        <!--Picture/Avatar Header Column-->
-                                        <DataGridTemplateColumn
-                                            CanUserSort="False"
-                                            Header="Picture"
-                                            MinWidth="100">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate DataType="viewModels:AuditLogItems">
-                                                    <shadui:Avatar
-                                                        Width="36"
-                                                        Height="36"
-                                                        VerticalAlignment="Center"
-                                                        HorizontalAlignment="Left"
-                                                        Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"
-                                                        Margin="8"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        
-                                        <!--Name Header Column-->
-                                        <DataGridTextColumn
-                                            Binding="{CompiledBinding Name}"
-                                            CanUserSort="False"
-                                            Header="Name"
-                                            IsReadOnly="True"
-                                            FontSize="15"
-                                            MinWidth="150"/>
+		</StackPanel>
+		<ScrollViewer>
+			<Interaction.Behaviors>
+				<scroll:VerticalScrollViewerAnimatedBehavior />
+			</Interaction.Behaviors>
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
+				<shadui:BreakpointViewPort>
+					<shadui:BreakpointView Breakpoint="XlAndUp">
+						<Grid RowDefinitions="* *" ColumnDefinitions="3.3* *" ColumnSpacing="30">
+							<Grid Grid.Row="0" Grid.Column="0">
+								<shadui:Card MaxHeight="845">
+									<StackPanel Orientation="Vertical" Spacing="15">
+										<Grid ColumnDefinitions="Auto Auto Auto *" ColumnSpacing="10">
+											<TextBox
+												Grid.Column="0"
+												Width="400"
+												HorizontalAlignment="Left"
+												shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingAuditLogs}"
+												Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
+												shadui:ControlAssist.Height="40"
+												Classes="Clearable"
+												FontSize="15"
+												Watermark="Search logs...">
+											</TextBox>
+											<ComboBox
+												Grid.Column="1"
+												Width="180"
+												shadui:ControlAssist.Height="40"
+												VerticalAlignment="Center"
+												ItemsSource="{CompiledBinding SortFilterItems}"
+												SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
+											<ComboBox
+												Grid.Column="2"
+												Width="150"
+												shadui:ControlAssist.Height="40"
+												VerticalAlignment="Center"
+												ItemsSource="{CompiledBinding SortPositionItems}"
+												SelectedItem="{CompiledBinding SelectedSortPositionItem}" />
+											<Button
+												HorizontalAlignment="Right"
+												Grid.Column="3"
+												Classes="Primary"
+												Command="{CompiledBinding DownloadAuditLogsCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="20"
+														Height="20"
+														Path="avares://AHON_TRACK/Assets/AuditLogsView/download-icon.svg"
+														VerticalAlignment="Center"
+														Margin="0,0,8,0" />
+													<TextBlock Text="Download Logs (PDF)" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+										</Grid>
+										<DataGrid
+											MaxHeight="740"
+											CanUserReorderColumns="False"
+											CanUserSortColumns="False"
+											GridLinesVisibility="All"
+											HeadersVisibility="Column"
+											SelectionMode="Single"
+											Background="{DynamicResource CardBackgroundColor}"
+											RowBackground="{DynamicResource CardBackgroundColor}"
+											ItemsSource="{CompiledBinding AuditLogs}"
+											Margin="0">
 
-                                        <!--Username Header Column-->
-                                        <DataGridTextColumn
-                                            Binding="{CompiledBinding Username}"
-                                            CanUserSort="False"
-                                            Header="Username"
-                                            IsReadOnly="True"
-                                            FontSize="15"
-                                            MinWidth="130"/>
-                                        
-                                        <!--Position Header Column-->
-                                        <DataGridTextColumn
-                                            Binding="{CompiledBinding Position}"
-                                            CanUserSort="False"
-                                            Header="Position"
-                                            IsReadOnly="True"
-                                            FontSize="14"
-                                            MinWidth="90"/>
-                                        
-                                        <!--Date Header Column-->
-                                        <DataGridTextColumn
-                                            Binding="{CompiledBinding FormattedDateTime}"
-                                            CanUserSort="False"
-                                            Header="Date &amp; Time"
-                                            IsReadOnly="True"
-                                            MinWidth="240"/>
-                                        
-                                        <!--Action Header Column-->
-                                        <DataGridTextColumn
-                                            Binding="{CompiledBinding Action}"
-                                            CanUserSort="False"
-                                            Header="Action"
-                                            IsReadOnly="True"
-                                            FontSize="14"
-                                            Width="263"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </StackPanel>
-                        </shadui:Card>
-                    </Grid>
-                    <Grid Grid.Row="0" Grid.Column="1" RowDefinitions="* *" VerticalAlignment="Top" RowSpacing="30">
-                        <shadui:Card Grid.Row="0">
-                            <StackPanel Orientation="Vertical" Spacing="15">
-                                <shadui:CardTitle Content="Calendar" />
-                                <Calendar SelectedDate="{CompiledBinding SelectedDate}"/>
-                            </StackPanel>
-                        </shadui:Card>
-                        <shadui:Card Grid.Row="1">
-                            <StackPanel Orientation="Vertical" Spacing="15">
-                                <shadui:CardTitle
-                                    Content="This date contains" 
-                                    FontSize="25"
-                                    HorizontalAlignment="Center"/>
-                                <lvc:PieChart
-                                    Height="300"
-                                    InitialRotation="-225"
-                                    MaxAngle="270"
-                                    MinValue="0"
-                                    MaxValue="100">
-                                    <lvc:PieChart.Series>
-                                        <lvc:XamlGaugeSeries
-                                            GaugeValue="{Binding Value}"
-                                            Fill="{lvc:SolidColorPaint Color='#22C55E'}"
-                                            ShowDataLabels="True"
-                                            DataLabelsSize="50"
-                                            DataLabelsPosition="ChartCenter"
-                                            InnerRadius="75"/>
-                                        <lvc:XamlGaugeBackgroundSeries
-                                            InnerRadius="75"
-                                            Fill="{lvc:SolidColorPaint Color='#9A3B82F6'}"/>
-                                    </lvc:PieChart.Series>
-                                </lvc:PieChart>
-                                <TextBlock 
-                                    Text="Audit log numbers"
-                                    FontSize="25"
-                                    HorizontalAlignment="Center"
-                                    Margin="0,-60,0,0" />
-                            </StackPanel>
-                        </shadui:Card>
-                    </Grid>
-                </Grid>
-            </StackPanel>
-        </ScrollViewer>
-    </DockPanel>
+											<DataGrid.Styles>
+												<Style Selector="TextBlock">
+													<Setter Property="TextWrapping" Value="WrapWithOverflow" />
+												</Style>
+											</DataGrid.Styles>
+
+											<DataGrid.Resources>
+												<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+											</DataGrid.Resources>
+
+											<DataGrid.Columns>
+												<!--ID Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding ID}"
+													CanUserSort="False"
+													Header="ID"
+													IsReadOnly="True"
+													FontSize="15"
+													MinWidth="80" />
+
+												<!--Picture/Avatar Header Column-->
+												<DataGridTemplateColumn
+													CanUserSort="False"
+													Header="Picture"
+													MinWidth="100">
+													<DataGridTemplateColumn.CellTemplate>
+														<DataTemplate DataType="viewModels:AuditLogItems">
+															<shadui:Avatar
+																Width="36"
+																Height="36"
+																VerticalAlignment="Center"
+																HorizontalAlignment="Left"
+																Source="{CompiledBinding AvatarSource}"
+																Margin="8" />
+														</DataTemplate>
+													</DataGridTemplateColumn.CellTemplate>
+												</DataGridTemplateColumn>
+
+												<!--Name Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding Name}"
+													CanUserSort="False"
+													Header="Name"
+													IsReadOnly="True"
+													FontSize="15"
+													MinWidth="150" />
+
+												<!--Username Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding Username}"
+													CanUserSort="False"
+													Header="Username"
+													IsReadOnly="True"
+													FontSize="15"
+													MinWidth="130" />
+
+												<!--Position Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding Position}"
+													CanUserSort="False"
+													Header="Position"
+													IsReadOnly="True"
+													FontSize="14"
+													MinWidth="90" />
+
+												<!--Date Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding FormattedDateTime}"
+													CanUserSort="False"
+													Header="Date &amp; Time"
+													IsReadOnly="True"
+													MinWidth="240" />
+
+												<!--Action Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding Action}"
+													CanUserSort="False"
+													Header="Action"
+													IsReadOnly="True"
+													FontSize="14"
+													Width="237" />
+											</DataGrid.Columns>
+										</DataGrid>
+									</StackPanel>
+								</shadui:Card>
+							</Grid>
+							<Grid Grid.Row="0" Grid.Column="1" RowDefinitions="* *" VerticalAlignment="Top" RowSpacing="30">
+								<shadui:Card Grid.Row="0">
+									<StackPanel Orientation="Vertical" Spacing="15">
+										<shadui:CardTitle Content="Calendar" />
+										<Calendar SelectedDate="{CompiledBinding SelectedDate}" />
+									</StackPanel>
+								</shadui:Card>
+								<shadui:Card Grid.Row="1">
+									<StackPanel Orientation="Vertical" Spacing="15">
+										<shadui:CardTitle
+											Content="This date contains"
+											FontSize="25"
+											HorizontalAlignment="Center" />
+										<lvc:PieChart
+											Height="300"
+											InitialRotation="-225"
+											MaxAngle="270"
+											MinValue="0"
+											MaxValue="2000">
+											<lvc:PieChart.Series>
+												<lvc:XamlGaugeSeries
+													GaugeValue="{Binding Value}"
+													Fill="{lvc:SolidColorPaint Color='#22C55E'}"
+													ShowDataLabels="True"
+													DataLabelsSize="50"
+													DataLabelsPosition="ChartCenter"
+													InnerRadius="75" />
+												<lvc:XamlGaugeBackgroundSeries
+													InnerRadius="75"
+													Fill="{lvc:SolidColorPaint Color='#9A3B82F6'}" />
+											</lvc:PieChart.Series>
+										</lvc:PieChart>
+										<TextBlock
+											Text="Audit log numbers"
+											FontSize="25"
+											HorizontalAlignment="Center"
+											Margin="0,-25,0,0" />
+									</StackPanel>
+								</shadui:Card>
+							</Grid>
+						</Grid>
+					</shadui:BreakpointView>
+					<shadui:BreakpointView Breakpoint="XlAndDown">
+						<Grid RowDefinitions="* *" RowSpacing="30">
+							<shadui:Card Grid.Row="0">
+								<Grid ColumnDefinitions="* *">
+									<StackPanel Grid.Column="0" Orientation="Vertical" Spacing="15" HorizontalAlignment="Left">
+										<shadui:CardTitle Content="Calendar" />
+										<Calendar SelectedDate="{CompiledBinding SelectedDate}" />
+									</StackPanel>
+									<StackPanel Grid.Column="1" Orientation="Vertical" Spacing="15" HorizontalAlignment="Right">
+										<shadui:CardTitle
+											Content="This date contains"
+											FontSize="25"
+											HorizontalAlignment="Center" />
+										<lvc:PieChart
+											Height="300"
+											InitialRotation="-225"
+											MaxAngle="270"
+											MinValue="0"
+											MaxValue="2000">
+											<lvc:PieChart.Series>
+												<lvc:XamlGaugeSeries
+													GaugeValue="{Binding Value}"
+													Fill="{lvc:SolidColorPaint Color='#22C55E'}"
+													ShowDataLabels="True"
+													DataLabelsSize="50"
+													DataLabelsPosition="ChartCenter"
+													InnerRadius="75" />
+												<lvc:XamlGaugeBackgroundSeries
+													InnerRadius="75"
+													Fill="{lvc:SolidColorPaint Color='#9A3B82F6'}" />
+											</lvc:PieChart.Series>
+										</lvc:PieChart>
+										<TextBlock
+											Text="Audit log numbers"
+											FontSize="25"
+											HorizontalAlignment="Center"
+											Margin="0,-25,0,0" />
+									</StackPanel>
+								</Grid>
+							</shadui:Card>
+							<Grid Grid.Row="1">
+								<shadui:Card MaxHeight="845">
+									<StackPanel Orientation="Vertical" Spacing="15">
+										<Grid ColumnDefinitions="Auto Auto Auto *" ColumnSpacing="10">
+											<TextBox
+												Grid.Column="0"
+												Width="200"
+												HorizontalAlignment="Left"
+												shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingAuditLogs}"
+												Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
+												shadui:ControlAssist.Height="40"
+												Classes="Clearable"
+												FontSize="13"
+												Watermark="Search logs...">
+											</TextBox>
+											<ComboBox
+												Grid.Column="1"
+												Width="120"
+												shadui:ControlAssist.Height="40"
+												VerticalAlignment="Center"
+												ItemsSource="{CompiledBinding SortFilterItems}"
+												SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
+											<ComboBox
+												Grid.Column="2"
+												Width="130"
+												shadui:ControlAssist.Height="40"
+												VerticalAlignment="Center"
+												ItemsSource="{CompiledBinding SortPositionItems}"
+												SelectedItem="{CompiledBinding SelectedSortPositionItem}" />
+											<Button
+												HorizontalAlignment="Right"
+												Grid.Column="3"
+												Classes="Primary"
+												Command="{CompiledBinding DownloadAuditLogsCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="15"
+														Height="15"
+														Path="avares://AHON_TRACK/Assets/AuditLogsView/download-icon.svg"
+														VerticalAlignment="Center"
+														Margin="0,0,8,0" />
+													<TextBlock Text="Download Logs (PDF)" FontSize="12" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+										</Grid>
+										<DataGrid
+											MaxHeight="740"
+											CanUserReorderColumns="False"
+											CanUserSortColumns="False"
+											GridLinesVisibility="All"
+											HeadersVisibility="Column"
+											SelectionMode="Single"
+											Background="{DynamicResource CardBackgroundColor}"
+											RowBackground="{DynamicResource CardBackgroundColor}"
+											ItemsSource="{CompiledBinding AuditLogs}"
+											Margin="0">
+
+											<DataGrid.Styles>
+												<Style Selector="TextBlock">
+													<Setter Property="TextWrapping" Value="WrapWithOverflow" />
+												</Style>
+											</DataGrid.Styles>
+
+											<DataGrid.Resources>
+												<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+											</DataGrid.Resources>
+
+											<DataGrid.Columns>
+												<!--ID Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding ID}"
+													CanUserSort="False"
+													Header="ID"
+													IsReadOnly="True"
+													FontSize="13"
+													MaxWidth="80" />
+
+												<!--Picture/Avatar Header Column-->
+												<DataGridTemplateColumn
+													CanUserSort="False"
+													Header="Picture"
+													MaxWidth="100">
+													<DataGridTemplateColumn.CellTemplate>
+														<DataTemplate DataType="viewModels:AuditLogItems">
+															<shadui:Avatar
+																Width="26"
+																Height="26"
+																VerticalAlignment="Center"
+																HorizontalAlignment="Left"
+																Source="{CompiledBinding AvatarSource}"
+																Margin="8" />
+														</DataTemplate>
+													</DataGridTemplateColumn.CellTemplate>
+												</DataGridTemplateColumn>
+
+												<!--Name Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding Name}"
+													CanUserSort="False"
+													Header="Name"
+													IsReadOnly="True"
+													FontSize="13"
+													MaxWidth="150" />
+
+												<!--Username Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding Username}"
+													CanUserSort="False"
+													Header="Username"
+													FontSize="13"
+													IsReadOnly="True"
+													MaxWidth="130" />
+
+												<!--Position Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding Position}"
+													CanUserSort="False"
+													Header="Position"
+													FontSize="13"
+													IsReadOnly="True"
+													MaxWidth="120" />
+
+												<!--Date Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding FormattedDateTime}"
+													CanUserSort="False"
+													Header="Date &amp; Time"
+													FontSize="13"
+													IsReadOnly="True"
+													Width="*"
+													MinWidth="150" />
+
+												<!--Action Header Column-->
+												<DataGridTextColumn
+													Binding="{CompiledBinding Action}"
+													CanUserSort="False"
+													Header="Action"
+													IsReadOnly="True"
+													FontSize="13"
+													Width="*"
+													MinWidth="200" />
+											</DataGrid.Columns>
+										</DataGrid>
+									</StackPanel>
+								</shadui:Card>
+							</Grid>
+						</Grid>
+					</shadui:BreakpointView>
+				</shadui:BreakpointViewPort>
+			</StackPanel>
+		</ScrollViewer>
+	</DockPanel>
 </UserControl>

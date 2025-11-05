@@ -1,5 +1,5 @@
 <UserControl
-	xmlns="https://github.com/avaloniaui"
+ 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	x:Class="AHON_TRACK.Views.ManageMembershipView"
 	x:DataType="viewModels:ManageMembershipViewModel"
@@ -47,562 +47,1147 @@
 				FontWeight="SemiBold"
 				Text="Manage Membership"
 				Foreground="{StaticResource FontForeground}"
-				Margin="90,30,0,0"/>
-			<TextBlock
-				Classes="Caption Muted"
-				FontSize="14"
-				Text="Add, edit, or remove members while managing renewals, upgrades, and searching or filtering through the membership list"
-				TextWrapping="Wrap"
-				Margin="90,0" />
+				Margin="90,30"/>
 		</StackPanel>
-		<ScrollViewer HorizontalScrollBarVisibility="Auto">
+		<ScrollViewer>
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="50,10,10,0" Spacing="16">
-				<!--
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
-					-->
-				<Grid ColumnDefinitions="3* 2*" ColumnSpacing="10">
-					<shadui:Card Margin="0,30" HorizontalAlignment="Left" VerticalAlignment="Top" Height="835">
-						<StackPanel Spacing="25">
-							<Grid ColumnDefinitions="Auto Auto Auto *">
-								<TextBox
-									Grid.Column="0"
-									Width="260"
-									HorizontalAlignment="Left"
-									shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingMember}"
-									shadui:ControlAssist.Height="40"
-									Classes="Clearable"
-									Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
-									FontSize="15"
-									Watermark="Search Members...">
-									<TextBox.InnerRightContent>
-										<Svg
-											Width="20"
-											Opacity="0.75"
-											Path="/Assets/ManageMembershipView/search-icon.svg" />
-									</TextBox.InnerRightContent>
-								</TextBox>
-								<ComboBox
-									Grid.Column="1"
-									HorizontalAlignment="Left"
-									VerticalAlignment="Center"
-									PlaceholderText="Sort Data"
-									Margin="20,0"
-									Width="180"
-									ItemsSource="{CompiledBinding SortFilterItems}"
-									SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
-								<ComboBox
-									Grid.Column="2"
-									HorizontalAlignment="Left"
-									VerticalAlignment="Center"
-									PlaceholderText="Filter"
-									Width="150"
-									ItemsSource="{CompiledBinding StatusFilterItems}"
-									SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
-								</ComboBox>
-								<Button
-									Grid.Column="3"
-									HorizontalAlignment="Right"
-									Classes="Primary"
-									FontSize="16"
-									Height="40"
-									Padding="20,0,20,0"
-									Command="{CompiledBinding OpenAddNewMemberViewCommand}">
-									<StackPanel Orientation="Horizontal">
-										<Svg
-											Width="22"
-											Height="22"
-											Path="/Assets/ManageMembershipView/add-new-employee-icon.svg"
+						<Grid ColumnDefinitions="3* 1.25*" ColumnSpacing="10">
+							<shadui:Card Margin="0,30" HorizontalAlignment="Left" VerticalAlignment="Top" Height="835">
+								<StackPanel Spacing="25">
+									<Grid ColumnDefinitions="Auto Auto Auto *">
+										<TextBox
+											Grid.Column="0"
+											Width="260"
+											HorizontalAlignment="Left"
+											shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingMember}"
+											shadui:ControlAssist.Height="40"
+											Classes="Clearable"
+											Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
+											FontSize="15"
+											Watermark="Search Members...">
+											<TextBox.InnerRightContent>
+												<Svg
+													Width="20"
+													Opacity="0.75"
+													Path="/Assets/ManageMembershipView/search-icon.svg" />
+											</TextBox.InnerRightContent>
+										</TextBox>
+										<ComboBox
+											Grid.Column="1"
+											HorizontalAlignment="Left"
 											VerticalAlignment="Center"
-											Margin="0,0,8,0"/>
-										<TextBlock Text="Add New Member" VerticalAlignment="Center"/>
-									</StackPanel>
-								</Button>
-							</Grid>
-							<DataGrid
-								Height="720"
-								x:Name="ManageMemberDataGrid"
-								CanUserReorderColumns="False"
-								CanUserSortColumns="False"
-								GridLinesVisibility="All"
-								ItemsSource="{CompiledBinding MemberItems}"
-								SelectedItem="{CompiledBinding SelectedMember}"
-								SelectionMode="Single"
-								Background="{DynamicResource CardBackgroundColor}"
-								RowBackground="{DynamicResource CardBackgroundColor}"
-								HeadersVisibility="Column"
-								Margin="0">
-								
-								<DataGrid.Styles>
-									<Style Selector="TextBlock">
-										<Setter Property="TextWrapping" Value="WrapWithOverflow" />
-									</Style>
-								</DataGrid.Styles>
-
-								<DataGrid.Resources>
-									<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
-								</DataGrid.Resources>
-
-								<DataGrid.Columns>
-									<DataGridCheckBoxColumn Binding="{CompiledBinding IsSelected}" CanUserSort="False" Width="60">
-										<!--CheckBox Header Column-->
-										<DataGridCheckBoxColumn.Header>
-											<CheckBox
-												x:Name="SelectToggler"
-												Command="{CompiledBinding ToggleSelectionCommand}"
-												CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
-												IsChecked="{CompiledBinding SelectAll}"
-												Margin="8,0" />
-										</DataGridCheckBoxColumn.Header>
-									</DataGridCheckBoxColumn>
-
-									<!--ID Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding ID}"
-										CanUserSort="False"
-										Header="ID"
-										IsReadOnly="True"
-										FontSize="15"
-										IsVisible="{CompiledBinding ShowIdColumn}"
-										Width="80" />
-
-									<!--Picture/Avatar Header Column-->
-									<DataGridTemplateColumn
-										CanUserSort="False"
-										Header="Picture"
-										IsVisible="{CompiledBinding ShowPictureColumn}"
-										Width="100">
-										<DataGridTemplateColumn.CellTemplate>
-											<DataTemplate DataType="viewModels:ManageMembersItem">
-												<shadui:Avatar
-													Width="36"
-													Height="36"
+											PlaceholderText="Sort Data"
+											Margin="20,0"
+											Width="180"
+											ItemsSource="{CompiledBinding SortFilterItems}"
+											SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
+										<ComboBox
+											Grid.Column="2"
+											HorizontalAlignment="Left"
+											VerticalAlignment="Center"
+											PlaceholderText="Filter"
+											Width="150"
+											ItemsSource="{CompiledBinding StatusFilterItems}"
+											SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
+										</ComboBox>
+										<Button
+											Grid.Column="3"
+											HorizontalAlignment="Right"
+											Classes="Primary"
+											FontSize="16"
+											Height="40"
+											Padding="20,0,20,0"
+											Command="{CompiledBinding OpenAddNewMemberViewCommand}">
+											<StackPanel Orientation="Horizontal">
+												<Svg
+													Width="22"
+													Height="22"
+													Path="/Assets/ManageMembershipView/add-new-employee-icon.svg"
 													VerticalAlignment="Center"
-													HorizontalAlignment="Center"
-													Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"
-													Margin="8" />
-											</DataTemplate>
-										</DataGridTemplateColumn.CellTemplate>
-									</DataGridTemplateColumn>
+													Margin="0,0,8,0" />
+												<TextBlock Text="Add New Member" VerticalAlignment="Center" />
+											</StackPanel>
+										</Button>
+									</Grid>
+									<DataGrid
+										Height="720"
+										x:Name="ManageMemberDataGrid"
+										CanUserReorderColumns="False"
+										CanUserSortColumns="False"
+										GridLinesVisibility="All"
+										ItemsSource="{CompiledBinding MemberItems}"
+										SelectedItem="{CompiledBinding SelectedMember}"
+										SelectionMode="Single"
+										Background="{DynamicResource CardBackgroundColor}"
+										RowBackground="{DynamicResource CardBackgroundColor}"
+										HeadersVisibility="Column"
+										Margin="0">
 
-									<!--Name Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding Name}"
-										CanUserSort="False"
-										Header="Name"
-										IsReadOnly="True"
-										FontSize="15"
-										IsVisible="{CompiledBinding ShowNameColumn}"
-										Width="170" />
+										<DataGrid.Styles>
+											<Style Selector="TextBlock">
+												<Setter Property="TextWrapping" Value="WrapWithOverflow" />
+											</Style>
+										</DataGrid.Styles>
 
-									<!--Contact No. Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding ContactNumber}"
-										CanUserSort="False"
-										Header="Contact No."
-										IsReadOnly="True"
-										FontSize="14"
-										IsVisible="{CompiledBinding ShowContactNumberColumn}"
-										Width="140" />
+										<DataGrid.Resources>
+											<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+										</DataGrid.Resources>
 
-									<!--Membership Type Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding AvailedPackages}"
-										CanUserSort="False"
-										Header="Availed Packages"
-										IsReadOnly="True"
-										FontSize="14"
-										IsVisible="{CompiledBinding ShowAvailedPackagesColumn}"
-										Width="160" />
+										<DataGrid.Columns>
+											<DataGridCheckBoxColumn Binding="{CompiledBinding IsSelected}" CanUserSort="False" Width="60">
+												<!--CheckBox Header Column-->
+												<DataGridCheckBoxColumn.Header>
+													<CheckBox
+														x:Name="SelectToggler"
+														Command="{CompiledBinding ToggleSelectionCommand}"
+														CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
+														IsChecked="{CompiledBinding SelectAll}"
+														Margin="8,0" />
+												</DataGridCheckBoxColumn.Header>
+											</DataGridCheckBoxColumn>
 
-									<!--Status Header Column with Custom Template-->
-									<DataGridTemplateColumn
-										CanUserSort="False"
-										Header="Status"
-										IsVisible="{CompiledBinding ShowStatusColumn}"
-										Width="140">
-										<DataGridTemplateColumn.CellTemplate>
-											<DataTemplate DataType="viewModels:ManageMembersItem">
-												<Border
-													Background="{CompiledBinding StatusBackground}"
-													CornerRadius="7"
-													Padding="8,4"
-													Margin="5,0,0,0"
-													HorizontalAlignment="Left">
-													<TextBlock
-														Text="{CompiledBinding StatusDisplayText}"
-														Foreground="{CompiledBinding StatusForeground}"
-														FontSize="13"
-														FontWeight="Medium"
-														HorizontalAlignment="Center"
-														VerticalAlignment="Center" />
-												</Border>
-											</DataTemplate>
-										</DataGridTemplateColumn.CellTemplate>
-									</DataGridTemplateColumn>
+											<!--ID Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding ID}"
+												CanUserSort="False"
+												Header="ID"
+												IsReadOnly="True"
+												FontSize="15"
+												IsVisible="{CompiledBinding ShowIdColumn}"
+												Width="80" />
 
-									<!--Validity Joined Header Column-->
-									<DataGridTextColumn
-										Binding="{CompiledBinding Validity, Converter={StaticResource DateToStringConverter}}"
-										CanUserSort="False"
-										Header="Validity"
-										IsReadOnly="True"
-										FontSize="15"
-										FontWeight="SemiBold"
-										IsVisible="{CompiledBinding ShowValidity}"
-										Width="150" />
+											<!--Picture/Avatar Header Column-->
+											<DataGridTemplateColumn
+												CanUserSort="False"
+												Header="Picture"
+												IsVisible="{CompiledBinding ShowPictureColumn}"
+												Width="100">
+												<DataGridTemplateColumn.CellTemplate>
+													<DataTemplate DataType="viewModels:ManageMembersItem">
+														<shadui:Avatar
+															Width="36"
+															Height="36"
+															VerticalAlignment="Center"
+															HorizontalAlignment="Center"
+															Source="{CompiledBinding AvatarSource}"
+															Margin="8" />
+													</DataTemplate>
+												</DataGridTemplateColumn.CellTemplate>
+											</DataGridTemplateColumn>
 
-									<!--Dropdown button (three-dots)-->
-									<DataGridTemplateColumn CanUserResize="False" CanUserSort="False" Width="60">
-										<DataGridTemplateColumn.CellTemplate>
-											<DataTemplate DataType="viewModels:ManageMembersItem">
-												<Menu>
-													<MenuItem
-														HorizontalAlignment="Center"
-														VerticalAlignment="Center"
-														Classes="Icon Grid"
-														shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
-														<MenuItem.Header>
-															<Svg
-																Width="24"
-																Height="24"
-																Path="/Assets/ManageMembershipView/three-dots-icon.svg"/>
-														</MenuItem.Header>
-														<shadui:MenuItemAssist.Label>
-															<TextBlock Text="Actions" FontSize="15" FontWeight="Regular" Foreground="{DynamicResource MutedColor}"/>
-														</shadui:MenuItemAssist.Label>
+											<!--Name Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding Name}"
+												CanUserSort="False"
+												Header="Name"
+												IsReadOnly="True"
+												FontSize="15"
+												IsVisible="{CompiledBinding ShowNameColumn}"
+												Width="170" />
 
-														<!--
+											<!--Contact No. Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding ContactNumber}"
+												CanUserSort="False"
+												Header="Contact No."
+												IsReadOnly="True"
+												FontSize="14"
+												IsVisible="{CompiledBinding ShowContactNumberColumn}"
+												Width="140" />
+
+											<!--Membership Type Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding AvailedPackages}"
+												CanUserSort="False"
+												Header="Availed Packages"
+												IsReadOnly="True"
+												FontSize="14"
+												IsVisible="{CompiledBinding ShowAvailedPackagesColumn}"
+												Width="160" />
+
+											<!--Status Header Column with Custom Template-->
+											<DataGridTemplateColumn
+												CanUserSort="False"
+												Header="Status"
+												IsVisible="{CompiledBinding ShowStatusColumn}"
+												Width="140">
+												<DataGridTemplateColumn.CellTemplate>
+													<DataTemplate DataType="viewModels:ManageMembersItem">
+														<Border
+															Background="{CompiledBinding StatusBackground}"
+															CornerRadius="7"
+															Padding="8,4"
+															Margin="5,0,0,0"
+															HorizontalAlignment="Left">
+															<TextBlock
+																Text="{CompiledBinding StatusDisplayText}"
+																Foreground="{CompiledBinding StatusForeground}"
+																FontSize="13"
+																FontWeight="Medium"
+																HorizontalAlignment="Center"
+																VerticalAlignment="Center" />
+														</Border>
+													</DataTemplate>
+												</DataGridTemplateColumn.CellTemplate>
+											</DataGridTemplateColumn>
+
+											<!--Validity Joined Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding Validity, Converter={StaticResource DateToStringConverter}}"
+												CanUserSort="False"
+												Header="Validity"
+												IsReadOnly="True"
+												FontSize="15"
+												FontWeight="SemiBold"
+												IsVisible="{CompiledBinding ShowValidity}"
+												Width="150" />
+
+											<!--Dropdown button (three-dots)-->
+											<DataGridTemplateColumn CanUserResize="False" CanUserSort="False" Width="60">
+												<DataGridTemplateColumn.CellTemplate>
+													<DataTemplate DataType="viewModels:ManageMembersItem">
+														<Menu>
+															<MenuItem
+																HorizontalAlignment="Center"
+																VerticalAlignment="Center"
+																Classes="Icon Grid"
+																shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+																<MenuItem.Header>
+																	<Svg
+																		Width="24"
+																		Height="24"
+																		Path="/Assets/ManageMembershipView/three-dots-icon.svg" />
+																</MenuItem.Header>
+																<shadui:MenuItemAssist.Label>
+																	<TextBlock Text="Actions" FontSize="15" FontWeight="Regular" Foreground="{DynamicResource MutedColor}" />
+																</shadui:MenuItemAssist.Label>
+
+																<!--
 														<MenuItem
 															Header="View Member"
 															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).OpenViewMemberProfileCommand, FallbackValue={x:Null}}"
 															CommandParameter="{CompiledBinding}"/>
 														-->
-														<MenuItem Header="Copy">
-															<MenuItem
-																Header="Copy Member Name"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberNameCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Selected Member Name"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberNameCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Member ID"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberIdCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Selected Member ID"
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberIdCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem Header="Copy Member Contact No."
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberContactNumberCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem Header="Copy Selected Member Contact No."
-																IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberContactNumberCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<Separator/>
-															<MenuItem
-																Header="Copy Member Status"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberStatusCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-															<MenuItem
-																Header="Copy Member Validity"
-																Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberValidityCommand, FallbackValue={x:Null}}"
-																CommandParameter="{CompiledBinding}"/>
-														</MenuItem>
+																<MenuItem Header="Copy">
+																	<MenuItem
+																		Header="Copy Member Name"
+																		IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberNameCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem
+																		Header="Copy Selected Member Name"
+																		IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberNameCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem
+																		Header="Copy Member ID"
+																		IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberIdCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem
+																		Header="Copy Selected Member ID"
+																		IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberIdCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem Header="Copy Member Contact No."
+																	          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+																	          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberContactNumberCommand, FallbackValue={x:Null}}"
+																	          CommandParameter="{CompiledBinding}" />
+																	<MenuItem Header="Copy Selected Member Contact No."
+																	          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+																	          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberContactNumberCommand, FallbackValue={x:Null}}"
+																	          CommandParameter="{CompiledBinding}" />
+																	<Separator />
+																	<MenuItem
+																		Header="Copy Member Status"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberStatusCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem
+																		Header="Copy Member Validity"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberValidityCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																</MenuItem>
 
-														<MenuItem
-															Header="Modify Member Details"
-															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowModifyMemberDialogCommand, FallbackValue={x:Null}}"
-															CommandParameter="{CompiledBinding}"/>
-														<Separator/>
-														<MenuItem
-															Header="Delete"
-															Foreground="{DynamicResource DestructiveColor}"
-															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
-															CommandParameter="{CompiledBinding}"
-															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
-															<MenuItem.IsEnabled>
-																<MultiBinding Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
-																	<!-- 1) status of the row where the menu is opened -->
-																	<Binding Path="Status" />
-																	<!-- 2) currently selected member's status from the viewmodel (may be null) -->
-																	<Binding Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedMember.Status" FallbackValue="{x:Null}" />
-																</MultiBinding>
-															</MenuItem.IsEnabled>
-														</MenuItem>
-														<MenuItem
-															Header="Delete Selected"
-															Foreground="{DynamicResource DestructiveColor}"
-															Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
-															CommandParameter="{CompiledBinding}"
-															IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
-															<MenuItem.IsEnabled>
-																<MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
-																	<!-- current row's Status -->
-																	<Binding Path="Status" />
-																	<!-- view-model global flag -->
-																	<Binding Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).CanDeleteSelectedMembers" FallbackValue="{x:Null}"/>
-																</MultiBinding>
-															</MenuItem.IsEnabled>
-														</MenuItem>
-													</MenuItem>
-												</Menu>
-											</DataTemplate>
-										</DataGridTemplateColumn.CellTemplate>
-									</DataGridTemplateColumn>
-								</DataGrid.Columns>
-							</DataGrid>
-						</StackPanel>
-					</shadui:Card>
-					<shadui:Card Grid.Column="1" Margin="0,25,0,0" VerticalAlignment="Top" MaxHeight="837">
-						<Grid RowDefinitions="Auto Auto Auto Auto">
-							<StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
-								<shadui:Avatar
-									Source="{CompiledBinding SelectedMember.AvatarSource, Converter={StaticResource StringToBitmapConverter}, FallbackValue='/Assets/MainWindowView/user-admin.png'}"
-									Width="100"
-									Height="100" />
-								<TextBlock
-									Text="{CompiledBinding SelectedMember.Name, FallbackValue='Select a Member'}"
-									Classes="h4"
-									HorizontalAlignment="Center" />
-								<TextBlock
-									Text="Gym Member"
-									FontSize="15"
-									FontWeight="Medium"
-									Classes="Muted"
-									HorizontalAlignment="Center"
-									IsVisible="{CompiledBinding HasSelectedMember}"/>
-							</StackPanel>
-							<StackPanel Grid.Row="1" Margin="0,10">
-								<shadui:Card>
-									<StackPanel>
-										<StackPanel Orientation="Horizontal" Spacing="15">
-											<Svg
-												Path="avares://AHON_TRACK/Assets/ManageMembershipView/check-icon.svg"
-												Width="28"
-												HorizontalAlignment="Left"
-												VerticalAlignment="Center" />
-											<TextBlock
-												Text="Latest Action Log"
-												FontSize="17"
-												FontWeight="SemiBold"
-												Foreground="{DynamicResource FontForeground}"
-												HorizontalAlignment="Left"
-												VerticalAlignment="Center" />
-										</StackPanel>
-										<Grid RowDefinitions="Auto Auto" IsVisible="{CompiledBinding HasSelectedMember}">
-											<Grid Margin="20,20" ColumnDefinitions="* *">
-												<StackPanel HorizontalAlignment="Left" Grid.Column="0">
-													<TextBlock
-														Text="Check-in"
-														FontSize="16"
-														FontWeight="SemiBold" />
-													<TextBlock
-														Text="July 13, 2025"
-														Classes="Muted"
-														FontSize="16"
-														FontWeight="Regular" />
-													<TextBlock
-														Text="8:00 AM"
-														Classes="Muted"
-														FontSize="16"
-														FontWeight="Regular" />
-												</StackPanel>
-												<StackPanel HorizontalAlignment="Right" Grid.Column="1">
-													<TextBlock
-														Text="Recent Purchase"
-														FontSize="16"
-														FontWeight="SemiBold" />
-													<TextBlock
-														Text="x2 Protein Bar"
-														Classes="Muted"
-														FontSize="16"
-														FontWeight="Regular" />
-													<TextBlock
-														Text="9:11 AM"
-														Classes="Muted"
-														FontSize="16"
-														FontWeight="Regular" />
-												</StackPanel>
-											</Grid>
-											<StackPanel Grid.Row="1" HorizontalAlignment="Left" Margin="20,0">
-												<TextBlock
-													Text="Check-out"
-													FontSize="16"
-													FontWeight="SemiBold" />
-												<TextBlock
-													Text="July 13, 2025"
-													Classes="Muted"
-													FontSize="16"
-													FontWeight="Regular" />
-												<TextBlock
-													Text="11:00 AM"
-													Classes="Muted"
-													FontSize="16"
-													FontWeight="Regular" />
-											</StackPanel>
-										</Grid>
-									</StackPanel>
-								</shadui:Card>
-							</StackPanel>
-							<StackPanel Grid.Row="2" Margin="0,10">
-								<shadui:Card>
-									<StackPanel>
-										<StackPanel Orientation="Horizontal" Spacing="15">
-											<Svg
-												Path="avares://AHON_TRACK/Assets/ManageMembershipView/check-icon.svg"
-												Width="28"
-												HorizontalAlignment="Left"
-												VerticalAlignment="Center" />
-											<TextBlock
-												Text="Membership Information"
-												FontSize="17"
-												FontWeight="SemiBold"
-												Foreground="{DynamicResource FontForeground}"
-												HorizontalAlignment="Left"
-												VerticalAlignment="Center" />
-										</StackPanel>
-										<Grid RowDefinitions="Auto Auto" IsVisible="{CompiledBinding HasSelectedMember}">
-											<Grid Margin="20,20" ColumnDefinitions="* *">
-												<StackPanel HorizontalAlignment="Left" Grid.Column="0">
-													<TextBlock
-														Text="Membership Start"
-														FontSize="16"
-														FontWeight="SemiBold" />
-													<TextBlock
-														Text="June 13, 2025"
-														Classes="Muted"
-														FontSize="16"
-														FontWeight="Regular" />
-												</StackPanel>
-												<StackPanel HorizontalAlignment="Right" Grid.Column="1">
-													<TextBlock
-														Text="Member Type"
-														FontSize="16"
-														FontWeight="SemiBold" />
-													<TextBlock
-														Text="{CompiledBinding SelectedMember.AvailedPackages, FallbackValue='Regular'}"
-														Width="100"
-														TextWrapping="Wrap"
-														Classes="Muted"
-														FontSize="16"
-														FontWeight="Regular" />
-												</StackPanel>
-											</Grid>
-											<Grid Margin="20,0" ColumnDefinitions="* *" Grid.Row="1">
-												<StackPanel HorizontalAlignment="Left" Grid.Column="0">
-													<TextBlock
-														Text="Membership End"
-														FontSize="16"
-														FontWeight="SemiBold" />
-													<TextBlock
-														Text="{CompiledBinding SelectedMember.Validity, Converter={StaticResource DateToStringConverter}, FallbackValue='July 13, 2025'}"
-														Classes="Muted"
-														FontSize="16"
-														FontWeight="Regular" />
-												</StackPanel>
-												<StackPanel HorizontalAlignment="Right" Grid.Column="1">
-													<StackPanel Orientation="Vertical" Spacing="5">
-														<Border
-															IsVisible="{CompiledBinding IsActiveVisible}"
-															Background="{DynamicResource SuccessColor10}"
-															Padding="10,5,10,5"
-															BorderThickness="1"
-															BorderBrush="{DynamicResource SuccessColor60}"
-															CornerRadius="5"
-															HorizontalAlignment="Right">
-															<TextBlock
-																Text="Active"
-																FontSize="16"
-																FontWeight="SemiBold"
-																Foreground="{DynamicResource SuccessColor}" />
-														</Border>
-														<Border
-															IsVisible="{CompiledBinding IsExpiredVisible}"
-															Background="{DynamicResource DestructiveColor10}"
-															Padding="10,5,10,5"
-															BorderThickness="1"
-															BorderBrush="{DynamicResource DestructiveColor75}"
-															CornerRadius="5"
-															HorizontalAlignment="Right">
-															<TextBlock
-																Text="Expired"
-																FontSize="16"
-																FontWeight="SemiBold"
-																Foreground="{DynamicResource DestructiveColor}" />
-														</Border>
-													</StackPanel>
-												</StackPanel>
-											</Grid>
-										</Grid>
-									</StackPanel>
-								</shadui:Card>
-							</StackPanel>
-							<StackPanel Grid.Row="3" HorizontalAlignment="Center">
-								<StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{CompiledBinding HasSelectedMember}">
-									<Button
-										Classes="Destructive"
-										Padding="20,0,20,0"
-										IsEnabled="{CompiledBinding !IsDeleteButtonEnabled}"
-										Command="{CompiledBinding ShowDeleteMemberDialogCommand}">
-										<StackPanel Orientation="Horizontal">
-											<Svg
-												Width="18"
-												Height="18"
-												Margin="0,0,10,0"
-												VerticalAlignment="Center"
-												Path="avares://AHON_TRACK/Assets/ManageMembershipView/delete-icon.svg" />
-											<TextBlock Text="Delete" Foreground="White" VerticalAlignment="Center" />
-										</StackPanel>
-									</Button>
-									<Button
-										Classes="Secondary"
-										HorizontalAlignment="Center"
-										Padding="20,0,20,0"
-										IsEnabled="{CompiledBinding IsUpgradeButtonEnabled}"
-										Command="{CompiledBinding OpenUpgradeMemberViewCommand}">
-										<StackPanel Orientation="Horizontal">
-											<Svg
-												Width="18"
-												Height="18"
-												Margin="0,0,10,0"
-												VerticalAlignment="Center"
-												Path="avares://AHON_TRACK/Assets/ManageMembershipView/upgrade-icon.svg" />
-											<TextBlock Text="Upgrade" Foreground="{DynamicResource FontForeground}" VerticalAlignment="Center" />
-										</StackPanel>
-									</Button>
-									<Button
-										Classes="Primary"
-										Padding="20,0,20,0"
-										IsEnabled="{CompiledBinding IsRenewButtonEnabled}"
-										Command="{CompiledBinding OpenRenewMemberViewCommand}">
-										<StackPanel Orientation="Horizontal">
-											<Svg
-												Width="18"
-												Height="18"
-												Margin="0,0,10,0"
-												VerticalAlignment="Center"
-												Path="avares://AHON_TRACK/Assets/ManageMembershipView/renew-icon.svg" />
-											<TextBlock Text="Renew" Foreground="White" VerticalAlignment="Center" />
-										</StackPanel>
-									</Button>
+																<MenuItem
+																	Header="Modify Member Details"
+																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowModifyMemberDialogCommand, FallbackValue={x:Null}}"
+																	CommandParameter="{CompiledBinding}" />
+																<Separator />
+																<MenuItem
+																	Header="Delete"
+																	Foreground="{DynamicResource DestructiveColor}"
+																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+																	CommandParameter="{CompiledBinding}"
+																	IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+																	<MenuItem.IsEnabled>
+																		<MultiBinding Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+																			<!-- 1) status of the row where the menu is opened -->
+																			<Binding Path="Status" />
+																			<!-- 2) currently selected member's status from the viewmodel (may be null) -->
+																			<Binding
+																				Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedMember.Status"
+																				FallbackValue="{x:Null}" />
+																		</MultiBinding>
+																	</MenuItem.IsEnabled>
+																</MenuItem>
+																<MenuItem
+																	Header="Delete Selected"
+																	Foreground="{DynamicResource DestructiveColor}"
+																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+																	CommandParameter="{CompiledBinding}"
+																	IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+																	<MenuItem.IsEnabled>
+																		<MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+																			<!-- current row's Status -->
+																			<Binding Path="Status" />
+																			<!-- view-model global flag -->
+																			<Binding
+																				Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).CanDeleteSelectedMembers"
+																				FallbackValue="{x:Null}" />
+																		</MultiBinding>
+																	</MenuItem.IsEnabled>
+																</MenuItem>
+															</MenuItem>
+														</Menu>
+													</DataTemplate>
+												</DataGridTemplateColumn.CellTemplate>
+											</DataGridTemplateColumn>
+										</DataGrid.Columns>
+									</DataGrid>
 								</StackPanel>
-							</StackPanel>
+							</shadui:Card>
+							<shadui:Card Grid.Column="1" Margin="0,25,0,0" VerticalAlignment="Top" MaxHeight="837">
+								<Grid RowDefinitions="Auto Auto Auto Auto">
+									<StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+										<shadui:Avatar
+											Source="{CompiledBinding SelectedMember.AvatarSource}"
+											Width="100"
+											Height="100" />
+										<TextBlock
+											Text="{CompiledBinding SelectedMember.Name, FallbackValue='Select a Member'}"
+											Classes="h4"
+											HorizontalAlignment="Center" />
+										<TextBlock
+											Text="Gym Member"
+											FontSize="15"
+											FontWeight="Medium"
+											Classes="Muted"
+											HorizontalAlignment="Center"
+											IsVisible="{CompiledBinding HasSelectedMember}" />
+									</StackPanel>
+									<StackPanel Grid.Row="1" Margin="0,10">
+										<shadui:Card>
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="15">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/check-icon.svg"
+														Width="28"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+													<TextBlock
+														Text="Latest Action Log"
+														FontSize="17"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource FontForeground}"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<Grid RowDefinitions="Auto Auto" IsVisible="{CompiledBinding HasSelectedMember}">
+													<Grid Margin="20,20" ColumnDefinitions="* *">
+														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
+															<TextBlock
+																Text="Check-in"
+																FontSize="16"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.LastCheckInDisplay}"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.LastCheckInTimeDisplay}"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+														<StackPanel HorizontalAlignment="Right" Grid.Column="1">
+															<TextBlock
+																Text="Recent Purchase"
+																FontSize="16"
+																TextAlignment="Right"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.RecentPurchaseDisplay}"
+																TextAlignment="Right"
+																TextWrapping="WrapWithOverflow"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.RecentPurchaseTimeDisplay}"
+																TextAlignment="Right"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+													</Grid>
+													<StackPanel Grid.Row="1" HorizontalAlignment="Left" Margin="20,0">
+														<TextBlock
+															Text="Check-out"
+															FontSize="16"
+															FontWeight="SemiBold" />
+														<TextBlock
+															Text="{CompiledBinding SelectedMember.LastCheckOutDisplay}"
+															Classes="Muted"
+															FontSize="16"
+															FontWeight="Regular" />
+														<TextBlock
+															Text="{CompiledBinding SelectedMember.LastCheckOutTimeDisplay}"
+															Classes="Muted"
+															FontSize="16"
+															FontWeight="Regular" />
+													</StackPanel>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+									</StackPanel>
+									<StackPanel Grid.Row="2" Margin="0,10">
+										<shadui:Card>
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="15">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/check-icon.svg"
+														Width="28"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+													<TextBlock
+														Text="Membership Information"
+														FontSize="17"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource FontForeground}"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<Grid RowDefinitions="Auto Auto" IsVisible="{CompiledBinding HasSelectedMember}">
+													<Grid Margin="20,20" ColumnDefinitions="* *">
+														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
+															<TextBlock
+																Text="Membership Start"
+																TextAlignment="Left"
+																FontSize="16"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.MembershipStartDisplay}"
+																TextAlignment="Left"
+																TextWrapping="WrapWithOverflow"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+														<StackPanel HorizontalAlignment="Right" Grid.Column="1">
+															<TextBlock
+																Text="Member Type"
+																TextAlignment="Left"
+																TextWrapping="WrapWithOverflow"
+																FontSize="16"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.AvailedPackages, FallbackValue='Regular'}"
+																TextAlignment="Right"
+																TextWrapping="WrapWithOverflow"
+																Width="100"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+													</Grid>
+													<Grid Margin="20,0" ColumnDefinitions="* *" Grid.Row="1">
+														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
+															<TextBlock
+																Text="Membership End"
+																FontSize="16"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.Validity, Converter={StaticResource DateToStringConverter}, FallbackValue='July 13, 2025'}"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+														<StackPanel HorizontalAlignment="Right" Grid.Column="1">
+															<StackPanel Orientation="Vertical" Spacing="5">
+																<Border
+																	IsVisible="{CompiledBinding IsActiveVisible}"
+																	Background="{DynamicResource SuccessColor10}"
+																	Padding="10,5,10,5"
+																	BorderThickness="1"
+																	BorderBrush="{DynamicResource SuccessColor60}"
+																	CornerRadius="5"
+																	HorizontalAlignment="Right">
+																	<TextBlock
+																		Text="Active"
+																		FontSize="16"
+																		FontWeight="SemiBold"
+																		Foreground="{DynamicResource SuccessColor}" />
+																</Border>
+																<Border
+																	IsVisible="{CompiledBinding IsNearExpiryVisible}"
+																	Background="{DynamicResource WarningColor10}"
+																	Padding="10,5,10,5"
+																	BorderThickness="1"
+																	BorderBrush="{DynamicResource WarningColor60}"
+																	CornerRadius="5"
+																	HorizontalAlignment="Right">
+																	<TextBlock
+																		Text="Near Expiry"
+																		FontSize="16"
+																		FontWeight="SemiBold"
+																		Foreground="{DynamicResource WarningColor}" />
+																</Border>
+																<Border
+																	IsVisible="{CompiledBinding IsExpiredVisible}"
+																	Background="{DynamicResource DestructiveColor10}"
+																	Padding="10,5,10,5"
+																	BorderThickness="1"
+																	BorderBrush="{DynamicResource DestructiveColor75}"
+																	CornerRadius="5"
+																	HorizontalAlignment="Right">
+																	<TextBlock
+																		Text="Expired"
+																		FontSize="16"
+																		FontWeight="SemiBold"
+																		Foreground="{DynamicResource DestructiveColor}" />
+																</Border>
+															</StackPanel>
+														</StackPanel>
+													</Grid>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+									</StackPanel>
+									<StackPanel Grid.Row="3" HorizontalAlignment="Center">
+										<StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{CompiledBinding HasSelectedMember}">
+											<Button
+												Classes="Destructive"
+												Padding="20,0,20,0"
+												IsEnabled="{CompiledBinding !IsDeleteButtonEnabled}"
+												Command="{CompiledBinding ShowDeleteMemberDialogCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="18"
+														Height="18"
+														Margin="0,0,10,0"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/delete-icon.svg" />
+													<TextBlock Text="Delete" Foreground="White" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+											<Button
+												Classes="Secondary"
+												HorizontalAlignment="Center"
+												Padding="20,0,20,0"
+												IsEnabled="{CompiledBinding IsUpgradeButtonEnabled}"
+												Command="{CompiledBinding OpenUpgradeMemberViewCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="18"
+														Height="18"
+														Margin="0,0,10,0"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/upgrade-icon.svg" />
+													<TextBlock Text="Upgrade" Foreground="{DynamicResource FontForeground}" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+											<Button
+												Classes="Primary"
+												Padding="20,0,20,0"
+												IsEnabled="{CompiledBinding IsRenewButtonEnabled}"
+												Command="{CompiledBinding OpenRenewMemberViewCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="18"
+														Height="18"
+														Margin="0,0,10,0"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/renew-icon.svg" />
+													<TextBlock Text="Renew" Foreground="White" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+										</StackPanel>
+									</StackPanel>
+								</Grid>
+							</shadui:Card>
 						</Grid>
-					</shadui:Card>
-				</Grid>
-				<!--
+					</shadui:BreakpointView>
+					<shadui:BreakpointView Breakpoint="XlAndDown">
+						<Grid RowDefinitions="* *" Margin="30,0,0,0">
+							<shadui:Card Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Height="835">
+								<StackPanel Spacing="25">
+									<Grid ColumnDefinitions="Auto Auto Auto *">
+										<TextBox
+											Grid.Column="0"
+											Width="170"
+											HorizontalAlignment="Left"
+											shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingMember}"
+											shadui:ControlAssist.Height="40"
+											Classes="Clearable"
+											Text="{CompiledBinding SearchStringResult, Mode=TwoWay}"
+											FontSize="13"
+											Watermark="Search Members...">
+											<TextBox.InnerRightContent>
+												<Svg
+													Width="15"
+													Opacity="0.75"
+													Path="/Assets/ManageMembershipView/search-icon.svg" />
+											</TextBox.InnerRightContent>
+										</TextBox>
+										<ComboBox
+											Grid.Column="1"
+											HorizontalAlignment="Left"
+											VerticalAlignment="Center"
+											PlaceholderText="Sort Data"
+											Margin="20,0"
+											Width="130"
+											ItemsSource="{CompiledBinding SortFilterItems}"
+											SelectedItem="{CompiledBinding SelectedSortFilterItem}" />
+										<ComboBox
+											Grid.Column="2"
+											HorizontalAlignment="Left"
+											VerticalAlignment="Center"
+											PlaceholderText="Filter"
+											Width="130"
+											ItemsSource="{CompiledBinding StatusFilterItems}"
+											SelectedItem="{CompiledBinding SelectedStatusFilterItem}">
+										</ComboBox>
+										<Button
+											Grid.Column="3"
+											HorizontalAlignment="Right"
+											Classes="Primary"
+											FontSize="14"
+											Height="40"
+											Padding="20,0,20,0"
+											Command="{CompiledBinding OpenAddNewMemberViewCommand}">
+											<StackPanel Orientation="Horizontal">
+												<Svg
+													Width="22"
+													Height="22"
+													Path="/Assets/ManageMembershipView/add-new-employee-icon.svg"
+													VerticalAlignment="Center"
+													Margin="0,0,8,0" />
+												<TextBlock Text="Add New Member" VerticalAlignment="Center" />
+											</StackPanel>
+										</Button>
+									</Grid>
+									<DataGrid
+										Height="720"
+										x:Name="ManageMemberDataGrid1"
+										CanUserReorderColumns="False"
+										CanUserSortColumns="False"
+										GridLinesVisibility="All"
+										ItemsSource="{CompiledBinding MemberItems}"
+										SelectedItem="{CompiledBinding SelectedMember}"
+										SelectionMode="Single"
+										Background="{DynamicResource CardBackgroundColor}"
+										RowBackground="{DynamicResource CardBackgroundColor}"
+										HeadersVisibility="Column"
+										Margin="0">
+
+										<DataGrid.Styles>
+											<Style Selector="TextBlock">
+												<Setter Property="TextWrapping" Value="WrapWithOverflow" />
+											</Style>
+										</DataGrid.Styles>
+
+										<DataGrid.Resources>
+											<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+										</DataGrid.Resources>
+
+										<DataGrid.Columns>
+											<DataGridCheckBoxColumn Binding="{CompiledBinding IsSelected}" CanUserSort="False" Width="60">
+												<!--CheckBox Header Column-->
+												<DataGridCheckBoxColumn.Header>
+													<CheckBox
+														x:Name="SelectToggler2"
+														Command="{CompiledBinding ToggleSelectionCommand}"
+														CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
+														IsChecked="{CompiledBinding SelectAll}"
+														Margin="8,0" />
+												</DataGridCheckBoxColumn.Header>
+											</DataGridCheckBoxColumn>
+
+											<!--ID Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding ID}"
+												CanUserSort="False"
+												Header="ID"
+												IsReadOnly="True"
+												FontSize="12"
+												IsVisible="{CompiledBinding ShowIdColumn}"
+												MaxWidth="50" />
+
+											<!--Picture/Avatar Header Column-->
+											<DataGridTemplateColumn
+												CanUserSort="False"
+												Header="Picture"
+												IsVisible="{CompiledBinding ShowPictureColumn}"
+												MaxWidth="80">
+												<DataGridTemplateColumn.CellTemplate>
+													<DataTemplate DataType="viewModels:ManageMembersItem">
+														<shadui:Avatar
+															Width="26"
+															Height="26"
+															VerticalAlignment="Center"
+															HorizontalAlignment="Center"
+															Source="{CompiledBinding AvatarSource}"
+															Margin="8" />
+													</DataTemplate>
+												</DataGridTemplateColumn.CellTemplate>
+											</DataGridTemplateColumn>
+
+											<!--Name Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding Name}"
+												CanUserSort="False"
+												Header="Name"
+												IsReadOnly="True"
+												FontSize="12"
+												IsVisible="{CompiledBinding ShowNameColumn}"
+												MaxWidth="130" />
+
+											<!--Contact No. Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding ContactNumber}"
+												CanUserSort="False"
+												Header="Contact No."
+												IsReadOnly="True"
+												FontSize="12"
+												IsVisible="{CompiledBinding ShowContactNumberColumn}"
+												MaxWidth="120" />
+
+											<!--Membership Type Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding AvailedPackages}"
+												CanUserSort="False"
+												Header="Availed Packages"
+												IsReadOnly="True"
+												FontSize="12"
+												IsVisible="{CompiledBinding ShowAvailedPackagesColumn}"
+												MaxWidth="130" />
+
+											<!--Status Header Column with Custom Template-->
+											<DataGridTemplateColumn
+												CanUserSort="False"
+												Header="Status"
+												IsVisible="{CompiledBinding ShowStatusColumn}"
+												MaxWidth="150">
+												<DataGridTemplateColumn.CellTemplate>
+													<DataTemplate DataType="viewModels:ManageMembersItem">
+														<Border
+															Background="{CompiledBinding StatusBackground}"
+															CornerRadius="7"
+															Padding="8,4"
+															Margin="5,0,0,0"
+															HorizontalAlignment="Left">
+															<TextBlock
+																Text="{CompiledBinding StatusDisplayText}"
+																Foreground="{CompiledBinding StatusForeground}"
+																FontSize="13"
+																FontWeight="Medium"
+																HorizontalAlignment="Center"
+																VerticalAlignment="Center" />
+														</Border>
+													</DataTemplate>
+												</DataGridTemplateColumn.CellTemplate>
+											</DataGridTemplateColumn>
+
+											<!--Validity Joined Header Column-->
+											<DataGridTextColumn
+												Binding="{CompiledBinding Validity, Converter={StaticResource DateToStringConverter}}"
+												CanUserSort="False"
+												Header="Validity"
+												IsReadOnly="True"
+												FontSize="12"
+												FontWeight="SemiBold"
+												IsVisible="{CompiledBinding ShowValidity}"
+												MaxWidth="100" />
+
+											<!--Dropdown button (three-dots)-->
+											<DataGridTemplateColumn CanUserResize="False" CanUserSort="False" MaxWidth="100">
+												<DataGridTemplateColumn.CellTemplate>
+													<DataTemplate DataType="viewModels:ManageMembersItem">
+														<Menu>
+															<MenuItem
+																HorizontalAlignment="Center"
+																VerticalAlignment="Center"
+																Classes="Icon Grid"
+																shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+																<MenuItem.Header>
+																	<Svg
+																		Width="24"
+																		Height="24"
+																		Path="/Assets/ManageMembershipView/three-dots-icon.svg" />
+																</MenuItem.Header>
+																<shadui:MenuItemAssist.Label>
+																	<TextBlock Text="Actions" FontSize="15" FontWeight="Regular" Foreground="{DynamicResource MutedColor}" />
+																</shadui:MenuItemAssist.Label>
+
+																<MenuItem Header="Copy">
+																	<MenuItem
+																		Header="Copy Member Name"
+																		IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberNameCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem
+																		Header="Copy Selected Member Name"
+																		IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberNameCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem
+																		Header="Copy Member ID"
+																		IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberIdCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem
+																		Header="Copy Selected Member ID"
+																		IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberIdCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem Header="Copy Member Contact No."
+																	          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}"
+																	          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberContactNumberCommand, FallbackValue={x:Null}}"
+																	          CommandParameter="{CompiledBinding}" />
+																	<MenuItem Header="Copy Selected Member Contact No."
+																	          IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}"
+																	          Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopyMultipleMemberContactNumberCommand, FallbackValue={x:Null}}"
+																	          CommandParameter="{CompiledBinding}" />
+																	<Separator />
+																	<MenuItem
+																		Header="Copy Member Status"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberStatusCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																	<MenuItem
+																		Header="Copy Member Validity"
+																		Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowCopySingleMemberValidityCommand, FallbackValue={x:Null}}"
+																		CommandParameter="{CompiledBinding}" />
+																</MenuItem>
+
+																<MenuItem
+																	Header="Modify Member Details"
+																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowModifyMemberDialogCommand, FallbackValue={x:Null}}"
+																	CommandParameter="{CompiledBinding}" />
+																<Separator />
+																<MenuItem
+																	Header="Delete"
+																	Foreground="{DynamicResource DestructiveColor}"
+																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+																	CommandParameter="{CompiledBinding}"
+																	IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+																	<MenuItem.IsEnabled>
+																		<MultiBinding Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+																			<!-- 1) status of the row where the menu is opened -->
+																			<Binding Path="Status" />
+																			<!-- 2) currently selected member's status from the viewmodel (may be null) -->
+																			<Binding
+																				Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedMember.Status"
+																				FallbackValue="{x:Null}" />
+																		</MultiBinding>
+																	</MenuItem.IsEnabled>
+																</MenuItem>
+																<MenuItem
+																	Header="Delete Selected"
+																	Foreground="{DynamicResource DestructiveColor}"
+																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+																	CommandParameter="{CompiledBinding}"
+																	IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+																	<MenuItem.IsEnabled>
+																		<MultiBinding Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+																			<!-- current row's Status -->
+																			<Binding Path="Status" />
+																			<!-- view-model global flag -->
+																			<Binding
+																				Path="$parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).CanDeleteSelectedMembers"
+																				FallbackValue="{x:Null}" />
+																		</MultiBinding>
+																	</MenuItem.IsEnabled>
+																</MenuItem>
+															</MenuItem>
+														</Menu>
+													</DataTemplate>
+												</DataGridTemplateColumn.CellTemplate>
+											</DataGridTemplateColumn>
+										</DataGrid.Columns>
+									</DataGrid>
+								</StackPanel>
+							</shadui:Card>
+							<shadui:Card Grid.Row="1" Margin="10,25,10,0" MinWidth="50" MaxWidth="800">
+								<Grid RowDefinitions="Auto Auto Auto Auto">
+									<StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center">
+										<shadui:Avatar
+											Source="{CompiledBinding SelectedMember.AvatarSource}"
+											Width="100"
+											Height="100" />
+										<TextBlock
+											Text="{CompiledBinding SelectedMember.Name, FallbackValue='Select a Member'}"
+											Classes="h4"
+											HorizontalAlignment="Center" />
+										<TextBlock
+											Text="Gym Member"
+											FontSize="15"
+											FontWeight="Medium"
+											Classes="Muted"
+											HorizontalAlignment="Center"
+											IsVisible="{CompiledBinding HasSelectedMember}" />
+									</StackPanel>
+									<StackPanel Grid.Row="1" Margin="0,10">
+										<shadui:Card>
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="15">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/check-icon.svg"
+														Width="28"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+													<TextBlock
+														Text="Latest Action Log"
+														FontSize="17"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource FontForeground}"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<Grid RowDefinitions="Auto Auto" IsVisible="{CompiledBinding HasSelectedMember}">
+													<Grid Margin="20,20" ColumnDefinitions="* *">
+														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
+															<TextBlock
+																Text="Check-in"
+																FontSize="16"
+																TextAlignment="Left"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.LastCheckInDisplay}"
+																TextAlignment="Left"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.LastCheckInTimeDisplay}"
+																TextAlignment="Left"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+														<StackPanel HorizontalAlignment="Right" Grid.Column="1">
+															<TextBlock
+																Text="Recent Purchase"
+																TextAlignment="Right"
+																FontSize="16"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{Binding SelectedMember.RecentPurchaseDisplay}"
+																TextAlignment="Right"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+															<TextBlock
+																Text="{Binding SelectedMember.RecentPurchaseTimeDisplay}"
+																TextAlignment="Right"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+													</Grid>
+													<StackPanel Grid.Row="1" HorizontalAlignment="Left" Margin="20,0">
+														<TextBlock
+															Text="Check-out"
+															TextAlignment="Left"
+															FontSize="16"
+															FontWeight="SemiBold" />
+														<TextBlock
+															Text="{CompiledBinding SelectedMember.LastCheckOutDisplay}"
+															TextAlignment="Left"
+															Classes="Muted"
+															FontSize="16"
+															FontWeight="Regular" />
+														<TextBlock
+															Text="{CompiledBinding SelectedMember.LastCheckOutTimeDisplay}"
+															TextAlignment="Left"
+															Classes="Muted"
+															FontSize="16"
+															FontWeight="Regular" />
+													</StackPanel>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+									</StackPanel>
+									<StackPanel Grid.Row="2" Margin="0,10">
+										<shadui:Card>
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" Spacing="15">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/check-icon.svg"
+														Width="28"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+													<TextBlock
+														Text="Membership Information"
+														FontSize="17"
+														FontWeight="SemiBold"
+														Foreground="{DynamicResource FontForeground}"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<Grid RowDefinitions="Auto Auto" IsVisible="{CompiledBinding HasSelectedMember}">
+													<Grid Margin="20,20" ColumnDefinitions="* *">
+														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
+															<TextBlock
+																Text="Membership Start"
+																TextAlignment="Left"
+																FontSize="16"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.MembershipStartDisplay}"
+																TextAlignment="Left"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+														<StackPanel HorizontalAlignment="Right" Grid.Column="1">
+															<TextBlock
+																Text="Member Type"
+																TextAlignment="Right"
+																FontSize="16"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.AvailedPackages, FallbackValue='Regular'}"
+																TextAlignment="Right"
+																Width="100"
+																TextWrapping="Wrap"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+													</Grid>
+													<Grid Margin="20,0" ColumnDefinitions="* *" Grid.Row="1">
+														<StackPanel HorizontalAlignment="Left" Grid.Column="0">
+															<TextBlock
+																Text="Membership End"
+																TextAlignment="Left"
+																FontSize="16"
+																FontWeight="SemiBold" />
+															<TextBlock
+																Text="{CompiledBinding SelectedMember.Validity, Converter={StaticResource DateToStringConverter}, FallbackValue='July 13, 2025'}"
+																TextAlignment="Left"
+																Classes="Muted"
+																FontSize="16"
+																FontWeight="Regular" />
+														</StackPanel>
+														<StackPanel HorizontalAlignment="Right" Grid.Column="1">
+															<StackPanel Orientation="Vertical" Spacing="5">
+																<Border
+																	IsVisible="{CompiledBinding IsActiveVisible}"
+																	Background="{DynamicResource SuccessColor10}"
+																	Padding="10,5,10,5"
+																	BorderThickness="1"
+																	BorderBrush="{DynamicResource SuccessColor60}"
+																	CornerRadius="5"
+																	HorizontalAlignment="Right">
+																	<TextBlock
+																		Text="Active"
+																		FontSize="16"
+																		FontWeight="SemiBold"
+																		Foreground="{DynamicResource SuccessColor}" />
+																</Border>
+																<Border
+																	IsVisible="{CompiledBinding IsNearExpiryVisible}"
+																	Background="{DynamicResource WarningColor10}"
+																	Padding="10,5,10,5"
+																	BorderThickness="1"
+																	BorderBrush="{DynamicResource WarningColor60}"
+																	CornerRadius="5"
+																	HorizontalAlignment="Right">
+																	<TextBlock
+																		Text="Near Expiry"
+																		FontSize="16"
+																		FontWeight="SemiBold"
+																		Foreground="{DynamicResource WarningColor}" />
+																</Border>
+																<Border
+																	IsVisible="{CompiledBinding IsExpiredVisible}"
+																	Background="{DynamicResource DestructiveColor10}"
+																	Padding="10,5,10,5"
+																	BorderThickness="1"
+																	BorderBrush="{DynamicResource DestructiveColor75}"
+																	CornerRadius="5"
+																	HorizontalAlignment="Right">
+																	<TextBlock
+																		Text="Expired"
+																		FontSize="16"
+																		FontWeight="SemiBold"
+																		Foreground="{DynamicResource DestructiveColor}" />
+																</Border>
+															</StackPanel>
+														</StackPanel>
+													</Grid>
+												</Grid>
+											</StackPanel>
+										</shadui:Card>
+									</StackPanel>
+									<StackPanel Grid.Row="3" HorizontalAlignment="Center">
+										<StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{CompiledBinding HasSelectedMember}">
+											<Button
+												Classes="Destructive"
+												Padding="20,0,20,0"
+												IsEnabled="{CompiledBinding !IsDeleteButtonEnabled}"
+												Command="{CompiledBinding ShowDeleteMemberDialogCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="18"
+														Height="18"
+														Margin="0,0,10,0"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/delete-icon.svg" />
+													<TextBlock Text="Delete" Foreground="White" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+											<Button
+												Classes="Secondary"
+												HorizontalAlignment="Center"
+												Padding="20,0,20,0"
+												IsEnabled="{CompiledBinding IsUpgradeButtonEnabled}"
+												Command="{CompiledBinding OpenUpgradeMemberViewCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="18"
+														Height="18"
+														Margin="0,0,10,0"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/upgrade-icon.svg" />
+													<TextBlock Text="Upgrade" Foreground="{DynamicResource FontForeground}" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+											<Button
+												Classes="Primary"
+												Padding="20,0,20,0"
+												IsEnabled="{CompiledBinding IsRenewButtonEnabled}"
+												Command="{CompiledBinding OpenRenewMemberViewCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="18"
+														Height="18"
+														Margin="0,0,10,0"
+														VerticalAlignment="Center"
+														Path="avares://AHON_TRACK/Assets/ManageMembershipView/renew-icon.svg" />
+													<TextBlock Text="Renew" Foreground="White" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+										</StackPanel>
+									</StackPanel>
+								</Grid>
+							</shadui:Card>
+						</Grid>
 					</shadui:BreakpointView>
 				</shadui:BreakpointViewPort>
-				-->
 			</StackPanel>
 		</ScrollViewer>
 	</DockPanel>

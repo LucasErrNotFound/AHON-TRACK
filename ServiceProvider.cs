@@ -1,20 +1,26 @@
-﻿using AHON_TRACK.ViewModels;
-using AHON_TRACK.Components.ViewModels;
+﻿using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using System;
 using System.IO;
-using AHON_TRACK.Services;
-using AHON_TRACK.Services.Interface;
 using ShadUI;
 using Jab;
 using Serilog;
+using ShadUI;
+using System;
+using System.IO;
 
 namespace AHON_TRACK;
 
 [ServiceProvider]
+[Transient<ServiceProvider>]
 [Transient<LoginViewModel>]
 [Transient<MainWindowViewModel>]
 [Transient<DashboardViewModel>]
+[Transient<DashboardModel>]
 [Transient<ManageEmployeesViewModel>]
 [Transient<CheckInOutViewModel>]
 [Transient<ManageMembershipViewModel>]
@@ -45,11 +51,26 @@ namespace AHON_TRACK;
 [Transient<SettingsDialogCardViewModel>]
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
-[Singleton<IMessenger, WeakReferenceMessenger>]
-[Singleton<IPackageService, PackageService>]
 [Singleton<SettingsService>]
+[Singleton<IMessenger, WeakReferenceMessenger>]
 [Singleton(typeof(ILogger), Factory = nameof(LoggerFactory))]
 [Singleton(typeof(PageManager), Factory = nameof(PageManagerFactory))]
+[Singleton<string>(Factory = nameof(ConnectionStringFactory))]
+[Singleton<IEmployeeService, EmployeeService>]
+[Singleton<IDashboardService, DashboardService>]
+[Singleton<IMemberService, MemberService>]
+[Singleton<ICheckInOutService, CheckInOutService>]
+[Singleton<ITrainingService, TrainingService>]
+[Singleton<IProductService, ProductService>]
+[Singleton<IInventoryService, InventoryService>]
+[Singleton<IPackageService, PackageService>]
+[Singleton<ISupplierService, SupplierService>]
+[Singleton<IWalkInService, WalkInService>]
+[Singleton<IProductPurchaseService, ProductPurchaseService>]
+[Singleton<DataCountingService, DataCountingService>]
+[Singleton(typeof(BackupDatabaseService), Factory = nameof(BackupDatabaseServiceFactory))]
+[Singleton(typeof(BackupSchedulerService), Factory = nameof(BackupSchedulerServiceFactory))]
+
 public partial class ServiceProvider
 {
     public static ILogger LoggerFactory()
@@ -74,5 +95,24 @@ public partial class ServiceProvider
     public PageManager PageManagerFactory()
     {
         return new PageManager(this);
+    }
+
+    private BackupDatabaseService BackupDatabaseServiceFactory()
+    {
+        var connectionString = ConnectionStringFactory();
+        return new BackupDatabaseService(connectionString);
+    }
+
+    private BackupSchedulerService BackupSchedulerServiceFactory()
+    {
+        var settingsService = GetService<SettingsService>();
+        var backupDatabaseService = GetService<BackupDatabaseService>();
+        var toastManager = GetService<ToastManager>();
+        return new BackupSchedulerService(settingsService, backupDatabaseService, toastManager);
+    }
+
+    private string ConnectionStringFactory()
+    {
+        return "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
     }
 }

@@ -8,67 +8,67 @@
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     x:DataType="viewModels:AddTrainingScheduleDialogCardViewModel"
     mc:Ignorable="d"
-    Width="1465"
+    Width="1360"
     MaxHeight="725"
     d:DesignWidth="1465"
     d:DesignHeight="655"
     x:Class="AHON_TRACK.Components.AddTrainingScheduleDialog.AddTrainingScheduleDialogCard">
 
-    <Design.DataContext>
-        <viewModels:AddTrainingScheduleDialogCardViewModel />
-    </Design.DataContext>
+	<Design.DataContext>
+		<viewModels:AddTrainingScheduleDialogCardViewModel />
+	</Design.DataContext>
 
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
-        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
-        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
 
-        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
-        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
-        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
-        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
-    </UserControl.Resources>
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+	</UserControl.Resources>
 
-    <UserControl.Styles>
-        <Style Selector="TextBlock.h4">
-            <Setter Property="FontSize" Value="19" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Margin" Value="0,0,0,5" />
-        </Style>
-        <Style Selector="TextBlock.Muted">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="Margin" Value="0,0,0,5" />
-        </Style>
-        <Style Selector="TextBlock.LabelField">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="Margin" Value="0,0,0,5" />
-        </Style>
-        <Style Selector="RadioButton.FormRadio">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="Regular" />
-            <Setter Property="Margin" Value="0,0,15,0" />
-        </Style>
-    </UserControl.Styles>
+	<UserControl.Styles>
+		<Style Selector="TextBlock.h4">
+			<Setter Property="FontSize" Value="19" />
+			<Setter Property="FontWeight" Value="SemiBold" />
+			<Setter Property="Margin" Value="0,0,0,5" />
+		</Style>
+		<Style Selector="TextBlock.Muted">
+			<Setter Property="FontSize" Value="14" />
+			<Setter Property="Margin" Value="0,0,0,5" />
+		</Style>
+		<Style Selector="TextBlock.LabelField">
+			<Setter Property="FontSize" Value="14" />
+			<Setter Property="FontWeight" Value="Medium" />
+			<Setter Property="Margin" Value="0,0,0,5" />
+		</Style>
+		<Style Selector="RadioButton.FormRadio">
+			<Setter Property="FontSize" Value="14" />
+			<Setter Property="FontWeight" Value="Regular" />
+			<Setter Property="Margin" Value="0,0,15,0" />
+		</Style>
+	</UserControl.Styles>
 
-    <Border
+	<Border
         Background="{DynamicResource BackgroundColor}"
         BorderBrush="{DynamicResource BorderColor}"
         BorderThickness="1"
         Padding="30">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <!-- Header Section -->
-                <TextBlock
+		<ScrollViewer VerticalScrollBarVisibility="Auto">
+			<StackPanel>
+				<!-- Header Section -->
+				<TextBlock
                     Text="Add new training schedule"
                     Classes="h4" />
-                <TextBlock
+				<TextBlock
                     Text="Add a new training schedule for your trainee"
                     Classes="Muted" />
-                <shadui:Card Margin="0,10,0,0" MaxHeight="595" HasShadow="True">
-                    <Grid ColumnDefinitions="Auto Auto" ColumnSpacing="30">
-                        <StackPanel Grid.Column="0" Spacing="20" HorizontalAlignment="Left">
-                            <AutoCompleteBox
+				<shadui:Card Margin="0,10,0,0" MaxHeight="595" HasShadow="True">
+					<Grid ColumnDefinitions="Auto Auto" ColumnSpacing="30">
+						<StackPanel Grid.Column="0" Spacing="20" HorizontalAlignment="Left">
+							<AutoCompleteBox
                                 Width="400"
                                 HorizontalAlignment="Left"
                                 shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingTrainee}"
@@ -78,14 +78,14 @@
                                 Classes="Clearable"
                                 FontSize="15"
                                 Watermark="Search Trainees...">
-                                <AutoCompleteBox.InnerRightContent>
-                                    <Svg
+								<AutoCompleteBox.InnerRightContent>
+									<Svg
                                         Width="20"
                                         Opacity="0.75"
                                         Path="/Assets/ManageEmployeesView/search-icon.svg" />
-                                </AutoCompleteBox.InnerRightContent>
-                            </AutoCompleteBox>
-                            <DataGrid
+								</AutoCompleteBox.InnerRightContent>
+							</AutoCompleteBox>
+							<DataGrid
                                 MaxHeight="380"
                                 AutoGenerateColumns="False"
                                 CanUserReorderColumns="False"
@@ -98,150 +98,131 @@
                                 SelectedItem="{CompiledBinding SelectedTrainee, Mode=OneWayToSource}"
                                 SelectionMode="Single">
 
-                                <DataGrid.Resources>
-                                    <converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
-                                </DataGrid.Resources>
+								<DataGrid.Resources>
+									<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+								</DataGrid.Resources>
 
-                                <DataGrid.Columns>
-                                    <!--  ID Column -->
-                                    <DataGridTextColumn
+								<DataGrid.Columns>
+									<!--  ID Column -->
+									<DataGridTextColumn
                                         Width="Auto"
                                         MinWidth="80"
                                         Header="ID"
                                         x:DataType="viewModels:Trainees"
                                         Binding="{CompiledBinding ID}" />
 
-                                    <!--  Picture Column -->
-                                    <DataGridTemplateColumn
-                                        CanUserSort="False"
-                                        Header="Picture"
-                                        x:DataType="viewModels:Trainees"
-                                        Width="100">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate DataType="viewModels:AddTrainingScheduleDialogCardViewModel">
-                                                <shadui:Avatar
-                                                    Width="36"
-                                                    Height="36"
-                                                    VerticalAlignment="Center"
-                                                    HorizontalAlignment="Center"
-                                                    x:DataType="viewModels:Trainees"
-                                                    Source="{CompiledBinding PicturePath, Converter={StaticResource StringToBitMapConverter}}"
-                                                    Margin="8" />
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-
-                                    <!--  First Name Column -->
-                                    <DataGridTextColumn
+									<!--  First Name Column -->
+									<DataGridTextColumn
                                         Width="Auto"
                                         MinWidth="170"
                                         Header="First Name"
                                         x:DataType="viewModels:Trainees"
                                         Binding="{CompiledBinding FirstName}" />
 
-                                    <!--  Last Name Column -->
-                                    <DataGridTextColumn
+									<!--  Last Name Column -->
+									<DataGridTextColumn
                                         Width="Auto"
                                         MinWidth="170"
                                         Header="Last Name"
                                         x:DataType="viewModels:Trainees"
                                         Binding="{CompiledBinding LastName}" />
 
-                                    <!--  Contact No. Name Column -->
-                                    <DataGridTextColumn
+									<!--  Contact No. Name Column -->
+									<DataGridTextColumn
                                         Width="Auto"
                                         MinWidth="150"
                                         Header="Contact No."
                                         x:DataType="viewModels:Trainees"
                                         Binding="{CompiledBinding ContactNumber}" />
 
-                                    <!--  Package Type Column -->
-                                    <DataGridTextColumn
+									<!--  Package Type Column -->
+									<DataGridTextColumn
                                         Width="Auto"
                                         MinWidth="150"
                                         Header="Package Type"
                                         x:DataType="viewModels:Trainees"
                                         Binding="{CompiledBinding PackageType}" />
-                                    <!--  Sessions Left Column -->
-                                    <DataGridTextColumn
+									<!--  Sessions Left Column -->
+									<DataGridTextColumn
                                         Width="Auto"
                                         MinWidth="110"
                                         Header="Sessions Left"
                                         x:DataType="viewModels:Trainees"
                                         Binding="{CompiledBinding SessionLeft}" />
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </StackPanel>
-                        <shadui:Card Grid.Column="1" Width="380" HasShadow="True">
-                            <StackPanel HorizontalAlignment="Center">
-                                <shadui:CardTitle Content="Set the schedule here"/>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <CalendarDatePicker 
+								</DataGrid.Columns>
+							</DataGrid>
+						</StackPanel>
+						<shadui:Card Grid.Column="1" Width="380" HasShadow="True">
+							<StackPanel HorizontalAlignment="Center">
+								<shadui:CardTitle Content="Set the schedule here"/>
+								<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+									<CalendarDatePicker
                                         HorizontalAlignment="Left"
                                         shadui:ControlAssist.Label="Date of Training"
                                         shadui:ControlAssist.ReadOnly="True"
                                         Width="135"
                                         Margin="0,20"
                                         SelectedDate="{CompiledBinding SelectedTrainingDate}">
-                                    </CalendarDatePicker>
-                                    <ComboBox 
+									</CalendarDatePicker>
+									<ComboBox
                                         VerticalAlignment="Top"
                                         Margin="30,20,0,35"
                                         Width="150"
                                         PlaceholderText="Pick a coach"
                                         shadui:ControlAssist.Label="Assign Coach"
                                         ItemsSource="{CompiledBinding CoachItems}"
-                                        SelectedItem="{CompiledBinding SelectedCoachItem, Mode=TwoWay}">
-                                    </ComboBox>
-                                </StackPanel>
-                                <StackPanel Spacing="10" Margin="0,0,0,0" HorizontalAlignment="Center">
-                                    <TimePicker 
+	
+                                        SelectedItem="{CompiledBinding SelectedCoachItems, Mode=TwoWay}">
+									</ComboBox>
+								</StackPanel>
+								<StackPanel Spacing="10" Margin="0,0,0,0" HorizontalAlignment="Center">
+									<TimePicker
                                         Width="310"
                                         shadui:ControlAssist.Label="Start Time"
                                         shadui:ControlAssist.Hint="Set the beginning time"
                                         SelectedTime="{CompiledBinding StartTime, Converter={x:Static converters:TimeOnlyToTimeSpanConverter.Instance}}"/>
-                                    <TimePicker 
+									<TimePicker
                                         Width="310"
                                         shadui:ControlAssist.Label="End Time"
                                         shadui:ControlAssist.Hint="Set the cut-off time"
                                         SelectedTime="{CompiledBinding EndTime, Converter={x:Static converters:TimeOnlyToTimeSpanConverter.Instance}}"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <shadui:Card.Footer>
-                                <StackPanel Orientation="Horizontal" Spacing="15" HorizontalAlignment="Right">
-                                    <Button
+								</StackPanel>
+							</StackPanel>
+							<shadui:Card.Footer>
+								<StackPanel Orientation="Horizontal" Spacing="15" HorizontalAlignment="Right">
+									<Button
                                         Classes="Secondary"
                                         Command="{CompiledBinding CancelCommand}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Svg
+										<StackPanel Orientation="Horizontal">
+											<Svg
                                                 Width="20"
                                                 Height="20"
                                                 Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/cancel-icon.svg"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,10,0" />
-                                            <TextBlock Text="Cancel" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button 
-                                        Classes="Primary" 
+											<TextBlock Text="Cancel" VerticalAlignment="Center" />
+										</StackPanel>
+									</Button>
+									<Button
+                                        Classes="Primary"
                                         Command="{CompiledBinding SubmitCommand}"
                                         IsEnabled="{CompiledBinding SelectedTrainee, Mode=TwoWay, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Svg
+										<StackPanel Orientation="Horizontal">
+											<Svg
                                                 Width="20"
                                                 Height="20"
                                                 Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/add-schedule-icon.svg"
                                                 VerticalAlignment="Center"
                                                 Margin="0,0,10,0"/>
-                                            <TextBlock Text="Submit" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </shadui:Card.Footer>
-                        </shadui:Card>
-                    </Grid>
-                </shadui:Card>
-            </StackPanel>
-        </ScrollViewer>
-    </Border>
+											<TextBlock Text="Submit" VerticalAlignment="Center"/>
+										</StackPanel>
+									</Button>
+								</StackPanel>
+							</shadui:Card.Footer>
+						</shadui:Card>
+					</Grid>
+				</shadui:Card>
+			</StackPanel>
+		</ScrollViewer>
+	</Border>
 </UserControl>

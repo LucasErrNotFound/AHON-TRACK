@@ -13,6 +13,33 @@ namespace AHON_TRACK
         [STAThread]
         public static void Main(string[] args)
         {
+            // 🔥 TEMPORARY CODE - Run once to get password hash, then DELETE! 🔥
+            try
+            {
+                string password = "Calubayan123";
+                string hash = BCrypt.Net.BCrypt.HashPassword(password);
+
+                Console.WriteLine("================================");
+                Console.WriteLine("PASSWORD HASH GENERATOR");
+                Console.WriteLine("================================");
+                Console.WriteLine($"Plain Password: {password}");
+                Console.WriteLine($"\nHashed Password:");
+                Console.WriteLine(hash);
+                Console.WriteLine("\n================================");
+                Console.WriteLine("Copy the hash above and use it in your SQL INSERT!");
+                Console.WriteLine("================================\n");
+
+                // Also write to debug output (visible in Visual Studio Output window)
+                System.Diagnostics.Debug.WriteLine("================================");
+                System.Diagnostics.Debug.WriteLine($"Hashed Password: {hash}");
+                System.Diagnostics.Debug.WriteLine("================================");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error hashing password: {ex.Message}");
+            }
+            // 🔥 END TEMPORARY CODE 🔥
+
             try
             {
                 QuestPDF.Settings.License = LicenseType.Community;

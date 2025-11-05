@@ -1,13 +1,18 @@
-﻿using AHON_TRACK.ViewModels;
+﻿using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using ShadUI;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AHON_TRACK.Converters;
+using AHON_TRACK.Services.Events;
+using Avalonia.Media.Imaging;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -18,6 +23,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly AddNewEmployeeDialogCardViewModel _addNewEmployeeDialogCardViewModel;
+    private readonly IEmployeeService _employeeService;
 
     [ObservableProperty]
     private bool _isFromCurrentUser = false;
@@ -26,7 +32,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private string _employeeFullNameHeader = string.Empty;
 
     [ObservableProperty]
-    private string _employeeID = string.Empty;
+    private int _employeeID;
 
     [ObservableProperty]
     private string _employeePosition = string.Empty;
@@ -41,7 +47,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
     private string _employeeFullName = string.Empty;
 
     [ObservableProperty]
-    private string _employeeAge = string.Empty;
+    private int _employeeAge;
 
     [ObservableProperty]
     private string _employeeBirthDate = string.Empty;
@@ -72,16 +78,26 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
 
     [ObservableProperty]
     private string _employeeZipCode = string.Empty;
+    
+    [ObservableProperty]
+    private Bitmap? _employeeAvatarSource;
 
+    [ObservableProperty]
     private ManageEmployeesItem? _selectedEmployeeData;
+    
+    public Bitmap? DisplayAvatarSource => IsFromCurrentUser 
+        ? ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes)
+        : _selectedEmployeeData?.AvatarSource ?? ImageHelper.GetDefaultAvatar();
 
-    public EmployeeProfileInformationViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel)
+    public EmployeeProfileInformationViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, IEmployeeService employeeService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _addNewEmployeeDialogCardViewModel = addNewEmployeeDialogCardViewModel;
+        _employeeService = employeeService;
 
+        UserProfileEventService.Instance.ProfilePictureUpdated += OnProfilePictureUpdated;
     }
 
     public EmployeeProfileInformationViewModel()
@@ -90,6 +106,7 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _addNewEmployeeDialogCardViewModel = new AddNewEmployeeDialogCardViewModel();
+        _employeeService = null!;
     }
 
     public void SetNavigationParameters(Dictionary<string, object> parameters)
@@ -124,48 +141,114 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
         }
     }
 
-    private void InitializeEmployeeProfile()
+    private async void InitializeEmployeeProfile()
     {
         if (_selectedEmployeeData != null)
         {
-            EmployeeID = _selectedEmployeeData.ID;
-            EmployeePosition = _selectedEmployeeData.Position;
-            EmployeeStatus = _selectedEmployeeData.Status;
-            EmployeeDateJoined = _selectedEmployeeData.DateJoined.ToString("MMMM d, yyyy");
-            EmployeeFullName = _selectedEmployeeData.Name;
-            EmployeeFullNameHeader = $"{_selectedEmployeeData.Name}'s Profile";
-            EmployeePhoneNumber = _selectedEmployeeData.ContactNumber;
+            var (success, message, fullEmployee) = await _employeeService.ViewEmployeeProfileAsync(_selectedEmployeeData.ID);
 
-            // Set default values for properties that are not available in ManageEmployeesItem (Hard-coded, sorry :)
-            EmployeeAge = "30"; // Default or calculate from birth date if available
-            EmployeeBirthDate = "1993-05-20"; // Default
-            EmployeeGender = "Male"; // Default
-            EmployeeLastLogin = DateTime.Now.ToString("MMMM dd, yyyy h:mmtt");
-            EmployeeHouseAddress = "123 Main"; // Default
-            EmployeeHouseNumber = "123"; // Default
-            EmployeeStreet = "Main Street"; // Default
-            EmployeeBarangay = "Maungib"; // Default
-            EmployeeCityProvince = "Cebu City, Cebu"; // Default
-            EmployeeZipCode = "6000"; // Default
+            if (!success || fullEmployee == null)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            EmployeeID = fullEmployee.ID;
+            EmployeePosition = fullEmployee.Position;
+            EmployeeStatus = fullEmployee.Status;
+            EmployeeDateJoined = fullEmployee.DateJoined == DateTime.MinValue
+                ? "N/A"
+                : fullEmployee.DateJoined.ToString("MMMM d, yyyy");
+            EmployeeFullName = fullEmployee.Name;
+            EmployeeFullNameHeader = $"{fullEmployee.Name}'s Profile";
+            EmployeePhoneNumber = fullEmployee.ContactNumber;
+
+            EmployeeAge = fullEmployee.Age;
+            EmployeeBirthDate = fullEmployee.Birthdate;
+            EmployeeGender = fullEmployee.Gender;
+            EmployeeLastLogin = fullEmployee.LastLogin;
+            EmployeeHouseAddress = fullEmployee.HouseAddress;
+            EmployeeHouseNumber = fullEmployee.HouseNumber;
+            EmployeeStreet = fullEmployee.Street;
+            EmployeeBarangay = fullEmployee.Barangay;
+            EmployeeCityProvince = fullEmployee.CityProvince;
+            EmployeeZipCode = fullEmployee.ZipCode;
+            EmployeeAvatarSource = fullEmployee.AvatarSource;
+            
+            OnPropertyChanged(nameof(DisplayAvatarSource));
         }
     }
 
-    public void InitializeCurrentUserProfile()
+    private async void InitializeCurrentUserProfile()
     {
         IsFromCurrentUser = true;
-        SetDefaultValues();
-        EmployeeFullNameHeader = "My Profile";
+
+        // Get the current user's employee ID from CurrentUserModel
+        int? currentUserId = CurrentUserModel.UserId;
+
+        if (currentUserId.HasValue)
+        {
+            var (success, message, fullEmployee) = await _employeeService.ViewEmployeeProfileAsync(currentUserId.Value);
+
+            if (!success || fullEmployee == null)
+            {
+                _toastManager?.CreateToast("Error")
+                    .WithContent(message)
+                    .DismissOnClick()
+                    .ShowError();
+                SetDefaultValues(); // Fallback
+                return;
+            }
+
+            // Load full employee data
+            EmployeeID = fullEmployee.ID;
+            EmployeePosition = fullEmployee.Position;
+            EmployeeStatus = fullEmployee.Status;
+            EmployeeDateJoined = fullEmployee.DateJoined == DateTime.MinValue
+                ? "N/A"
+                : fullEmployee.DateJoined.ToString("MMMM d, yyyy");
+            EmployeeFullName = fullEmployee.Name;
+            EmployeeFullNameHeader = "My Profile";
+            EmployeePhoneNumber = fullEmployee.ContactNumber;
+            EmployeeAge = fullEmployee.Age;
+            EmployeeBirthDate = fullEmployee.Birthdate;
+            EmployeeGender = fullEmployee.Gender;
+            EmployeeLastLogin = fullEmployee.LastLogin;
+            EmployeeHouseAddress = fullEmployee.HouseAddress;
+            EmployeeHouseNumber = fullEmployee.HouseNumber;
+            EmployeeStreet = fullEmployee.Street;
+            EmployeeBarangay = fullEmployee.Barangay;
+            EmployeeCityProvince = fullEmployee.CityProvince;
+            EmployeeZipCode = fullEmployee.ZipCode;
+            
+            if (fullEmployee.AvatarBytes != null)
+            {
+                CurrentUserModel.AvatarBytes = fullEmployee.AvatarBytes;
+            }
+
+            OnPropertyChanged(nameof(DisplayAvatarSource));
+        }
+        else
+        {
+            // No user logged in, use defaults
+            SetDefaultValues();
+            EmployeeFullNameHeader = "My Profile";
+            OnPropertyChanged(nameof(DisplayAvatarSource));
+        }
     }
 
     private void SetDefaultValues()
     {
-        EmployeeID = "E12345";
+        EmployeeID = 13203;
         EmployeePosition = "Software Engineer";
         EmployeeStatus = "Active";
         EmployeeDateJoined = "January 15, 2023";
         EmployeeFullName = "John Doe";
         EmployeeFullNameHeader = IsFromCurrentUser ? "My Profile" : "John Doe's Profile";
-        EmployeeAge = "30";
+        EmployeeAge = 31;
         EmployeeBirthDate = "1993-05-20";
         EmployeeGender = "Male";
         EmployeePhoneNumber = "09837756473";
@@ -211,5 +294,33 @@ public sealed partial class EmployeeProfileInformationViewModel : ViewModelBase,
                     .ShowWarning()).WithMaxWidth(950)
             .Show();
         Debug.WriteLine("Edit profile dialog shown successfully.");
+    }
+    
+    private void OnProfilePictureUpdated()
+    {
+        if (IsFromCurrentUser)
+        {
+            // Refresh the display avatar
+            OnPropertyChanged(nameof(DisplayAvatarSource));
+        }
+    }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe profile picture update event
+        UserProfileEventService.Instance.ProfilePictureUpdated -= OnProfilePictureUpdated;
+
+        // Dispose bitmap if disposable and clear avatar
+        if (EmployeeAvatarSource is IDisposable d) d.Dispose();
+        EmployeeAvatarSource = null;
+        SelectedEmployeeData = null;
+
+        // Null other UI fields
+        EmployeeFullName = string.Empty;
+        EmployeeFullNameHeader = string.Empty;
+        
+        (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
+
+        base.DisposeManagedResources();
     }
 }

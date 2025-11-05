@@ -20,7 +20,7 @@ public class EquipmentItem
     public string? BrandName { get; set; } = string.Empty;
     public string? Category { get; set; } = string.Empty;
     public string? Supplier { get; set; } = string.Empty;
-    public int CurrentStock { get; set; }
+    public int Quantity { get; set; }
     public int PurchasedPrice { get; set; }
     public DateTime? PurchasedDate { get; set; }
     public DateTime? Warranty { get; set; }

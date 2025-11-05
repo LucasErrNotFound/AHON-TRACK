@@ -1,4 +1,6 @@
 ﻿using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,6 +11,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
+using Avalonia.Media.Imaging;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -17,31 +23,29 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly PageManager _pageManager;
     private readonly DashboardViewModel _dashboardViewModel;
     private readonly ManageEmployeesViewModel _manageEmployeesViewModel;
-	private readonly CheckInOutViewModel _checkInOutViewModel;
-	private readonly ManageMembershipViewModel _manageMembershipViewModel;
+    private readonly CheckInOutViewModel _checkInOutViewModel;
+    private readonly ManageMembershipViewModel _manageMembershipViewModel;
     private readonly TrainingSchedulesViewModel _trainingSchedulesViewModel;
     private readonly ManageBillingViewModel _manageBillingViewModel;
     private readonly ProductPurchaseViewModel _productPurchaseViewModel;
     private readonly EquipmentInventoryViewModel _equipmentInventoryViewModel;
-    private readonly ProductStockViewModel  _productStockViewModel;
+    private readonly ProductStockViewModel _productStockViewModel;
     private readonly SupplierManagementViewModel _supplierManagementViewModel;
     private readonly FinancialReportsViewModel _financialReportsViewModel;
-    private readonly GymDemographicsViewModel  _gymDemographicsViewModel;
-    private readonly GymAttendanceViewModel  _gymAttendanceViewModel;
+    private readonly GymDemographicsViewModel _gymDemographicsViewModel;
+    private readonly GymAttendanceViewModel _gymAttendanceViewModel;
     private readonly AuditLogsViewModel _auditLogsViewModel;
-
     private readonly EmployeeProfileInformationViewModel _employeeProfileInformationViewModel;
     private readonly SettingsDialogCardViewModel _settingsDialogCardViewModel;
 
-    // Primary constructor for DI
     public MainWindowViewModel(
         PageManager pageManager,
         DialogManager dialogManager,
         ToastManager toastManager,
         DashboardViewModel dashboardViewModel,
         ManageEmployeesViewModel manageEmployeesViewModel,
-		CheckInOutViewModel checkInOutViewModel,
-		ManageMembershipViewModel manageMembershipViewModel,
+        CheckInOutViewModel checkInOutViewModel,
+        ManageMembershipViewModel manageMembershipViewModel,
         TrainingSchedulesViewModel trainingSchedulesViewModel,
         ManageBillingViewModel billingViewModel,
         ProductPurchaseViewModel productPurchaseViewModel,
@@ -59,8 +63,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _dashboardViewModel = dashboardViewModel;
-		_checkInOutViewModel = checkInOutViewModel;
-		_manageMembershipViewModel = manageMembershipViewModel;
+        _checkInOutViewModel = checkInOutViewModel;
+        _manageMembershipViewModel = manageMembershipViewModel;
         _trainingSchedulesViewModel = trainingSchedulesViewModel;
         _manageBillingViewModel = billingViewModel;
         _productPurchaseViewModel = productPurchaseViewModel;
@@ -71,24 +75,25 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _gymDemographicsViewModel = gymDemographicsViewModel;
         _gymAttendanceViewModel = gymAttendanceViewModel;
         _auditLogsViewModel = auditLogsViewModel;
-
-        // Set up page navigation callback
-        _pageManager.OnNavigate = SwitchPage;
         _manageEmployeesViewModel = manageEmployeesViewModel;
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _settingsDialogCardViewModel = settingsDialogCardViewModel;
+
+        _pageManager.OnNavigate = SwitchPage;
+        UserProfileEventService.Instance.ProfilePictureUpdated += OnProfilePictureUpdated;
     }
 
-    // Design-time constructor
     public MainWindowViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _dashboardViewModel = new DashboardViewModel();
+
+        var designTimeDashboardService = new DashboardService("Server=localhost;Database=AHON_TRACK;Integrated Security=true;TrustServerCertificate=true;");
+        _dashboardViewModel = new DashboardViewModel(_pageManager, designTimeDashboardService);
         _manageEmployeesViewModel = new ManageEmployeesViewModel();
-		_checkInOutViewModel = new CheckInOutViewModel();
-		_manageMembershipViewModel = new ManageMembershipViewModel();
+        _checkInOutViewModel = new CheckInOutViewModel();
+        _manageMembershipViewModel = new ManageMembershipViewModel();
         _employeeProfileInformationViewModel = new EmployeeProfileInformationViewModel();
         _trainingSchedulesViewModel = new TrainingSchedulesViewModel();
         _manageBillingViewModel = new ManageBillingViewModel();
@@ -102,17 +107,26 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _auditLogsViewModel = new AuditLogsViewModel();
     }
 
-    [ObservableProperty]
-    private DialogManager _dialogManager;
-
-    [ObservableProperty]
-    private ToastManager _toastManager;
-
-    [ObservableProperty]
-    private object? _selectedPage;
-
-    [ObservableProperty]
-    private string _currentRoute = "dashboard";
+    [ObservableProperty] private DialogManager _dialogManager;
+    [ObservableProperty] private ToastManager _toastManager;
+    [ObservableProperty] private object? _selectedPage;
+    [ObservableProperty] private string _currentRoute = "dashboard";
+    [ObservableProperty] private Bitmap? _avatarSource;
+    [ObservableProperty] private string? _role = CurrentUserModel.Role;
+    [ObservableProperty] private string? _username = CurrentUserModel.Username;
+    [ObservableProperty] private bool _isAdmin;
+    [ObservableProperty] private bool _isStaff;
+    [ObservableProperty] private bool _isCoach;
+    [ObservableProperty] private bool _canManageEmployees;
+    [ObservableProperty] private bool _canAccessCheckInOut;
+    [ObservableProperty] private bool _canAccessMemberManagement;
+    [ObservableProperty] private bool _canAccessBilling;
+    [ObservableProperty] private bool _canAccessProductPurchase;
+    [ObservableProperty] private bool _canManageInventory;
+    [ObservableProperty] private bool _canViewFinancialReports;
+    [ObservableProperty] private bool _canViewAnalytics;
+    [ObservableProperty] private bool _canViewAuditLogs;
+    [ObservableProperty] private bool _canAccessTraining;
 
     private bool _shouldShowSuccessLogOutToast = false;
 
@@ -121,12 +135,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         try
         {
             var pageType = page.GetType();
-            if (string.IsNullOrEmpty(route)) route = pageType.GetCustomAttribute<PageAttribute>()?.Route ?? "dashboard";
+            if (string.IsNullOrEmpty(route)) 
+                route = pageType.GetCustomAttribute<PageAttribute>()?.Route ?? "dashboard";
+            
             CurrentRoute = route;
 
             if (SelectedPage == page) return;
             SelectedPage = page;
-            CurrentRoute = route;
             page.Initialize();
         }
         catch (Exception ex)
@@ -155,62 +170,32 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             .Show();
     }
 
-    [RelayCommand]
-    private void OpenDashboard() => SwitchPage(_dashboardViewModel);
-
-    [RelayCommand]
-    private void OpenManageEmployees() => SwitchPage(_manageEmployeesViewModel);
-
-    [RelayCommand]
-    private void OpenCheckInOut() => SwitchPage(_checkInOutViewModel);
-
-    [RelayCommand]
-    private void OpenManageMembership() => SwitchPage(_manageMembershipViewModel);
-
-    [RelayCommand]
-    private void OpenTrainingSchedules() => SwitchPage(_trainingSchedulesViewModel);
-
-    [RelayCommand]
-    private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
-    
-    [RelayCommand]
-    private void OpenProductPurchase() => SwitchPage(_productPurchaseViewModel);
-
-    [RelayCommand]
-    private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
-
-    [RelayCommand]
-    private void OpenProductStockViewModel() => SwitchPage(_productStockViewModel);
-
-    [RelayCommand]
-    private void OpenSupplierManagement() => SwitchPage(_supplierManagementViewModel);
-
-    [RelayCommand]
-    private void OpenFinancialReports() => SwitchPage(_financialReportsViewModel);
-
-    [RelayCommand]
-    private void OpenGymDemographics() => SwitchPage(_gymDemographicsViewModel);
-
-    [RelayCommand]
-    private void OpenGymAttendanceReports() => SwitchPage(_gymAttendanceViewModel);
-    
-    [RelayCommand]
-    private void OpenAuditLogs() => SwitchPage(_auditLogsViewModel);
+    [RelayCommand] private void OpenDashboard() => SwitchPage(_dashboardViewModel);
+    [RelayCommand] private void OpenManageEmployees() => SwitchPage(_manageEmployeesViewModel);
+    [RelayCommand] private void OpenCheckInOut() => SwitchPage(_checkInOutViewModel);
+    [RelayCommand] private void OpenManageMembership() => SwitchPage(_manageMembershipViewModel);
+    [RelayCommand] private void OpenTrainingSchedules() => SwitchPage(_trainingSchedulesViewModel);
+    [RelayCommand] private void OpenManageBilling() => SwitchPage(_manageBillingViewModel);
+    [RelayCommand] private void OpenProductPurchase() => SwitchPage(_productPurchaseViewModel);
+    [RelayCommand] private void OpenEquipmentInventory() => SwitchPage(_equipmentInventoryViewModel);
+    [RelayCommand] private void OpenProductStockViewModel() => SwitchPage(_productStockViewModel);
+    [RelayCommand] private void OpenSupplierManagement() => SwitchPage(_supplierManagementViewModel);
+    [RelayCommand] private void OpenFinancialReports() => SwitchPage(_financialReportsViewModel);
+    [RelayCommand] private void OpenGymDemographics() => SwitchPage(_gymDemographicsViewModel);
+    [RelayCommand] private void OpenGymAttendanceReports() => SwitchPage(_gymAttendanceViewModel);
+    [RelayCommand] private void OpenAuditLogs() => SwitchPage(_auditLogsViewModel);
 
     [RelayCommand]
     private void OpenViewProfile()
     {
-        var parameters = new Dictionary<string, object>
-        {
-            { "IsCurrentUser", true }
-        };
+        var parameters = new Dictionary<string, object> { { "IsCurrentUser", true } };
         _pageManager.Navigate<EmployeeProfileInformationViewModel>(parameters);
     }
-    
+
     [RelayCommand]
     private void OpenSettingsDialog()
     {
-        _settingsDialogCardViewModel.Initialize();
+        _ = _settingsDialogCardViewModel.Initialize();
         DialogManager.CreateDialog(_settingsDialogCardViewModel)
             .WithSuccessCallback(_ =>
                 ToastManager.CreateToast("Settings Saved!")
@@ -221,7 +206,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 ToastManager.CreateToast("Changes Discarded!")
                     .WithContent("No settings were modified")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(670)
+                    .ShowWarning())
+            .WithMaxWidth(670)
             .Show();
     }
 
@@ -230,7 +216,34 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public void Initialize()
     {
         _shouldShowSuccessLogOutToast = false;
+        AvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
+        UpdateRoleBasedPermissions();
         SwitchPage(_dashboardViewModel);
+    }
+    
+    private void UpdateRoleBasedPermissions()
+    {
+        string userRole = CurrentUserModel.Role ?? string.Empty;
+    
+        IsAdmin = userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                  userRole.Equals("Gym Admin", StringComparison.OrdinalIgnoreCase);
+    
+        IsStaff = userRole.Equals("Staff", StringComparison.OrdinalIgnoreCase) ||
+                  userRole.Equals("Gym Staff", StringComparison.OrdinalIgnoreCase);
+    
+        IsCoach = userRole.Equals("Coach", StringComparison.OrdinalIgnoreCase) ||
+                  userRole.Equals("Gym Coach", StringComparison.OrdinalIgnoreCase);
+    
+        CanManageEmployees = IsAdmin;
+        CanManageInventory = IsAdmin;
+        CanViewFinancialReports = IsAdmin;
+        CanViewAuditLogs = IsAdmin;
+        CanAccessCheckInOut = IsAdmin || IsStaff || IsCoach;
+        CanAccessMemberManagement = IsAdmin || IsStaff || IsCoach;
+        CanAccessBilling = IsAdmin || IsStaff || IsCoach;
+        CanAccessProductPurchase = IsAdmin || IsStaff || IsCoach;
+        CanViewAnalytics = IsAdmin || IsStaff || IsCoach;
+        CanAccessTraining = true;
     }
 
     public void SetInitialLogInToastState(bool showLogInSuccess)
@@ -240,7 +253,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Task.Delay(900).ContinueWith(_ =>
         {
             ToastManager.CreateToast("You have signed in! Welcome back!")
-            .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
+                .WithContent($"{DateTime.Now:dddd, MMMM d 'at' h:mm tt}")
                 .WithDelay(8)
                 .DismissOnClick()
                 .ShowSuccess();
@@ -249,8 +262,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     private void SwitchToLoginWindow()
     {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) return;
-        var currentWindow = desktop.MainWindow; // Keep reference to MainWindow
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop) 
+            return;
+        
+        var currentWindow = desktop.MainWindow;
         _shouldShowSuccessLogOutToast = true;
 
         var provider = new ServiceProvider();
@@ -261,6 +276,46 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         viewModel.SetInitialLogOutToastState(_shouldShowSuccessLogOutToast);
         desktop.MainWindow = loginWindow;
         loginWindow.Show();
+        
+        // Dispose old view model and close window
+        if (currentWindow?.DataContext is IDisposable disposableVm)
+        {
+            disposableVm.Dispose();
+        }
         currentWindow?.Close();
+        DisposeManagedResources();
+        
+        ForceGarbageCollection();
+    }
+    
+    private void OnProfilePictureUpdated()
+    {
+        AvatarSource = ImageHelper.GetAvatarOrDefault(CurrentUserModel.AvatarBytes);
+    }
+
+    protected override void DisposeManagedResources()
+    {
+        UserProfileEventService.Instance.ProfilePictureUpdated -= OnProfilePictureUpdated;
+
+        // Dispose all child ViewModels if they implement IDisposable
+        (_dashboardViewModel as IDisposable).Dispose();
+        (_manageEmployeesViewModel as IDisposable).Dispose();
+        (_checkInOutViewModel as IDisposable).Dispose();
+        (_manageMembershipViewModel as IDisposable).Dispose();
+        (_trainingSchedulesViewModel as IDisposable).Dispose();
+        (_manageBillingViewModel as IDisposable).Dispose();
+        (_productPurchaseViewModel as IDisposable).Dispose();
+        (_equipmentInventoryViewModel as IDisposable).Dispose();
+        (_productStockViewModel as IDisposable).Dispose();
+        (_supplierManagementViewModel as IDisposable).Dispose();
+        (_financialReportsViewModel as IDisposable).Dispose();
+        (_gymDemographicsViewModel as IDisposable).Dispose();
+        (_gymAttendanceViewModel as IDisposable).Dispose();
+        (_auditLogsViewModel as IDisposable).Dispose();
+        (_employeeProfileInformationViewModel as IDisposable).Dispose();
+        (_settingsDialogCardViewModel as IDisposable).Dispose();
+        _pageManager.Dispose();
+
+        base.DisposeManagedResources();
     }
 }

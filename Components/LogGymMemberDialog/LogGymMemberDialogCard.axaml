@@ -6,11 +6,11 @@
 	xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
 	xmlns:converters="clr-namespace:AHON_TRACK.Converters"
 	mc:Ignorable="d"
-	d:DesignWidth="950"
+	d:DesignWidth="850"
 	d:DesignHeight="600"
 	xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
 	x:DataType="viewModel:LogGymMemberDialogCardViewModel"
-	Width="950"
+	Width="850"
 	Height="600"
 	x:Class="AHON_TRACK.Components.LogGymMemberDialog.LogGymMemberDialogCard">
 
@@ -68,7 +68,7 @@
 				<StackPanel>
 					<shadui:Card>
 						<StackPanel>
-							<Grid ColumnDefinitions="* * * ">
+							<Grid ColumnDefinitions="* * Auto">
 								<AutoCompleteBox
 									Grid.Column="0"
 									Width="250"
@@ -78,8 +78,8 @@
 									HorizontalAlignment="Left"
 									Classes="Clearable"
 									FilterMode="Contains"
-									ItemsSource="{Binding MemberSuggestions}"
-									Text="{Binding SearchText}"
+									ItemsSource="{CompiledBinding MemberSuggestions}"
+									Text="{CompiledBinding SearchText}"
 									Watermark="Search members...">
 									<AutoCompleteBox.InnerRightContent>
 										<Svg
@@ -92,24 +92,23 @@
 									Grid.Column="1"
 									Orientation="Horizontal"
 									HorizontalAlignment="Right"
-									Spacing="20"
-									Margin="407,0">
+									Spacing="20">
 									<Button
 										Classes="Outline"
 										Content="Cancel"
-										Command="{Binding CancelCommand}"/>
+										Command="{CompiledBinding CancelCommand}"/>
 									<Button
 										Classes="Primary"
 										Content="Submit"
-										Command="{Binding SubmitCommand}"
-										IsEnabled="{Binding SelectedMember, Mode=TwoWay, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+										Command="{CompiledBinding SubmitCommand}"
+										IsEnabled="{CompiledBinding SelectedMember, Mode=TwoWay, Converter={x:Static ObjectConverters.IsNotNull}}"/>
 								</StackPanel>
 							</Grid>
 							<DataGrid
 								MaxHeight="350"
 								Margin="0,20"
-								ItemsSource="{Binding FilteredMembers}"
-								SelectedItem="{Binding SelectedMember, Mode=OneWayToSource}"
+								ItemsSource="{CompiledBinding FilteredMembers}"
+								SelectedItem="{CompiledBinding SelectedMember, Mode=OneWayToSource}"
 								AutoGenerateColumns="False"
 								CanUserReorderColumns="False"
 								CanUserResizeColumns="False"
@@ -118,7 +117,14 @@
 								HeadersVisibility="Column"
 								SelectionMode="Single"
 								IsReadOnly="True">
+								
+								<DataGrid.Styles>
+									<Style Selector="TextBlock">
+										<Setter Property="TextWrapping" Value="WrapWithOverflow" />
+									</Style>
+								</DataGrid.Styles>
 								<DataGrid.Resources>
+									
 									<converters:StringToBitmapConverter x:Key="StringToBitMapConverter"/>
 								</DataGrid.Resources>
 								<DataGrid.Columns>
@@ -126,7 +132,7 @@
 										Width="Auto"
 										MinWidth="80"
 										Header="ID"
-										Binding="{Binding ID}"/>
+										Binding="{CompiledBinding ID}"/>
 									<DataGridTemplateColumn
 										Width="Auto"
 										MinWidth="100"
@@ -145,7 +151,7 @@
 														VerticalAlignment="Center"
 														HorizontalAlignment="Center"
 														Margin="8"
-														Source="{Binding MemberPicturePath, Converter={StaticResource StringToBitMapConverter}}"/>
+														Source="{CompiledBinding AvatarSource}"/>
 												</Border>
 											</DataTemplate>
 										</DataGridTemplateColumn.CellTemplate>
@@ -153,18 +159,13 @@
 									<DataGridTextColumn
 										Width="*"
 										MinWidth="120"
-										Header="First Name"
-										Binding="{Binding FirstName}"/>
-									<DataGridTextColumn
-										Width="*"
-										MinWidth="120"
-										Header="Last Name"
-										Binding="{Binding LastName}"/>
+										Header="Gym Member Name"
+										Binding="{CompiledBinding FirstName}"/>
 									<DataGridTextColumn
 										Width="Auto"
 										MinWidth="120"
 										Header="Membership Type"
-										Binding="{Binding MembershipType}"/>
+										Binding="{CompiledBinding MembershipType}"/>
 									<DataGridTemplateColumn
 										CanUserSort="False"
 										Header="Status"
@@ -173,14 +174,14 @@
 										<DataGridTemplateColumn.CellTemplate>
 											<DataTemplate>
 												<Border
-													Background="{Binding StatusBackground}"
+													Background="{CompiledBinding StatusBackground}"
 													CornerRadius="11"
 													Padding="8,4"
 													Margin="0,0,0,0"
 													HorizontalAlignment="Left">
 													<TextBlock
-														Text="{Binding StatusDisplayText}"
-														Foreground="{Binding StatusForeground}"
+														Text="{CompiledBinding StatusDisplayText}"
+														Foreground="{CompiledBinding StatusForeground}"
 														FontSize="13"
 														FontWeight="Medium"
 														HorizontalAlignment="Center"

@@ -4,12 +4,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace AHON_TRACK.ViewModels;
 
-public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
+public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo, IDisposable
 {
     private readonly Dictionary<string, List<string>> _errors = new();
 
@@ -48,6 +49,12 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
             MemberName = propertyName
         };
         var validationResults = new List<ValidationResult>();
+
+        object valueToValidate = value;
+        if (value == null && typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(Nullable<>))
+        {
+            valueToValidate = null;
+        }
 
         if (Validator.TryValidateProperty(value, validationContext, validationResults)) return;
 
@@ -95,5 +102,53 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo
             var value = property.GetValue(this);
             ValidateProperty(value, property.Name);
         }
+    }
+    
+    private bool _disposed;
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing)
+        {
+            // Dispose managed resources here
+            DisposeManagedResources();
+        }
+
+        _disposed = true;
+    }
+    
+    /// <summary>
+    /// Forces a full garbage collection. Use sparingly, only after major cleanup operations.
+    /// </summary>
+    protected void ForceGarbageCollection()
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        
+        Debug.WriteLine($"[{GetType().Name}] Forced garbage collection completed.");
+    }
+
+    /// <summary>
+    /// Suggests a lightweight garbage collection for generation 0 or 1.
+    /// Use for moderate cleanup operations.
+    /// </summary>
+    protected void SuggestGarbageCollection(int generation = 0)
+    {
+        GC.Collect(generation, GCCollectionMode.Optimized);
+        Debug.WriteLine($"[{GetType().Name}] Suggested Gen{generation} garbage collection.");
+    }
+
+    protected virtual void DisposeManagedResources()
+    {
+        // Override in derived classes to clean up resources
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

@@ -100,6 +100,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenManageEmployeesCommand}"
+						IsVisible="{CompiledBinding CanManageEmployees}"
 						Route="manageEmployees"
 						Content="Manage Employees"
 						FontSize="15"
@@ -123,6 +124,7 @@
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenCheckInOutCommand}"
+						IsVisible="{CompiledBinding CanAccessCheckInOut}"
 						Route="checkInOut"
 						Content="Check-in/Check-out"
 						FontSize="15"
@@ -138,6 +140,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenManageMembershipCommand}"
+						IsVisible="{CompiledBinding CanAccessMemberManagement}"
 						Content="Manage Membership"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Manage Membership'}">
@@ -160,6 +163,7 @@
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenTrainingSchedulesCommand}"
+						IsVisible="{CompiledBinding CanAccessTraining}"
 						Content="Training Schedules"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Training Schedules'}">
@@ -182,6 +186,7 @@
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenManageBillingCommand}"
+						IsVisible="{CompiledBinding CanAccessBilling}"
 						Content="Manage Billing"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Manage Billing'}">
@@ -196,6 +201,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenProductPurchaseCommand}"
+						IsVisible="{CompiledBinding CanAccessProductPurchase}"
 						Content="Product Purchase"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Product Purchase'}">
@@ -268,6 +274,7 @@
                         Foreground="{DynamicResource InfoColor}"/>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenFinancialReportsCommand}"
+						IsVisible="{CompiledBinding CanViewFinancialReports}"
 						Content="Financial Reports"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Financial Reports'}">
@@ -282,6 +289,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenGymDemographicsCommand}"
+						IsVisible="{CompiledBinding CanViewAnalytics}"
 						Content="Gym Demographics"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Gym Demographics'}">
@@ -296,6 +304,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenGymAttendanceReportsCommand}"
+						IsVisible="{CompiledBinding CanViewAnalytics}"
 						Content="Gym Attendance"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Class Attendance Reports'}">
@@ -310,6 +319,7 @@
 					</shadui:SidebarItem>
 					<shadui:SidebarItem
 						Command="{CompiledBinding OpenAuditLogsCommand}"
+						IsVisible="{CompiledBinding CanViewAuditLogs}"
 						Content="Audit Logs"
 						FontSize="15"
 						ToolTip.Tip="{CompiledBinding $parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.NullOrString}, ConverterParameter='Equipment Usage Reports'}">
@@ -340,7 +350,7 @@
 										Fallback="CN"
 										IsVisible="{CompiledBinding !$parent[shadui:Sidebar].Expanded}"
                                         Opacity="{CompiledBinding !$parent[shadui:Sidebar].Expanded, Converter={x:Static converters:BooleanConverters.Opaque}}"
-										Source="avares://AHON_TRACK/Assets/MainWindowView/user-admin.png">
+										Source="{CompiledBinding AvatarSource}">
 										<shadui:Avatar.Transitions>
 											<Transitions>
 												<DoubleTransition Property="Opacity" Duration="0:0:0.20"/>
@@ -357,13 +367,13 @@
 											Margin="0,0,8,0"
 											CornerRadius="{DynamicResource XlCornerRadius}"
 											Fallback="CN"
-											Source="avares://AHON_TRACK/Assets/MainWindowView/user-admin.png"/>
+											Source="{CompiledBinding AvatarSource}"/>
 										<StackPanel Grid.Column="1" VerticalAlignment="Center">
-											<TextBlock Classes="Small" Text="Mardie Dela Cruz" />
+											<TextBlock Classes="Small" Text="{CompiledBinding Username}" />
 											<TextBlock
                                                 Margin="0,-4,0,0"
                                                 Classes="Caption"
-                                                Text="Gym Admin" />
+                                                Text="{CompiledBinding Role}" />
 										</StackPanel>
 										<Viewbox
                                             Grid.Column="2"
@@ -385,18 +395,17 @@
 										Margin="0,0,8,0"
 										CornerRadius="{DynamicResource XlCornerRadius}"
 										Fallback="CN"
-										Source="avares://AHON_TRACK/Assets/MainWindowView/user-admin.png"/>
+										Source="{CompiledBinding AvatarSource}"/>
 									<StackPanel Grid.Column="1" VerticalAlignment="Center">
-										<TextBlock Classes="Small" Text="Mardie Dela Cruz"/>
+										<TextBlock Classes="Small" Text="{CompiledBinding Username}"/>
 										<TextBlock
 											Margin="0,-4,0,0"
 											Classes="Caption"
-											Text="Gym Admin"/>
+											Text="{CompiledBinding Role}"/>
 									</StackPanel>
 								</Grid>
 							</shadui:MenuItemAssist.Label>
 							<Separator/>
-							<!--Show Profile: Command property missing-->
 							<MenuItem Header="View Profile" Command="{CompiledBinding OpenViewProfileCommand}">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -404,7 +413,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show Setting: Command property missing-->
 							<MenuItem Header="Settings" Command="{CompiledBinding OpenSettingsDialogCommand}">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -413,7 +421,7 @@
 								</MenuItem.Icon>
 							</MenuItem>
 							<Separator/>
-							<!--Show About: Command property missing-->
+							<!--
 							<MenuItem Header="About">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -421,7 +429,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show ReadMe: Command property missing-->
 							<MenuItem Header="Readme">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -429,7 +436,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show Source Repo: Command property missing-->
 							<MenuItem Header="Source Repository">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -438,7 +444,6 @@
 								</MenuItem.Icon>
 							</MenuItem>
 							<Separator/>
-							<!--Show Source Repo: Command property missing-->
 							<MenuItem Header="GPLv3 License">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -446,7 +451,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show Code of Conduct: Command property missing-->
 							<MenuItem Header="Code of Conduct">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -454,7 +458,6 @@
 									</Viewbox>
 								</MenuItem.Icon>
 							</MenuItem>
-							<!--Show Security: Command property missing-->
 							<MenuItem Header="Security">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">
@@ -463,7 +466,7 @@
 								</MenuItem.Icon>
 							</MenuItem>
 							<Separator/>
-							<!--Show Logout: Command property missing-->
+							-->
 							<MenuItem Header="Logout" Foreground="{DynamicResource DestructiveColor}" Command="{CompiledBinding TryLogoutCommand}">
 								<MenuItem.Icon>
 									<Viewbox Width="16" Height="16">

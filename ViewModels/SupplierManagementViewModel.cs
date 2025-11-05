@@ -1,3 +1,11 @@
+using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
+using Avalonia.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using HotAvalonia;
+using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -5,48 +13,41 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using AHON_TRACK.Components.ViewModels;
-using AHON_TRACK.Models;
 using AHON_TRACK.Services;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using HotAvalonia;
 using QuestPDF.Companion;
 using QuestPDF.Fluent;
-using ShadUI;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("supplier-management")]
 public sealed partial class SupplierManagementViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty] 
-    private string[] _supplierFilterItems = ["All", "Products", "Drinks", "Supplements"];
-
-    [ObservableProperty] 
-    private string _selectedSupplierFilterItem = "All";
+    [ObservableProperty]
+    private string[] _statusFilterItems = ["All", "Active", "Inactive", "Suspended"];
     
+    [ObservableProperty]
+    private string _selectedStatusFilterItem = "All";
+
     [ObservableProperty]
     private ObservableCollection<Supplier> _supplierItems = [];
-    
+
     [ObservableProperty]
     private List<Supplier> _originalSupplierData = [];
-    
+
     [ObservableProperty]
     private List<Supplier> _currentFilteredSupplierData = [];
-    
+
     [ObservableProperty]
     private bool _isInitialized;
-    
+
     [ObservableProperty]
     private string _searchStringResult = string.Empty;
-    
+
     [ObservableProperty]
     private bool _isSearchingSupplier;
-    
+
     [ObservableProperty]
     private bool _selectAll;
 
@@ -55,27 +56,34 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private int _totalCount;
-    
+
+    [ObservableProperty]
+    private bool _isLoading;
+
     [ObservableProperty]
     private Supplier? _selectedSupplier;
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly SupplierDialogCardViewModel _supplierDialogCardViewModel;
+    private readonly ISupplierService _supplierService;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
-    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
-        SupplierDialogCardViewModel supplierDialogCardViewModel, SettingsService settingsService)
+    public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
+        SupplierDialogCardViewModel supplierDialogCardViewModel, SettingsService settingsService, ISupplierService supplierService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _supplierDialogCardViewModel = supplierDialogCardViewModel;
+        _supplierService = supplierService;
         _settingsService = settingsService;
-        
-        LoadSupplierData();
+
+        SelectedStatusFilterItem = "All";
+
+        _ = LoadSupplierDataFromDatabaseAsync();
         UpdateSupplierCounts();
     }
 
@@ -86,8 +94,11 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _pageManager = new PageManager(new ServiceProvider());
         _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
         _settingsService = new SettingsService();
+        _supplierService = null!; // This should be injected in real scenario
         
-        LoadSupplierData();
+        SelectedStatusFilterItem = "All";
+
+        _ = LoadSupplierDataFromDatabaseAsync();
         UpdateSupplierCounts();
     }
 
@@ -95,25 +106,92 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     public async Task Initialize()
     {
         if (IsInitialized) return;
-        await LoadSettingsAsync();
+        SelectedStatusFilterItem = "All";
         
-        LoadSupplierData();
+        await LoadSettingsAsync();
+
+        if (_supplierService != null)
+        {
+            await LoadSupplierDataFromDatabaseAsync();
+        }
+        else
+        {
+            LoadSupplierData();
+        }
         UpdateSupplierCounts();
         IsInitialized = true;
     }
+
+    private async Task LoadSupplierDataFromDatabaseAsync()
+    {
+        IsLoading = true;
+
+        try
+        {
+            var result = await _supplierService.GetAllSuppliersAsync();
+
+            if (result.Success && result.Suppliers != null)
+            {
+                var suppliers = result.Suppliers.Select(s => new Supplier
+                {
+                    ID = s.SupplierID,
+                    Name = s.SupplierName,
+                    ContactPerson = s.ContactPerson,
+                    Email = s.Email,
+                    PhoneNumber = s.PhoneNumber,
+                    Products = s.Products,
+                    Status = s.Status,
+                    DeliverySchedule = s.DeliverySchedule,
+                    ContractTerms = s.ContractTerms,
+                    IsSelected = false
+                }).ToList();
+
+                OriginalSupplierData = suppliers;
+                
+                await CheckAndUpdateSupplierStatusesAsync();
+
+                // Let ApplySupplierFilter populate SupplierItems according to the current SelectedStatusFilterItem
+                ApplySupplierFilter();
+
+                // Ensure selection / counts are correct after filtering
+                UpdateSupplierCounts();
+
+                if (SupplierItems.Count > 0)
+                {
+                    SelectedSupplier = SupplierItems[0];
+                }
+            }
+            else
+            {
+                _toastManager.CreateToast("Data Load Failed")
+                    .WithContent(result.Message)
+                    .DismissOnClick()
+                    .ShowWarning();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Error Loading Data")
+                .WithContent($"Failed to load suppliers: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
 
     private void LoadSupplierData()
     {
         var sampleSupplier = GetSampleSupplierData();
         OriginalSupplierData = sampleSupplier;
-        CurrentFilteredSupplierData = [..sampleSupplier];
 
-        SupplierItems.Clear();
-        foreach (var supplier in sampleSupplier)
-        {
-            SupplierItems.Add(supplier);
-        }
-        TotalCount = SupplierItems.Count;
+        // Use ApplySupplierFilter so the current filter is applied
+        ApplySupplierFilter();
+
+        UpdateSupplierCounts();
 
         if (SupplierItems.Count > 0)
         {
@@ -123,7 +201,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     private List<Supplier> GetSampleSupplierData()
     {
-        return 
+        return
         [
             new Supplier
             {
@@ -177,26 +255,49 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             }
         ];
     }
-    
+
     [RelayCommand]
     private void ShowAddSupplierDialog()
     {
         _supplierDialogCardViewModel.Initialize();
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
-            .WithSuccessCallback(_ =>
-                _toastManager.CreateToast("Added a new supplier contact")
-                    .WithContent($"You just added a new supplier contact to the database!")
-                    .DismissOnClick()
-                    .ShowSuccess())
+            .WithSuccessCallback(async _ =>
+            {
+                var newSupplier = new SupplierManagementModel
+                {
+                    SupplierName = _supplierDialogCardViewModel.SupplierName,
+                    ContactPerson = _supplierDialogCardViewModel.ContactPerson,
+                    Email = _supplierDialogCardViewModel.Email,
+                    PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
+                    Products = _supplierDialogCardViewModel.Products,
+                    Status = _supplierDialogCardViewModel.Status ?? "Active",
+                    DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
+                    DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
+                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
+                };
+
+                var result = await _supplierService.AddSupplierAsync(newSupplier);
+
+                if (result.Success)
+                {
+                    await LoadSupplierDataFromDatabaseAsync();
+
+                    _toastManager.CreateToast("Supplier Added Successfully")
+                        .WithContent($"Successfully added '{newSupplier.SupplierName}' to the database!")
+                        .DismissOnClick()
+                        .ShowSuccess();
+                }
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Adding new supplier contact cancelled")
                     .WithContent("If you want to add a new supplier contact, please try again.")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(650)
+                    .ShowWarning())
+            .WithMaxWidth(650)
             .Dismissible()
             .Show();
     }
-    
+
     [RelayCommand]
     private void ShowEditSupplierDialog(Supplier? supplier)
     {
@@ -204,50 +305,99 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         _supplierDialogCardViewModel.InitializeForEditMode(supplier);
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
             {
-                _toastManager.CreateToast("Modified supplier details")
-                    .WithContent($"You have successfully modified {supplier.Name}!")
-                    .DismissOnClick()
-                    .ShowSuccess();
+                var newContractTerms = _supplierDialogCardViewModel.ContractTerms;
+                var currentStatus = _supplierDialogCardViewModel.Status ?? "Active";
+            
+                if (newContractTerms.HasValue)
+                {
+                    var today = DateTime.Today;
+                    if (newContractTerms.Value.Date <= today && currentStatus.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentStatus = "Inactive";
+                    }
+                    else if (newContractTerms.Value.Date > today && currentStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentStatus = "Active";
+                    }
+                }
+
+                var updatedSupplier = new SupplierManagementModel
+                {
+                    SupplierID = supplier.ID ?? 0,
+                    SupplierName = _supplierDialogCardViewModel.SupplierName,
+                    ContactPerson = _supplierDialogCardViewModel.ContactPerson,
+                    Email = _supplierDialogCardViewModel.Email,
+                    PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
+                    Products = _supplierDialogCardViewModel.Products,
+                    Status = currentStatus,
+                    DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
+                    DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
+                    ContractTerms = newContractTerms
+                };
+
+                var result = await _supplierService.UpdateSupplierAsync(updatedSupplier);
+
+                if (result.Success)
+                {
+                    await LoadSupplierDataFromDatabaseAsync();
+
+                    _toastManager.CreateToast("Supplier Updated")
+                        .WithContent($"Successfully updated '{updatedSupplier.SupplierName}'!")
+                        .DismissOnClick()
+                        .ShowSuccess();
+                }
             })
-            .WithCancelCallback(() => 
+            .WithCancelCallback(() =>
                 _toastManager.CreateToast("Modifying supplier Details Cancelled")
-                    .WithContent($"Try again if you really want to modify the {supplier.Name}'s details")
+                    .WithContent($"Try again if you really want to modify {supplier.Name}'s details")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(950)
+                    .ShowWarning())
+            .WithMaxWidth(950)
             .Dismissible()
             .Show();
     }
-    
+
     [RelayCommand]
     private void ShowSingleItemDeletionDialog(Supplier? supplier)
     {
         if (supplier == null) return;
-        
-        _dialogManager.CreateDialog("" + 
-            "Are you absolutely sure?", $"This action cannot be undone. This will permanently delete {supplier.Name} and remove the data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(supplier), DialogButtonStyle.Destructive)
-            .WithCancelButton("Cancel")
-            .WithMaxWidth(512)
-            .Dismissible()
-            .Show();
-    }
-    
-    [RelayCommand]
-    private void ShowMultipleItemDeletionDialog(Supplier? supplier)
-    {
-        if (supplier == null) return;
 
-        _dialogManager.CreateDialog("" + 
-            "Are you absolutely sure?", $"This action cannot be undone. This will permanently delete multiple equipments and remove their data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteMultipleItems(supplier), DialogButtonStyle.Destructive)
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            $"This action cannot be undone. This will permanently delete {supplier.Name} and remove the data from your database.")
+            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteSingleItem(supplier), DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
     }
-    
+
+    [RelayCommand]
+    private void ShowMultipleItemDeletionDialog()
+    {
+        var selectedSuppliers = SupplierItems.Where(s => s.IsSelected).ToList();
+
+        if (selectedSuppliers.Count == 0)
+        {
+            _toastManager.CreateToast("No Selection")
+                .WithContent("Please select at least one supplier to delete.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            $"This action cannot be undone. This will permanently delete {selectedSuppliers.Count} supplier(s) and remove their data from your database.")
+            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteMultipleItems(), DialogButtonStyle.Destructive)
+            .WithCancelButton("Cancel")
+            .WithMaxWidth(512)
+            .Dismissible()
+            .Show();
+    }
+
     [RelayCommand]
     private async Task SearchSupplier()
     {
@@ -262,9 +412,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             UpdateSupplierCounts();
             return;
         }
-        
+
         IsSearchingSupplier = true;
-        
+
         try
         {
             await Task.Delay(500);
@@ -272,9 +422,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             var filteredSuppliers = CurrentFilteredSupplierData.Where(supplier =>
                     supplier is
                     {
-                        Name: not null, ContactPerson: not null, Email: not null, 
+                        Name: not null, ContactPerson: not null, Email: not null,
                         PhoneNumber: not null, Products: not null, Status: not null
-                    } && (supplier.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) || 
+                    } && (supplier.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                           supplier.ContactPerson.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                           supplier.Email.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                           supplier.PhoneNumber.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
@@ -295,7 +445,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             IsSearchingSupplier = false;
         }
     }
-    
+
     [RelayCommand]
     private async Task ExportSupplierList()
     {
@@ -315,7 +465,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 ? desktop.MainWindow
                 : null;
             if (toplevel == null) return;
-        
+
             IStorageFolder? startLocation = null;
             if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
             {
@@ -328,7 +478,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     // If path is invalid, startLocation will remain null
                 }
             }
-        
+
             var fileName = $"Supplier_List_{DateTime.Today:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -341,14 +491,14 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
             if (pdfFile == null) return;
 
-            var supplierModel = new SupplierDocumentModel 
+            var supplierModel = new SupplierDocumentModel
             {
                 GeneratedDate = DateTime.Today,
                 GymName = "AHON Victory Fitness Gym",
                 GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
                 GymPhone = "+63 123 456 7890",
                 GymEmail = "info@ahonfitness.com",
-                Items = SupplierItems.Select(supplier => new SupplierItem 
+                Items = SupplierItems.Select(supplier => new SupplierItem
                 {
                     ID = supplier.ID ?? 0,
                     Name = supplier.Name,
@@ -356,18 +506,20 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     Email = supplier.Email,
                     PhoneNumber = supplier.PhoneNumber,
                     Products = supplier.Products,
-                    Status = supplier.Status
+                    Status = supplier.Status,
+                    DeliverySchedule = supplier.DeliverySchedule,
+                    ContractTerms = supplier.ContractTerms
                 }).ToList()
             };
 
             var document = new SupplierDocument(supplierModel);
-        
+
             await using var stream = await pdfFile.OpenWriteAsync();
-            
+
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
             // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
-        
+
             _toastManager.CreateToast("Supplier list exported successfully")
                 .WithContent($"Supplier list has been saved to {pdfFile.Name}")
                 .DismissOnClick()
@@ -382,24 +534,52 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         }
     }
     
+    public bool CanDeleteSelectedSuppliers
+    {
+        get
+        {
+            // If there is no checked items, can't delete
+            var selectedSuppliers = SupplierItems.Where(item => item.IsSelected).ToList();
+            if (selectedSuppliers.Count == 0) return false;
+
+            // If the currently selected row is present and its status is not expired,
+            // then "Delete Selected" should be disabled when opening the menu for that row.
+            if (SelectedSupplier?.Status != null &&
+                !SelectedSupplier.Status.Equals("Suspended", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // Only allow deletion if ALL selected members are Expired
+            return selectedSuppliers.All(supplier 
+                => supplier.Status != null && 
+                   supplier.Status.Equals("Suspended", StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
     private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
-    
+
     private void ApplySupplierFilter()
     {
         if (OriginalSupplierData.Count == 0) return;
-        List<Supplier> filteredList;
-        
-        if (SelectedSupplierFilterItem == "All")
+        List<Supplier> filteredList = OriginalSupplierData.ToList();
+
+        // Apply Status filter
+        if (SelectedStatusFilterItem != "All")
         {
-            filteredList = OriginalSupplierData.ToList();
-        }
-        else
-        {
-            filteredList = OriginalSupplierData
-                .Where(equipment => equipment.Products == SelectedSupplierFilterItem)
+            filteredList = filteredList
+                .Where(supplier => supplier.Status != null && 
+                                  supplier.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
+        
         CurrentFilteredSupplierData = filteredList;
+        
+        // Unsubscribe from old items
+        foreach (var item in SupplierItems)
+        {
+            item.PropertyChanged -= OnSupplierPropertyChanged;
+        }
 
         SupplierItems.Clear();
         foreach (var supplier in filteredList)
@@ -407,9 +587,10 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             supplier.PropertyChanged += OnSupplierPropertyChanged;
             SupplierItems.Add(supplier);
         }
+        
         UpdateSupplierCounts();
     }
-    
+
     [RelayCommand]
     private void ToggleSelection(bool? isChecked)
     {
@@ -421,52 +602,119 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         }
         UpdateSupplierCounts();
     }
-    
+
     private async Task OnSubmitDeleteSingleItem(Supplier supplier)
     {
-        await DeleteEquipmentFromDatabase(supplier);
-        supplier.PropertyChanged -= OnSupplierPropertyChanged;
-        SupplierItems.Remove(supplier);
-        UpdateSupplierCounts();
+        if (supplier.ID == null) return;
 
-        _toastManager.CreateToast("Delete Supplier")
-            .WithContent($"{supplier.Name} has been deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+        // Call service to delete from database
+        var result = await _supplierService.DeleteSupplierAsync(supplier.ID.Value);
+
+        if (result.Success)
+        {
+            // Remove from UI
+            supplier.PropertyChanged -= OnSupplierPropertyChanged;
+            SupplierItems.Remove(supplier);
+            OriginalSupplierData.Remove(supplier);
+            CurrentFilteredSupplierData.Remove(supplier);
+            UpdateSupplierCounts();
+
+            _toastManager.CreateToast("Supplier Deleted")
+                .WithContent($"{supplier.Name} has been deleted successfully!")
+                .DismissOnClick()
+                .WithDelay(6)
+                .ShowSuccess();
+        }
     }
-    private async Task OnSubmitDeleteMultipleItems(Supplier supplier)
+
+    private async Task OnSubmitDeleteMultipleItems()
     {
         var selectedSuppliers = SupplierItems.Where(item => item.IsSelected).ToList();
         if (selectedSuppliers.Count == 0) return;
 
-        foreach (var suppliers in selectedSuppliers)
-        {
-            await DeleteEquipmentFromDatabase(supplier);
-            suppliers.PropertyChanged -= OnSupplierPropertyChanged;
-            SupplierItems.Remove(suppliers);
-        }
-        UpdateSupplierCounts();
+        // Prepare list of IDs
+        var supplierIds = selectedSuppliers
+            .Where(s => s.ID.HasValue)
+            .Select(s => s.ID!.Value)
+            .ToList();
 
-        _toastManager.CreateToast($"Delete Selected Suppliers")
-            .WithContent($"Multiple suppliers deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+        // Call service to delete multiple from database
+        var result = await _supplierService.DeleteMultipleSuppliersAsync(supplierIds);
+
+        if (result.Success)
+        {
+            // Remove from UI
+            foreach (var supplier in selectedSuppliers)
+            {
+                supplier.PropertyChanged -= OnSupplierPropertyChanged;
+                SupplierItems.Remove(supplier);
+                OriginalSupplierData.Remove(supplier);
+                CurrentFilteredSupplierData.Remove(supplier);
+            }
+            UpdateSupplierCounts();
+
+            _toastManager.CreateToast("Suppliers Deleted")
+                .WithContent($"{result.DeletedCount} supplier(s) deleted successfully!")
+                .DismissOnClick()
+                .WithDelay(6)
+                .ShowSuccess();
+        }
     }
     
-    private async Task DeleteEquipmentFromDatabase(Supplier supplier)
+    private async Task CheckAndUpdateSupplierStatusesAsync()
     {
-        await Task.Delay(100); // Just an animation/simulation of async operation
+        var today = DateTime.Today;
+        var suppliersToUpdate = new List<Supplier>();
+
+        foreach (var supplier in OriginalSupplierData)
+        {
+            if (supplier.ContractTerms.HasValue && supplier.Status != null)
+            {
+                if (supplier.ContractTerms.Value.Date <= today && 
+                    supplier.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                {
+                    suppliersToUpdate.Add(supplier);
+                }
+                else if (supplier.ContractTerms.Value.Date > today && 
+                         supplier.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
+                {
+                    suppliersToUpdate.Add(supplier);
+                }
+            }
+        }
+
+        foreach (var supplier in suppliersToUpdate)
+        {
+            if (supplier.ID.HasValue)
+            {
+                var newStatus = supplier.ContractTerms!.Value.Date <= today ? "Inactive" : "Active";
+            
+                var updatedSupplier = new SupplierManagementModel
+                {
+                    SupplierID = supplier.ID.Value,
+                    SupplierName = supplier.Name,
+                    ContactPerson = supplier.ContactPerson,
+                    Email = supplier.Email,
+                    PhoneNumber = supplier.PhoneNumber,
+                    Products = supplier.Products,
+                    Status = newStatus,
+                    DeliverySchedule = supplier.DeliverySchedule,
+                    ContractTerms = supplier.ContractTerms
+                };
+
+                await _supplierService.UpdateSupplierAsync(updatedSupplier);
+                supplier.Status = newStatus;
+            }
+        }
     }
-    
+
     private void UpdateSupplierCounts()
     {
         SelectedCount = SupplierItems.Count(x => x.IsSelected);
         TotalCount = SupplierItems.Count;
         SelectAll = SupplierItems.Count > 0 && SupplierItems.All(x => x.IsSelected);
     }
-    
+
     private void OnSupplierPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Supplier.IsSelected))
@@ -474,44 +722,71 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             UpdateSupplierCounts();
         }
     }
-    
+
     partial void OnSearchStringResultChanged(string value)
     {
         SearchSupplierCommand.Execute(null);
     }
-    
-    partial void OnSelectedSupplierFilterItemChanged(string value)
+
+    partial void OnSelectedStatusFilterItemChanged(string value)
     {
         ApplySupplierFilter();
+    }
+    
+    partial void OnSelectedSupplierChanged(Supplier? value)
+    {
+        OnPropertyChanged(nameof(CanDeleteSelectedSuppliers));
+    }
+    
+    protected override void DisposeManagedResources()
+    {
+        // Unsubscribe from property changed events
+        foreach (var supplier in SupplierItems)
+        {
+            supplier.PropertyChanged -= OnSupplierPropertyChanged;
+        }
+
+        // Clear collections
+        SupplierItems.Clear();
+        OriginalSupplierData.Clear();
+        CurrentFilteredSupplierData.Clear();
     }
 }
 
 public partial class Supplier : ObservableObject
 {
-    [ObservableProperty] 
+    [ObservableProperty]
     private int? _iD;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string? _name;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _contactPerson;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _email;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _phoneNumber;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _products;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
+    private string? _deliverySchedule;
+
+    [ObservableProperty]
+    private DateTime? _contractTerms;
+
+    [ObservableProperty]
     private string? _status;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private bool _isSelected;
     
+    public string FormattedContractTerms => ContractTerms.HasValue ? $"{ContractTerms.Value:MM/dd/yyyy}" : string.Empty;
+
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch
     {
         "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500

@@ -76,8 +76,7 @@
 															Title="Total Revenue"
 															CardBackground="{StaticResource GreenGradient}"
 															Foreground="White"
-															Hint="+96% from last month"
-															Value="₱20,911.69">
+															Value="{CompiledBinding TotalRevenue, StringFormat='₱{0:N2}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -90,8 +89,7 @@
 												Title="Member Subscriptions"
 												CardBackground="{StaticResource BlueGradient}"
 												Foreground="White"
-												Hint="+16% from last month"
-												Value="+18">
+												Value="{CompiledBinding MemberSubscriptions, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -103,8 +101,7 @@
 												Title="Sales"
 												CardBackground="{StaticResource PurpleGradient}"
 												Foreground="White"
-												Hint="+16% from last month"
-												Value="+69">
+												Value="{CompiledBinding SalesCount, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -116,8 +113,7 @@
 												Title="Active Now"
 												CardBackground="{StaticResource OrangeGradient}"
 												Foreground="White"
-												Hint="+26 since last hour"
-												Value="+9">
+												Value="{CompiledBinding ActiveNow, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -158,8 +154,7 @@
 															CardBackground="{StaticResource GreenGradient}"
 															Foreground="White"
 															FontWeight="SemiBold"
-															Hint="+96% from last month"
-															Value="₱20,911.69">
+															Value="{CompiledBinding TotalRevenue, StringFormat='₱{0:N0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -172,8 +167,7 @@
 												Title="Member Subscriptions"
 												CardBackground="{StaticResource BlueGradient}"
 												Foreground="White"
-												Hint="+16% from last month"
-												Value="+18">
+												Value="{CompiledBinding MemberSubscriptions, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -185,8 +179,7 @@
 												Title="Sales"
 												CardBackground="{StaticResource PurpleGradient}"
 												Foreground="White"
-												Hint="+16% from last month"
-												Value="+69">
+												Value="{CompiledBinding SalesCount, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -198,8 +191,7 @@
 												Title="Active Now"
 												CardBackground="{StaticResource OrangeGradient}"
 												Foreground="White"
-												Hint="+26 since last hour"
-												Value="+9">
+												Value="{CompiledBinding ActiveNow, StringFormat='+{0}'}">
 												<dashboard:OverviewCard.Icon>
 													<Svg
 														Width="30"
@@ -227,22 +219,17 @@
 														DockPanel.Dock="Top"
 														FontSize="17"
 														FontWeight="Bold"
-														Text="2025 Sales Overview"/>
-													<ComboBox
+														Text="{CompiledBinding SelectedYearDisplay}" />
+													<DatePicker
 														Margin="20,-35,30,0"
 														HorizontalAlignment="Right"
-														HorizontalContentAlignment="Center"
-														Width="100"
+														VerticalAlignment="Center"
+														Width="120"
 														DockPanel.Dock="Top"
-														ItemsSource="{CompiledBinding AvailableYears}"
-														SelectedIndex="{CompiledBinding SelectedYearIndex}">
-														<ComboBoxItem>2025</ComboBoxItem>
-														<ComboBoxItem>2026</ComboBoxItem>
-														<ComboBoxItem>2027</ComboBoxItem>
-														<ComboBoxItem>2028</ComboBoxItem>
-														<ComboBoxItem>2029</ComboBoxItem>
-														<ComboBoxItem>2030</ComboBoxItem>
-													</ComboBox>
+														DayVisible="False" 
+														MonthVisible="False" 
+														YearFormat="yyyy"
+														SelectedDate="{CompiledBinding SelectedDate}" />
 													<avalonia:CartesianChart
 														Height="445"
 														Name="CartesianChart1"
@@ -275,7 +262,7 @@
 															Text="Recent Sales" />
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding SalesSummary}"/>
 													</StackPanel>
-													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+													<ScrollViewer VerticalScrollBarVisibility="Auto">
 														<Interaction.Behaviors>
 															<scroll:VerticalScrollViewerAnimatedBehavior/>
 														</Interaction.Behaviors>
@@ -302,10 +289,12 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="120"
 																					FontSize="15"
 																					FontWeight="SemiBold"
 																					Text="{CompiledBinding CustomerName}"/>
@@ -322,6 +311,7 @@
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left"
 																			FontSize="15"
+																			TextWrapping="WrapWithOverflow"
 																			FontWeight="SemiBold"
 																			Text="{CompiledBinding ProductName}"/>
 
@@ -330,6 +320,7 @@
 																			Grid.Column="2"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Right"
+																			TextWrapping="WrapWithOverflow"
 																			FontSize="15"
 																			FontWeight="Bold"
 																			Foreground="{DynamicResource SuccessColor}"
@@ -359,22 +350,17 @@
 														DockPanel.Dock="Top"
 														FontSize="17"
 														FontWeight="Bold"
-														Text="2025 Sales Overview"/>
-													<ComboBox
+														Text="{CompiledBinding SelectedYearDisplay}"/>
+													<DatePicker
 														Margin="20,-35,30,0"
 														HorizontalAlignment="Right"
-														HorizontalContentAlignment="Center"
-														Width="100"
+														VerticalAlignment="Center"
+														Width="120"
 														DockPanel.Dock="Top"
-														ItemsSource="{CompiledBinding AvailableYears}"
-														SelectedIndex="{CompiledBinding SelectedYearIndex}">
-														<ComboBoxItem>2025</ComboBoxItem>
-														<ComboBoxItem>2026</ComboBoxItem>
-														<ComboBoxItem>2027</ComboBoxItem>
-														<ComboBoxItem>2028</ComboBoxItem>
-														<ComboBoxItem>2029</ComboBoxItem>
-														<ComboBoxItem>2030</ComboBoxItem>
-													</ComboBox>
+														DayVisible="False" 
+														MonthVisible="False" 
+														YearFormat="yyyy"
+														SelectedDate="{CompiledBinding SelectedDate}" />
 													<avalonia:CartesianChart
 														Height="445"
 														Name="CartesianChart2"
@@ -407,7 +393,7 @@
 																Text="Recent Sales" />
 														<TextBlock Classes="Caption Muted" FontSize="14" Text="{CompiledBinding SalesSummary}"/>
 													</StackPanel>
-													<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+													<ScrollViewer VerticalScrollBarVisibility="Auto">
 														<Interaction.Behaviors>
 															<scroll:VerticalScrollViewerAnimatedBehavior/>
 														</Interaction.Behaviors>
@@ -434,11 +420,12 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
+																					TextWrapping="WrapWithOverflow"
 																					FontWeight="SemiBold"
 																					Text="{CompiledBinding CustomerName}"/>
 																				<TextBlock
@@ -452,7 +439,8 @@
 																		<TextBlock
 																			Grid.Column="1"
 																			VerticalAlignment="Center"
-																			HorizontalAlignment="Left"
+																			HorizontalAlignment="Center"
+																			TextWrapping="WrapWithOverflow"
 																			FontSize="15"
 																			FontWeight="SemiBold"
 																			Text="{CompiledBinding ProductName}"/>
@@ -462,6 +450,7 @@
 																			Grid.Column="2"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Right"
+																			TextWrapping="WrapWithOverflow"
 																			FontSize="15"
 																			FontWeight="Bold"
 																			Foreground="{DynamicResource SuccessColor}"
@@ -521,15 +510,12 @@
 																			Orientation="Horizontal"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left">
-																			<shadui:Avatar
-																				Width="36"
-																				Height="36"
-																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="140"
 																					FontWeight="SemiBold"
 																					Text="{CompiledBinding ClientName}"/>
 																				<TextBlock
@@ -545,6 +531,8 @@
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left"
 																			FontSize="15"
+																			TextWrapping="WrapWithOverflow"
+																			MaxWidth="100"
 																			FontWeight="SemiBold"
 																			Text="{CompiledBinding TrainingType}"/>
 
@@ -554,6 +542,8 @@
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left"
 																			FontSize="15"
+																			TextWrapping="WrapWithOverflow"
+																			MaxWidth="100"
 																			FontWeight="SemiBold"
 																			Text="{CompiledBinding Location}"/>
 
@@ -631,11 +621,13 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="90"
 																					FontWeight="SemiBold"
 																					Text="{CompiledBinding Username}"/>
 																				<TextBlock
@@ -711,16 +703,13 @@
 																			Orientation="Horizontal"
 																			VerticalAlignment="Center"
 																			HorizontalAlignment="Left">
-																			<shadui:Avatar
-																				Width="36"
-																				Height="36"
-																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
 																					FontWeight="SemiBold"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="140"
 																					Text="{CompiledBinding ClientName}"/>
 																				<TextBlock
 																					Classes="Caption Muted"
@@ -736,6 +725,8 @@
 																			HorizontalAlignment="Left"
 																			FontSize="15"
 																			FontWeight="SemiBold"
+																			TextWrapping="WrapWithOverflow"
+																			MaxWidth="100"
 																			Text="{CompiledBinding TrainingType}"/>
 
 																		<!-- Location Column -->
@@ -745,6 +736,8 @@
 																			HorizontalAlignment="Left"
 																			FontSize="15"
 																			FontWeight="SemiBold"
+																			TextWrapping="WrapWithOverflow"
+																			MaxWidth="100"
 																			Text="{CompiledBinding Location}"/>
 
 																		<!-- Time Slot Column -->
@@ -821,12 +814,14 @@
 																				Width="36"
 																				Height="36"
 																				VerticalAlignment="Center"
-																				Source="{CompiledBinding AvatarSource, Converter={StaticResource StringToBitMapConverter}}"/>
+																				Source="{CompiledBinding AvatarSource}"/>
 																			<StackPanel Margin="15,0">
 																				<TextBlock
 																					Classes="Small"
 																					FontSize="15"
 																					FontWeight="SemiBold"
+																					TextWrapping="WrapWithOverflow"
+																					MaxWidth="160"
 																					Text="{CompiledBinding Username}"/>
 																				<TextBlock
 																					Classes="Caption Muted"
@@ -844,7 +839,7 @@
 																			FontWeight="SemiBold"
 																			TextWrapping="Wrap"
 																			TextAlignment="Right"
-																			Width="150"
+																			MaxWidth="350"
 																			Foreground="{DynamicResource SuccessColor}"
 																			Text="{CompiledBinding ActionLogName}"/>
 																	</Grid>
@@ -859,8 +854,6 @@
 								</shadui:BreakpointViewPort>
 							</StackPanel>
 						</TabItem>
-						<TabItem Header="Analytics" />
-						<TabItem Header="Reports" />
 						<TabItem Header="Notifications">
 							<shadui:Card MaxWidth="900" MaxHeight="820" Margin="0,15,0,0">
 								<DockPanel Dock="Top" MaxHeight="720">

@@ -1,4 +1,7 @@
-﻿using System;
+﻿using AHON_TRACK.Converters;
+using Avalonia.Media.Imaging;
+using Microsoft.Data.SqlClient;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,7 +15,7 @@ public class SalesItem
     public string CustomerType { get; set; } = "Gym Member";
     public string ProductName { get; set; } = string.Empty;
     public decimal Amount { get; init; }
-    public string AvatarSource { get; set; } = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+    public Bitmap? AvatarSource { get; set; }
 
     // Formatted currency for display
     public string FormattedAmount => $"+₱{Amount:F2}";
@@ -36,33 +39,32 @@ public class TrainingSession
 // Model for Recent Logs
 public class RecentLog
 {
-    public string Username { get; set; } = string.Empty;
-    public string UserType { get; set; } = "Gym Admin";
-    public string ActionLogName { get; set; } = string.Empty;
-    public string AvatarSource { get; set; } = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
+    public string Username { get; set; }
+    public string UserType { get; set; }
+    public string ActionLogName { get; set; }
     public DateTime LogDateTime { get; set; }
+
+    // New property for display
+    public string FormattedDateTime { get; set; }
+    public Bitmap AvatarSource { get; set; } = ImageHelper.GetDefaultAvatar();
 }
 
 public class Notification
 {
-    public NotificationType Type { get; set; } = NotificationType.Info;
+    public NotificationType Type { get; set; } = NotificationType.Reminder;
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public DateTime DateAndTime { get; set; } = DateTime.Now;
+    public string NotificationKey { get; set; } = string.Empty;
     
-    // Formatted date for display
     public string FormattedDateTime => DateAndTime.ToString("dd MMM yyyy 'at' h:mm tt");
-    
-    // Badge text based on type
     public string BadgeText => Type.ToString();
-    
-    // Badge color resource key based on type
     public string BadgeColor => Type switch
     {
         NotificationType.Success => "#FF2E7D32",
-        NotificationType.Info => "#FF0288D1",
+        NotificationType.Reminder => "#FF0288D1",
         NotificationType.Warning => "#FFED6C02",
-        NotificationType.Error => "#FFE7000B",
+        NotificationType.Alert => "#FFE7000B",
         _ => "#FF2979FF"
     };
 }
@@ -70,9 +72,9 @@ public class Notification
 public enum NotificationType
 {
     Success,
-    Info,
+    Reminder,
     Warning,
-    Error
+    Alert
 }
 
 // Main Dashboard Model - handles all data operations
@@ -89,59 +91,6 @@ public class DashboardModel
     {
         InitializeYearlyData();
     }
-    
-    #region Notifications Data Operations
-
-    public List<Notification> GetSampleNotificationsData()
-    {
-        return
-        [
-            new Notification
-            {
-                Type = NotificationType.Warning,
-                Title = "New Registration: This is just a test. This is just a test. This is just a test",
-                Message = "This is just a test. This is just a test. This is just a test. This is just a test. This is just a test. This is just a test. This is just a test",
-                DateAndTime = DateTime.Today.AddHours(-2)
-            },
-            new Notification
-            {
-                Type = NotificationType.Success,
-                Title = "Payment Received",
-                Message = "Member payment has been successfully processed.",
-                DateAndTime = DateTime.Today.AddDays(-1)
-            },
-            new Notification
-            {
-                Type = NotificationType.Error,
-                Title = "Equipment Malfunction",
-                Message = "Treadmill #3 requires immediate maintenance.",
-                DateAndTime = DateTime.Today.AddHours(-5)
-            },
-            new Notification
-            {
-                Type = NotificationType.Info,
-                Title = "System Update",
-                Message = "System will undergo maintenance tonight at 11 PM.",
-                DateAndTime = DateTime.Today.AddMinutes(-30)
-            },
-            new Notification
-            {
-                Type = NotificationType.Warning,
-                Title = "Low Stock Alert",
-                Message = "Red Horse Mucho's stock level is near zero. Re-stock now!",
-                DateAndTime = DateTime.Today.AddMinutes(-50)
-            }
-        ];
-    }
-
-    public async Task<List<Notification>> GetNotificationsFromDatabaseAsync()
-    {
-        // Replace this with your actual SQL database call
-        await Task.Delay(100); // Simulate async operation
-        return [];
-    }
-
-    #endregion
 
     #region Sales Data Operations
 
@@ -312,64 +261,51 @@ public class DashboardModel
     #endregion
 
     #region Recent Logs Data Operations
+    public const string connectionString = "Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
-    public List<RecentLog> GetSampleRecentLogsData()
+    public async Task<List<RecentLog>> GetRecentLogsFromDatabaseAsync(string connectionString)
     {
-        return
-        [
-            new RecentLog
-            {
-                Username = "Kuya Rome",
-                UserType = "Gym Admin",
-                ActionLogName = "Printed monthly reports",
-                LogDateTime = DateTime.Now.AddMinutes(-30)
-            },
+        var logs = new List<RecentLog>();
 
-            new RecentLog
-            {
-                Username = "Jaycee",
-                UserType = "Gym Admin",
-                ActionLogName = "Modified rates in boxing package",
-                LogDateTime = DateTime.Now.AddHours(-1)
-            },
+        try
+        {
+            using var conn = new SqlConnection(connectionString);
+            await conn.OpenAsync();
 
-            new RecentLog
-            {
-                Username = "Figora",
-                UserType = "Gym Staff",
-                ActionLogName = "Reported a broken gym equipment",
-                LogDateTime = DateTime.Now.AddHours(-2)
-            },
+            string query = @"
+        SELECT TOP 10 
+        Username, 
+        Role AS UserType, 
+        ActionType AS ActionLogName, 
+        LogDateTime
+        FROM SystemLogs
+        ORDER BY LogDateTime DESC;";
 
-            new RecentLog
-            {
-                Username = "JeyEL",
-                UserType = "Gym Staff",
-                ActionLogName = "Scheduled a gym equipment maintenance",
-                LogDateTime = DateTime.Now.AddHours(-3)
-            },
+            using var cmd = new SqlCommand(query, conn);
+            using var reader = await cmd.ExecuteReaderAsync();
 
-            new RecentLog
+            while (await reader.ReadAsync())
             {
-                Username = "Mr. Javitos",
-                UserType = "Gym Admin",
-                ActionLogName = "Printed month gym member summary",
-                LogDateTime = DateTime.Now.AddHours(-4)
+                DateTime logDateTime = (DateTime)reader["LogDateTime"];
+                string formattedDate = logDateTime.ToString("MM/dd/yyyy hh:mm tt"); // 12H format
+
+                logs.Add(new RecentLog
+                {
+                    Username = reader["Username"].ToString(),
+                    UserType = reader["UserType"].ToString(),           // comes from SQL alias
+                    ActionLogName = reader["ActionLogName"].ToString(), // comes from SQL alias
+                    LogDateTime = logDateTime,
+                    FormattedDateTime = formattedDate,
+                    AvatarSource = ImageHelper.GetDefaultAvatar()
+                });
             }
-        ];
-    }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching logs: {ex.Message}");
+        }
 
-    public async Task<List<RecentLog>> GetRecentLogsFromDatabaseAsync()
-    {
-        // Replace this with your actual SQL database call
-        // Example:
-        // using var connection = new SqlConnection(connectionString);
-        // var logs = await connection.QueryAsync<RecentLog>(
-        //     "SELECT * FROM ActivityLogs WHERE DATE(LogDateTime) = CURDATE() ORDER BY LogDateTime DESC LIMIT 10");
-        // return logs.ToList();
-
-        await Task.Delay(100); // Simulate async operation
-        return [];
+        return logs;
     }
 
     public string GenerateRecentLogsSummary(int logCount) => $"You have {logCount} recent action logs today";
@@ -423,5 +359,52 @@ public class DashboardModel
 
         return [.. baseValues.Select(value => (int)(value * yearMultiplier))];
     }
+    #endregion
+
+    #region Notification Tracking
+
+    private readonly HashSet<string> _shownNotificationKeys = new();
+
+    /// <summary>
+    /// Generate a unique key for a notification to track if it's already been shown
+    /// </summary>
+    public string GenerateNotificationKey(string title, string message)
+    {
+        // Create a unique key based on title and core message content
+        return $"{title}|{message}".ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Check if a notification has already been shown
+    /// </summary>
+    public bool IsNotificationAlreadyShown(string notificationKey)
+    {
+        return _shownNotificationKeys.Contains(notificationKey);
+    }
+
+    /// <summary>
+    /// Mark a notification as shown
+    /// </summary>
+    public void MarkNotificationAsShown(string notificationKey)
+    {
+        _shownNotificationKeys.Add(notificationKey);
+    }
+
+    /// <summary>
+    /// Remove a notification from tracking (when user deletes it)
+    /// </summary>
+    public void RemoveNotificationTracking(string notificationKey)
+    {
+        _shownNotificationKeys.Remove(notificationKey);
+    }
+
+    /// <summary>
+    /// Clear all notification tracking
+    /// </summary>
+    public void ClearAllNotificationTracking()
+    {
+        _shownNotificationKeys.Clear();
+    }
+
     #endregion
 }

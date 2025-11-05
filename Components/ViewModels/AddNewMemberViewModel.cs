@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using AHON_TRACK.Models;
 using AHON_TRACK.ViewModels;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Converters;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
@@ -15,6 +10,15 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
 using ShadUI;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -26,61 +30,69 @@ public enum MemberViewContext
 }
 
 [Page("add-member")]
-public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigableWithParameters 
+public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParameters
 {
-    [ObservableProperty] 
-    private MemberViewContext _viewContext = MemberViewContext.AddNew; 
-    
-    [ObservableProperty] 
-    private string[] _middleInitialItems = 
-        ["A", "B", "C", "D", "E", "F", "G", "H",
-            "I", "J", "K", "L", "M", "N", "O", "P", 
-            "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]; // Revert change because of char to string issue
+    [ObservableProperty]
+    private MemberViewContext _viewContext = MemberViewContext.AddNew;
 
     [ObservableProperty]
-    private string[] _memberPackageItems = ["Boxing", "Muay Thai", "Crossfit", "Zumba"];
+    private string[] _middleInitialItems =
+        ["A", "B", "C", "D", "E", "F", "G", "H",
+            "I", "J", "K", "L", "M", "N", "O", "P",
+            "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+
+    // Store monthly membership packages from SellingModel
+    [ObservableProperty]
+    private List<SellingModel> _monthlyPackages = new();
+
+    [ObservableProperty]
+    private SellingModel? _selectedMonthlyPackage;
 
     [ObservableProperty]
     private string[] _memberStatusItems = ["Active", "Expired"];
-    
+
+    [ObservableProperty]
+    private Bitmap? _profileImageSource = ImageHelper.GetDefaultAvatar();
+
     [ObservableProperty]
     private Image? _memberProfileImageControl;
     
+    [ObservableProperty]
+    private Image? _memberProfileImageControl2;
+
     // Personal Details Section
     private string _memberFirstName = string.Empty;
     private string _selectedMiddleInitialItem = string.Empty;
     private string _memberLastName = string.Empty;
-    private string _memberGender = string.Empty;
+    private string? _memberGender = string.Empty;
     private string _memberContactNumber = string.Empty;
-    private string _memberPackages = string.Empty;
     private int? _memberAge;
+    private int _selectedMemberId = 0;
     private DateTime? _memberBirthDate;
-
-    // Address Section
-    private string _memberHouseAddress = string.Empty;
-    private string _memberHouseNumber = string.Empty;
-    private string _memberStreet = string.Empty;
-    private string _memberBarangay = string.Empty;
-    private string _memberCityTown = string.Empty;
-    private string _memberProvince = string.Empty;
+    private DateTime _currentMemberValidUntil = DateTime.MinValue;
 
     // Membership Plan 
     private int? _membershipDuration;
-    private DateTime? _memberDateJoined;
     private string _memberStatus = string.Empty;
-    
+
     // Payment Method
     private bool _isCashSelected;
     private bool _isGCashSelected;
     private bool _isMayaSelected;
-    
+
+    // Status Selection
+    private bool _isActiveSelected = true;
+    private bool _isInactiveSelected;
+    private bool _isTerminatedSelected;
+
     public bool IsCashVisible => IsCashSelected;
     public bool IsGCashVisible => IsGCashSelected;
     public bool IsMayaVisible => IsMayaSelected;
-    
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly IMemberService _memberService;
 
     public string ViewTitle => ViewContext switch
     {
@@ -104,8 +116,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         OnPropertyChanged(nameof(ViewTitle));
         OnPropertyChanged(nameof(ViewDescription));
     }
-    
+
     [Required(ErrorMessage = "First name is required")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string MemberFirstName
@@ -130,6 +143,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     }
 
     [Required(ErrorMessage = "Last name is required")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string MemberLastName
@@ -149,25 +163,35 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         get => _memberGender;
         set
         {
-            if (_memberGender == value) return;
-            _memberGender = value ?? string.Empty;
-            OnPropertyChanged(nameof(MemberGender));
+            SetProperty(ref _memberGender, value, true);
             OnPropertyChanged(nameof(IsMale));
             OnPropertyChanged(nameof(IsFemale));
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
-
+    
     public bool IsMale
     {
         get => MemberGender == "Male";
-        set { if (value) MemberGender = "Male"; }
+        set 
+        { 
+            if (value) 
+                MemberGender = "Male";
+            else if (MemberGender == "Male")
+                MemberGender = string.Empty;
+        }
     }
 
     public bool IsFemale
     {
         get => MemberGender == "Female";
-        set { if (value) MemberGender = "Female"; }
+        set 
+        { 
+            if (value) 
+                MemberGender = "Female";
+            else if (MemberGender == "Female")
+                MemberGender = string.Empty;
+        }
     }
 
     [Required(ErrorMessage = "Contact number is required")]
@@ -176,13 +200,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     {
         get => _memberContactNumber;
         set => SetProperty(ref _memberContactNumber, value, true);
-    }
-
-    [Required(ErrorMessage = "Position is required")]
-    public string MemberPackages
-    {
-        get => _memberPackages;
-        set => SetProperty(ref _memberPackages, value, true);
     }
 
     [Required(ErrorMessage = "Age is required")]
@@ -217,102 +234,16 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         }
     }
 
-    [Required(ErrorMessage = "House address is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
-    public string MemberHouseAddress
-    {
-        get => _memberHouseAddress;
-        set
-        {
-            SetProperty(ref _memberHouseAddress, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "House number is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 character long")]
-    [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
-    public string MemberHouseNumber
-    {
-        get => _memberHouseNumber;
-        set
-        {
-            SetProperty(ref _memberHouseNumber, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "Street is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberStreet
-    {
-        get => _memberStreet;
-        set
-        {
-            SetProperty(ref _memberStreet, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "Barangay is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberBarangay
-    {
-        get => _memberBarangay;
-        set
-        {
-            SetProperty(ref _memberBarangay, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "City/Town is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberCityTown
-    {
-        get => _memberCityTown;
-        set
-        {
-            SetProperty(ref _memberCityTown, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-
-    [Required(ErrorMessage = "Province is required")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
-    public string MemberProvince
-    {
-        get => _memberProvince;
-        set
-        {
-            SetProperty(ref _memberProvince, value, true);
-            OnPropertyChanged(nameof(IsPaymentPossible));
-        }
-    }
-    
-    [Required(ErrorMessage = "Date joined is required")]
-    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? MemberDateJoined
-    {
-        get => _memberDateJoined;
-        set => SetProperty(ref _memberDateJoined, value, true);
-    }
-
     [Required(ErrorMessage = "Status is required")]
     public string MemberStatus
     {
         get => _memberStatus;
         set => SetProperty(ref _memberStatus, value, true);
     }
-    
+
     [Required(ErrorMessage = "Duration is required")]
     [Range(1, 12, ErrorMessage = "Duration must be between 1 and 12")]
-    public int? MembershipDuration 
+    public int? MembershipDuration
     {
         get => _membershipDuration;
         set
@@ -323,9 +254,31 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             OnPropertyChanged(nameof(MembershipDurationQuantityHeader));
             OnPropertyChanged(nameof(MembershipDurationQuantitySummary));
             OnPropertyChanged(nameof(IsPaymentPossible));
+
+            OnPropertyChanged(nameof(PackageDurationDisplay));
+            OnPropertyChanged(nameof(SubtotalDisplay));
+            OnPropertyChanged(nameof(ValidFromDate));
+            OnPropertyChanged(nameof(ValidUntilDate));
+            OnPropertyChanged(nameof(ValidityFrom));
+            OnPropertyChanged(nameof(ValidityTo));
+            OnPropertyChanged(nameof(MembershipDurationSummary));
+
+            // Auto-select monthly package when duration is set
+            _ = AutoSelectMonthlyPackageAsync();
         }
     }
-    
+
+    private byte[]? _profileImage;
+    public byte[]? ProfileImage
+    {
+        get => _profileImage;
+        set
+        {
+            SetProperty(ref _profileImage, value);
+            Debug.WriteLine($"ProfileImage updated: {(value != null ? $"{value.Length} bytes" : "null")}");
+        }
+    }
+
     public bool IsCashSelected
     {
         get => _isCashSelected;
@@ -333,13 +286,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         {
             if (_isCashSelected == value) return;
             _isCashSelected = value;
-            
+
             if (value)
             {
                 _isGCashSelected = false;
                 _isMayaSelected = false;
             }
-            
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsGCashSelected));
             OnPropertyChanged(nameof(IsMayaSelected));
@@ -357,13 +310,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         {
             if (_isGCashSelected == value) return;
             _isGCashSelected = value;
-            
+
             if (value)
             {
                 _isCashSelected = false;
                 _isMayaSelected = false;
             }
-            
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsCashSelected));
             OnPropertyChanged(nameof(IsMayaSelected));
@@ -381,13 +334,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         {
             if (_isMayaSelected == value) return;
             _isMayaSelected = value;
-            
+
             if (value)
             {
                 _isCashSelected = false;
                 _isGCashSelected = false;
             }
-            
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsCashSelected));
             OnPropertyChanged(nameof(IsGCashSelected));
@@ -397,10 +350,70 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
-    
-    public string MemberFullName 
+
+    public bool IsActiveSelected
     {
-        get 
+        get => _isActiveSelected;
+        set
+        {
+            if (_isActiveSelected == value) return;
+            _isActiveSelected = value;
+
+            if (value)
+            {
+                _isInactiveSelected = false;
+                _isTerminatedSelected = false;
+                OnPropertyChanged(nameof(IsInactiveSelected));
+                OnPropertyChanged(nameof(IsTerminatedSelected));
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsInactiveSelected
+    {
+        get => _isInactiveSelected;
+        set
+        {
+            if (_isInactiveSelected == value) return;
+            _isInactiveSelected = value;
+
+            if (value)
+            {
+                _isActiveSelected = false;
+                _isTerminatedSelected = false;
+                OnPropertyChanged(nameof(IsActiveSelected));
+                OnPropertyChanged(nameof(IsTerminatedSelected));
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsTerminatedSelected
+    {
+        get => _isTerminatedSelected;
+        set
+        {
+            if (_isTerminatedSelected == value) return;
+            _isTerminatedSelected = value;
+
+            if (value)
+            {
+                _isActiveSelected = false;
+                _isInactiveSelected = false;
+                OnPropertyChanged(nameof(IsActiveSelected));
+                OnPropertyChanged(nameof(IsInactiveSelected));
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    public string MemberFullName
+    {
+        get
         {
             var parts = new List<string>();
 
@@ -418,62 +431,165 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
     }
 
     public bool IsMembershipPlanVisible => MembershipDuration.HasValue && MembershipDuration > 0;
-    
+
     public string MembershipDurationQuantity
     {
         get
         {
             if (!MembershipDuration.HasValue || MembershipDuration == 0)
-                return "0 Sessions";
+                return "0 Months";
 
             int quantity = MembershipDuration.Value;
             return quantity == 1 ? $"{quantity} Month" : $"{quantity} Months";
         }
     }
-    
+
     public string MembershipDurationQuantityHeader
     {
         get
         {
-            if (!MembershipDuration.HasValue || MembershipDuration == 0)
-                return "0 Sessions";
+            if (!MembershipDuration.HasValue || MembershipDuration == 0 || SelectedMonthlyPackage == null)
+                return "0 Months";
 
             int quantity = MembershipDuration.Value;
-            return quantity == 1 ? $"{quantity} Month × ₱500.00" : $"{quantity} Months × ₱500.00";
+            decimal price = SelectedMonthlyPackage.Price;
+            return quantity == 1 ? $"{quantity} Month × ₱{price:N2}" : $"{quantity} Months × ₱{price:N2}";
         }
     }
-    
+
     public string MembershipDurationQuantitySummary
     {
         get
         {
-            if (!MembershipDuration.HasValue || MembershipDuration == 0)
-                return "0 Sessions";
+            if (!MembershipDuration.HasValue || MembershipDuration == 0 || SelectedMonthlyPackage == null)
+                return "No package selected";
 
             int quantity = MembershipDuration.Value;
-            return quantity == 1 ? $"Gym Membership ({quantity} Month)" : $"Gym Membership ({quantity} Months)";
+            string packageName = SelectedMonthlyPackage.Title;
+            return quantity == 1
+                ? $"{packageName} ({quantity} Month)"
+                : $"{packageName} ({quantity} Months)";
         }
     }
 
-    public AddNewMemberViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public AddNewMemberViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
+        _memberService = memberService;
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
     }
-    
-    public AddNewMemberViewModel() 
+
+    public AddNewMemberViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _memberService = null!;
     }
 
     [AvaloniaHotReload]
-    public void Initialize()
+    public async Task Initialize()
     {
+        IsActiveSelected = true;
+        
+        if (ViewContext == MemberViewContext.AddNew)
+        {
+            ProfileImageSource = ManageMemberModel.DefaultAvatarSource;
+            ProfileImage = null;
+        }
+        
+        await LoadMonthlyPackagesAsync();
     }
-    
+
+    // Load monthly membership packages using GetAvailablePackagesForMembersAsync
+    private async Task LoadMonthlyPackagesAsync()
+    {
+        try
+        {
+            Debug.WriteLine("🔹 Loading monthly membership packages for members...");
+
+            var packages = await _memberService.GetAvailablePackagesForMembersAsync();
+
+            if (packages != null && packages.Any())
+            {
+                MonthlyPackages = packages;
+
+                Debug.WriteLine($"✅ Loaded {MonthlyPackages.Count} monthly packages:");
+                foreach (var pkg in MonthlyPackages)
+                {
+                    Debug.WriteLine($"  📦 {pkg.Title} - ₱{pkg.Price}");
+                }
+            }
+            else
+            {
+                Debug.WriteLine("⚠️ No packages found or failed to load");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"❌ Error loading monthly packages: {ex.Message}");
+            _toastManager?.CreateToast("Load Error")
+                .WithContent($"Failed to load membership packages: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+
+    // Auto-select monthly package when duration is entered
+    private async Task AutoSelectMonthlyPackageAsync()
+    {
+        if (!MembershipDuration.HasValue || MembershipDuration <= 0)
+        {
+            SelectedMonthlyPackage = null;
+            OnPropertyChanged(nameof(MembershipDurationQuantityHeader));
+            OnPropertyChanged(nameof(MembershipDurationQuantitySummary));
+
+            OnPropertyChanged(nameof(PackageDisplayName));
+            OnPropertyChanged(nameof(PackagePriceDisplay));
+            OnPropertyChanged(nameof(SubtotalDisplay));
+            OnPropertyChanged(nameof(ValidFromDate));
+            OnPropertyChanged(nameof(ValidUntilDate));
+            OnPropertyChanged(nameof(ValidityFrom));
+            OnPropertyChanged(nameof(ValidityTo));
+            OnPropertyChanged(nameof(MembershipDurationSummary));
+
+            return;
+        }
+
+        // If packages not loaded yet, load them
+        if (!MonthlyPackages.Any())
+        {
+            await LoadMonthlyPackagesAsync();
+        }
+
+        // Auto-select the first monthly package (you can add logic to select a specific one based on price/tier)
+        if (MonthlyPackages.Any())
+        {
+            SelectedMonthlyPackage = MonthlyPackages.First();
+
+            OnPropertyChanged(nameof(MembershipDurationQuantityHeader));
+            OnPropertyChanged(nameof(MembershipDurationQuantitySummary));
+            OnPropertyChanged(nameof(IsPaymentPossible));
+
+            OnPropertyChanged(nameof(PackageDisplayName));
+            OnPropertyChanged(nameof(PackagePriceDisplay));
+            OnPropertyChanged(nameof(SubtotalDisplay));
+            OnPropertyChanged(nameof(ValidFromDate));
+            OnPropertyChanged(nameof(ValidUntilDate));
+            OnPropertyChanged(nameof(ValidityFrom));
+            OnPropertyChanged(nameof(ValidityTo));
+            OnPropertyChanged(nameof(MembershipDurationSummary));
+
+            Debug.WriteLine($"✅ Auto-selected package: {SelectedMonthlyPackage.Title} - ₱{SelectedMonthlyPackage.Price}/month");
+            Debug.WriteLine($"   Total for {MembershipDuration} months: ₱{SelectedMonthlyPackage.Price * MembershipDuration:N2}");
+        }
+        else
+        {
+            Debug.WriteLine("⚠️ No monthly packages available to auto-select");
+        }
+    }
+
     public void SetNavigationParameters(Dictionary<string, object> parameters)
     {
         if (parameters.TryGetValue("Context", out var context))
@@ -483,23 +599,50 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
         if (!parameters.TryGetValue("SelectedMember", out var member)) return;
         var selectedMember = (ManageMembersItem)member;
+        if (int.TryParse(selectedMember.ID, out int memberId))
+        {
+            _selectedMemberId = memberId;
+        }
         PopulateFormWithMemberData(selectedMember);
     }
-    
+
     private void PopulateFormWithMemberData(ManageMembersItem member)
     {
-        // Remove whitespaces from contact number
         MemberContactNumber = member.ContactNumber.Replace(" ", "");
 
-        // Parse the name using the enhanced algorithm
         var nameResult = ParseFullName(member.Name);
-    
+
         MemberFirstName = nameResult.FirstName;
         SelectedMiddleInitialItem = nameResult.MiddleInitial;
         MemberLastName = nameResult.LastName;
-
-        MemberPackages = member.AvailedPackages;
         MemberStatus = member.Status;
+        MemberGender = member.Gender;
+
+        if (member.BirthDate != DateTime.MinValue)
+        {
+            MemberBirthDate = member.BirthDate;
+            MemberAge = CalculateAge(member.BirthDate);
+        }
+
+        if (member.Validity != DateTime.MinValue)
+        {
+            _currentMemberValidUntil = member.Validity;
+        }
+
+        ProfileImageSource = member.AvatarSource;
+
+        if (member.AvatarSource != ManageMemberModel.DefaultAvatarSource)
+        {
+            ProfileImage = ImageHelper.BitmapToBytes(member.AvatarSource);
+            Debug.WriteLine($"[PopulateFormWithMemberData] Loaded custom profile image ({ProfileImage?.Length} bytes)");
+        }
+        else
+        {
+            ProfileImage = null;
+            Debug.WriteLine("[PopulateFormWithMemberData] Using default avatar");
+        }
+
+        OnPropertyChanged(nameof(ProfileImageSource));
     }
 
     private (string FirstName, string MiddleInitial, string LastName) ParseFullName(string fullName)
@@ -514,76 +657,61 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
         if (nameParts.Length == 1)
         {
-            // Only one part - treat as first name
             return (nameParts[0], string.Empty, string.Empty);
         }
 
-        // Look for middle initial (single character with optional dot, not at first or last position)
         int middleInitialIndex = FindMiddleInitialIndex(nameParts);
 
         if (middleInitialIndex != -1)
         {
-            // Found middle initial - everything before is first name, everything after is last name
             string firstName = string.Join(" ", nameParts.Take(middleInitialIndex));
             string middleInitial = nameParts[middleInitialIndex].TrimEnd('.');
             string lastName = string.Join(" ", nameParts.Skip(middleInitialIndex + 1));
-        
+
             return (firstName, middleInitial, lastName);
         }
 
-        // No middle initial found - use strategy to split first and last name
         return SplitFirstAndLastName(nameParts);
     }
 
     private int FindMiddleInitialIndex(string[] nameParts)
     {
-        // Look for middle initial (not at first or last position)
         for (int i = 1; i < nameParts.Length - 1; i++)
         {
             string part = nameParts[i];
-        
-            // Check if it's a single character or single character with dot
+
             if (part.Length == 1 || (part.Length == 2 && part.EndsWith(".")))
             {
                 return i;
             }
         }
-    
-        return -1; // No middle initial found
+
+        return -1;
     }
 
     private (string FirstName, string MiddleInitial, string LastName) SplitFirstAndLastName(string[] nameParts)
     {
-        // Strategy for ambiguous cases without middle initial
-        // This addresses the "Juan Dela Cruz" ambiguity
-    
         if (nameParts.Length == 2)
         {
-            // Simple case: First Last
             return (nameParts[0], string.Empty, nameParts[1]);
         }
 
-        // For 3+ parts without middle initial, we need a strategy
-        // Option 1: Favor compound last names (common in Filipino names like "Dela Cruz", "De Leon")
         if (HasCompoundLastNamePattern(nameParts))
         {
             return SplitWithCompoundLastName(nameParts);
         }
 
-        // Option 2: Default strategy - first part is first name, rest is last name
         return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
     }
 
     private bool HasCompoundLastNamePattern(string[] nameParts)
     {
-        // Common Filipino compound last name prefixes
         var compoundPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "de", "del", "dela", "delos", "delas", "van", "von", "da", "di", "du",
             "san", "santa", "santo", "mc", "mac", "o'"
         };
 
-        // Check if any part (except the first) starts with a compound prefix
         for (int i = 1; i < nameParts.Length; i++)
         {
             if (compoundPrefixes.Contains(nameParts[i]))
@@ -603,23 +731,19 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
             "san", "santa", "santo", "mc", "mac", "o'"
         };
 
-        // Find the first compound prefix
         for (int i = 1; i < nameParts.Length; i++)
         {
             if (compoundPrefixes.Contains(nameParts[i]))
             {
-                // Everything before this index is first name
-                // Everything from this index onwards is last name
                 string firstName = string.Join(" ", nameParts.Take(i));
                 string lastName = string.Join(" ", nameParts.Skip(i));
                 return (firstName, string.Empty, lastName);
             }
         }
 
-        // Fallback - shouldn't reach here if HasCompoundLastNamePattern returned true
         return (nameParts[0], string.Empty, string.Join(" ", nameParts.Skip(1)));
     }
-    
+
     [RelayCommand]
     private async Task ChooseFile()
     {
@@ -638,7 +762,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                 [
                     new FilePickerFileType("Image Files")
                     {
-                        Patterns = ["*.png", "*.jpg"]
+                        Patterns = ["*.png", "*.jpg", "*.jpeg"]
                     },
                     new FilePickerFileType("All Files")
                     {
@@ -654,22 +778,38 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
                     .WithContent($"{selectedFile.Name}")
                     .DismissOnClick()
                     .ShowInfo();
-                
+
                 var file = files[0];
                 await using var stream = await file.OpenReadAsync();
-                
+
                 var bitmap = new Bitmap(stream);
-                
+
                 if (MemberProfileImageControl != null)
                 {
                     MemberProfileImageControl.Source = bitmap;
                     MemberProfileImageControl.IsVisible = true;
                 }
+
+                if (MemberProfileImageControl2 != null)
+                {
+                    MemberProfileImageControl2.Source = bitmap;
+                    MemberProfileImageControl2.IsVisible = true;
+                }
+
+                stream.Position = 0;
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                ProfileImage = memoryStream.ToArray();
+                ProfileImageSource = bitmap;
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+            _toastManager?.CreateToast("Upload Error")
+                .WithContent($"Failed to upload image: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
     }
 
@@ -679,15 +819,203 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         _toastManager.CreateToast("Add new member cancelled").ShowWarning();
         _pageManager.Navigate<ManageMembershipViewModel>();
     }
-    
-    [RelayCommand]
-    private void Payment() 
+
+    private string? GetSelectedPaymentMethod()
     {
-        _toastManager.CreateToast("Payment Successful!").ShowSuccess();
-        _pageManager.Navigate<ManageMembershipViewModel>();
+        if (IsCashSelected) return "Cash";
+        if (IsGCashSelected) return "GCash";
+        if (IsMayaSelected) return "Maya";
+        return null;
     }
-    
-    public bool IsPaymentPossible 
+
+    private string? GetSelectedStatus()
+    {
+        if (IsActiveSelected) return "Active";
+        if (IsInactiveSelected) return "Inactive";
+        if (IsTerminatedSelected) return "Terminated";
+        return "Active";
+    }
+
+    [RelayCommand]
+    private async Task Payment()
+    {
+        try
+        {
+            // Validate that a monthly package is selected
+            if (SelectedMonthlyPackage == null)
+            {
+                _toastManager?.CreateToast("Package Required")
+                    .WithContent("Please enter membership duration to select a package.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            // Validate membership duration
+            if (!MembershipDuration.HasValue || MembershipDuration <= 0)
+            {
+                _toastManager?.CreateToast("Duration Required")
+                    .WithContent("Please enter a valid membership duration (1-12 months).")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            // ✅ FIX: Calculate ValidUntil based on context
+            DateTime validUntilDate;
+
+            if (ViewContext == MemberViewContext.Renew || ViewContext == MemberViewContext.Upgrade)
+            {
+                // For RENEW or UPGRADE: Extend from current ValidUntil date
+                DateTime currentValidUntil = _currentMemberValidUntil;
+
+                // If no valid date stored, try to get it from the database
+                if (currentValidUntil == DateTime.MinValue && _selectedMemberId > 0)
+                {
+                    var result = await _memberService.GetMemberByIdAsync(_selectedMemberId);
+                    if (result.Success && result.Member != null)
+                    {
+                        DateTime.TryParse(result.Member.ValidUntil, out currentValidUntil);
+                    }
+                }
+
+                // ✅ CRITICAL FIX: Always add months to existing expiry (even if expired)
+                // This ensures the sale records the EXACT months the user is purchasing
+                if (currentValidUntil == DateTime.MinValue)
+                {
+                    // Only use today if we have NO expiry date at all (shouldn't happen in renew/upgrade)
+                    validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+                    Debug.WriteLine($"[Payment] {ViewContext}: No existing date, starting from today → {validUntilDate:MMM dd, yyyy}");
+                }
+                else
+                {
+                    // ✅ Always extend from existing expiry, even if it's in the past
+                    // Example: Expired on Feb 1, user buys 3 months → Feb 1 + 3 = May 1
+                    // CalculateMonthsAdded(Feb 1, May 1) = 3 months ✓
+                    validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
+
+                    string status = currentValidUntil < DateTime.Now ? "expired" : "active";
+                    int monthsAdded = MembershipDuration.Value;
+                    Debug.WriteLine($"[Payment] {ViewContext}: Member {status}");
+                    Debug.WriteLine($"  Current expiry: {currentValidUntil:MMM dd, yyyy}");
+                    Debug.WriteLine($"  Adding: {monthsAdded} months");
+                    Debug.WriteLine($"  New expiry: {validUntilDate:MMM dd, yyyy}");
+                }
+            }
+            else
+            {
+                // For ADD NEW: Start from today
+                validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+                Debug.WriteLine($"[Payment] ADD NEW: Starting from today to {validUntilDate:MMM dd, yyyy}");
+            }
+
+            var member = new ManageMemberModel
+            {
+                FirstName = MemberFirstName,
+                MiddleInitial = string.IsNullOrWhiteSpace(SelectedMiddleInitialItem) ? null : SelectedMiddleInitialItem,
+                LastName = MemberLastName,
+                Gender = MemberGender,
+                ContactNumber = MemberContactNumber,
+                Age = MemberAge,
+                DateOfBirth = MemberBirthDate,
+                ValidUntil = validUntilDate.ToString("MMM dd, yyyy"),
+                MembershipType = SelectedMonthlyPackage.Title,
+                PackageID = SelectedMonthlyPackage.SellingID,
+                Status = GetSelectedStatus() ?? "Active",
+                PaymentMethod = GetSelectedPaymentMethod(),
+                ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
+            };
+
+            bool isSuccess;
+            string successMessage;
+
+            if (ViewContext == MemberViewContext.AddNew)
+            {
+                // ADD NEW MEMBER
+                Debug.WriteLine($"[Payment] ========== NEW MEMBER REGISTRATION ==========");
+                Debug.WriteLine($"[Payment] Name: {member.FirstName} {member.LastName}");
+                Debug.WriteLine($"[Payment] Package: {SelectedMonthlyPackage.Title} (ID: {SelectedMonthlyPackage.SellingID})");
+                Debug.WriteLine($"[Payment] Price per month: ₱{SelectedMonthlyPackage.Price:N2}");
+                Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months");
+                Debug.WriteLine($"[Payment] Total Amount: ₱{SelectedMonthlyPackage.Price * MembershipDuration:N2}");
+                Debug.WriteLine($"[Payment] ValidUntil: {member.ValidUntil}");
+                Debug.WriteLine($"[Payment] =======================================");
+
+                var result = await _memberService.AddMemberAsync(member);
+                isSuccess = result.Success;
+                successMessage = $"{member.FirstName} {member.LastName} registered successfully!";
+
+                if (!result.Success)
+                {
+                    _toastManager?.CreateToast("Registration Failed")
+                        .WithContent(result.Message)
+                        .DismissOnClick()
+                        .ShowError();
+                    return;
+                }
+
+                member.MemberID = result.MemberId ?? 0;
+            }
+            else if (ViewContext == MemberViewContext.Upgrade || ViewContext == MemberViewContext.Renew)
+            {
+                // UPDATE EXISTING MEMBER (Upgrade/Renew)
+                string actionType = ViewContext == MemberViewContext.Upgrade ? "UPGRADE" : "RENEW";
+                Debug.WriteLine($"[Payment] ========== {actionType} MEMBER ==========");
+                Debug.WriteLine($"[Payment] Member ID: {_selectedMemberId}");
+                Debug.WriteLine($"[Payment] Name: {member.FirstName} {member.LastName}");
+                Debug.WriteLine($"[Payment] New Package: {SelectedMonthlyPackage.Title}");
+                Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months added");
+                Debug.WriteLine($"[Payment] New ValidUntil: {member.ValidUntil}");
+                Debug.WriteLine($"[Payment] =======================================");
+
+                // Set the MemberID from the member being upgraded/renewed
+                member.MemberID = _selectedMemberId;
+
+                var result = await _memberService.UpdateMemberAsync(member);
+                isSuccess = result.Success;
+
+                successMessage = ViewContext == MemberViewContext.Upgrade
+                    ? $"{member.FirstName} {member.LastName} upgraded successfully! Extended by {MembershipDuration} months."
+                    : $"{member.FirstName} {member.LastName} renewed successfully! Extended by {MembershipDuration} months.";
+
+                if (!result.Success)
+                {
+                    _toastManager?.CreateToast("Update Failed")
+                        .WithContent(result.Message)
+                        .DismissOnClick()
+                        .ShowError();
+                    return;
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"[Payment] ❌ Unknown ViewContext: {ViewContext}");
+                return;
+            }
+
+            // Calculate total amount
+            decimal totalAmount = SelectedMonthlyPackage.Price * MembershipDuration.Value;
+
+            _toastManager?.CreateToast(successMessage)
+                .WithContent($"{SelectedMonthlyPackage.Title} ({MembershipDuration} months) = ₱{totalAmount:N2}")
+                .DismissOnClick()
+                .ShowSuccess();
+
+            ClearAllFields();
+            _pageManager.Navigate<ManageMembershipViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Payment] ❌ Error: {ex.Message}");
+            Debug.WriteLine($"[Payment] Stack trace: {ex.StackTrace}");
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to save member: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+
+    public bool IsPaymentPossible
     {
         get
         {
@@ -700,11 +1028,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
 
             bool hasValidQuantity = (MembershipDuration.HasValue && MembershipDuration > 0);
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
+            bool hasPackage = SelectedMonthlyPackage != null;
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod;
+            return hasValidInputs && hasValidQuantity && hasPaymentMethod && hasPackage;
         }
     }
-    
+
     private int CalculateAge(DateTime birthDate)
     {
         var today = DateTime.Today;
@@ -713,7 +1042,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         if (birthDate.Date > today.AddYears(-age)) age--;
         return age;
     }
-    
+
     private void ClearAllFields()
     {
         MemberFirstName = string.Empty;
@@ -721,20 +1050,178 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigable, INavigab
         MemberLastName = string.Empty;
         MemberGender = null;
         MemberContactNumber = string.Empty;
-        MemberPackages = string.Empty;
         MemberAge = null;
         MemberBirthDate = null;
-        MemberHouseAddress = string.Empty;
-        MemberHouseNumber = string.Empty;
-        MemberStreet = string.Empty;
-        MemberBarangay = string.Empty;
-        MemberCityTown = string.Empty;
-        MemberProvince = string.Empty;
-        MemberDateJoined = null;
         MemberStatus = string.Empty;
+        MembershipDuration = null;
+        SelectedMonthlyPackage = null;
+        IsCashSelected = false;
+        IsGCashSelected = false;
+        IsMayaSelected = false;
+        IsActiveSelected = true;
+        IsInactiveSelected = false;
+        IsTerminatedSelected = false;
+        ProfileImage = null;
+        ProfileImageSource = ManageMemberModel.DefaultAvatarSource;
+
         ClearAllErrors();
+
+        ImageResetRequested?.Invoke();
     }
-    
+
+    #region Payment Summary Display Properties
+
+    public string PackageDisplayName => SelectedMonthlyPackage?.Title ?? "No package selected";
+
+    public string PackagePriceDisplay => SelectedMonthlyPackage != null
+        ? $"₱{SelectedMonthlyPackage.Price:N2}"
+        : "₱0.00";
+
+    public string PackageDurationDisplay
+    {
+        get
+        {
+            if (!MembershipDuration.HasValue || MembershipDuration <= 0)
+                return "0 Month";
+
+            int duration = MembershipDuration.Value;
+            return duration == 1 ? $"{duration} Month" : $"{duration} Months";
+        }
+    }
+
+    public string SubtotalDisplay
+    {
+        get
+        {
+            if (SelectedMonthlyPackage == null || !MembershipDuration.HasValue || MembershipDuration <= 0)
+                return "₱0.00";
+
+            decimal subtotal = SelectedMonthlyPackage.Price * MembershipDuration.Value;
+            return $"₱{subtotal:N2}";
+        }
+    }
+
+    public string MemberIdDisplay => _selectedMemberId > 0
+        ? $"ID: GM-2025-{_selectedMemberId:D6}"
+        : "ID: GM-2025-001234";
+
+    // ✅ ADD: Transaction Details
+    public string CurrentDate => DateTime.Now.ToString("MMMM dd, yyyy");
+
+    public string CurrentTime => DateTime.Now.ToString("h:mm tt");
+
+    public string TransactionID => $"TX-{DateTime.Now:yyyy}-{new Random().Next(1000, 9999)}";
+
+    // ✅ ADD: Membership Validity Dates
+    public string ValidFromDate
+    {
+        get
+        {
+            if (ViewContext == MemberViewContext.Renew || ViewContext == MemberViewContext.Upgrade)
+            {
+                DateTime currentValidUntil = _currentMemberValidUntil;
+
+                // If membership already expired or no valid date, start from today
+                if (currentValidUntil == DateTime.MinValue || currentValidUntil < DateTime.Now)
+                {
+                    return DateTime.Now.ToString("MMMM dd, yyyy");
+                }
+                else
+                {
+                    // If still valid, start from current expiry date
+                    return currentValidUntil.ToString("MMMM dd, yyyy");
+                }
+            }
+            else
+            {
+                // For ADD NEW: Start from today
+                return DateTime.Now.ToString("MMMM dd, yyyy");
+            }
+        }
+    }
+
+    public string ValidUntilDate
+    {
+        get
+        {
+            if (!MembershipDuration.HasValue || MembershipDuration <= 0)
+                return DateTime.Now.ToString("MMMM dd, yyyy");
+
+            DateTime validUntilDate;
+
+            if (ViewContext == MemberViewContext.Renew || ViewContext == MemberViewContext.Upgrade)
+            {
+                // For RENEW or UPGRADE: Extend from current ValidUntil date
+                DateTime currentValidUntil = _currentMemberValidUntil;
+
+                // If membership already expired or no valid date, extend from today
+                if (currentValidUntil == DateTime.MinValue || currentValidUntil < DateTime.Now)
+                {
+                    validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+                }
+                else
+                {
+                    // If still valid, extend from current expiry date
+                    validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
+                }
+            }
+            else
+            {
+                // For ADD NEW: Start from today
+                validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
+            }
+
+            return validUntilDate.ToString("MMMM dd, yyyy");
+        }
+    }
+
+    public string ValidityFrom => $"Valid from: {ValidFromDate}";
+    public string ValidityTo => $"Valid to: {ValidUntilDate}";
+
+    // ✅ ADD: Formatted membership duration for Purchase Summary
+    public string MembershipDurationSummary
+    {
+        get
+        {
+            if (!MembershipDuration.HasValue || MembershipDuration <= 0 || SelectedMonthlyPackage == null)
+                return "No package selected";
+
+            int duration = MembershipDuration.Value;
+            string packageName = SelectedMonthlyPackage.Title;
+
+            return duration == 1
+                ? $"{packageName} ({duration} Month)"
+                : $"{packageName} ({duration} Months)";
+        }
+    }
+
+    #endregion
+
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
+
+    public event Action? ImageResetRequested;
+    
+    protected override void DisposeManagedResources()
+    {
+        // Dispose / null bitmaps and image bytes
+        if (ProfileImageSource is IDisposable d0) d0.Dispose();
+        ProfileImageSource = null;
+        MemberProfileImageControl = null;
+        MemberProfileImageControl2 = null;
+        ProfileImage = null;
+
+        // Clear collections
+        MonthlyPackages.Clear();
+        MonthlyPackages = [];
+
+        // Clear suggestions & arrays
+        MiddleInitialItems = [];
+        MemberStatusItems = [];
+
+        // Null references to large objects
+        SelectedMonthlyPackage = null;
+
+        base.DisposeManagedResources();
+    }
 }

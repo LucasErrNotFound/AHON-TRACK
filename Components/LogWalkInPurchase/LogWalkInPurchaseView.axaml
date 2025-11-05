@@ -80,21 +80,19 @@
 			<Interaction.Behaviors>
 				<scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
 			</Interaction.Behaviors>
-			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="48,0,48,24" Spacing="16">
-				<!--
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="0,0,28,24" Spacing="16">
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
-					-->
-						<Grid Margin="100,30" ColumnDefinitions="3* 3*">
-							<shadui:Card VerticalAlignment="Top">
+						<Grid Margin="100,30" ColumnDefinitions="4* 3*">
+							<shadui:Card VerticalAlignment="Top" HasShadow="True">
 								<StackPanel Spacing="0">
 									<!-- Header Section -->
 									<TextBlock
 										Text="Walk In Information"
-										Classes="h4"/>
+										Classes="h4" />
 									<TextBlock
 										Text="Please fill out the form to log this walk in"
-										Classes="Muted"/>
+										Classes="Muted" />
 									<Grid
 										Margin="0,30"
 										RowDefinitions="Auto Auto"
@@ -109,7 +107,7 @@
 												Classes="Clearable"
 												UseFloatingWatermark="True"
 												Watermark="First Name"
-												Text="{CompiledBinding WalkInFirstName, Mode=TwoWay}"/>
+												Text="{CompiledBinding WalkInFirstName, Mode=TwoWay}" />
 										</StackPanel>
 
 										<!-- Middle Initial -->
@@ -136,7 +134,7 @@
 												Classes="Clearable"
 												UseFloatingWatermark="True"
 												Watermark="Last Name"
-												Text="{CompiledBinding WalkInLastName, Mode=TwoWay}"/>
+												Text="{CompiledBinding WalkInLastName, Mode=TwoWay}" />
 										</StackPanel>
 
 										<!-- Row 2: Contact and Personal Details -->
@@ -149,7 +147,7 @@
 												Classes="Clearable"
 												UseFloatingWatermark="True"
 												Watermark="Contact Number"
-												HorizontalAlignment="Left"/>
+												HorizontalAlignment="Left" />
 										</StackPanel>
 
 										<!-- Age Field -->
@@ -164,20 +162,24 @@
 												Minimum="1"
 												Maximum="100"
 												Margin="30,32"
-												HorizontalAlignment="Left"/>
+												HorizontalAlignment="Left" />
 										</StackPanel>
 
 										<!-- Gender Field -->
 										<StackPanel Grid.Row="1" Grid.Column="2" Margin="0,30">
-											<TextBlock Text="Gender" Classes="LabelField"/>
-											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="23">
-												<RadioButton Content="Male" GroupName="EmployeeGender" Classes="FormRadio" IsChecked="{CompiledBinding IsMale}"/>
-												<RadioButton Content="Female" GroupName="EmployeeGender" Classes="FormRadio" IsChecked="{CompiledBinding IsFemale}"/>
+											<TextBlock Text="Gender" Classes="LabelField" />
+											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="15">
+												<CheckBox
+													Content="Male"
+													IsChecked="{CompiledBinding IsMale}"/>
+												<CheckBox
+													Content="Female"
+													IsChecked="{CompiledBinding IsFemale}"/>
 											</StackPanel>
 										</StackPanel>
 									</Grid>
 
-									<TextBlock Text="Walk in Plan" Classes="h4" Margin="0,-40"/>
+									<TextBlock Text="Walk in Plan" Classes="h4" Margin="0,-40" />
 									<Grid
 										RowDefinitions="Auto"
 										ColumnDefinitions="Auto Auto Auto">
@@ -215,21 +217,23 @@
 											<NumericUpDown
 												IsVisible="{CompiledBinding IsQuantityVisible, Mode=TwoWay}"
 												Value="{CompiledBinding SpecializedPackageQuantity, Mode=TwoWay}"
+												IsEnabled="{CompiledBinding IsQuantityEditable}"
+												IsReadOnly="True"
 												Width="130"
 												Minimum="1"
-												Maximum="100"
+												Maximum="1"
 												Margin="0,21"
 												shadui:ControlAssist.Label="Quantity"
 												FormatString="N0"
 												Watermark="0">
 												<NumericUpDown.InnerLeftContent>
-													<TextBlock Margin="8,0,-8,0" Text="×"/>
+													<TextBlock Margin="8,0,-8,0" Text="×" />
 												</NumericUpDown.InnerLeftContent>
 											</NumericUpDown>
 										</StackPanel>
 									</Grid>
 
-									<TextBlock Text="Payment Method" Classes="h4" Margin="0,40"/>
+									<TextBlock Text="Payment Method" Classes="h4" Margin="0,40" />
 									<Grid
 										RowDefinitions="Auto"
 										ColumnDefinitions="Auto Auto Auto">
@@ -247,7 +251,7 @@
 														Width="100"
 														Height="100"
 														Margin="15,0"
-														HorizontalAlignment="Center"/>
+														HorizontalAlignment="Center" />
 												</StackPanel>
 											</ToggleButton>
 										</StackPanel>
@@ -265,7 +269,7 @@
 														Width="100"
 														Height="100"
 														Margin="15,0"
-														HorizontalAlignment="Center"/>
+														HorizontalAlignment="Center" />
 												</StackPanel>
 											</ToggleButton>
 										</StackPanel>
@@ -283,7 +287,7 @@
 														Width="100"
 														Height="100"
 														Margin="15,0"
-														HorizontalAlignment="Center"/>
+														HorizontalAlignment="Center" />
 												</StackPanel>
 											</ToggleButton>
 										</StackPanel>
@@ -295,10 +299,10 @@
 										Padding="20,0,20,0"
 										Content="Cancel"
 										Classes="Outline"
-										Command="{CompiledBinding CancelCommand}" />
+										Command="{CompiledBinding}" />
 								</StackPanel>
 							</shadui:Card>
-							<shadui:Card Grid.Column="1" Margin="20,0" Padding="40,40">
+							<shadui:Card Grid.Column="1" Margin="20,0,0,0" Padding="40,40" HasShadow="True">
 								<StackPanel Spacing="0">
 									<StackPanel>
 										<!-- Header Receipt -->
@@ -310,12 +314,12 @@
 											<Svg
 												Path="avares://AHON_TRACK/Assets/CheckInOutView/philippine-peso-icon.svg"
 												Width="28"
-												Height="28"/>
+												Height="28" />
 											<shadui:CardTitle
 												Content="Payment Summary"
 												FontSize="19"
 												HorizontalAlignment="Left"
-												VerticalAlignment="Center"/>
+												VerticalAlignment="Center" />
 										</StackPanel>
 
 										<!-- Customer Details -->
@@ -327,90 +331,20 @@
 														Width="24"
 														Height="24"
 														HorizontalAlignment="Left"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 													<TextBlock
 														Classes="Muted"
 														Text="Customer Details"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 												</StackPanel>
 												<StackPanel Orientation="Vertical" Margin="40,-25,0,20">
 													<TextBlock
 														Text="{CompiledBinding CustomerFullName}"
-														Classes="h4"/>
-													<TextBlock
-														Text="ID: GM-2025-001234"
-														Classes="h5"/>
+														Classes="h4" />
 												</StackPanel>
 											</StackPanel>
 										</Grid>
-										<Separator Background="{StaticResource ForegroundColor}"/>
-
-										<!-- Walk in Plan -->
-										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPlanVisible}">
-											<!-- Left Column -->
-											<StackPanel Grid.Column="0">
-												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
-													<Svg
-														Path="avares://AHON_TRACK/Assets/CheckInOutView/shopping-cart-icon.svg"
-														Width="24"
-														Height="24"
-														HorizontalAlignment="Left"
-														VerticalAlignment="Center"/>
-													<TextBlock
-														Classes="Muted"
-														Text="Walk in Plan"
-														VerticalAlignment="Center"/>
-												</StackPanel>
-												<StackPanel Orientation="Vertical" Margin="40,-25,0,20">
-													<TextBlock
-														Text="{CompiledBinding SelectedWalkInType}"
-														Classes="h4"/>
-													<TextBlock
-														Text="1 Day × ₱150.00"
-														FontSize="16"
-														Classes="Muted"/>
-													<StackPanel Spacing="5" Margin="0,20,0,0">
-														<TextBlock
-															Text="Subtotal:"
-															Classes="h5"/>
-														<TextBlock
-															Text="Discount (0%):"
-															Classes="h5SuccessColor"/>
-														<TextBlock
-															Text="Walk in Total:"
-															Classes="h5"/>
-													</StackPanel>
-												</StackPanel>
-											</StackPanel>
-											<!-- Right Column -->
-											<StackPanel Grid.Column="1">
-												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
-													<Border
-														CornerRadius="5"
-														Padding="20,5,20,5"
-														Background="LightGray">
-														<TextBlock
-															Text="1 Day"
-															FontSize="14"
-															FontWeight="Bold"
-															HorizontalAlignment="Center"
-															Foreground="{StaticResource FontForeground}"/>
-													</Border>
-													<StackPanel Spacing="5" Margin="0,20,0,0">
-														<TextBlock
-															Text="₱150.00"
-															Classes="h5"/>
-														<TextBlock
-															Text="-₱0"
-															Classes="h5SuccessColor"/>
-														<TextBlock
-															Text="₱150.00"
-															Classes="h5"/>
-													</StackPanel>
-												</StackPanel>
-											</StackPanel>
-										</Grid>
-										<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPlanVisible}"/>
+										<Separator Background="{StaticResource ForegroundColor}" />
 
 										<!-- Walk in Plan -->
 										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPackageDetailsVisible}">
@@ -422,30 +356,30 @@
 														Width="24"
 														Height="24"
 														HorizontalAlignment="Left"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 													<TextBlock
 														Classes="Muted"
 														Text="Add-on Package"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 												</StackPanel>
 												<StackPanel Orientation="Vertical" Margin="40,-25,0,20">
 													<TextBlock
-														Text="Muay Thai Session"
-														Classes="h4"/>
+														Text="{CompiledBinding PackageName}"
+														Classes="h4" />
 													<TextBlock
 														Text="{CompiledBinding SessionQuantity}"
 														FontSize="16"
-														Classes="Muted"/>
+														Classes="Muted" />
 													<StackPanel Spacing="5" Margin="0,20,0,0">
 														<TextBlock
 															Text="Subtotal:"
-															Classes="h5"/>
+															Classes="h5" />
 														<TextBlock
 															Text="Discount (0%):"
-															Classes="h5SuccessColor"/>
+															Classes="h5SuccessColor" />
 														<TextBlock
 															Text="Package Total:"
-															Classes="h5"/>
+															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
 											</StackPanel>
@@ -454,31 +388,34 @@
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<Border
 														HorizontalAlignment="Right"
+														Width="160"
 														CornerRadius="5"
 														Padding="15,5,15,5"
 														Background="LightGray">
 														<TextBlock
 															Text="{CompiledBinding SessionQuantity}"
 															FontSize="14"
+															TextWrapping="WrapWithOverflow"
 															FontWeight="Bold"
 															HorizontalAlignment="Center"
-															Foreground="{StaticResource FontForeground}"/>
+															Foreground="{StaticResource FontForeground}" />
 													</Border>
 													<StackPanel Spacing="5" Margin="0,20,0,0">
 														<TextBlock
-															Text="₱1,500.00"
-															Classes="h5"/>
+															Text="{CompiledBinding PackageSubtotal}"
+															Classes="h5" />
 														<TextBlock
-															Text="-₱0"
-															Classes="h5SuccessColor"/>
+															Text="{CompiledBinding PackageDiscount}"
+															Classes="h5SuccessColor" />
 														<TextBlock
-															Text="₱1,500.00"
-															Classes="h5"/>
+															Text="{CompiledBinding PackageTotal}"
+															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
 											</StackPanel>
 										</Grid>
-										<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPackageDetailsVisible}"/>
+										<Separator Background="{StaticResource ForegroundColor}"
+										           IsVisible="{CompiledBinding IsPackageDetailsVisible}" />
 										<Grid RowDefinitions="Auto" ColumnDefinitions="Auto">
 											<StackPanel Spacing="0">
 												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
@@ -487,11 +424,11 @@
 														Width="24"
 														Height="24"
 														HorizontalAlignment="Left"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 													<TextBlock
 														Classes="Muted"
 														Text="Payment Method"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 												</StackPanel>
 												<StackPanel Orientation="Horizontal" Margin="40,-25,0,20" Spacing="10">
 													<Border
@@ -506,7 +443,7 @@
 															Text="GCash"
 															FontSize="16"
 															FontWeight="SemiBold"
-															Foreground="{DynamicResource InfoColor}"/>
+															Foreground="{DynamicResource InfoColor}" />
 													</Border>
 													<Border
 														IsVisible="{CompiledBinding IsMayaVisible}"
@@ -520,7 +457,7 @@
 															Text="Maya"
 															FontSize="16"
 															FontWeight="SemiBold"
-															Foreground="{DynamicResource SuccessColor}"/>
+															Foreground="{DynamicResource SuccessColor}" />
 													</Border>
 													<Border
 														IsVisible="{CompiledBinding IsCashVisible}"
@@ -534,13 +471,13 @@
 															Text="Cash"
 															FontSize="16"
 															FontWeight="SemiBold"
-															Foreground="{DynamicResource WarningColor}"/>
+															Foreground="{DynamicResource WarningColor}" />
 													</Border>
 												</StackPanel>
 											</StackPanel>
 										</Grid>
-										<Separator Background="{StaticResource ForegroundColor}"/>
-										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPaymentPossible}">
+										<Separator Background="{StaticResource ForegroundColor}" />
+										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 2*" IsVisible="{CompiledBinding IsPaymentPossible}">
 											<!-- Left Column -->
 											<StackPanel Grid.Column="0" Spacing="0">
 												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
@@ -549,47 +486,41 @@
 														Width="24"
 														Height="24"
 														HorizontalAlignment="Left"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 													<TextBlock
 														Classes="Muted"
 														Text="Transaction Details"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 												</StackPanel>
 												<StackPanel Orientation="Vertical" Margin="40,-25,0,20" Spacing="10">
 													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 														<TextBlock
-															Text="Transaction ID:"
-															Classes="h5"/>
-														<TextBlock
 															Text="Date:"
-															Classes="h5"/>
+															Classes="h5" />
 														<TextBlock
 															Text="Time:"
-															Classes="h5"/>
+															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
 											</StackPanel>
 
 											<!-- Right Column -->
-											<StackPanel Grid.Column="1">
-												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
+											<StackPanel Grid.Column="1" HorizontalAlignment="Right">
+												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="TX-2025-0109"
-															TextWrapping="NoWrap"
-															FontWeight="SemiBold"
-															Classes="h5"/>
+															Text="{CompiledBinding CurrentDate}"
+															TextAlignment="Right"
+															Classes="h5" />
 														<TextBlock
-															Text="July 28, 2025"
-															Classes="h5"/>
-														<TextBlock
-															Text="6:45 PM"
-															Classes="h5"/>
+															TextAlignment="Right"
+															Text="{CompiledBinding CurrentTime}"
+															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
 											</StackPanel>
 										</Grid>
-										<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPaymentPossible}"/>
+										<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPaymentPossible}" />
 										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPaymentPossible}">
 											<!-- Left Column -->
 											<StackPanel Grid.Column="0" Spacing="0">
@@ -598,19 +529,16 @@
 														Classes="Muted"
 														FontSize="19"
 														Text="Purchase Summary"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 												</StackPanel>
 												<StackPanel Orientation="Vertical" Margin="0,-25,0,20" Spacing="10">
 													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 														<TextBlock
-															Text="Walk in (1 Day):"
-															Classes="h5"/>
-														<TextBlock
 															Text="Specialized Package:"
-															Classes="h5"/>
+															Classes="h5" />
 														<TextBlock
 															Text="Subtotal:"
-															Classes="h5"/>
+															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
 											</StackPanel>
@@ -620,20 +548,19 @@
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="₱150.00"
-															Classes="h5"/>
+															Text="{CompiledBinding PurchaseSummaryPackage}"
+															Classes="h5" />
 														<TextBlock
-															Text="₱1,500.00"
-															Classes="h5"/>
-														<TextBlock
-															Text="₱1,650.00"
-															Classes="h5"/>
+															Text="{CompiledBinding PurchaseSummarySubtotal}"
+															TextAlignment="Right"
+															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
 											</StackPanel>
 										</Grid>
-										<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPaymentPossible}"/>
-										<Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="4* 1.8*" IsVisible="{CompiledBinding IsPaymentPossible}">
+										<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPaymentPossible}" />
+										<Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="4* 1.8*"
+										      IsVisible="{CompiledBinding IsPaymentPossible}">
 											<StackPanel Grid.Column="0" Spacing="0">
 												<StackPanel Orientation="Horizontal" Margin="0,20" Spacing="15">
 													<TextBlock
@@ -641,16 +568,16 @@
 														FontWeight="Bold"
 														FontSize="25"
 														Text="Total Amount:"
-														VerticalAlignment="Center"/>
+														VerticalAlignment="Center" />
 												</StackPanel>
 											</StackPanel>
 											<StackPanel Grid.Row="0" Grid.Column="1">
 												<StackPanel Orientation="Vertical" Margin="0,15,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="₱1,650.00"
+															Text="{CompiledBinding TotalAmount}"
 															Foreground="{DynamicResource SuccessColor}"
-															Classes="h2"/>
+															Classes="h2" />
 													</StackPanel>
 												</StackPanel>
 											</StackPanel>
@@ -667,27 +594,22 @@
 																Width="26"
 																Height="26"
 																HorizontalAlignment="Left"
-																VerticalAlignment="Center"/>
+																VerticalAlignment="Center" />
 															<TextBlock
 																Text="Walk in Validity"
 																FontSize="20"
 																FontWeight="SemiBold"
 																HorizontalAlignment="Left"
 																VerticalAlignment="Center"
-																Foreground="{DynamicResource InfoColor}"/>
+																Foreground="{DynamicResource InfoColor}" />
 														</StackPanel>
 														<StackPanel>
 															<TextBlock
-																Text="Valid from: July 28, 2025"
+																Text="{CompiledBinding ValidFromDate, StringFormat='Valid from: {0}'}"
 																Foreground="{DynamicResource InfoColor}"
 																FontSize="18"
 																FontWeight="Medium"
-																Margin="0,20"/>
-															<TextBlock
-																Text="Valid until: July 28, 2025"
-																Foreground="{DynamicResource InfoColor}"
-																FontSize="18"
-																FontWeight="Medium"/>
+																Margin="0,20" />
 														</StackPanel>
 													</StackPanel>
 												</shadui:Card>
@@ -701,26 +623,26 @@
 															Text="Important Notes:"
 															Classes="Muted"
 															FontSize="20"
-															FontWeight="SemiBold"/>
+															FontWeight="SemiBold" />
 														<TextBlock
 															Text="• Walk in is not transferable"
 															Classes="Muted"
 															FontSize="18"
 															FontWeight="Medium"
-															Margin="30,10"/>
+															Margin="30,10" />
 														<TextBlock
 															Text="• No refunds for used/unused sessions"
 															Classes="Muted"
 															FontSize="18"
 															FontWeight="Medium"
-															Margin="30,0"/>
+															Margin="30,0" />
 													</StackPanel>
 												</shadui:Card>
 											</StackPanel>
 										</Grid>
 									</StackPanel>
 									<Button
-										Content="Pay ₱1,650.00"
+										Content="{CompiledBinding GrandTotal}"
 										Classes="Primary"
 										FontSize="20"
 										Height="50"
@@ -728,14 +650,585 @@
 										Margin="0,20,0,0"
 										Padding="30,0"
 										IsEnabled="{CompiledBinding IsPaymentPossible}"
-										Command="{CompiledBinding PaymentCommand}"/>
+										Command="{CompiledBinding PaymentCommand}" />
 								</StackPanel>
 							</shadui:Card>
 						</Grid>
-				<!--
+					</shadui:BreakpointView>
+					<shadui:BreakpointView Breakpoint="XlAndDown">
+						<Grid Margin="100,30" RowDefinitions="* *" RowSpacing="30">
+							<shadui:Card Grid.Row="0">
+								<StackPanel Spacing="0">
+									<!-- Header Section -->
+									<TextBlock
+										Text="Walk In Information"
+										Classes="h4" />
+									<TextBlock
+										Text="Please fill out the form to log this walk in"
+										Classes="Muted" />
+									<Grid
+										Margin="0,30"
+										RowDefinitions="Auto Auto"
+										ColumnDefinitions="Auto Auto Auto">
+
+										<!-- First Name -->
+										<StackPanel Grid.Row="0" Grid.Column="0">
+											<TextBox
+												Width="200"
+												FontSize="15"
+												HorizontalAlignment="Left"
+												Classes="Clearable"
+												UseFloatingWatermark="True"
+												Watermark="First Name"
+												Text="{CompiledBinding WalkInFirstName, Mode=TwoWay}" />
+										</StackPanel>
+
+										<!-- Middle Initial -->
+										<StackPanel Grid.Row="0" Grid.Column="1">
+											<ComboBox
+												shadui:ControlAssist.Label="Middle Initial"
+												shadui:ControlAssist.Height="35"
+												Width="100"
+												HorizontalAlignment="Left"
+												Margin="30,0"
+												PlaceholderText="-"
+												ItemsSource="{CompiledBinding MiddleInitialItems}"
+												SelectedItem="{CompiledBinding SelectedMiddleInitialItem, Mode=TwoWay}">
+											</ComboBox>
+										</StackPanel>
+
+										<!-- Last Name -->
+										<StackPanel Grid.Row="0" Grid.Column="2">
+											<TextBox
+												Width="200"
+												FontSize="15"
+												HorizontalAlignment="Left"
+												Margin="-30,0"
+												Classes="Clearable"
+												UseFloatingWatermark="True"
+												Watermark="Last Name"
+												Text="{CompiledBinding WalkInLastName, Mode=TwoWay}" />
+										</StackPanel>
+
+										<!-- Row 2: Contact and Personal Details -->
+										<StackPanel Grid.Row="1" Grid.Column="0">
+											<TextBox
+												Text="{CompiledBinding WalkInContactNumber, Mode=TwoWay}"
+												Width="200"
+												Margin="0,30"
+												FontSize="15"
+												Classes="Clearable"
+												UseFloatingWatermark="True"
+												Watermark="Contact Number"
+												HorizontalAlignment="Left" />
+										</StackPanel>
+
+										<!-- Age Field -->
+										<StackPanel Grid.Row="1" Grid.Column="1">
+											<NumericUpDown
+												Value="{CompiledBinding WalkInAge, Mode=TwoWay}"
+												shadui:ControlAssist.Label="Age"
+												FormatString="N0"
+												ParsingNumberStyle="Integer"
+												Watermark="Age"
+												Width="140"
+												Minimum="1"
+												Maximum="100"
+												Margin="30,32"
+												HorizontalAlignment="Left" />
+										</StackPanel>
+
+										<!-- Gender Field -->
+										<StackPanel Grid.Row="1" Grid.Column="2" Margin="0,30">
+											<TextBlock Text="Gender" Classes="LabelField" />
+											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="15">
+												<CheckBox
+													Content="Male"
+													IsChecked="{CompiledBinding IsMale}"/>
+												<CheckBox
+													Content="Female"
+													IsChecked="{CompiledBinding IsFemale}"/>
+											</StackPanel>
+										</StackPanel>
+									</Grid>
+
+									<TextBlock Text="Walk in Plan" Classes="h4" Margin="0,-40" />
+									<Grid
+										RowDefinitions="Auto"
+										ColumnDefinitions="Auto Auto Auto">
+
+										<!-- Walk in Type -->
+										<StackPanel Grid.Row="0" Grid.Column="0">
+											<ComboBox
+												shadui:ControlAssist.Label="Walk in Type"
+												shadui:ControlAssist.Height="35"
+												Width="210"
+												HorizontalAlignment="Left"
+												Margin="0,20"
+												PlaceholderText="-"
+												ItemsSource="{CompiledBinding WalkInTypeItems}"
+												SelectedItem="{CompiledBinding SelectedWalkInTypeItem, Mode=TwoWay}">
+											</ComboBox>
+										</StackPanel>
+
+										<!-- Specialized Package -->
+										<StackPanel Grid.Row="0" Grid.Column="1">
+											<ComboBox
+												shadui:ControlAssist.Label="Walk in Package"
+												shadui:ControlAssist.Height="35"
+												Width="210"
+												HorizontalAlignment="Left"
+												Margin="30,20"
+												PlaceholderText="-"
+												ItemsSource="{CompiledBinding SpecializedPackageItems}"
+												SelectedItem="{CompiledBinding SelectedSpecializedPackageItem, Mode=TwoWay}">
+											</ComboBox>
+										</StackPanel>
+
+										<!-- Quantity -->
+										<StackPanel Grid.Row="0" Grid.Column="2">
+											<NumericUpDown
+												IsVisible="{CompiledBinding IsQuantityVisible, Mode=TwoWay}"
+												Value="{CompiledBinding SpecializedPackageQuantity, Mode=TwoWay}"
+												IsEnabled="{CompiledBinding IsQuantityEditable}"
+												Width="130"
+												Minimum="1"
+												Maximum="1"
+												IsReadOnly="True"
+												Margin="0,21"
+												shadui:ControlAssist.Label="Quantity"
+												FormatString="N0"
+												Watermark="0">
+												<NumericUpDown.InnerLeftContent>
+													<TextBlock Margin="8,0,-8,0" Text="×" />
+												</NumericUpDown.InnerLeftContent>
+											</NumericUpDown>
+										</StackPanel>
+									</Grid>
+
+									<TextBlock Text="Payment Method" Classes="h4" Margin="0,40" />
+									<Grid
+										RowDefinitions="Auto"
+										ColumnDefinitions="Auto Auto Auto">
+
+										<!-- Cash -->
+										<StackPanel Grid.Row="0" Grid.Column="0">
+											<ToggleButton
+												HorizontalAlignment="Center"
+												VerticalAlignment="Center"
+												Classes="Outline"
+												IsChecked="{CompiledBinding IsCashSelected}">
+												<StackPanel Orientation="Vertical">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/cash-logo.svg"
+														Width="100"
+														Height="100"
+														Margin="15,0"
+														HorizontalAlignment="Center" />
+												</StackPanel>
+											</ToggleButton>
+										</StackPanel>
+
+										<!-- GCash -->
+										<StackPanel Grid.Row="0" Grid.Column="1" Margin="20,0">
+											<ToggleButton
+												HorizontalAlignment="Center"
+												VerticalAlignment="Center"
+												Classes="Outline"
+												IsChecked="{CompiledBinding IsGCashSelected}">
+												<StackPanel Orientation="Vertical">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/GCash_logo.svg"
+														Width="100"
+														Height="100"
+														Margin="15,0"
+														HorizontalAlignment="Center" />
+												</StackPanel>
+											</ToggleButton>
+										</StackPanel>
+
+										<!-- Maya -->
+										<StackPanel Grid.Row="0" Grid.Column="2">
+											<ToggleButton
+												HorizontalAlignment="Center"
+												VerticalAlignment="Center"
+												Classes="Outline"
+												IsChecked="{CompiledBinding IsMayaSelected}">
+												<StackPanel Orientation="Vertical">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/Maya_logo.svg"
+														Width="100"
+														Height="100"
+														Margin="15,0"
+														HorizontalAlignment="Center" />
+												</StackPanel>
+											</ToggleButton>
+										</StackPanel>
+									</Grid>
+									<Button
+										HorizontalAlignment="Right"
+										VerticalAlignment="Center"
+										Margin="0,10"
+										Padding="20,0,20,0"
+										Content="Cancel"
+										Classes="Outline"
+										Command="{CompiledBinding}" />
+								</StackPanel>
+							</shadui:Card>
+							<shadui:Card Grid.Row="1" Padding="40,40" HasShadow="True">
+								<StackPanel Spacing="0">
+									<StackPanel>
+										<!-- Header Receipt -->
+										<StackPanel
+											HorizontalAlignment="Left"
+											VerticalAlignment="Center"
+											Orientation="Horizontal"
+											Spacing="15">
+											<Svg
+												Path="avares://AHON_TRACK/Assets/CheckInOutView/philippine-peso-icon.svg"
+												Width="28"
+												Height="28" />
+											<shadui:CardTitle
+												Content="Payment Summary"
+												FontSize="19"
+												HorizontalAlignment="Left"
+												VerticalAlignment="Center" />
+										</StackPanel>
+
+										<!-- Customer Details -->
+										<Grid RowDefinitions="Auto" ColumnDefinitions="Auto">
+											<StackPanel>
+												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/user-icon.svg"
+														Width="24"
+														Height="24"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+													<TextBlock
+														Classes="Muted"
+														Text="Customer Details"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<StackPanel Orientation="Vertical" Margin="40,-25,0,20">
+													<TextBlock
+														Text="{CompiledBinding CustomerFullName}"
+														Classes="h4" />
+												</StackPanel>
+											</StackPanel>
+										</Grid>
+										<Separator Background="{StaticResource ForegroundColor}" />
+
+										<!-- Walk in Plan -->
+										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPackageDetailsVisible}">
+											<!-- Left Column -->
+											<StackPanel Grid.Column="0">
+												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/package-icon.svg"
+														Width="24"
+														Height="24"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+													<TextBlock
+														Classes="Muted"
+														Text="Add-on Package"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<StackPanel Orientation="Vertical" Margin="40,-25,0,20">
+													<TextBlock
+														Text="{CompiledBinding PackageName}"
+														Classes="h4" />
+													<TextBlock
+														Text="{CompiledBinding SessionQuantity}"
+														FontSize="16"
+														Classes="Muted" />
+													<StackPanel Spacing="5" Margin="0,20,0,0">
+														<TextBlock
+															Text="Subtotal:"
+															Classes="h5" />
+														<TextBlock
+															Text="Discount (0%):"
+															Classes="h5SuccessColor" />
+														<TextBlock
+															Text="Package Total:"
+															Classes="h5" />
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+											<!-- Right Column -->
+											<StackPanel Grid.Column="1">
+												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
+													<Border
+														HorizontalAlignment="Right"
+														Width="160"
+														CornerRadius="5"
+														Padding="15,5,15,5"
+														Background="LightGray">
+														<TextBlock
+															Text="{CompiledBinding SessionQuantity}"
+															FontSize="14"
+															TextWrapping="WrapWithOverflow"
+															FontWeight="Bold"
+															HorizontalAlignment="Center"
+															Foreground="{StaticResource FontForeground}" />
+													</Border>
+													<StackPanel Spacing="5" Margin="0,20,0,0">
+														<TextBlock
+															Text="{CompiledBinding PackageSubtotal}"
+															Classes="h5" />
+														<TextBlock
+															Text="{CompiledBinding PackageDiscount}"
+															Classes="h5SuccessColor" />
+														<TextBlock
+															Text="{CompiledBinding PackageTotal}"
+															Classes="h5" />
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+										</Grid>
+										<Separator 
+											Background="{StaticResource ForegroundColor}"
+											IsVisible="{CompiledBinding IsPackageDetailsVisible}" />
+										<Grid RowDefinitions="Auto" ColumnDefinitions="Auto">
+											<StackPanel Spacing="0">
+												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/payment-icon.svg"
+														Width="24"
+														Height="24"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+													<TextBlock
+														Classes="Muted"
+														Text="Payment Method"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<StackPanel Orientation="Horizontal" Margin="40,-25,0,20" Spacing="10">
+													<Border
+														IsVisible="{CompiledBinding IsGCashVisible}"
+														Background="{DynamicResource InfoColor10}"
+														Padding="10,5,10,5"
+														BorderThickness="1"
+														BorderBrush="{DynamicResource InfoColor60}"
+														CornerRadius="5"
+														HorizontalAlignment="Left">
+														<TextBlock
+															Text="GCash"
+															FontSize="16"
+															FontWeight="SemiBold"
+															Foreground="{DynamicResource InfoColor}" />
+													</Border>
+													<Border
+														IsVisible="{CompiledBinding IsMayaVisible}"
+														Background="{DynamicResource SuccessColor10}"
+														Padding="10,5,10,5"
+														BorderThickness="1"
+														BorderBrush="{DynamicResource SuccessColor60}"
+														CornerRadius="5"
+														HorizontalAlignment="Left">
+														<TextBlock
+															Text="Maya"
+															FontSize="16"
+															FontWeight="SemiBold"
+															Foreground="{DynamicResource SuccessColor}" />
+													</Border>
+													<Border
+														IsVisible="{CompiledBinding IsCashVisible}"
+														Background="{DynamicResource WarningColor10}"
+														Padding="10,5,10,5"
+														BorderThickness="1"
+														BorderBrush="{DynamicResource WarningColor60}"
+														CornerRadius="5"
+														HorizontalAlignment="Left">
+														<TextBlock
+															Text="Cash"
+															FontSize="16"
+															FontWeight="SemiBold"
+															Foreground="{DynamicResource WarningColor}" />
+													</Border>
+												</StackPanel>
+											</StackPanel>
+										</Grid>
+										<Separator Background="{StaticResource ForegroundColor}" />
+										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 2*" IsVisible="{CompiledBinding IsPaymentPossible}">
+											<!-- Left Column -->
+											<StackPanel Grid.Column="0" Spacing="0">
+												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
+													<Svg
+														Path="avares://AHON_TRACK/Assets/CheckInOutView/calendar-icon.svg"
+														Width="24"
+														Height="24"
+														HorizontalAlignment="Left"
+														VerticalAlignment="Center" />
+													<TextBlock
+														Classes="Muted"
+														Text="Transaction Details"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<StackPanel Orientation="Vertical" Margin="40,-25,0,20" Spacing="10">
+													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
+														<TextBlock
+															Text="Date:"
+															Classes="h5" />
+														<TextBlock
+															Text="Time:"
+															Classes="h5" />
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+
+											<!-- Right Column -->
+											<StackPanel Grid.Column="1" HorizontalAlignment="Right">
+												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
+													<StackPanel Spacing="5" Margin="0,4,0,0">
+														<TextBlock
+															Text="{CompiledBinding CurrentDate}"
+															TextAlignment="Right"
+															Classes="h5" />
+														<TextBlock
+															TextAlignment="Right"
+															Text="{CompiledBinding CurrentTime}"
+															Classes="h5" />
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+										</Grid>
+										<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPaymentPossible}" />
+										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 1.2*" IsVisible="{CompiledBinding IsPaymentPossible}">
+											<!-- Left Column -->
+											<StackPanel Grid.Column="0" Spacing="0">
+												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
+													<TextBlock
+														Classes="Muted"
+														FontSize="19"
+														Text="Purchase Summary"
+														VerticalAlignment="Center" />
+												</StackPanel>
+												<StackPanel Orientation="Vertical" Margin="0,-25,0,20" Spacing="10">
+													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
+														<TextBlock
+															Text="Specialized Package:"
+															Classes="h5" />
+														<TextBlock
+															Text="Subtotal:"
+															Classes="h5" />
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+
+											<!-- Right Column -->
+											<StackPanel Grid.Column="1">
+												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
+													<StackPanel Spacing="5" Margin="0,4,0,0">
+														<TextBlock
+															Text="{CompiledBinding PurchaseSummaryPackage}"
+															Classes="h5" />
+														<TextBlock
+															Text="{CompiledBinding PurchaseSummarySubtotal}"
+															Classes="h5" />
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+										</Grid>
+										<Separator Background="{StaticResource ForegroundColor}" IsVisible="{CompiledBinding IsPaymentPossible}" />
+										<Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="4* 1.8*"
+										      IsVisible="{CompiledBinding IsPaymentPossible}">
+											<StackPanel Grid.Column="0" Spacing="0">
+												<StackPanel Orientation="Horizontal" Margin="0,20" Spacing="15">
+													<TextBlock
+														Classes="h2"
+														FontWeight="Bold"
+														FontSize="25"
+														Text="Total Amount:"
+														VerticalAlignment="Center" />
+												</StackPanel>
+											</StackPanel>
+											<StackPanel Grid.Row="0" Grid.Column="1">
+												<StackPanel Orientation="Vertical" Margin="0,15,0,0" Spacing="15" HorizontalAlignment="Right">
+													<StackPanel Spacing="5" Margin="0,4,0,0">
+														<TextBlock
+															Text="{CompiledBinding TotalAmount}"
+															Foreground="{DynamicResource SuccessColor}"
+															Classes="h2" />
+													</StackPanel>
+												</StackPanel>
+											</StackPanel>
+										</Grid>
+										<Grid RowDefinitions="Auto Auto" IsVisible="{CompiledBinding IsPaymentPossible}">
+											<StackPanel Grid.Row="0" Margin="0,10">
+												<shadui:Card
+													Background="{DynamicResource InfoColor10}"
+													BorderThickness="0">
+													<StackPanel>
+														<StackPanel Orientation="Horizontal" Spacing="15">
+															<Svg
+																Path="avares://AHON_TRACK/Assets/CheckInOutView/clock-icon.svg"
+																Width="26"
+																Height="26"
+																HorizontalAlignment="Left"
+																VerticalAlignment="Center" />
+															<TextBlock
+																Text="Walk in Validity"
+																FontSize="20"
+																FontWeight="SemiBold"
+																HorizontalAlignment="Left"
+																VerticalAlignment="Center"
+																Foreground="{DynamicResource InfoColor}" />
+														</StackPanel>
+														<StackPanel>
+															<TextBlock
+																Text="{CompiledBinding ValidFromDate, StringFormat='Valid from: {0}'}"
+																Foreground="{DynamicResource InfoColor}"
+																FontSize="18"
+																FontWeight="Medium"
+																Margin="0,20" />
+														</StackPanel>
+													</StackPanel>
+												</shadui:Card>
+											</StackPanel>
+											<StackPanel Grid.Row="1">
+												<shadui:Card
+													Background="{DynamicResource PrimaryColor10}"
+													BorderThickness="0">
+													<StackPanel>
+														<TextBlock
+															Text="Important Notes:"
+															Classes="Muted"
+															FontSize="20"
+															FontWeight="SemiBold" />
+														<TextBlock
+															Text="• Walk in is not transferable"
+															Classes="Muted"
+															FontSize="18"
+															FontWeight="Medium"
+															Margin="30,10" />
+														<TextBlock
+															Text="• No refunds for used/unused sessions"
+															Classes="Muted"
+															FontSize="18"
+															FontWeight="Medium"
+															Margin="30,0" />
+													</StackPanel>
+												</shadui:Card>
+											</StackPanel>
+										</Grid>
+									</StackPanel>
+									<Button
+										Content="{CompiledBinding GrandTotal}"
+										Classes="Primary"
+										FontSize="20"
+										Height="50"
+										HorizontalAlignment="Right"
+										Margin="0,20,0,0"
+										Padding="30,0"
+										IsEnabled="{CompiledBinding IsPaymentPossible}"
+										Command="{CompiledBinding PaymentCommand}" />
+								</StackPanel>
+							</shadui:Card>
+						</Grid>
 					</shadui:BreakpointView>
 				</shadui:BreakpointViewPort>
-				-->
 			</StackPanel>
 		</ScrollViewer>
 	</DockPanel>

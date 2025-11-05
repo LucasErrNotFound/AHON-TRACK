@@ -8,7 +8,7 @@ public partial class AddEditProductView : UserControl
     public AddEditProductView()
     {
         InitializeComponent();
-        
+
         Loaded += (s, e) =>
         {
             if (DataContext is AddEditProductViewModel vm)

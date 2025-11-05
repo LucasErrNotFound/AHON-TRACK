@@ -189,6 +189,7 @@
                             HorizontalAlignment="Left"
                             shadui:ControlAssist.Label="Discount Type"
                             ItemsSource="{CompiledBinding DiscountTypeItems}"
+                            IsEnabled="False"
                             SelectedItem="{CompiledBinding SelectedDiscountTypeItem, Mode=TwoWay}" />
                     </StackPanel>
                     <StackPanel Grid.Row="0" Grid.Column="1">
@@ -197,6 +198,7 @@
                             shadui:ControlAssist.Label="Discount Value"
                             Classes="Clearable"
                             FormatString="{CompiledBinding DiscountFormat}"
+                            Minimum="0"
                             ShowButtonSpinner="False"
                             Watermark="0"
                             VerticalAlignment="Center"
@@ -227,7 +229,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="1">
                         <CalendarDatePicker
-                            shadui:ControlAssist.Label="Valid Until (optional)"
+                            shadui:ControlAssist.Label="Valid Until"
                             shadui:ControlAssist.ReadOnly="True"
                             HorizontalAlignment="Right"
                             Width="200"

@@ -16,36 +16,46 @@ using HotAvalonia;
 using QuestPDF.Companion;
 using QuestPDF.Fluent;
 using ShadUI;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.ViewModels;
 
 [Page("item-stock")]
 public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
-    [ObservableProperty] 
-    private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements"];
-
-    [ObservableProperty] 
-    private string _selectedProductFilterItem = "All";
+    [ObservableProperty]
+    private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements", "Apparel"];
     
+    [ObservableProperty]
+    private string[] _statusFilterItems = ["All", "In Stock", "Out of Stock", "Expired"];
+
+    [ObservableProperty]
+    private string _selectedStatusFilterItem = "All";
+
+    [ObservableProperty]
+    private string _selectedProductFilterItem = "All";
+
     [ObservableProperty]
     private ObservableCollection<ProductStock> _productItems = [];
-    
+
     [ObservableProperty]
     private List<ProductStock> _originalProductData = [];
-    
+
     [ObservableProperty]
     private List<ProductStock> _currentFilteredProductData = [];
-    
+
     [ObservableProperty]
     private bool _isInitialized;
-    
+
     [ObservableProperty]
     private string _searchStringResult = string.Empty;
-    
+
     [ObservableProperty]
     private bool _isSearchingProduct;
-    
+
     [ObservableProperty]
     private bool _selectAll;
 
@@ -54,25 +64,35 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
     [ObservableProperty]
     private int _totalCount;
-    
+
     [ObservableProperty]
     private ProductStock? _selectedProduct;
-    
+
+    [ObservableProperty]
+    private bool _isLoading;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly IProductService _productService;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
+    private bool _disposed = false;
 
-    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
-        SettingsService settingsService)
+    public ProductStockViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
+        SettingsService settingsService, IProductService productService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _settingsService = settingsService;
+        _productService = productService;
         
-        LoadProductData();
+        SelectedProductFilterItem = "All";
+        SelectedStatusFilterItem = "All";
+        
+        SubscribeToEvent();
+        _ = LoadProductDataAsync(showAlerts: true);
         UpdateProductCounts();
     }
 
@@ -82,8 +102,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _settingsService = new SettingsService();
+        _productService = null!;
         
-        LoadProductData();
+        SelectedProductFilterItem = "All";
+        SelectedStatusFilterItem = "All";
+
+        SubscribeToEvent();
         UpdateProductCounts();
     }
 
@@ -91,19 +115,123 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     public async Task Initialize()
     {
         if (IsInitialized) return;
-        await LoadSettingsAsync();
+        SubscribeToEvent();
         
-        LoadProductData();
+        SelectedProductFilterItem = "All";
+        SelectedStatusFilterItem = "All";
+        
+        await LoadSettingsAsync();
+        await LoadProductDataAsync();
+
         UpdateProductCounts();
         IsInitialized = true;
+    }
+
+    private void SubscribeToEvent()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        eventService.ProductAdded -= OnProductDataChanged;  // Unsubscribe first to prevent double subscription
+        eventService.ProductUpdated -= OnProductDataChanged;
+        eventService.ProductDeleted -= OnProductDataChanged;
+        eventService.ProductPurchased -= OnProductPurchased;
+
+        eventService.ProductAdded += OnProductDataChanged;
+        eventService.ProductUpdated += OnProductDataChanged;
+        eventService.ProductDeleted += OnProductDataChanged;
+        eventService.ProductPurchased += OnProductPurchased;
+    }
+
+    private async void OnProductDataChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            await LoadProductDataAsync(showAlerts: false);
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+    }
+
+    private async void OnProductPurchased(object? sender, EventArgs e)
+    {
+        try
+        {
+            await LoadProductDataAsync(showAlerts: true);
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+    }
+
+    private async Task LoadProductDataAsync(bool showAlerts = false)
+    {
+        if (_productService == null)
+        {
+            LoadProductData(); // Fallback to sample data
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var result = await _productService.GetAllProductsAsync();
+
+            if (!result.Success || result.Products == null)
+            {
+                _toastManager?.CreateToast("Error Loading Products")
+                    .WithContent(result.Message)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            var productStocks = result.Products.Select(MapToProductStock).ToList();
+
+            OriginalProductData = productStocks;
+            CurrentFilteredProductData = [.. productStocks];
+
+            ProductItems.Clear();
+            foreach (var product in productStocks)
+            {
+                product.PropertyChanged += OnProductPropertyChanged;
+                ProductItems.Add(product);
+            }
+            TotalCount = ProductItems.Count;
+
+            if (ProductItems.Count > 0)
+            {
+                SelectedProduct = ProductItems[0];
+            }
+            ApplyProductFilter();
+            UpdateProductCounts();
+
+            if (showAlerts)
+            {
+                await _productService.ShowProductAlertsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Error Loading Products")
+                .WithContent($"Failed to load products: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private void LoadProductData()
     {
         var sampleProduct = GetSampleProductdata();
         OriginalProductData = sampleProduct;
-        CurrentFilteredProductData = [..sampleProduct];
-        
+        CurrentFilteredProductData = [.. sampleProduct];
+
         ProductItems.Clear();
         foreach (var product in sampleProduct)
         {
@@ -129,12 +257,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1001,
                 Name = "Cobra Energy Drink",
-                Sku = "1AU3OTE0923U",
+                BatchCode = "1AU3OTE0923U",
                 Description = "Yellow Blast Flavor",
                 Category = "Drinks",
                 CurrentStock = 17,
                 Price = 35,
-                DiscountInPercentage = true,
                 DiscountedPrice = 5,
                 Supplier = "San Miguel",
                 Expiry = today.AddYears(6).AddDays(32),
@@ -145,53 +272,20 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             {
                 ID = 1002,
                 Name = "Gold Standard Whey Protein",
-                Sku = "1AU3OTE0923U",
+                BatchCode = "1AU3OTE0923U",
                 Description = "5lbs Premium Whey Protein",
                 Category = "Supplements",
                 CurrentStock = 17,
-                DiscountInPercentage = true,
                 DiscountedPrice = 50,
                 Price = 2500,
                 Supplier = "Optimum",
                 Expiry = today.AddYears(6).AddDays(32),
                 Status = "In Stock",
                 Poster = "avares://AHON_TRACK/Assets/ProductStockView/protein-powder-display.png"
-            },
-            new ProductStock
-            {
-                ID = 1003,
-                Name = "Creatine XPLODE Powder",
-                Sku = "1AU3OTE0923U",
-                Description = "1.1lbs Creatine Monohydrate",
-                Category = "Supplements",
-                CurrentStock = 0,
-                DiscountInPercentage = false,
-                DiscountedPrice = 550,
-                Price = 1050,
-                Supplier = "Optimum",
-                Expiry = today.AddYears(6).AddDays(32),
-                Status = "Out of Stock",
-                Poster = "avares://AHON_TRACK/Assets/ProductStockView/creatine-display.png"
-            },
-            new ProductStock
-            {
-                ID = 1004,
-                Name = "Insane Labz PSYCHOTIC",
-                Sku = "1AU3OTE0923U",
-                Description = "7.6oz PreWorkout Peaches & Cream",
-                Category = "Supplements",
-                CurrentStock = 3,
-                DiscountInPercentage = false,
-                DiscountedPrice = null,
-                Price = 900,
-                Supplier = "Optimum",
-                Expiry = today.AddYears(6).AddDays(32),
-                Status = "In Stock",
-                Poster = "avares://AHON_TRACK/Assets/ProductStockView/preworkout-display.png"
             }
         ];
     }
-    
+
     [RelayCommand]
     private void ShowAddProductView()
     {
@@ -211,77 +305,88 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             ["SelectedProduct"] = SelectedProduct
         });
     }
-    
+
     [RelayCommand]
     private void ShowSingleItemDeletionDialog(ProductStock? product)
     {
         if (product == null) return;
-        
-        _dialogManager.CreateDialog("" + 
-            "Are you absolutely sure?", $"This action cannot be undone. This will permanently delete {product.Name} and remove the data from your database.")
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            $"This action cannot be undone. This will permanently delete {product.Name} and remove the data from your database.")
             .WithPrimaryButton("Continue", () => OnSubmitDeleteSingleItem(product), DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
     }
-    
-    [RelayCommand]
-    private void ShowMultipleItemDeletionDialog(ProductStock? product)
-    {
-        if (product == null) return;
 
-        _dialogManager.CreateDialog("" + 
-            "Are you absolutely sure?", $"This action cannot be undone. This will permanently delete multiple products and remove their data from your database.")
-            .WithPrimaryButton("Continue", () => OnSubmitDeleteMultipleItems(product), DialogButtonStyle.Destructive)
+    [RelayCommand]
+    private void ShowMultipleItemDeletionDialog()
+    {
+        var selectedCount = ProductItems.Count(x => x.IsSelected);
+        if (selectedCount == 0)
+        {
+            _toastManager.CreateToast("No Selection")
+                .WithContent("Please select products to delete")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+        _dialogManager.CreateDialog(
+            "Are you absolutely sure?",
+            $"This action cannot be undone. This will permanently delete {selectedCount} product(s) and remove their data from your database.")
+            .WithPrimaryButton("Continue", OnSubmitDeleteMultipleItems, DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
             .Show();
     }
-    
+
     private async Task OnSubmitDeleteSingleItem(ProductStock? product)
     {
-        if (product == null) return;
-        
-        await DeleteProductFromDatabase(product);
-        product.PropertyChanged -= OnProductPropertyChanged;
-        ProductItems.Remove(product);
-        UpdateProductCounts();
+        if (product == null || _productService == null) return;
 
-        _toastManager.CreateToast("Delete product")
-            .WithContent($"{product.Name} has been deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+        var result = await _productService.DeleteProductAsync(product.ID);
+
+        if (result.Success)
+        {
+            product.PropertyChanged -= OnProductPropertyChanged;
+            ProductItems.Remove(product);
+            OriginalProductData.Remove(product);
+            CurrentFilteredProductData.Remove(product);
+            UpdateProductCounts();
+            _ = LoadProductDataAsync();
+
+            // Service already shows success toast
+        }
     }
-    private async Task OnSubmitDeleteMultipleItems(ProductStock? product)
+
+    private async Task OnSubmitDeleteMultipleItems()
     {
-        if (product == null) return;
-        
+        if (_productService == null) return;
+
         var selectedProducts = ProductItems.Where(item => item.IsSelected).ToList();
         if (selectedProducts.Count == 0) return;
 
-        foreach (var products in selectedProducts)
-        {
-            await DeleteProductFromDatabase(products);
-            products.PropertyChanged -= OnProductPropertyChanged;
-            ProductItems.Remove(products);
-        }
-        UpdateProductCounts();
+        var productIds = selectedProducts.Select(p => p.ID).ToList();
+        var result = await _productService.DeleteMultipleProductsAsync(productIds);
 
-        _toastManager.CreateToast("Delete Selected Products")
-            .WithContent("Multiple products deleted successfully!")
-            .DismissOnClick()
-            .WithDelay(6)
-            .ShowSuccess();
+        if (result.Success)
+        {
+            foreach (var product in selectedProducts)
+            {
+                product.PropertyChanged -= OnProductPropertyChanged;
+                ProductItems.Remove(product);
+                OriginalProductData.Remove(product);
+                CurrentFilteredProductData.Remove(product);
+            }
+
+            UpdateProductCounts();
+            _ = LoadProductDataAsync();
+            // Service already shows success toast
+        }
     }
-    
-    private async Task DeleteProductFromDatabase(ProductStock? product)
-    {
-        await Task.Delay(100); // Just an animation/simulation of async operation
-    }
-    
+
     [RelayCommand]
     private void ToggleSelection(bool? isChecked)
     {
@@ -293,7 +398,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         }
         UpdateProductCounts();
     }
-    
+
     [RelayCommand]
     private async Task SearchProduct()
     {
@@ -308,26 +413,27 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             UpdateProductCounts();
             return;
         }
-        
+
         IsSearchingProduct = true;
-        
+
         try
         {
-            await Task.Delay(500);
+            await Task.Delay(300); // Debounce
 
-            var filteredEquipments = CurrentFilteredProductData.Where(equipment =>
-                    equipment is { Name: not null, Category: not null, Supplier: not null, Status: not null } && 
-                    (equipment.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) || 
-                     equipment.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                     equipment.Supplier.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
-                     equipment.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
+            var filteredProducts = CurrentFilteredProductData.Where(product =>
+                    product is { Name: not null, Category: not null, Supplier: not null, Status: not null } &&
+                    (product.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     product.Category.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     product.Supplier.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
+                     product.BatchCode?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) == true ||
+                     product.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             ProductItems.Clear();
-            foreach (var equipment in filteredEquipments)
+            foreach (var product in filteredProducts)
             {
-                equipment.PropertyChanged += OnProductPropertyChanged;
-                ProductItems.Add(equipment);
+                product.PropertyChanged += OnProductPropertyChanged;
+                ProductItems.Add(product);
             }
             UpdateProductCounts();
         }
@@ -336,7 +442,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             IsSearchingProduct = false;
         }
     }
-    
+
     [RelayCommand]
     private async Task ExportProductStock()
     {
@@ -356,7 +462,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 ? desktop.MainWindow
                 : null;
             if (toplevel == null) return;
-        
+
             IStorageFolder? startLocation = null;
             if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
             {
@@ -369,7 +475,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                     // If path is invalid, startLocation will remain null
                 }
             }
-        
+
             var fileName = $"Product_Stock_List_{DateTime.Today:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -382,21 +488,21 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
             if (pdfFile == null) return;
 
-            var productStockModel = new ProductStockDocumentModel 
+            var productStockModel = new ProductStockDocumentModel
             {
                 GeneratedDate = DateTime.Today,
                 GymName = "AHON Victory Fitness Gym",
                 GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
                 GymPhone = "+63 123 456 7890",
                 GymEmail = "info@ahonfitness.com",
-                Items = ProductItems.Select(product => new ProductItem 
+                Items = ProductItems.Select(product => new ProductItem
                 {
-                    ID = product.ID ?? 0,
+                    ID = product.ID,
                     ProductName = product.Name,
-                    Sku = product.Sku,
+                    BatchCode = product.BatchCode,
                     Category = product.Category,
                     CurrentStock = product.CurrentStock ?? 0,
-                    Price = product.Price ?? 0,
+                    Price = product.Price,
                     Supplier = product.Supplier,
                     Expiry = product.Expiry,
                     Status = product.Status,
@@ -404,13 +510,13 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             };
 
             var document = new ProductStockDocument(productStockModel);
-        
+
             await using var stream = await pdfFile.OpenWriteAsync();
-            
+
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
             // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
-        
+
             _toastManager.CreateToast("Product stock list exported successfully")
                 .WithContent($"Product stock list has been saved to {pdfFile.Name}")
                 .DismissOnClick()
@@ -424,25 +530,39 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 .ShowError();
         }
     }
-    
+
     private async Task LoadSettingsAsync() => _currentSettings = await _settingsService.LoadSettingsAsync();
-    
+
     private void ApplyProductFilter()
     {
         if (OriginalProductData.Count == 0) return;
-        List<ProductStock> filteredList;
-        
-        if (SelectedProductFilterItem == "All")
+    
+        List<ProductStock> filteredList = OriginalProductData.ToList();
+
+        // Apply Product Category filter
+        if (SelectedProductFilterItem != "All")
         {
-            filteredList = OriginalProductData.ToList();
-        }
-        else
-        {
-            filteredList = OriginalProductData 
-                .Where(equipment => equipment.Category == SelectedProductFilterItem)
+            filteredList = filteredList
+                .Where(product => product.Category == SelectedProductFilterItem)
                 .ToList();
         }
+
+        // Apply Status filter
+        if (SelectedStatusFilterItem != "All")
+        {
+            filteredList = filteredList
+                .Where(product => product.Status != null && 
+                                  product.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
         CurrentFilteredProductData = filteredList;
+
+        // Unsubscribe from old items
+        foreach (var item in ProductItems)
+        {
+            item.PropertyChanged -= OnProductPropertyChanged;
+        }
 
         ProductItems.Clear();
         foreach (var product in filteredList)
@@ -450,9 +570,10 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             product.PropertyChanged += OnProductPropertyChanged;
             ProductItems.Add(product);
         }
+    
         UpdateProductCounts();
     }
-    
+
     private void UpdateProductCounts()
     {
         SelectedCount = ProductItems.Count(x => x.IsSelected);
@@ -461,6 +582,27 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         SelectAll = ProductItems.Count > 0 && ProductItems.All(x => x.IsSelected);
     }
     
+    public bool CanDeleteSelectedProducts
+    {
+        get
+        {            
+            var selectedProducts = ProductItems.Where(item => item.IsSelected).ToList();
+            if (selectedProducts.Count == 0) return false;
+
+            if (SelectedProduct?.Status != null &&
+                !SelectedProduct.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase) &&
+                !SelectedProduct.Status.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return selectedProducts.All(product 
+                => product.Status != null && 
+                   (product.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase) ||
+                    product.Status.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase)));
+        }
+    }
+
     private void OnProductPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ProductStock.IsSelected))
@@ -468,90 +610,198 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             UpdateProductCounts();
         }
     }
-    
+
     partial void OnSearchStringResultChanged(string value)
     {
         SearchProductCommand.Execute(null);
     }
-    
+
     partial void OnSelectedProductFilterItemChanged(string value)
     {
         ApplyProductFilter();
     }
+
+    partial void OnSelectedProductChanged(ProductStock? value)
+    {
+        OnPropertyChanged(nameof(CanDeleteSelectedProducts));
+    }
+    
+    partial void OnSelectedStatusFilterItemChanged(string value)
+    {
+        ApplyProductFilter();
+    }
+
+    private ProductStock MapToProductStock(ProductModel model)
+    {
+        // ✅ Handle Base64 image properly
+        string posterPath = "avares://AHON_TRACK/Assets/ProductStockView/default-product.png";
+
+        if (!string.IsNullOrEmpty(model.ProductImageBase64))
+        {
+            posterPath = $"data:image/png;base64,{model.ProductImageBase64}";
+        }
+
+        var productStock = new ProductStock
+        {
+            ID = model.ProductID,
+            Name = model.ProductName ?? "",
+            BatchCode = model.BatchCode ?? "",
+            Category = model.Category ?? "",
+            CurrentStock = model.CurrentStock,
+            Price = model.Price,
+            Supplier = model.SupplierName ?? "None", // ✅ Use SupplierName from join
+            Expiry = model.ExpiryDate,
+            Status = model.Status ?? "",
+            Description = model.Description ?? "",
+            DiscountedPrice = model.DiscountedPrice,
+            Poster = posterPath
+        };
+        
+        if (productStock.Expiry.HasValue && productStock.Expiry.Value.Date <= DateTime.Today)
+        {
+            productStock.Status = "Expired";
+        }
+    
+        return productStock;
+    }
+
+    protected override void DisposeManagedResources()
+    {
+        var eventService = DashboardEventService.Instance;
+        eventService.ProductAdded -= OnProductDataChanged;
+        eventService.ProductUpdated -= OnProductDataChanged;
+        eventService.ProductDeleted -= OnProductDataChanged;
+        eventService.ProductPurchased -= OnProductPurchased;
+
+        foreach (var product in ProductItems)
+        {
+            product.PropertyChanged -= OnProductPropertyChanged;
+        }
+
+        ProductItems.Clear();
+        OriginalProductData.Clear();
+        CurrentFilteredProductData.Clear();
+    }
 }
 
+// ProductStock class remains the same as in your document
 public partial class ProductStock : ObservableObject
 {
-    [ObservableProperty] 
-    private int? _iD;
+    [ObservableProperty]
+    private int _iD;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string? _name;
-    
-    [ObservableProperty] 
-    private string? _sku;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
+    private string? _batchCode;
+
+    [ObservableProperty]
     private string? _description;
-    
-    [ObservableProperty] 
-    private string? _category; 
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
+    private string? _category;
+
+    [ObservableProperty]
     private int? _currentStock;
-    
-    [ObservableProperty] 
-    private int? _price;
-    
-    [ObservableProperty] 
-    private int? _discountedPrice;
-    
-    [ObservableProperty] 
-    private bool _discountInPercentage;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
+    private decimal _price;
+
+    [ObservableProperty]
+    private decimal? _discountedPrice;
+
+    [ObservableProperty]
     private string? _supplier;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private DateTime? _expiry;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _status;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private string? _poster;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private bool _isSelected;
-    
-    public string FormattedExpiry => Expiry.HasValue ? $"{Expiry.Value:MM/dd/yyyy}" :  string.Empty;
-    public string FormattedPrice => Price.HasValue ? $"₱{Price:N2}" : string.Empty;
-    
+
+    public decimal FinalPrice
+    {
+        get
+        {
+            if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
+            {
+                var discountAmount = Price * (DiscountedPrice.Value / 100);
+                return Price - discountAmount;
+            }
+            return Price;
+        }
+    }
+
+    public string FormattedExpiry => Expiry.HasValue ? $"{Expiry.Value:MM/dd/yyyy}" : string.Empty;
+
+    public string FormattedPrice => $"₱{FinalPrice:N2}";
+
+    public string OriginalPrice => (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
+        ? $"₱{Price:N2}"
+        : string.Empty;
+
+    public string DiscountDisplay
+    {
+        get
+        {
+            if (DiscountedPrice.HasValue && DiscountedPrice.Value > 0)
+            {
+                return $"{DiscountedPrice:N0}% OFF";
+            }
+            return string.Empty;
+        }
+    }
+
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch
     {
-        "in stock" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),      // Green-500
-        "out of stock" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),  // Red-500
-        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))              // Default Gray-500
+        "in stock" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
+        "out of stock" => new SolidColorBrush(Color.FromRgb(249, 115, 22)),
+        "expired" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
     };
 
     public IBrush StatusBackground => Status?.ToLowerInvariant() switch
     {
-        "in stock" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
-        "out of stock" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
-        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))             // Default Gray-500 with alpha
+        "in stock" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
+        "out of stock" => new SolidColorBrush(Color.FromArgb(25, 249, 115, 22)),
+        "expired" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
     };
 
     public string? StatusDisplayText => Status?.ToLowerInvariant() switch
     {
         "in stock" => "● In Stock",
         "out of stock" => "● Out of Stock",
-        _ => Status 
+        "expired" => "● Expired",
+        _ => Status
     };
 
-    partial void OnStatusChanged(string value)
+    partial void OnStatusChanged(string? value)
     {
         OnPropertyChanged(nameof(StatusForeground));
         OnPropertyChanged(nameof(StatusBackground));
         OnPropertyChanged(nameof(StatusDisplayText));
+    }
+
+    partial void OnPriceChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(FinalPrice));
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPrice));
+    }
+
+    partial void OnDiscountedPriceChanged(decimal? value)
+    {
+        OnPropertyChanged(nameof(FinalPrice));
+        OnPropertyChanged(nameof(FormattedPrice));
+        OnPropertyChanged(nameof(OriginalPrice));
+        OnPropertyChanged(nameof(DiscountDisplay));
     }
 }

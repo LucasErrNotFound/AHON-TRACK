@@ -1,4 +1,13 @@
-﻿using AHON_TRACK.ViewModels;
+﻿using AHON_TRACK.Converters;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Interface;
+using AHON_TRACK.ViewModels;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -7,40 +16,46 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
+using System.ComponentModel;
+using AHON_TRACK.Services.Events;
 
 namespace AHON_TRACK.Components.ViewModels;
 
 public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
 {
-    [ObservableProperty] 
-    private char[] _middleInitialItems = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+    [ObservableProperty]
+    private string[] _middleInitialItems = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
     [ObservableProperty]
     private string[] _employeePositionItems = ["Gym Staff", "Gym Admin"];
 
     [ObservableProperty]
     private string[] _employeeStatusItems = ["Active", "Inactive", "Terminated"];
+    
+    [ObservableProperty]
+    private bool _isEmployeeStatusItemEnabled;
 
     [ObservableProperty]
     private string _dialogTitle = "Add Employee Details";
 
     [ObservableProperty]
     private string _dialogDescription = "Please fill out the form to create this employee's information";
-    
+
     [ObservableProperty]
     private Image? _employeeProfileImageControl;
 
     [ObservableProperty]
     private bool _isEditMode = false;
 
+    [ObservableProperty]
+    private int? _editingEmployeeID;
+
     private readonly DialogManager _dialogManager;
+    private readonly IEmployeeService _employeeService;
     private readonly ToastManager _toastManager;
 
     // Personal Details Section
@@ -67,6 +82,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     private string _employeeStatus = string.Empty;
 
     [Required(ErrorMessage = "First name is required")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeFirstName
@@ -75,7 +91,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeFirstName, value, true);
     }
 
-    // [Required(ErrorMessage = "Select your MI")] -> I disabled this because apparently there are people who do not have middle name/initial
     public string SelectedMiddleInitialItem
     {
         get => _selectedMiddleInitialItem;
@@ -83,6 +98,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Last name is required")]
+    [RegularExpression(@"^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(2, ErrorMessage = "Must be at least 2 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeLastName
@@ -99,7 +115,6 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         {
             if (_employeeGender == value) return;
             _employeeGender = value ?? string.Empty;
-            OnPropertyChanged(nameof(EmployeeGender));
             OnPropertyChanged(nameof(IsMale));
             OnPropertyChanged(nameof(IsFemale));
         }
@@ -161,6 +176,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "House address is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string EmployeeHouseAddress
@@ -170,6 +186,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "House number is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 character long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeHouseNumber
@@ -179,6 +196,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Street is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
     public string EmployeeStreet
@@ -188,6 +206,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Barangay is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
     public string EmployeeBarangay
@@ -197,6 +216,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "City/Town is required")]
+    [RegularExpression("^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
     public string EmployeeCityTown
@@ -206,6 +226,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Province is required")]
+    [RegularExpression("^[a-zA-Z ]*$", ErrorMessage = "Alphabets only.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(20, ErrorMessage = "Must not exceed 20 characters")]
     public string EmployeeProvince
@@ -215,6 +236,7 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     }
 
     [Required(ErrorMessage = "Username is required")]
+    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "Only letters and numbers are allowed.")]
     [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
     [MaxLength(15, ErrorMessage = "Must not exceed 15 characters")]
     public string EmployeeUsername
@@ -239,16 +261,32 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         set => SetProperty(ref _employeeStatus, value, true);
     }
 
-    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager)
+    private byte[]? _profileImage;
+    public byte[]? ProfileImage
+    {
+        get => _profileImage;
+        set
+        {
+            SetProperty(ref _profileImage, value);
+            Debug.WriteLine($"ProfileImage updated: {(value != null ? $"{value.Length} bytes" : "null")}");
+        }
+    }
+
+    [ObservableProperty]
+    private Bitmap? _profileImageSource;
+
+    public AddNewEmployeeDialogCardViewModel(DialogManager dialogManager, IEmployeeService employeeService, ToastManager toastManager)
     {
         _dialogManager = dialogManager;
-        _toastManager =  toastManager;
+        _employeeService = employeeService;
+        _toastManager = toastManager;
     }
 
     public AddNewEmployeeDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
+        _employeeService = new EmployeeService("Data Source=LAPTOP-SSMJIDM6\\SQLEXPRESS08;Initial Catalog=AHON_TRACK;Integrated Security=True;Encrypt=True;Trust Server Certificate=True", _toastManager);
     }
 
     [AvaloniaHotReload]
@@ -256,48 +294,100 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
     {
         IsEditMode = false;
         DialogTitle = "Add Employee Details";
+        DialogDescription = "Please fill out the form to create this employee's information";
+        EmployeeStatusItems = ["Active"];
+        EmployeeStatus = "Active";
+        IsEmployeeStatusItemEnabled = false;
         ClearAllFields();
     }
 
-    public void InitializeForEditMode(ManageEmployeesItem? employee)
+    public async Task InitializeForEditMode(ManageEmployeesItem? employee)
     {
+        if (employee == null) return;
+
         IsEditMode = true;
         DialogTitle = "Edit Employee Details";
         DialogDescription = "Please update the employee's information";
+        IsEmployeeStatusItemEnabled = true;
+        EditingEmployeeID = employee.ID;
 
         ClearAllErrors();
-        var nameParts = employee.Name?.Split(' ') ?? [];
 
-        // Set personal details with default values
+        // Load full employee data from database
+        if (EditingEmployeeID.HasValue)
+        {
+            var (success, message, fullEmployee) = await _employeeService.ViewEmployeeProfileAsync(EditingEmployeeID.Value);
+
+            if (success && fullEmployee != null)
+            {
+                // Personal Details
+                EmployeeFirstName = fullEmployee.FirstName ?? string.Empty;
+                SelectedMiddleInitialItem = fullEmployee.MiddleInitial?.Trim() ?? string.Empty;
+                EmployeeLastName = fullEmployee.LastName ?? string.Empty;
+                EmployeeGender = fullEmployee.Gender ?? "Male";
+                EmployeeContactNumber = fullEmployee.ContactNumber ?? string.Empty;
+                EmployeePosition = fullEmployee.Position ?? "Gym Staff";
+                EmployeeAge = fullEmployee.Age;
+                EmployeeBirthDate = fullEmployee.DateOfBirth;
+
+                // Address
+                EmployeeHouseAddress = fullEmployee.HouseAddress ?? string.Empty;
+                EmployeeHouseNumber = fullEmployee.HouseNumber ?? string.Empty;
+                EmployeeStreet = fullEmployee.Street ?? string.Empty;
+                EmployeeBarangay = fullEmployee.Barangay ?? string.Empty;
+                EmployeeCityTown = fullEmployee.CityTown ?? string.Empty;
+                EmployeeProvince = fullEmployee.Province ?? string.Empty;
+
+                // Account
+                EmployeeUsername = fullEmployee.Username ?? string.Empty;
+                EmployeePassword = fullEmployee.Password ?? "********";
+                EmployeeStatus = fullEmployee.Status ?? "Active";
+
+                // Profile Picture
+                ProfileImage = fullEmployee.AvatarBytes;
+                ProfileImageSource = fullEmployee.AvatarBytes != null
+    ? ImageHelper.BytesToBitmap(fullEmployee.AvatarBytes)
+    : ImageHelper.GetDefaultAvatar();
+
+                Debug.WriteLine($"✅ Successfully loaded employee data: {fullEmployee.FirstName} {fullEmployee.LastName}");
+                return;
+            }
+            _toastManager.CreateToast("Load Error")
+                .WithContent($"Failed to load employee data: {message}")
+                .DismissOnClick()
+                .ShowError();
+
+            Debug.WriteLine($"❌ Failed to load employee: {message}");
+        }
+
+        // Fallback to basic data
+        var nameParts = employee.Name?.Split(' ') ?? [];
         EmployeeFirstName = nameParts.Length > 0 ? nameParts[0] : "John";
         SelectedMiddleInitialItem = nameParts.Length > 2 ? nameParts[1].TrimEnd('.') : "A";
-        EmployeeLastName = nameParts.Length > 1 ? nameParts[^1] : "Doe"; // Last element
-
-        // Set default values for fields not available in ManageEmployeesItem
+        EmployeeLastName = nameParts.Length > 1 ? nameParts[^1] : "Doe";
         EmployeeGender = "Male";
-        EmployeeContactNumber = !string.IsNullOrEmpty(employee.ContactNumber) ?
-            employee.ContactNumber.Replace(" ", "") : "09123456789";
-        EmployeePosition = !string.IsNullOrEmpty(employee.Position) ? employee.Position : "Gym Staff";
-        EmployeeAge = 25; // Default age
+        EmployeeContactNumber = employee.ContactNumber?.Replace(" ", "") ?? "09123456789";
+        EmployeePosition = employee.Position ?? "Gym Staff";
+        EmployeeAge = 25;
         EmployeeBirthDate = DateTime.Now.AddYears(-25);
-
-        EmployeeHouseAddress = "Sample House Address";
-        EmployeeHouseNumber = "Blk 8 Lot 2";
+        EmployeeHouseAddress = "Sample Address";
+        EmployeeHouseNumber = "Block 1 Lot 1";
         EmployeeStreet = "Sample Street";
         EmployeeBarangay = "Sample Barangay";
         EmployeeCityTown = "Sample City";
         EmployeeProvince = "Sample Province";
-
-        EmployeeUsername = !string.IsNullOrEmpty(employee.Username) ? employee.Username : "defaultuser";
+        EmployeeUsername = employee.Username ?? "defaultuser";
         EmployeePassword = "defaultpassword";
         EmployeeStatus = !string.IsNullOrEmpty(employee.Status) ? employee.Status : "Active";
+        EmployeeStatus = employee.Status ?? "Active";
+
+        Debug.WriteLine("⚠️ Using fallback data");
     }
 
     private int CalculateAge(DateTime birthDate)
     {
         var today = DateTime.Today;
         var age = today.Year - birthDate.Year;
-
         if (birthDate.Date > today.AddYears(-age)) age--;
         return age;
     }
@@ -336,56 +426,130 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
                     .WithContent($"{selectedFile.Name}")
                     .DismissOnClick()
                     .ShowInfo();
-                
+
                 var file = files[0];
                 await using var stream = await file.OpenReadAsync();
-                
+
                 var bitmap = new Bitmap(stream);
-                
+
+                // Update UI control if present
                 if (EmployeeProfileImageControl != null)
                 {
                     EmployeeProfileImageControl.Source = bitmap;
                     EmployeeProfileImageControl.IsVisible = true;
                 }
+
+                // Convert to bytes for database storage
+                stream.Position = 0;
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                ProfileImage = memoryStream.ToArray();
+                ProfileImageSource = bitmap;
+
+                Debug.WriteLine($"✅ Profile image loaded: {ProfileImage.Length} bytes");
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Error from uploading Picture: {ex.Message}");
+            _toastManager?.CreateToast("Image Error")
+                .WithContent($"Failed to load image: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
     }
 
     [RelayCommand]
-    private void SaveDetails()
+    private async Task SaveDetails()
     {
         ClearAllErrors();
         ValidateAllProperties();
 
-        if (HasErrors) return;
-        // Personal Details Debugging
-        Debug.WriteLine($"First Name: {EmployeeFirstName}");
-        Debug.WriteLine($"Middle Initial: {SelectedMiddleInitialItem}");
-        Debug.WriteLine($"Last Name: {EmployeeLastName}");
-        Debug.WriteLine($"Gender: {EmployeeGender}");
-        Debug.WriteLine($"Contact No.: {EmployeeContactNumber}");
-        Debug.WriteLine($"Position: {EmployeePosition}");
-        Debug.WriteLine($"Age: {EmployeeAge}");
-        Debug.WriteLine($"Date of Birth: {EmployeeBirthDate?.ToString("MMMM d, yyyy")}");
+        if (HasErrors)
+        {
+            _toastManager?.CreateToast("Validation Error")
+                .WithContent("Please fix all validation errors before saving.")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
 
-        // Address Details Debugging
-        Debug.WriteLine($"\nHouse Adress: {EmployeeHouseAddress}");
-        Debug.WriteLine($"House Number: {EmployeeHouseNumber}");
-        Debug.WriteLine($"Street: {EmployeeStreet}");
-        Debug.WriteLine($"Barangay: {EmployeeBarangay}");
-        Debug.WriteLine($"City/Town: {EmployeeCityTown}");
-        Debug.WriteLine($"Province: {EmployeeProvince}");
+        try
+        {
+            var employee = new ManageEmployeeModel
+            {
+                EmployeeId = EditingEmployeeID ?? 0,
+                FirstName = EmployeeFirstName,
+                MiddleInitial = string.IsNullOrWhiteSpace(SelectedMiddleInitialItem) ? null : SelectedMiddleInitialItem,
+                LastName = EmployeeLastName,
+                Gender = EmployeeGender ?? string.Empty,
+                ContactNumber = EmployeeContactNumber,
+                Age = EmployeeAge ?? 0,
+                DateOfBirth = EmployeeBirthDate,
+                HouseAddress = EmployeeHouseAddress,
+                HouseNumber = EmployeeHouseNumber,
+                Street = EmployeeStreet,
+                Barangay = EmployeeBarangay,
+                CityTown = EmployeeCityTown,
+                Province = EmployeeProvince,
+                Username = EmployeeUsername,
+                Password = EmployeePassword,
+                Status = EmployeeStatus,
+                Position = EmployeePosition,
+                ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
+            };
 
-        // Account Details Debugging
-        Debug.WriteLine($"\nUsername: {EmployeeUsername}");
-        Debug.WriteLine($"Password: {EmployeePassword}");
-        Debug.WriteLine($"Status: {EmployeeStatus}");
+            Debug.WriteLine($"📸 Profile Picture: {(employee.ProfilePicture != null ? $"{employee.ProfilePicture.Length} bytes" : "null")}");
 
-        _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+            if (IsEditMode && EditingEmployeeID.HasValue)
+            {
+                // UPDATE MODE
+                var (success, message) = await _employeeService.UpdateEmployeeAsync(employee);
+
+                if (success)
+                {
+                    _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+                    DashboardEventService.Instance.NotifyEmployeeUpdated();
+                }
+                else
+                {
+                    _toastManager?.CreateToast("Update Failed")
+                        .WithContent($"Failed to update employee: {message}")
+                        .DismissOnClick()
+                        .ShowError();
+                }
+            }
+            else
+            {
+                // ADD MODE
+                var (success, message, employeeId) = await _employeeService.AddEmployeeAsync(employee);
+
+                if (success)
+                {
+                    Debug.WriteLine($"✅ New employee added with ID: {employeeId}");
+                    _dialogManager.Close(this, new CloseDialogOptions { Success = true });
+                    DashboardEventService.Instance.NotifyEmployeeAdded();
+
+                }
+                else
+                {
+                    _toastManager?.CreateToast("Add Failed")
+                        .WithContent($"Failed to add employee: {message}")
+                        .DismissOnClick()
+                        .ShowError();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Error: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+
+            Debug.WriteLine($"❌ Error saving employee: {ex.Message}");
+            Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
     }
 
     [RelayCommand]
@@ -412,7 +576,45 @@ public sealed partial class AddNewEmployeeDialogCardViewModel : ViewModelBase
         EmployeeProvince = string.Empty;
         EmployeeUsername = string.Empty;
         EmployeePassword = string.Empty;
-        EmployeeStatus = string.Empty;
+        ProfileImage = null;
+        ProfileImageSource = ImageHelper.GetDefaultAvatar();
+        EditingEmployeeID = null;
         ClearAllErrors();
+
+        ImageResetRequested?.Invoke();
+        Debug.WriteLine("🔄 All fields cleared");
+    }
+
+    public event Action? ImageResetRequested;
+    
+    protected override void DisposeManagedResources()
+    {
+        // Clear image-related memory
+        if (ProfileImageSource is IDisposable disposableBitmap)
+        {
+            disposableBitmap.Dispose();
+        }
+        ProfileImageSource = null;
+        ProfileImage = null;
+        
+        EmployeeProfileImageControl = null;
+        
+        // Clear arrays
+        MiddleInitialItems = Array.Empty<string>();
+        EmployeePositionItems = Array.Empty<string>();
+        EmployeeStatusItems = Array.Empty<string>();
+
+        // Clear sensitive data
+        EmployeePassword = string.Empty;
+        EmployeeUsername = string.Empty;
+        EmployeeFirstName = string.Empty;
+        EmployeeLastName = string.Empty;
+        EmployeeContactNumber = string.Empty;
+        EmployeeHouseAddress = string.Empty;
+        
+        // Clear event subscriptions
+        ImageResetRequested = null;
+
+        base.DisposeManagedResources();
     }
 }

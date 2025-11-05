@@ -8,7 +8,7 @@ public partial class AddNewEmployeeDialogCard : UserControl
     public AddNewEmployeeDialogCard()
     {
         InitializeComponent();
-        
+
         Loaded += (s, e) =>
         {
             if (DataContext is AddNewEmployeeDialogCardViewModel vm)

@@ -6,6 +6,7 @@
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
     xmlns:viewModels="clr-namespace:AHON_TRACK.ViewModels"
+    xmlns:card="clr-namespace:AHON_TRACK.Components.Dashboard"
     xmlns:system="clr-namespace:System;assembly=System.Runtime"
     xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
     x:DataType="viewModels:ManageBillingViewModel"
@@ -14,387 +15,644 @@
     d:DesignHeight="1080"
     x:Class="AHON_TRACK.Views.ManageBillingView">
 
-    <Design.DataContext>
-        <viewModels:ManageBillingViewModel />
-    </Design.DataContext>
+	<Design.DataContext>
+		<viewModels:ManageBillingViewModel />
+	</Design.DataContext>
 
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
-        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
-        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
 
-        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
-        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
-        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
-        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
 
-        <SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
-        <SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
-        <SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
+		<SolidColorBrush x:Key="SuccessColor" Color="#22C55E" />
+		<SolidColorBrush x:Key="SuccessColor60" Color="#22c55e" Opacity="0.6" />
+		<SolidColorBrush x:Key="SuccessColor10" Color="#22c55e" Opacity="0.1" />
 
-        <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
-        <converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
-        <converters:DateToStringConverter x:Key="DateToStringConverter" />
-    </UserControl.Resources>
+		<converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+		<converters:IntToInverseBoolConverter x:Key="IntToInverseBoolConverter" />
+		<converters:DateToStringConverter x:Key="DateToStringConverter" />
+	</UserControl.Resources>
 
-    <DockPanel LastChildFill="True">
-        <StackPanel
+	<DockPanel LastChildFill="True">
+		<StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
             Margin="{StaticResource PageMargin}"
             DockPanel.Dock="Top">
-            <TextBlock
+			<TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
                 Text="Manage Billing"
                 Foreground="{StaticResource FontForeground}"
-                Margin="90,30,0,0" />
-            <TextBlock
-                Classes="Caption Muted"
-                FontSize="14"
-                Text="Easily track invoices, review purchase activity, and manage gym packages with options to add, edit, or remove as needed"
-                TextWrapping="Wrap"
-                Margin="90,0" />
-        </StackPanel>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Interaction.Behaviors>
-                <scroll:VerticalScrollViewerAnimatedBehavior />
-            </Interaction.Behaviors>
-            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,25,90,0" Spacing="16">
-                <StackPanel>
-                    <shadui:Card Margin="0,5,0,0" HasShadow="True" MaxHeight="850">
-                        <StackPanel>
-                            <TabControl>
-                                <TabControl.Items>
-                                    <TabItem Header="Overview">
-                                        <StackPanel>
-                                            <Grid ColumnDefinitions="* *" Margin="0,20,0,30">
-                                                <TextBlock
-                                                    Grid.Column="0"
-                                                    Text="Recent Activity"
-                                                    HorizontalAlignment="Left"
-                                                    Classes="h3" />
-                                                <CalendarDatePicker
-                                                    Grid.Column="1"
-                                                    HorizontalAlignment="Right"
-                                                    Margin="0,-20"
-                                                    shadui:ControlAssist.Label="Date Today"
-                                                    shadui:ControlAssist.ReadOnly="True"
-                                                    SelectedDate="{x:Static system:DateTime.Today}"
-                                                    IsEnabled="False" />
-                                            </Grid>
-                                            <shadui:Card
-                                                MaxHeight="655"
-                                                HasShadow="True"
-                                                BorderBrush="{DynamicResource DialogBackgroundColor}"
-                                                Background="{DynamicResource DialogBackgroundColor}">
-                                                <DockPanel>
-                                                    <DockPanel.Resources>
-                                                        <converters:StringToBitmapConverter 
-                                                            x:Key="StringToBitMapConverter" />
-                                                    </DockPanel.Resources>
-                                                    <ScrollViewer 
-                                                        HorizontalScrollBarVisibility="Auto"
-                                                        VerticalScrollBarVisibility="Auto">
-                                                        <Interaction.Behaviors>
-                                                            <scroll:VerticalScrollViewerAnimatedBehavior />
-                                                        </Interaction.Behaviors>
-                                                        <ItemsControl 
-                                                            Margin="40,0,24,24"
-                                                            ItemsSource="{CompiledBinding RecentActivity}">
+                Margin="90,30" />
+		</StackPanel>
+		<ScrollViewer VerticalScrollBarVisibility="Auto">
+			<Interaction.Behaviors>
+				<scroll:VerticalScrollViewerAnimatedBehavior />
+			</Interaction.Behaviors>
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,50,90,0" Spacing="16">
+				<shadui:Card Margin="0,5,0,0" HasShadow="True" MaxHeight="750">
+					<StackPanel>
+						<TabControl>
+							<TabControl.Items>
+								<TabItem Header="Overview">
+									<StackPanel>
+										<Grid ColumnDefinitions="* *" Margin="0,20,0,30">
+											<TextBlock
+												Grid.Column="0"
+												Text="Recent Activity"
+												HorizontalAlignment="Left"
+												Classes="h3" />
+											<CalendarDatePicker
+												Grid.Column="1"
+												HorizontalAlignment="Right"
+												Margin="0,-20"
+												shadui:ControlAssist.Label="Date Today"
+												SelectedDate="{Binding SelectedActivityDate}"
+												IsEnabled="False" />
+										</Grid>
+										<shadui:BreakpointViewPort>
+											<!-- Extra large and up breakpoint (1280 px and above). -->
+											<shadui:BreakpointView Breakpoint="XlAndUp">
+												<shadui:Card
+													HasShadow="True"
+													BorderBrush="{DynamicResource DialogBackgroundColor}"
+													Background="{DynamicResource DialogBackgroundColor}">
+													<DockPanel MaxHeight="500">
+														<DockPanel.Resources>
+															<converters:StringToBitmapConverter
+																x:Key="StringToBitMapConverter" />
+														</DockPanel.Resources>
+														<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+															<Interaction.Behaviors>
+																<scroll:VerticalScrollViewerAnimatedBehavior />
+															</Interaction.Behaviors>
+															<ItemsControl
+																Margin="40,0,24,24"
+																ItemsSource="{CompiledBinding FilteredRecentActivities}">
 
-                                                            <!-- Define the item container style -->
-                                                            <ItemsControl.ItemsPanel>
-                                                                <ItemsPanelTemplate>
-                                                                    <StackPanel Spacing="24" />
-                                                                </ItemsPanelTemplate>
-                                                            </ItemsControl.ItemsPanel>
+																<!-- Define the item container style -->
+																<ItemsControl.ItemsPanel>
+																	<ItemsPanelTemplate>
+																		<StackPanel Spacing="24" />
+																	</ItemsPanelTemplate>
+																</ItemsControl.ItemsPanel>
 
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <shadui:Card 
-                                                                        Background="White" 
-                                                                        CornerRadius="5"
-                                                                        BorderBrush="White">
-                                                                        <Grid ColumnDefinitions="300 300 300 * 100">
-                                                                            <!-- Customer Info Column -->
-                                                                            <StackPanel
-                                                                                Grid.Column="0"
-                                                                                Orientation="Horizontal"
-                                                                                VerticalAlignment="Center"
-                                                                                HorizontalAlignment="Left">
-                                                                                <shadui:Avatar
-                                                                                    Width="36"
-                                                                                    Height="36"
-                                                                                    VerticalAlignment="Center"
-                                                                                    Source="{CompiledBinding PicturePath, Converter={StaticResource StringToBitMapConverter}}" />
-                                                                                <StackPanel Margin="15,0">
-                                                                                    <TextBlock
-                                                                                        Classes="Small"
-                                                                                        FontSize="15"
-                                                                                        FontWeight="SemiBold"
-                                                                                        Text="{CompiledBinding CustomerName}" />
-                                                                                    <TextBlock
-                                                                                        Classes="Caption Muted"
-                                                                                        FontSize="13"
-                                                                                        Text="{CompiledBinding CustomerType}" />
-                                                                                </StackPanel>
-                                                                            </StackPanel>
+																<ItemsControl.ItemTemplate>
+																	<DataTemplate>
+																		<shadui:Card Background="White" CornerRadius="5" BorderBrush="White">
+																			<Grid ColumnDefinitions="300 300 300 * 100">
+																				<!-- Customer Info Column -->
+																				<StackPanel
+																					Grid.Column="0"
+																					Orientation="Horizontal"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Left">
+																					<StackPanel Margin="15,0">
+																						<TextBlock
+																							Classes="Small"
+																							FontSize="15"
+																							FontWeight="SemiBold"
+																							Text="{CompiledBinding CustomerName}" />
+																						<TextBlock
+																							Classes="Caption Muted"
+																							FontSize="13"
+																							Text="{CompiledBinding CustomerType}" />
+																					</StackPanel>
+																				</StackPanel>
 
-                                                                            <!-- Product Name Column -->
-                                                                            <TextBlock
-                                                                                Grid.Column="1"
-                                                                                VerticalAlignment="Center"
-                                                                                HorizontalAlignment="Left"
-                                                                                FontSize="15"
-                                                                                FontWeight="SemiBold"
-                                                                                Text="{CompiledBinding ProductName}" />
+																				<!-- Product Name Column -->
+																				<TextBlock
+																					Grid.Column="1"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Left"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding ProductName}" />
 
-                                                                            <!-- Date Column -->
-                                                                            <TextBlock
-                                                                                Grid.Column="2"
-                                                                                VerticalAlignment="Center"
-                                                                                HorizontalAlignment="Left"
-                                                                                FontSize="15"
-                                                                                FontWeight="SemiBold"
-                                                                                Text="{CompiledBinding DateFormatted}" />
+																				<!-- Date Column -->
+																				<TextBlock
+																					Grid.Column="2"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Left"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding DateFormatted}" />
 
-                                                                            <!-- Time Column -->
-                                                                            <TextBlock
-                                                                                Grid.Column="3"
-                                                                                VerticalAlignment="Center"
-                                                                                HorizontalAlignment="Left"
-                                                                                FontSize="15"
-                                                                                FontWeight="SemiBold"
-                                                                                Text="{CompiledBinding PurchaseTime, StringFormat='h:mm tt'}" />
+																				<!-- Time Column -->
+																				<TextBlock
+																					Grid.Column="3"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Left"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding PurchaseTime, StringFormat='h:mm tt'}" />
 
-                                                                            <!-- Amount Column -->
-                                                                            <TextBlock
-                                                                                Grid.Column="4"
-                                                                                VerticalAlignment="Center"
-                                                                                HorizontalAlignment="Right"
-                                                                                FontSize="15"
-                                                                                FontWeight="Bold"
-                                                                                Foreground="{DynamicResource SuccessColor}"
-                                                                                Text="{CompiledBinding FormattedAmount}" />
-                                                                        </Grid>
-                                                                    </shadui:Card>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </ScrollViewer>
-                                                </DockPanel>
-                                            </shadui:Card>
-                                        </StackPanel>
-                                    </TabItem>
-                                    <TabItem Header="Invoices">
-                                        <StackPanel>
-                                            <Grid ColumnDefinitions="* *" Margin="0,20,0,30">
-                                                <TextBlock
-                                                    Grid.Column="0"
-                                                    Text="Invoices"
-                                                    HorizontalAlignment="Left"
-                                                    Classes="h3" />
-                                                <CalendarDatePicker
-                                                    Grid.Column="1"
-                                                    HorizontalAlignment="Right"
-                                                    Margin="0,-20"
-                                                    shadui:ControlAssist.Label="Date Today"
-                                                    shadui:ControlAssist.ReadOnly="True"
-                                                    SelectedDate="{CompiledBinding SelectedDate}" />
-                                            </Grid>
-                                            <StackPanel>
-                                                <Button
-                                                    Classes="Primary"
-                                                    Background="{DynamicResource InfoColor}"
-                                                    HorizontalAlignment="Left"
-                                                    Command="{CompiledBinding DownloadInvoicesCommand}">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Svg
-                                                            Width="20"
-                                                            Height="20"
-                                                            Margin="0,0,10,0"
-                                                            VerticalAlignment="Center"
-                                                            Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
-                                                        <TextBlock
-                                                            Text="Download Invoices (PDF)"
-                                                            Foreground="White"
-                                                            VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                </Button>
-                                                <DataGrid
-                                                    Height="610"
-                                                    CanUserReorderColumns="False"
-                                                    CanUserSortColumns="False"
-                                                    GridLinesVisibility="All"
-                                                    ItemsSource="{CompiledBinding InvoiceList}"
-                                                    SelectionMode="Single"
-                                                    IsReadOnly="True"
-                                                    Background="{DynamicResource CardBackgroundColor}"
-                                                    RowBackground="{DynamicResource CardBackgroundColor}"
-                                                    HeadersVisibility="Column"
-                                                    Margin="0,10,0,0">
+																				<!-- Amount Column -->
+																				<TextBlock
+																					Grid.Column="4"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Right"
+																					FontSize="15"
+																					FontWeight="Bold"
+																					Foreground="{DynamicResource SuccessColor}"
+																					Text="{CompiledBinding FormattedAmount}" />
+																			</Grid>
+																		</shadui:Card>
+																	</DataTemplate>
+																</ItemsControl.ItemTemplate>
+															</ItemsControl>
+														</ScrollViewer>
+													</DockPanel>
+												</shadui:Card>
+											</shadui:BreakpointView>
+											<!-- Extra large and up breakpoint (1280 px and below). -->
+											<shadui:BreakpointView Breakpoint="XlAndDown">
+												<shadui:Card
+													HasShadow="True"
+													BorderBrush="{DynamicResource DialogBackgroundColor}"
+													Background="{DynamicResource DialogBackgroundColor}">
+													<DockPanel MaxHeight="500">
+														<DockPanel.Resources>
+															<converters:StringToBitmapConverter
+																x:Key="StringToBitMapConverter" />
+														</DockPanel.Resources>
+														<ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+															<Interaction.Behaviors>
+																<scroll:VerticalScrollViewerAnimatedBehavior />
+															</Interaction.Behaviors>
+															<ItemsControl
+																Margin="40,0,24,24"
+																ItemsSource="{CompiledBinding FilteredRecentActivities}">
 
-                                                    <DataGrid.Resources>
-                                                        <converters:StringToBitmapConverter
-                                                            x:Key="StringToBitMapConverter" />
-                                                    </DataGrid.Resources>
+																<!-- Define the item container style -->
+																<ItemsControl.ItemsPanel>
+																	<ItemsPanelTemplate>
+																		<StackPanel Spacing="24" />
+																	</ItemsPanelTemplate>
+																</ItemsControl.ItemsPanel>
 
-                                                    <DataGrid.Columns>
-                                                        <DataGridTextColumn
-                                                            Width="Auto"
-                                                            MinWidth="80"
-                                                            Header="ID"
-                                                            Binding="{CompiledBinding ID}" />
-                                                        <DataGridTextColumn
-                                                            Width="*"
-                                                            MinWidth="120"
-                                                            Header="Customer"
-                                                            Binding="{CompiledBinding CustomerName}" />
-                                                        <DataGridTextColumn
-                                                            Width="*"
-                                                            MinWidth="120"
-                                                            Header="Purchased Item"
-                                                            Binding="{CompiledBinding PurchasedItem}" />
-                                                        <DataGridTextColumn
-                                                            Width="Auto"
-                                                            MinWidth="150"
-                                                            Header="Quantity"
-                                                            Binding="{CompiledBinding Quantity}" />
-                                                        <DataGridTextColumn
-                                                            Width="Auto"
-                                                            MinWidth="150"
-                                                            Header="Amount"
-                                                            Binding="{CompiledBinding Amount}" />
-                                                        <DataGridTextColumn
-                                                            Width="*"
-                                                            MinWidth="120"
-                                                            Header="Date Purchased"
-                                                            Binding="{CompiledBinding DateFormatted}" />
-                                                    </DataGrid.Columns>
-                                                </DataGrid>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </TabItem>
-                                    <TabItem Header="Specialized Packages">
-                                        <StackPanel>
-                                            <Grid ColumnDefinitions="* Auto" Margin="0,20,0,30">
-                                                <TextBlock
-                                                    Grid.Column="0"
-                                                    Text="Specialized Packages"
-                                                    HorizontalAlignment="Left"
-                                                    Classes="h3" />
-                                                <Button
-                                                    Grid.Column="1"
-                                                    Margin="0,0,10,0"
-                                                    Classes="Primary"
-                                                    Background="{DynamicResource InfoColor}"
-                                                    Command="{CompiledBinding OpenAddNewPackageCommand}">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Svg
-                                                            Width="22"
-                                                            Height="22"
-                                                            Margin="0,0,10,0"
-                                                            Path="avares://AHON_TRACK/Assets/ManageBillingView/add-new-package-icon.svg" />
-                                                        <TextBlock 
-                                                            Text="Add New Package" 
-                                                            Foreground="White"
-                                                            VerticalAlignment="Center" />
-                                                    </StackPanel>
-                                                </Button>
-                                            </Grid>
-                                            <StackPanel>
-                                                <ItemsControl ItemsSource="{CompiledBinding PackageOptions}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <UniformGrid Columns="3" RowSpacing="30" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <shadui:Card Width="330" Height="390">
-                                                                <StackPanel>
-                                                                    <shadui:CardTitle
-                                                                        Content="{CompiledBinding Title}"
-                                                                        FontSize="18"
-                                                                        FontWeight="Bold" />
-                                                                    <shadui:CardDescription
-                                                                        Content="{CompiledBinding Description}" />
+																<ItemsControl.ItemTemplate>
+																	<DataTemplate>
+																		<shadui:Card Background="White" CornerRadius="5" BorderBrush="White">
+																			<Grid ColumnDefinitions="1.3* 1.2* 1.5* 1.4* Auto">
+																				<!-- Customer Info Column -->
+																				<StackPanel
+																					Grid.Column="0"
+																					Orientation="Horizontal"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Left">
+																					<StackPanel Margin="15,0">
+																						<TextBlock
+																							Classes="Small"
+																							FontSize="15"
+																							FontWeight="SemiBold"
+																							Text="{CompiledBinding CustomerName}" />
+																						<TextBlock
+																							Classes="Caption Muted"
+																							FontSize="13"
+																							Text="{CompiledBinding CustomerType}" />
+																					</StackPanel>
+																				</StackPanel>
 
-                                                                    <!-- Price -->
-                                                                    <StackPanel Orientation="Horizontal"
-                                                                            Margin="0,20,0,0">
-                                                                        <TextBlock
-                                                                            FontSize="35"
-                                                                            FontWeight="Bold"
-                                                                            Text="{CompiledBinding FormattedPrice}"
-                                                                            VerticalAlignment="Bottom" />
-                                                                        <TextBlock
-                                                                            Classes="Caption Muted"
-                                                                            FontSize="17"
-                                                                            FontWeight="Medium"
-                                                                            Text="{CompiledBinding PriceUnit}"
-                                                                            VerticalAlignment="Center" />
-                                                                    </StackPanel>
+																				<!-- Product Name Column -->
+																				<TextBlock
+																					Grid.Column="1"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Left"
+																					FontSize="15"
+																					TextWrapping="WrapWithOverflow"
+																					Width="100"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding ProductName}" />
 
-                                                                    <!-- Descriptions/Features/Benefits -->
-                                                                    <StackPanel>
-                                                                        <ItemsControl
-                                                                            ItemsSource="{CompiledBinding Features}">
-                                                                            <ItemsControl.ItemTemplate>
-                                                                                <DataTemplate>
-                                                                                    <StackPanel
-                                                                                        Orientation="Horizontal"
-                                                                                        Spacing="10">
-                                                                                        <Svg
-                                                                                            Width="24"
-                                                                                            Height="24"
-                                                                                            VerticalAlignment="Center"
-                                                                                            Margin="0,4"
-                                                                                            Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg" />
-                                                                                        <TextBlock
-                                                                                            Text="{CompiledBinding }"
-                                                                                            FontSize="14"
-                                                                                            Margin="0,4"
-                                                                                            VerticalAlignment="Center" />
-                                                                                    </StackPanel>
-                                                                                </DataTemplate>
-                                                                            </ItemsControl.ItemTemplate>
-                                                                        </ItemsControl>
-                                                                        <Button
-                                                                            Classes="Primary"
-                                                                            HorizontalAlignment="Center"
-                                                                            Padding="65,0"
-                                                                            Margin="0,30,0,0"
-                                                                            Command="{CompiledBinding $parent[ItemsControl].((viewModels:ManageBillingViewModel)DataContext).OpenEditPackageCommand, FallbackValue={x:Null}}"
-                                                                            CommandParameter="{CompiledBinding}">
-                                                                            <StackPanel Orientation="Horizontal">
-                                                                                <Svg
-                                                                                    Width="20"
-                                                                                    Height="20"
-                                                                                    Margin="0,0,10,0"
-                                                                                    VerticalAlignment="Center"
-                                                                                    Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
-                                                                                <TextBlock
-                                                                                    Text="Edit Package"
-                                                                                    Foreground="White"
-                                                                                    VerticalAlignment="Center" />
-                                                                            </StackPanel>
-                                                                        </Button>
-                                                                    </StackPanel>
-                                                                </StackPanel>
-                                                            </shadui:Card>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </TabItem>
-                                </TabControl.Items>
-                            </TabControl>
-                        </StackPanel>
-                    </shadui:Card>
-                </StackPanel>
-            </StackPanel>
-        </ScrollViewer>
-    </DockPanel>
+																				<!-- Date Column -->
+																				<TextBlock
+																					Grid.Column="2"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Left"
+																					FontSize="15"
+																					TextWrapping="WrapWithOverflow"
+																					Width="180"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding DateFormatted}" />
+
+																				<!-- Time Column -->
+																				<TextBlock
+																					Grid.Column="3"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Left"
+																					FontSize="15"
+																					FontWeight="SemiBold"
+																					Text="{CompiledBinding PurchaseTime, StringFormat='h:mm tt'}" />
+
+																				<!-- Amount Column -->
+																				<TextBlock
+																					Grid.Column="4"
+																					VerticalAlignment="Center"
+																					HorizontalAlignment="Right"
+																					FontSize="15"
+																					FontWeight="Bold"
+																					Foreground="{DynamicResource SuccessColor}"
+																					Text="{CompiledBinding FormattedAmount}" />
+																			</Grid>
+																		</shadui:Card>
+																	</DataTemplate>
+																</ItemsControl.ItemTemplate>
+															</ItemsControl>
+														</ScrollViewer>
+													</DockPanel>
+												</shadui:Card>
+											</shadui:BreakpointView>
+										</shadui:BreakpointViewPort>
+									</StackPanel>
+								</TabItem>
+								<TabItem Header="Purchase History">
+									<StackPanel>
+										<Grid ColumnDefinitions="* *" Margin="0,20,0,30">
+											<TextBlock
+												Grid.Column="0"
+												Text="Purchase History"
+												HorizontalAlignment="Left"
+												Classes="h3" />
+											<CalendarDatePicker
+												Grid.Column="1"
+												HorizontalAlignment="Right"
+												Margin="0,-20"
+												shadui:ControlAssist.Label="Date Today"
+												shadui:ControlAssist.ReadOnly="True"
+												SelectedDate="{CompiledBinding SelectedDate}" />
+										</Grid>
+										<Button
+											Classes="Primary"
+											Background="{DynamicResource InfoColor}"
+											HorizontalAlignment="Left"
+											Command="{CompiledBinding DownloadInvoicesCommand}">
+											<StackPanel Orientation="Horizontal">
+												<Svg
+													Width="20"
+													Height="20"
+													Margin="0,0,10,0"
+													VerticalAlignment="Center"
+													Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
+												<TextBlock
+													Text="Download Purchases (PDF)"
+													Foreground="White"
+													VerticalAlignment="Center" />
+											</StackPanel>
+										</Button>
+										<StackPanel>
+											<!-- Extra large and up breakpoint (1280 px and above). -->
+											<shadui:BreakpointViewPort>
+												<shadui:BreakpointView Breakpoint="XlAndUp">
+													<DataGrid
+														Height="315"
+														CanUserReorderColumns="False"
+														CanUserSortColumns="False"
+														GridLinesVisibility="All"
+														ItemsSource="{CompiledBinding InvoiceList}"
+														SelectionMode="Single"
+														IsReadOnly="True"
+														Background="{DynamicResource CardBackgroundColor}"
+														RowBackground="{DynamicResource CardBackgroundColor}"
+														HeadersVisibility="Column"
+														Margin="0,10,0,0">
+														
+														<DataGrid.Styles>
+															<Style Selector="TextBlock">
+																<Setter Property="TextWrapping" Value="WrapWithOverflow" />
+															</Style>
+														</DataGrid.Styles>
+
+														<DataGrid.Resources>
+															<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+														</DataGrid.Resources>
+
+														<DataGrid.Columns>
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="80"
+																Header="ID"
+																Binding="{CompiledBinding ID}" />
+															<DataGridTextColumn
+																Width="*"
+																MinWidth="120"
+																Header="Customer"
+																Binding="{CompiledBinding CustomerName}" />
+															<DataGridTextColumn
+																Width="*"
+																MinWidth="120"
+																Header="Purchased Item"
+																Binding="{CompiledBinding PurchasedItem}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="150"
+																Header="Quantity"
+																Binding="{CompiledBinding Quantity}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="150"
+																Header="Amount"
+																Binding="{CompiledBinding Amount}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="150"
+																Header="Payment Method"
+																Binding="{CompiledBinding PaymentMethod}" />
+															<DataGridTextColumn
+																Width="*"
+																MinWidth="120"
+																Header="Date Purchased"
+																Binding="{CompiledBinding DateFormatted}" />
+														</DataGrid.Columns>
+													</DataGrid>
+												</shadui:BreakpointView>
+												<shadui:BreakpointView Breakpoint="XlAndDown">
+													<Button
+														Classes="Primary"
+														Background="{DynamicResource InfoColor}"
+														HorizontalAlignment="Left"
+														Command="{CompiledBinding DownloadInvoicesCommand}">
+														<StackPanel Orientation="Horizontal">
+															<Svg
+																Width="20"
+																Height="20"
+																Margin="0,0,10,0"
+																VerticalAlignment="Center"
+																Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
+															<TextBlock
+																Text="Download Purchases (PDF)"
+																Foreground="White"
+																VerticalAlignment="Center" />
+														</StackPanel>
+													</Button>
+													<DataGrid
+														Height="315"
+														CanUserReorderColumns="False"
+														CanUserSortColumns="False"
+														GridLinesVisibility="All"
+														ItemsSource="{CompiledBinding InvoiceList}"
+														SelectionMode="Single"
+														IsReadOnly="True"
+														Background="{DynamicResource CardBackgroundColor}"
+														RowBackground="{DynamicResource CardBackgroundColor}"
+														HeadersVisibility="Column"
+														Margin="0,10,0,0">
+
+														<DataGrid.Styles>
+															<Style Selector="TextBlock">
+																<Setter Property="TextWrapping" Value="WrapWithOverflow" />
+															</Style>
+														</DataGrid.Styles>
+														
+														<DataGrid.Resources>
+															<converters:StringToBitmapConverter x:Key="StringToBitMapConverter" />
+														</DataGrid.Resources>
+
+														<DataGrid.Columns>
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="50"
+																Header="ID"
+																Binding="{CompiledBinding ID}" />
+															<DataGridTextColumn
+																Width="*"
+																MinWidth="160"
+																Header="Customer"
+																Binding="{CompiledBinding CustomerName}" />
+															<DataGridTextColumn
+																Width="*"
+																MinWidth="160"
+																Header="Purchased Item"
+																Binding="{CompiledBinding PurchasedItem}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="60"
+																Header="Quantity"
+																Binding="{CompiledBinding Quantity}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="60"
+																Header="Amount"
+																Binding="{CompiledBinding Amount}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="90"
+																Header="Payment Method"
+																Binding="{CompiledBinding PaymentMethod}" />
+															<DataGridTextColumn
+																Width="*"
+																MinWidth="120"
+																Header="Date Purchased"
+																Binding="{CompiledBinding DateFormatted}" />
+														</DataGrid.Columns>
+													</DataGrid>
+												</shadui:BreakpointView>
+											</shadui:BreakpointViewPort>
+										</StackPanel>
+									</StackPanel>
+								</TabItem>
+								<TabItem Header="Specialized Packages">
+									<StackPanel>
+										<Grid ColumnDefinitions="* Auto" Margin="0,20,0,30">
+											<TextBlock
+												Grid.Column="0"
+												Text="Specialized Packages"
+												HorizontalAlignment="Left"
+												Classes="h3" />
+											<Button
+												Grid.Column="1"
+												Margin="0,0,10,0"
+												Classes="Primary"
+												Background="{DynamicResource InfoColor}"
+												Command="{CompiledBinding OpenAddNewPackageCommand}">
+												<StackPanel Orientation="Horizontal">
+													<Svg
+														Width="22"
+														Height="22"
+														Margin="0,0,10,0"
+														Path="avares://AHON_TRACK/Assets/ManageBillingView/add-new-package-icon.svg" />
+													<TextBlock Text="Add New Package" Foreground="White" VerticalAlignment="Center" />
+												</StackPanel>
+											</Button>
+										</Grid>
+										<shadui:BreakpointViewPort>
+											<shadui:BreakpointView Breakpoint="LgAndUp">
+												<StackPanel>
+													<ItemsControl ItemsSource="{CompiledBinding PackageOptions}">
+														<ItemsControl.ItemsPanel>
+															<ItemsPanelTemplate>
+																<UniformGrid Columns="3" RowSpacing="30" />
+															</ItemsPanelTemplate>
+														</ItemsControl.ItemsPanel>
+														<ItemsControl.ItemTemplate>
+															<DataTemplate>
+																<shadui:Card Width="330" MaxHeight="390" VerticalAlignment="Top">
+																	<StackPanel>
+																		<shadui:CardTitle
+																			Content="{CompiledBinding Title}"
+																			FontSize="18"
+																			FontWeight="Bold" />
+																		<shadui:CardDescription Content="{CompiledBinding Description}" />
+
+																		<!-- Price -->
+																		<StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+																			<TextBlock
+																				FontSize="35"
+																				FontWeight="Bold"
+																				Text="{CompiledBinding FormattedPrice}"
+																				VerticalAlignment="Bottom" />
+																			<TextBlock
+																				Classes="Caption Muted"
+																				FontSize="17"
+																				FontWeight="Medium"
+																				Text="{CompiledBinding Duration}"
+																				VerticalAlignment="Center" />
+																		</StackPanel>
+
+																		<!-- Descriptions/Features/Benefits -->
+																		<StackPanel>
+																			<ItemsControl ItemsSource="{CompiledBinding Features}">
+																				<ItemsControl.ItemTemplate>
+																					<DataTemplate>
+																						<StackPanel Orientation="Horizontal" Spacing="10">
+																							<Svg
+																								Width="24"
+																								Height="24"
+																								VerticalAlignment="Center"
+																								Margin="0,4"
+																								Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg" />
+																							<TextBlock
+																								Text="{CompiledBinding }"
+																								FontSize="14"
+																								Margin="0,4"
+																								VerticalAlignment="Center" />
+																						</StackPanel>
+																					</DataTemplate>
+																				</ItemsControl.ItemTemplate>
+																			</ItemsControl>
+																			<Button
+																				Classes="Primary"
+																				HorizontalAlignment="Center"
+																				Padding="65,0"
+																				Margin="0,30,0,0"
+																				Command="{CompiledBinding $parent[ItemsControl].((viewModels:ManageBillingViewModel)DataContext).OpenEditPackageCommand}"
+																				CommandParameter="{CompiledBinding}">
+																				<StackPanel Orientation="Horizontal">
+																					<Svg
+																						Width="20"
+																						Height="20"
+																						Margin="0,0,10,0"
+																						VerticalAlignment="Center"
+																						Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+																					<TextBlock
+																						Text="Edit Package"
+																						Foreground="White"
+																						VerticalAlignment="Center" />
+																				</StackPanel>
+																			</Button>
+																		</StackPanel>
+																	</StackPanel>
+																</shadui:Card>
+															</DataTemplate>
+														</ItemsControl.ItemTemplate>
+													</ItemsControl>
+												</StackPanel>
+											</shadui:BreakpointView>
+											<shadui:BreakpointView Breakpoint="LgAndDown">
+												<StackPanel>
+													<ItemsControl ItemsSource="{CompiledBinding PackageOptions}">
+														<ItemsControl.ItemsPanel>
+															<ItemsPanelTemplate>
+																<UniformGrid Columns="2" RowSpacing="30" />
+															</ItemsPanelTemplate>
+														</ItemsControl.ItemsPanel>
+														<ItemsControl.ItemTemplate>
+															<DataTemplate>
+																<shadui:Card Width="330" MaxHeight="390" VerticalAlignment="Top">
+																	<StackPanel>
+																		<shadui:CardTitle
+																			Content="{CompiledBinding Title}"
+																			FontSize="18"
+																			FontWeight="Bold" />
+																		<shadui:CardDescription Content="{CompiledBinding Description}" />
+
+																		<!-- Price -->
+																		<StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+																			<TextBlock
+																				FontSize="35"
+																				FontWeight="Bold"
+																				Text="{CompiledBinding FormattedPrice}"
+																				VerticalAlignment="Bottom" />
+																			<TextBlock
+																				Classes="Caption Muted"
+																				FontSize="17"
+																				FontWeight="Medium"
+																				Text="{CompiledBinding Duration}"
+																				VerticalAlignment="Center" />
+																		</StackPanel>
+
+																		<!-- Descriptions/Features/Benefits -->
+																		<StackPanel>
+																			<ItemsControl ItemsSource="{CompiledBinding Features}">
+																				<ItemsControl.ItemTemplate>
+																					<DataTemplate>
+																						<StackPanel Orientation="Horizontal" Spacing="10">
+																							<Svg
+																								Width="24"
+																								Height="24"
+																								VerticalAlignment="Center"
+																								Margin="0,4"
+																								Path="avares://AHON_TRACK/Assets/ManageBillingView/check-badge-icon.svg" />
+																							<TextBlock
+																								Text="{CompiledBinding }"
+																								FontSize="14"
+																								Margin="0,4"
+																								VerticalAlignment="Center" />
+																						</StackPanel>
+																					</DataTemplate>
+																				</ItemsControl.ItemTemplate>
+																			</ItemsControl>
+																			<Button
+																				Classes="Primary"
+																				HorizontalAlignment="Center"
+																				Padding="65,0"
+																				Margin="0,30,0,0"
+																				Command="{CompiledBinding $parent[ItemsControl].((viewModels:ManageBillingViewModel)DataContext).OpenEditPackageCommand}"
+																				CommandParameter="{CompiledBinding}">
+																				<StackPanel Orientation="Horizontal">
+																					<Svg
+																						Width="20"
+																						Height="20"
+																						Margin="0,0,10,0"
+																						VerticalAlignment="Center"
+																						Path="avares://AHON_TRACK/Assets/ManageBillingView/edit-package-icon.svg" />
+																					<TextBlock
+																						Text="Edit Package"
+																						Foreground="White"
+																						VerticalAlignment="Center" />
+																				</StackPanel>
+																			</Button>
+																		</StackPanel>
+																	</StackPanel>
+																</shadui:Card>
+															</DataTemplate>
+														</ItemsControl.ItemTemplate>
+													</ItemsControl>
+												</StackPanel>
+											</shadui:BreakpointView>
+										</shadui:BreakpointViewPort>
+									</StackPanel>
+								</TabItem>
+							</TabControl.Items>
+						</TabControl>
+					</StackPanel>
+				</shadui:Card>
+			</StackPanel>
+		</ScrollViewer>
+	</DockPanel>
 </UserControl>
