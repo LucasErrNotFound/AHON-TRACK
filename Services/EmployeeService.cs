@@ -190,16 +190,27 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-                    SELECT e.EmployeeId, e.FirstName, e.MiddleInitial, e.LastName, e.ContactNumber, 
-                           e.Position, e.ProfilePicture, e.Status, e.DateJoined, e.Gender, e.Age, e.DateOfBirth,
-                           e.HouseAddress, e.HouseNumber, e.Street, e.Barangay, e.CityTown, e.Province,
-                           COALESCE(a.Username, c.Username, s.Username) AS Username
-                    FROM Employees e
-                    LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
-                    LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
-                    LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
-                    WHERE e.EmployeeId = @Id AND e.IsDeleted = 0";
-
+    SELECT e.EmployeeId, e.FirstName, e.MiddleInitial, e.LastName, e.ContactNumber, 
+           e.Position, e.ProfilePicture, e.Status, e.DateJoined, e.Gender, 
+           CASE 
+               WHEN e.DateOfBirth IS NOT NULL THEN 
+                   DATEDIFF(YEAR, e.DateOfBirth, GETDATE()) - 
+                   CASE 
+                       WHEN MONTH(e.DateOfBirth) > MONTH(GETDATE()) 
+                            OR (MONTH(e.DateOfBirth) = MONTH(GETDATE()) AND DAY(e.DateOfBirth) > DAY(GETDATE()))
+                       THEN 1 
+                       ELSE 0 
+                   END
+               ELSE e.Age
+           END AS Age,
+           e.DateOfBirth,
+           e.HouseAddress, e.HouseNumber, e.Street, e.Barangay, e.CityTown, e.Province,
+           COALESCE(a.Username, c.Username, s.Username) AS Username
+    FROM Employees e
+    LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
+    LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
+    LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
+    WHERE e.EmployeeId = @Id AND e.IsDeleted = 0";
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", employeeId);
 
@@ -231,17 +242,28 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-                    SELECT 
-                        e.EmployeeID, e.FirstName, e.MiddleInitial, e.LastName, e.Gender, e.ProfilePicture, 
-                        e.ContactNumber, e.Age, e.DateOfBirth, e.HouseAddress, e.HouseNumber, e.Street, 
-                        e.Barangay, e.CityTown, e.Province, e.Position, e.Status, e.DateJoined,
-                        COALESCE(a.Username, c.Username, s.Username) AS Username,
-                        COALESCE(a.LastLogin, c.LastLogin, s.LastLogin) AS LastLogin
-                    FROM Employees e
-                    LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
-                    LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
-                    LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
-                    WHERE e.EmployeeID = @Id AND e.IsDeleted = 0";
+    SELECT 
+        e.EmployeeID, e.FirstName, e.MiddleInitial, e.LastName, e.Gender, e.ProfilePicture, 
+        e.ContactNumber, 
+        COALESCE(
+            DATEDIFF(YEAR, e.DateOfBirth, GETDATE()) - 
+            CASE 
+                WHEN MONTH(e.DateOfBirth) > MONTH(GETDATE()) 
+                    OR (MONTH(e.DateOfBirth) = MONTH(GETDATE()) AND DAY(e.DateOfBirth) > DAY(GETDATE()))
+                THEN 1 
+                ELSE 0 
+            END,
+            e.Age
+        ) AS Age,
+        e.DateOfBirth, e.HouseAddress, e.HouseNumber, e.Street, 
+        e.Barangay, e.CityTown, e.Province, e.Position, e.Status, e.DateJoined,
+        COALESCE(a.Username, c.Username, s.Username) AS Username,
+        COALESCE(a.LastLogin, c.LastLogin, s.LastLogin) AS LastLogin
+    FROM Employees e
+    LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
+    LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
+    LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
+    WHERE e.EmployeeID = @Id AND e.IsDeleted = 0";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", employeeId);
