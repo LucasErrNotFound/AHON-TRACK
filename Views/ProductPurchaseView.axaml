@@ -163,10 +163,6 @@
 											<TextBlock
 												Text="{CompiledBinding CustomerFullName}"
 												Classes="h4" />
-											<TextBlock
-												Text="{CompiledBinding CurrentTransactionId, StringFormat='ID: {0}'}"
-												Classes="Caption Muted"
-												FontSize="15" />
 										</StackPanel>
 									</StackPanel>
 									<Separator Background="{StaticResource ForegroundColor}" Margin="0,0,20,0" />
@@ -505,10 +501,6 @@
 											<TextBlock
 												Text="{CompiledBinding CustomerFullName}"
 												Classes="h4" />
-											<TextBlock
-												Text="{CompiledBinding CurrentTransactionId, StringFormat='ID: {0}'}"
-												Classes="Caption Muted"
-												FontSize="15" />
 										</StackPanel>
 									</StackPanel>
 									<Separator Background="{StaticResource ForegroundColor}" Margin="0,0,20,0" />
