@@ -27,6 +27,28 @@ namespace AHON_TRACK.ViewModels;
 public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
+    private List<string> _sortOptions = 
+    [
+        "By ID",
+        "Names by A-Z",
+        "Names by Z-A",
+        "Usernames by A-Z",
+        "Usernames by Z-A",
+        "By newest to oldest",
+        "By oldest to newest",
+        "Reset Data"
+    ];
+    
+    [ObservableProperty]
+    private List<string> _filterOptions = 
+    [
+        "All",
+        "By active",
+        "By inactive",
+        "By terminated"
+    ];
+    
+    [ObservableProperty]
     private List<ManageEmployeesItem> _originalEmployeeData = [];
 
     [ObservableProperty]
@@ -111,6 +133,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _serviceProvider = serviceProvider;
         _employeeService = employeeService;
+        
+        SelectedSortIndex = 0;
+        SelectedFilterIndex = 0;
+        
         SubscribToEvent();
         _ = LoadEmployeesFromDatabaseAsync(); ;
         _ = UpdateCounts();
@@ -516,18 +542,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private void SortReset()
     {
-        EmployeeItems.Clear();
-        foreach (var employee in OriginalEmployeeData)
-        {
-            employee.PropertyChanged += OnEmployeePropertyChanged;
-            EmployeeItems.Add(employee);
-        }
-
-        CurrentFilteredData = [.. OriginalEmployeeData];
-        _ = UpdateCounts();
-
-        SelectedSortIndex = -1;
-        SelectedFilterIndex = -1;
+        SelectedSortIndex = 0;
+        ExecuteFilterCommand(SelectedFilterIndex);
     }
 
     [RelayCommand]
@@ -540,7 +556,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         {
             EmployeeItems.Add(employees);
         }
-        // Update current filtered data to match sorted state
+        
         CurrentFilteredData = [.. sortedById];
     }
 
@@ -625,31 +641,31 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     [RelayCommand]
     private void FilterActiveStatus()
     {
-        var filterActiveStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("active", StringComparison.OrdinalIgnoreCase)).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employee in filterActiveStatus)
-        {
-            employee.PropertyChanged += OnEmployeePropertyChanged;
-            EmployeeItems.Add(employee);
-        }
-        CurrentFilteredData = [.. filterActiveStatus];
-        _ = UpdateCounts();
+        var filtered = OriginalEmployeeData
+            .Where(e => e.Status.Equals("active", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    
+        ApplyCurrentSortToFilteredData(filtered);
     }
 
     [RelayCommand]
     private void FilterInactiveStatus()
     {
-        var filterInactiveStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase)).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employee in filterInactiveStatus)
-        {
-            employee.PropertyChanged += OnEmployeePropertyChanged;
-            EmployeeItems.Add(employee);
-        }
-        CurrentFilteredData = [.. filterInactiveStatus];
-        _ = UpdateCounts();
+        var filtered = OriginalEmployeeData
+            .Where(e => e.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    
+        ApplyCurrentSortToFilteredData(filtered);
+    }
+    
+    [RelayCommand]
+    private void FilterTerminatedStatus()
+    {
+        var filtered = OriginalEmployeeData
+            .Where(e => e.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    
+        ApplyCurrentSortToFilteredData(filtered);
     }
 
     [RelayCommand]
@@ -661,21 +677,6 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         {
             item.IsSelected = shouldSelect;
         }
-        _ = UpdateCounts();
-    }
-
-    [RelayCommand]
-    private void FilterTerminatedStatus()
-    {
-        var filterTerminatedStatus = OriginalEmployeeData.Where(employee => employee.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase)).ToList();
-        EmployeeItems.Clear();
-
-        foreach (var employee in filterTerminatedStatus)
-        {
-            employee.PropertyChanged += OnEmployeePropertyChanged;
-            EmployeeItems.Add(employee);
-        }
-        CurrentFilteredData = [.. filterTerminatedStatus];
         _ = UpdateCounts();
     }
 
@@ -725,6 +726,11 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
     }
 
+    [RelayCommand]
+    private void FilterAll()
+    {
+        ApplyCurrentSortToFilteredData([.. OriginalEmployeeData]);
+    }
 
     [RelayCommand]
     private async Task ShowCopySingleEmployeeName(ManageEmployeesItem? employee)
@@ -1008,13 +1014,40 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         }
     }
 
+    private void ApplyCurrentSortToFilteredData(List<ManageEmployeesItem> filtered)
+    {
+        var sorted = SelectedSortIndex switch
+        {
+            0 => filtered.OrderBy(e => e.ID).ToList(),
+            1 => filtered.OrderBy(e => e.Name).ToList(),
+            2 => filtered.OrderByDescending(e => e.Name).ToList(),
+            3 => filtered.OrderBy(e => e.Username).ToList(),
+            4 => filtered.OrderByDescending(e => e.Username).ToList(),
+            5 => filtered.OrderByDescending(e => e.DateJoined).ToList(),
+            6 => filtered.OrderBy(e => e.DateJoined).ToList(),
+            _ => filtered
+        };
+    
+        CurrentFilteredData = [.. sorted];
+        
+        EmployeeItems.Clear();
+        foreach (var employee in sorted)
+        {
+            employee.PropertyChanged += OnEmployeePropertyChanged;
+            EmployeeItems.Add(employee);
+        }
+        
+        _ = UpdateCounts();
+    }
+    
     private void ExecuteFilterCommand(int selectedIndex)
     {
         switch (selectedIndex)
         {
-            case 0: FilterActiveStatusCommand.Execute(null); break;
-            case 1: FilterInactiveStatusCommand.Execute(null); break;
-            case 2: FilterTerminatedStatusCommand.Execute(null); break;
+            case 0: FilterAllCommand.Execute(null); break;
+            case 1: FilterActiveStatusCommand.Execute(null); break;
+            case 2: FilterInactiveStatusCommand.Execute(null); break;
+            case 3: FilterTerminatedStatusCommand.Execute(null); break;
         }
     }
 

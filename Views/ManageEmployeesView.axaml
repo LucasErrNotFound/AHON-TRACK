@@ -89,24 +89,13 @@
                                         <ComboBox
                                             PlaceholderText="Sort Data"
                                             Width="185"
-                                            SelectedIndex="{CompiledBinding SelectedSortIndex}">
-                                            <ComboBoxItem Content="By ID" />
-                                            <ComboBoxItem Content="Names by A-Z" />
-                                            <ComboBoxItem Content="Names by Z-A" />
-                                            <ComboBoxItem Content="Usernames by A-Z" />
-                                            <ComboBoxItem Content="Usernames by Z-A" />
-                                            <ComboBoxItem Content="By newest to oldest" />
-                                            <ComboBoxItem Content="By oldest to newest" />
-                                            <ComboBoxItem Content="Reset Data" />
-                                        </ComboBox>
+                                            ItemsSource="{CompiledBinding SortOptions}"
+                                            SelectedIndex="{CompiledBinding SelectedSortIndex}" />
                                         <ComboBox
                                             PlaceholderText="Filter"
                                             Width="155"
-                                            SelectedIndex="{CompiledBinding SelectedFilterIndex}">
-                                            <ComboBoxItem Content="By active" />
-                                            <ComboBoxItem Content="By inactive" />
-                                            <ComboBoxItem Content="By terminated" />
-                                        </ComboBox>
+                                            ItemsSource="{CompiledBinding FilterOptions}"
+                                            SelectedIndex="{CompiledBinding SelectedFilterIndex}" />
                                     </StackPanel>
                                     <Button
                                         Grid.Column="2"
@@ -421,25 +410,14 @@
                                         Spacing="30">
                                         <ComboBox
                                             PlaceholderText="Sort Data"
-                                            Width="145"
-                                            SelectedIndex="{CompiledBinding SelectedSortIndex}">
-                                            <ComboBoxItem Content="By ID" />
-                                            <ComboBoxItem Content="Names by A-Z" />
-                                            <ComboBoxItem Content="Names by Z-A" />
-                                            <ComboBoxItem Content="Usernames by A-Z" />
-                                            <ComboBoxItem Content="Usernames by Z-A" />
-                                            <ComboBoxItem Content="By newest to oldest" />
-                                            <ComboBoxItem Content="By oldest to newest" />
-                                            <ComboBoxItem Content="Reset Data" />
-                                        </ComboBox>
+                                            Width="185"
+                                            ItemsSource="{CompiledBinding SortOptions}"
+                                            SelectedIndex="{CompiledBinding SelectedSortIndex}" />
                                         <ComboBox
                                             PlaceholderText="Filter"
-                                            Width="125"
-                                            SelectedIndex="{CompiledBinding SelectedFilterIndex}">
-                                            <ComboBoxItem Content="By active" />
-                                            <ComboBoxItem Content="By inactive" />
-                                            <ComboBoxItem Content="By terminated" />
-                                        </ComboBox>
+                                            Width="155"
+                                            ItemsSource="{CompiledBinding FilterOptions}"
+                                            SelectedIndex="{CompiledBinding SelectedFilterIndex}" />
                                     </StackPanel>
                                     <Button
                                         Grid.Column="2"
