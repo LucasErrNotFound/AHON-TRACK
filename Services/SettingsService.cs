@@ -44,6 +44,14 @@ public class SettingsService
 
             _cachedSettings = JsonSerializer.Deserialize<AppSettings>(json, options) ?? new AppSettings();
 
+            if (_cachedSettings.IndexMaintenanceFrequencyDays == 3)
+            {
+                _cachedSettings.IndexMaintenanceFrequencyDays = 1;
+                await SaveSettingsAsync(_cachedSettings); // Save the updated value
+            }
+
+            _cachedSettings = JsonSerializer.Deserialize<AppSettings>(json, options) ?? new AppSettings();
+
             // Debug output
             System.Diagnostics.Debug.WriteLine($"Loaded DownloadPath: '{_cachedSettings.DownloadPath}'");
             System.Diagnostics.Debug.WriteLine($"Loaded BackupFrequency: '{_cachedSettings.BackupFrequency}'");

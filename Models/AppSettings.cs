@@ -17,4 +17,7 @@ public class AppSettings
     [JsonPropertyName("recoveryFilePath")]
     public string RecoveryFilePath { get; set; } = string.Empty;
     public DateTime? LastBackupDate { get; set; }
+
+    public int IndexMaintenanceFrequencyDays { get; set; } = 1;
+    public DateTime? LastIndexMaintenanceDate { get; set; }
 }

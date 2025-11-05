@@ -17,6 +17,8 @@ namespace AHON_TRACK.Components.ViewModels;
 
 public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
 {
+    #region Observable Properties
+
     [ObservableProperty]
     private TextBox? _downloadTextBoxControl;
 
@@ -46,6 +48,19 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
     [ObservableProperty]
     private bool _restoreConfirmationPending;
 
+    [ObservableProperty]
+    private bool _isPerformingMaintenance;
+
+    [ObservableProperty]
+    private int _indexMaintenanceFrequencyDays;
+
+    [ObservableProperty]
+    private string _lastMaintenanceDate = "Never";
+
+    #endregion
+
+    #region Private Fields
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -54,6 +69,10 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
     private readonly BackupSchedulerService? _backupScheduler;
     private AppSettings? _currentSettings;
     private DateTime? _restoreConfirmationExpiry;
+
+    #endregion
+
+    #region Constructors
 
     public SettingsDialogCardViewModel(
         DialogManager dialogManager,
@@ -75,6 +94,7 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
             BackupFrequencyOptions.Add($"{i} Days");
 
         _selectedBackupFrequency = BackupFrequencyOptions[0];
+        _indexMaintenanceFrequencyDays = 1;
 
         _ = LoadSettingsAsync();
     }
@@ -93,7 +113,12 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
             BackupFrequencyOptions.Add($"{i} Days");
 
         _selectedBackupFrequency = BackupFrequencyOptions[0];
+        _indexMaintenanceFrequencyDays = 1;
     }
+
+    #endregion
+
+    #region Initialization
 
     [AvaloniaHotReload]
     public async Task Initialize()
@@ -109,9 +134,19 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         IsDarkMode = _currentSettings.IsDarkMode;
         SelectedBackupFrequency = _currentSettings.BackupFrequency;
         RecoveryFilePath = _currentSettings.RecoveryFilePath;
+        IndexMaintenanceFrequencyDays = _currentSettings.IndexMaintenanceFrequencyDays;
+
+        if (_currentSettings.LastIndexMaintenanceDate.HasValue)
+        {
+            LastMaintenanceDate = _currentSettings.LastIndexMaintenanceDate.Value.ToString("yyyy-MM-dd HH:mm");
+        }
 
         UpdateTextBoxes();
     }
+
+    #endregion
+
+    #region Settings Commands
 
     [RelayCommand]
     private async Task Apply()
@@ -119,28 +154,24 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         if (_currentSettings == null)
             _currentSettings = new AppSettings();
 
-        // IMPORTANT: Make sure to capture current property values
         _currentSettings.DownloadPath = DownloadPath;
         _currentSettings.IsDarkMode = IsDarkMode;
         _currentSettings.BackupFrequency = SelectedBackupFrequency;
         _currentSettings.RecoveryFilePath = RecoveryFilePath;
+        _currentSettings.IndexMaintenanceFrequencyDays = IndexMaintenanceFrequencyDays;
 
-        // Debug output
         System.Diagnostics.Debug.WriteLine($"Saving DownloadPath: '{_currentSettings.DownloadPath}'");
         System.Diagnostics.Debug.WriteLine($"Saving BackupFrequency: '{_currentSettings.BackupFrequency}'");
+        System.Diagnostics.Debug.WriteLine($"Saving IndexMaintenanceFrequencyDays: {_currentSettings.IndexMaintenanceFrequencyDays}");
 
-        // Save settings
         await _settingsService.SaveSettingsAsync(_currentSettings);
 
-        // Restart the backup scheduler if available (without triggering immediate backup)
         if (_backupScheduler != null)
         {
-            // Use RestartSchedulerAsync instead of StartSchedulerAsync
-            // This updates the timer but doesn't trigger an immediate backup
             await _backupScheduler.RestartSchedulerAsync();
 
             _toastManager.CreateToast("Settings saved")
-                .WithContent($"Backup schedule updated to: {SelectedBackupFrequency}")
+                .WithContent($"Backup: {SelectedBackupFrequency} | Index maintenance: Every {IndexMaintenanceFrequencyDays} days")
                 .DismissOnClick()
                 .ShowSuccess();
         }
@@ -160,6 +191,10 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
     {
         _dialogManager.Close(this);
     }
+
+    #endregion
+
+    #region Backup Path Commands
 
     [RelayCommand]
     private async Task SetDownloadPath()
@@ -247,11 +282,14 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
                 DataRecoveryTextBoxControl.Text = RecoveryFilePath;
             }
 
-            // Reset confirmation state when new file is selected
             RestoreConfirmationPending = false;
             _restoreConfirmationExpiry = null;
         }
     }
+
+    #endregion
+
+    #region Backup Operations
 
     [RelayCommand]
     private async Task BackupNow()
@@ -346,18 +384,14 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
             return;
         }
 
-        // Check if confirmation is still valid
         if (_restoreConfirmationExpiry.HasValue && _restoreConfirmationExpiry.Value < DateTime.Now)
         {
-            // Confirmation expired, reset
             RestoreConfirmationPending = false;
             _restoreConfirmationExpiry = null;
         }
 
-        // Two-step confirmation process
         if (!RestoreConfirmationPending)
         {
-            // First click - show warning and set confirmation flag
             RestoreConfirmationPending = true;
             _restoreConfirmationExpiry = DateTime.Now.AddSeconds(10);
 
@@ -366,7 +400,6 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
                 .DismissOnClick()
                 .ShowWarning();
 
-            // Auto-reset after 10 seconds
             _ = Task.Run(async () =>
             {
                 await Task.Delay(10000);
@@ -380,7 +413,6 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
             return;
         }
 
-        // Second click within time window - proceed with restore
         RestoreConfirmationPending = false;
         _restoreConfirmationExpiry = null;
         IsRestoring = true;
@@ -416,6 +448,54 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         }
     }
 
+    #endregion
+
+    #region Index Maintenance Operations
+
+    [RelayCommand]
+    private async Task PerformIndexMaintenance()
+    {
+        if (IsPerformingMaintenance) return;
+
+        IsPerformingMaintenance = true;
+
+        try
+        {
+            _toastManager.CreateToast("Starting index maintenance...")
+                .WithContent("This may take several minutes depending on database size")
+                .ShowInfo();
+
+            await _backupDatabaseService.PerformIndexMaintenanceAsync();
+
+            if (_currentSettings != null)
+            {
+                _currentSettings.LastIndexMaintenanceDate = DateTime.Now;
+                await _settingsService.SaveSettingsAsync(_currentSettings);
+                LastMaintenanceDate = _currentSettings.LastIndexMaintenanceDate.Value.ToString("yyyy-MM-dd HH:mm");
+            }
+
+            _toastManager.CreateToast("Index maintenance completed")
+                .WithContent("Database indexes have been optimized successfully")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Index maintenance failed")
+                .WithContent($"Failed to optimize indexes: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsPerformingMaintenance = false;
+        }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
     private void UpdateTextBoxes()
     {
         if (DownloadTextBoxControl != null)
@@ -437,9 +517,12 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
             value.Text = RecoveryFilePath;
     }
 
+    #endregion
+
+    #region Disposal
+
     protected override void DisposeManagedResources()
     {
-        // Clear UI controls' contents and release references
         if (DownloadTextBoxControl != null)
             DownloadTextBoxControl.Text = string.Empty;
         if (DataRecoveryTextBoxControl != null)
@@ -448,7 +531,6 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         DownloadTextBoxControl = null;
         DataRecoveryTextBoxControl = null;
 
-        // Reset simple properties
         IsDarkMode = false;
         DownloadPath = string.Empty;
         RecoveryFilePath = string.Empty;
@@ -456,21 +538,14 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
         IsBackingUp = false;
         IsRestoring = false;
         RestoreConfirmationPending = false;
+        IsPerformingMaintenance = false;
         _restoreConfirmationExpiry = null;
 
-        // Aggressively clear collections
         BackupFrequencyOptions?.Clear();
-        // Drop loaded settings and any cached objects
         _currentSettings = null;
-
-        if (DownloadTextBoxControl != null)
-            DownloadTextBoxControl.Text = string.Empty;
-        if (DataRecoveryTextBoxControl != null)
-            DataRecoveryTextBoxControl.Text = string.Empty;
-
-        DownloadTextBoxControl = null;
-        DataRecoveryTextBoxControl = null;
 
         base.DisposeManagedResources();
     }
+
+    #endregion
 }
