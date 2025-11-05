@@ -77,14 +77,12 @@
                         Title="Current Schedule"
                         CardBackground="{StaticResource GreenGradient}"
                         Foreground="White"
-                        Hint="{CompiledBinding CurrentScheduleChangeText}"
                         Value="{CompiledBinding CurrentScheduleCount}">
                     </card:OverviewCard>
                     <card:OverviewCard
                         Title="Upcoming Schedule"
                         CardBackground="{StaticResource BlueGradient}"
                         Foreground="White"
-                        Hint="{CompiledBinding UpcomingScheduleChangeText}"
                         Value="{CompiledBinding UpcomingScheduleCount}">
                     </card:OverviewCard>
                 </UniformGrid>
