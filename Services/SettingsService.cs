@@ -44,9 +44,9 @@ public class SettingsService
 
             _cachedSettings = JsonSerializer.Deserialize<AppSettings>(json, options) ?? new AppSettings();
 
-            if (_cachedSettings.IndexMaintenanceFrequencyDays == 3)
+            if (_cachedSettings.IndexMaintenanceFrequencyDays == 25)
             {
-                _cachedSettings.IndexMaintenanceFrequencyDays = 1;
+                _cachedSettings.IndexMaintenanceFrequencyDays = 25;
                 await SaveSettingsAsync(_cachedSettings); // Save the updated value
             }
 

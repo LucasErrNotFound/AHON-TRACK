@@ -18,6 +18,6 @@ public class AppSettings
     public string RecoveryFilePath { get; set; } = string.Empty;
     public DateTime? LastBackupDate { get; set; }
 
-    public int IndexMaintenanceFrequencyDays { get; set; } = 1;
+    public int IndexMaintenanceFrequencyDays { get; set; } = 25;
     public DateTime? LastIndexMaintenanceDate { get; set; }
 }

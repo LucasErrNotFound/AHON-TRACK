@@ -94,7 +94,7 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
             BackupFrequencyOptions.Add($"{i} Days");
 
         _selectedBackupFrequency = BackupFrequencyOptions[0];
-        _indexMaintenanceFrequencyDays = 1;
+        _indexMaintenanceFrequencyDays = 25;
 
         _ = LoadSettingsAsync();
     }
@@ -113,7 +113,7 @@ public partial class SettingsDialogCardViewModel : ViewModelBase, INavigable
             BackupFrequencyOptions.Add($"{i} Days");
 
         _selectedBackupFrequency = BackupFrequencyOptions[0];
-        _indexMaintenanceFrequencyDays = 1;
+        _indexMaintenanceFrequencyDays = 25;
     }
 
     #endregion
