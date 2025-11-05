@@ -100,7 +100,6 @@
                                 Title="Total Walk-ins"
                                 CardBackground="{StaticResource GreenGradient}"
                                 Foreground="White"
-                                Hint="{CompiledBinding WalkInChangePercent, StringFormat={}{0:+0.0;-0.0;0.0}%}"
                                 Value="{CompiledBinding TotalWalkIns}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -114,7 +113,6 @@
                                 Title="Total Gym Members"
                                 CardBackground="{StaticResource BlueGradient}"
                                 Foreground="White"
-                                Hint="{CompiledBinding MemberChangePercent, StringFormat={}{0:+0.0;-0.0;0.0}%}"
                                 Value="{CompiledBinding TotalMembers}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
@@ -127,7 +125,6 @@
                                 Title="Total Customers"
                                 CardBackground="{StaticResource PurpleGradient}"
                                 Foreground="White"
-                                Hint="{CompiledBinding AttendanceChangePercent, StringFormat={}{0:+0.0;-0.0;0.0}%}"
                                 Value="{CompiledBinding TotalAttendance}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
