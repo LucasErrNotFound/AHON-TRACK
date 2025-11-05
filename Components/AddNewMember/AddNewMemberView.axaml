@@ -374,9 +374,6 @@
 													<TextBlock
 														Text="{CompiledBinding MemberFullName}"
 														Classes="h4" />
-													<TextBlock
-														Text="{CompiledBinding TransactionID}"
-														Classes="h5" />
 												</StackPanel>
 											</StackPanel>
 										</Grid>
@@ -532,9 +529,6 @@
 												<StackPanel Orientation="Vertical" Margin="40,-25,0,20" Spacing="10">
 													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 														<TextBlock
-															Text="Transaction ID:"
-															Classes="h5" />
-														<TextBlock
 															Text="Date:"
 															Classes="h5" />
 														<TextBlock
@@ -548,12 +542,6 @@
 											<StackPanel Grid.Column="1">
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
-														<TextBlock
-															Text="{CompiledBinding TransactionID}"
-															TextAlignment="Right"
-															TextWrapping="NoWrap"
-															FontWeight="SemiBold"
-															Classes="h5" />
 														<TextBlock
 															Text="{CompiledBinding CurrentDate}"
 															TextAlignment="Right"
@@ -998,9 +986,6 @@
 													<TextBlock
 														Text="{CompiledBinding MemberFullName}"
 														Classes="h4" />
-													<TextBlock
-														Text="{CompiledBinding TransactionID}"
-														Classes="h5" />
 												</StackPanel>
 											</StackPanel>
 										</Grid>
@@ -1156,9 +1141,6 @@
 												<StackPanel Orientation="Vertical" Margin="40,-25,0,20" Spacing="10">
 													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 														<TextBlock
-															Text="Transaction ID:"
-															Classes="h5" />
-														<TextBlock
 															Text="Date:"
 															Classes="h5" />
 														<TextBlock
@@ -1172,12 +1154,6 @@
 											<StackPanel Grid.Column="1">
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
-														<TextBlock
-															Text="{CompiledBinding TransactionID}"
-															TextAlignment="Right"
-															TextWrapping="NoWrap"
-															FontWeight="SemiBold"
-															Classes="h5" />
 														<TextBlock
 															Text="{CompiledBinding CurrentDate}"
 															TextAlignment="Right"

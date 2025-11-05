@@ -341,9 +341,6 @@
 													<TextBlock
 														Text="{CompiledBinding CustomerFullName}"
 														Classes="h4" />
-													<TextBlock
-														Text="{CompiledBinding TransactionID}"
-														Classes="h5" />
 												</StackPanel>
 											</StackPanel>
 										</Grid>
@@ -498,9 +495,6 @@
 												<StackPanel Orientation="Vertical" Margin="40,-25,0,20" Spacing="10">
 													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 														<TextBlock
-															Text="Transaction ID:"
-															Classes="h5" />
-														<TextBlock
 															Text="Date:"
 															Classes="h5" />
 														<TextBlock
@@ -514,12 +508,6 @@
 											<StackPanel Grid.Column="1" HorizontalAlignment="Right">
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
-														<TextBlock
-															Text="{CompiledBinding TransactionID}"
-															TextAlignment="Right"
-															HorizontalAlignment="Left"
-															FontWeight="SemiBold"
-															Classes="h5" />
 														<TextBlock
 															Text="{CompiledBinding CurrentDate}"
 															TextAlignment="Right"
@@ -622,11 +610,6 @@
 																FontSize="18"
 																FontWeight="Medium"
 																Margin="0,20" />
-															<TextBlock
-																Text="{CompiledBinding TransactionID}"
-																Foreground="{DynamicResource InfoColor}"
-																FontSize="18"
-																FontWeight="Medium" />
 														</StackPanel>
 													</StackPanel>
 												</shadui:Card>
@@ -931,9 +914,6 @@
 													<TextBlock
 														Text="{CompiledBinding CustomerFullName}"
 														Classes="h4" />
-													<TextBlock
-														Text="{CompiledBinding TransactionID}"
-														Classes="h5" />
 												</StackPanel>
 											</StackPanel>
 										</Grid>
@@ -1089,9 +1069,6 @@
 												<StackPanel Orientation="Vertical" Margin="40,-25,0,20" Spacing="10">
 													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 														<TextBlock
-															Text="Transaction ID:"
-															Classes="h5" />
-														<TextBlock
 															Text="Date:"
 															Classes="h5" />
 														<TextBlock
@@ -1105,12 +1082,6 @@
 											<StackPanel Grid.Column="1" HorizontalAlignment="Right">
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
-														<TextBlock
-															Text="{CompiledBinding TransactionID}"
-															TextAlignment="Right"
-															HorizontalAlignment="Left"
-															FontWeight="SemiBold"
-															Classes="h5" />
 														<TextBlock
 															Text="{CompiledBinding CurrentDate}"
 															TextAlignment="Right"
@@ -1212,11 +1183,6 @@
 																FontSize="18"
 																FontWeight="Medium"
 																Margin="0,20" />
-															<TextBlock
-																Text="{CompiledBinding TransactionID}"
-																Foreground="{DynamicResource InfoColor}"
-																FontSize="18"
-																FontWeight="Medium" />
 														</StackPanel>
 													</StackPanel>
 												</shadui:Card>
