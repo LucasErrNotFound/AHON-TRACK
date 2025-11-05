@@ -249,7 +249,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         catch (Exception ex)
         {
             _toastManager.CreateToast("Load Error")
-                .WithContent($"Failed to load invoices: {ex.Message}")
+                .WithContent($"Failed to load purchases: {ex.Message}")
                 .ShowError();
             LoadInvoiceData(); // Fallback to sample data
         }
@@ -361,11 +361,11 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         try
         {
-            // Check if there are any invoices to export
+            // Check if there are any purchases to export
             if (InvoiceList.Count == 0)
             {
-                _toastManager.CreateToast("No invoices to export")
-                    .WithContent("There are no invoices available for the selected date.")
+                _toastManager.CreateToast("No purchases to export")
+                    .WithContent("There are no purchase list available for the selected date.")
                     .DismissOnClick()
                     .ShowWarning();
                 return;
@@ -389,10 +389,10 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 }
             }
 
-            var fileName = $"Invoice_{SelectedDate:yyyy-MM-dd}.pdf";
+            var fileName = $"PurchaseList_{SelectedDate:yyyy-MM-dd}.pdf";
             var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Download Invoice",
+                Title = "Download Purchases",
                 SuggestedStartLocation = startLocation,
                 FileTypeChoices = [FilePickerFileTypes.Pdf],
                 SuggestedFileName = fileName,
@@ -425,17 +425,17 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
             // Both cannot be enabled at the same time. Disable one of them 
             document.GeneratePdf(stream); // Generate the PDF
-                                          // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
 
-            _toastManager.CreateToast("Invoice exported successfully")
-                .WithContent($"Invoice has been saved to {pdfFile.Name}")
+            _toastManager.CreateToast("Purchases exported successfully")
+                .WithContent($"Purchase list has been saved to {pdfFile.Name}")
                 .DismissOnClick()
                 .ShowSuccess();
         }
         catch (Exception ex)
         {
             _toastManager.CreateToast("Export failed")
-                .WithContent($"Failed to export invoice: {ex.Message}")
+                .WithContent($"Failed to export purchases: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
         }

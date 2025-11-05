@@ -76,8 +76,7 @@ public class InvoiceDocument : IDocument
             row.RelativeItem().Column(column =>
             {
                 column.Item().AlignRight()
-                    .PaddingRight(10)
-                    .Text("INVOICE REPORT")
+                    .Text("PURCHASE REPORT")
                     .FontColor(Colors.Red.Medium)
                     .FontSize(18)
                     .SemiBold();

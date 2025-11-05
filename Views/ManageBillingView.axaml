@@ -271,12 +271,12 @@
 										</shadui:BreakpointViewPort>
 									</StackPanel>
 								</TabItem>
-								<TabItem Header="Invoices">
+								<TabItem Header="Purchase History">
 									<StackPanel>
 										<Grid ColumnDefinitions="* *" Margin="0,20,0,30">
 											<TextBlock
 												Grid.Column="0"
-												Text="Invoices"
+												Text="Purchase History"
 												HorizontalAlignment="Left"
 												Classes="h3" />
 											<CalendarDatePicker
@@ -300,7 +300,7 @@
 													VerticalAlignment="Center"
 													Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
 												<TextBlock
-													Text="Download Invoice (PDF)"
+													Text="Download Purchases (PDF)"
 													Foreground="White"
 													VerticalAlignment="Center" />
 											</StackPanel>
@@ -380,7 +380,7 @@
 																VerticalAlignment="Center"
 																Path="avares://AHON_TRACK/Assets/ManageBillingView/download-icon.svg" />
 															<TextBlock
-																Text="Download Invoice (PDF)"
+																Text="Download Purchases (PDF)"
 																Foreground="White"
 																VerticalAlignment="Center" />
 														</StackPanel>
