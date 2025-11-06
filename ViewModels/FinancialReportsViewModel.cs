@@ -83,8 +83,6 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-
-        SubscribeToEvent();
         // For design-time, you'll need to handle this appropriately
     }
 

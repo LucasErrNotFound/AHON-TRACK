@@ -102,8 +102,8 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         _dashboardService = dashboardService;
         _settingsService = settingsService;
 
-        SubscribeToEvents();
         _ = LoadDataFromDatabaseAsync();
+        SubscribeToEvents();
         UpdateCounts();
     }
 
@@ -193,16 +193,6 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         {
             IsLoading = false;
             _isLoadingDataFlag = false; // ? Reset flag
-        }
-    }
-
-    [RelayCommand]
-    private async Task RefreshDataAsync()
-    {
-        if (_dashboardService != null)
-        {
-            await LoadDataFromDatabaseAsync();
-            _toastManager.CreateToast($"Success. Audit logs refreshed {NotificationType.Success}");
         }
     }
 
@@ -549,23 +539,24 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         RefreshAuditLogItems(sortedList);
     }
 
-    private void RefreshAuditLogItems(List<AuditLogItems> auditLogItems)
+    private void RefreshAuditLogItems(List<AuditLogItems> items)
     {
-        // ? Unsubscribe before clearing
+        // 1?? Unsubscribe before replacing collection
         foreach (var log in AuditLogs)
-        {
             log.PropertyChanged -= OnAuditLogPropertyChanged;
-        }
 
-        AuditLogs.Clear();
-        foreach (var logs in auditLogItems)
-        {
-            logs.PropertyChanged += OnAuditLogPropertyChanged;
-            AuditLogs.Add(logs);
-        }
+        // 2?? Replace collection reference
+        AuditLogs = new ObservableCollection<AuditLogItems>(items);
+
+        // 3?? Subscribe to new items
+        foreach (var log in AuditLogs)
+            log.PropertyChanged += OnAuditLogPropertyChanged;
+
+        // 4?? Update state
         UpdateCounts();
         UpdateGaugeValue();
     }
+
 
     private void UpdateGaugeValue()
     {

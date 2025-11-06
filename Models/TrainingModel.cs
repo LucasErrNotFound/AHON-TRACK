@@ -15,7 +15,6 @@ namespace AHON_TRACK.Models
         public string firstName { get; set; } = string.Empty;
         public string lastName { get; set; } = string.Empty;
         public string contactNumber { get; set; } = string.Empty;
-        public byte[]? picture { get; set; } // ✅ store raw bytes
         public int packageID { get; set; }
         public string packageType { get; set; } = string.Empty;
         public string assignedCoach { get; set; } = string.Empty;

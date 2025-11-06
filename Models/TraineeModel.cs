@@ -12,7 +12,6 @@ namespace AHON_TRACK.Models
     {
         public int ID { get; set; }
         public string CustomerType { get; set; } = string.Empty; // Added
-        public Bitmap? Picture { get; set; }
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string ContactNumber { get; set; } = string.Empty;

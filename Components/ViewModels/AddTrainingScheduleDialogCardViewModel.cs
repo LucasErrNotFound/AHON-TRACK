@@ -245,7 +245,6 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                 var trainee = new Trainees
                 {
                     ID = model.ID,
-                    Picture = model.Picture,
                     FirstName = model.FirstName,
                     LastName = model.LastName,
                     ContactNumber = model.ContactNumber,
@@ -528,7 +527,6 @@ public sealed partial class AddTrainingScheduleDialogCardViewModel : ViewModelBa
                 firstName = SelectedTrainee.FirstName,
                 lastName = SelectedTrainee.LastName,
                 contactNumber = SelectedTrainee.ContactNumber,
-                picture = imageBytes,
                 packageID = SelectedTrainee.PackageID,
                 packageType = SelectedTrainee.PackageType,
                 assignedCoach = SelectedCoachItems,

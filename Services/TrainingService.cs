@@ -167,15 +167,13 @@ namespace AHON_TRACK.Services
         {
             const string query = @"
 INSERT INTO Trainings (
-    CustomerID, CustomerType, FirstName, LastName, ContactNumber, 
-    ProfilePicture, PackageID, PackageType, AssignedCoach, 
+    CustomerID, CustomerType, FirstName, LastName, ContactNumber, PackageID, PackageType, AssignedCoach, 
     ScheduledDate, ScheduledTimeStart, ScheduledTimeEnd, 
     Attendance, CreatedByEmployeeID
 )
 OUTPUT INSERTED.TrainingID
 VALUES (
-    @CustomerID, @CustomerType, @FirstName, @LastName, @ContactNumber, 
-    @ProfilePicture, @PackageID, @PackageType, @AssignedCoach, 
+    @CustomerID, @CustomerType, @FirstName, @LastName, @ContactNumber, @PackageID, @PackageType, @AssignedCoach, 
     @ScheduledDate, @ScheduledTimeStart, @ScheduledTimeEnd, 
     @Attendance, @EmployeeID
 )";
@@ -187,7 +185,6 @@ VALUES (
             cmd.Parameters.AddWithValue("@FirstName", training.firstName ?? string.Empty);
             cmd.Parameters.AddWithValue("@LastName", training.lastName ?? string.Empty);
             cmd.Parameters.AddWithValue("@ContactNumber", ToDbValue(training.contactNumber));
-            cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary).Value = ToDbValue(training.picture);
             cmd.Parameters.AddWithValue("@PackageID", training.packageID);
             cmd.Parameters.AddWithValue("@PackageType", training.packageType ?? string.Empty);
             cmd.Parameters.AddWithValue("@AssignedCoach", training.assignedCoach ?? string.Empty);
@@ -225,7 +222,7 @@ VALUES (
 
                 const string query = @"
 SELECT TrainingID, CustomerID, FirstName, LastName, ContactNumber, 
-       ProfilePicture, PackageType, AssignedCoach, ScheduledDate, 
+        PackageType, AssignedCoach, ScheduledDate, 
        ScheduledTimeStart, ScheduledTimeEnd, Attendance, 
        CreatedAt, UpdatedAt
 FROM Trainings 
@@ -266,7 +263,7 @@ ORDER BY ScheduledDate, ScheduledTimeStart";
 
                 const string query = @"
 SELECT TrainingID, CustomerID, CustomerType, FirstName, LastName, ContactNumber, 
-       ProfilePicture, PackageID, PackageType, AssignedCoach, ScheduledDate, 
+       PackageID, PackageType, AssignedCoach, ScheduledDate, 
        ScheduledTimeStart, ScheduledTimeEnd, Attendance, 
        CreatedAt, UpdatedAt, CreatedByEmployeeID
 FROM Trainings 
@@ -316,7 +313,6 @@ SELECT
     m.CustomerType AS CustomerType,
     m.Firstname AS FirstName,
     m.Lastname AS LastName,
-    NULL AS ProfilePicture,
     m.ContactNumber,
     p.PackageName AS PackageType,
     p.PackageID,
@@ -334,7 +330,6 @@ SELECT
     w.CustomerType AS CustomerType,
     w.FirstName AS FirstName,
     w.LastName AS LastName,
-    NULL AS ProfilePicture,
     w.ContactNumber,
     p.PackageName AS PackageType,
     p.PackageID,
@@ -493,7 +488,6 @@ UPDATE Trainings SET
     FirstName = @FirstName,
     LastName = @LastName,
     ContactNumber = @ContactNumber,
-    ProfilePicture = @ProfilePicture,
     PackageType = @PackageType,
     AssignedCoach = @AssignedCoach,
     ScheduledDate = @ScheduledDate,
@@ -514,7 +508,6 @@ WHERE TrainingID = @TrainingID";
                 command.Parameters.AddWithValue("@FirstName", training.firstName);
                 command.Parameters.AddWithValue("@LastName", training.lastName);
                 command.Parameters.AddWithValue("@ContactNumber", ToDbValue(training.contactNumber));
-                command.Parameters.AddWithValue("@ProfilePicture", ToDbValue(training.picture));
                 command.Parameters.AddWithValue("@PackageType", training.packageType);
                 command.Parameters.AddWithValue("@AssignedCoach", training.assignedCoach);
                 command.Parameters.AddWithValue("@ScheduledDate", training.scheduledDate);
@@ -926,9 +919,6 @@ VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @emplo
                 firstName = reader["FirstName"]?.ToString() ?? string.Empty,
                 lastName = reader["LastName"]?.ToString() ?? string.Empty,
                 contactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                picture = !reader.IsDBNull(reader.GetOrdinal("ProfilePicture"))
-                    ? (byte[])reader["ProfilePicture"]
-                    : null,
                 packageType = reader["PackageType"]?.ToString() ?? string.Empty,
                 assignedCoach = reader["AssignedCoach"]?.ToString() ?? string.Empty,
                 scheduledDate = reader.GetDateTime(reader.GetOrdinal("ScheduledDate")),
@@ -952,9 +942,6 @@ VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @emplo
                 firstName = reader["FirstName"]?.ToString() ?? string.Empty,
                 lastName = reader["LastName"]?.ToString() ?? string.Empty,
                 contactNumber = reader["ContactNumber"]?.ToString() ?? string.Empty,
-                picture = !reader.IsDBNull(reader.GetOrdinal("ProfilePicture"))
-                    ? (byte[])reader["ProfilePicture"]
-                    : Array.Empty<byte>(),
                 packageID = reader.GetInt32(reader.GetOrdinal("PackageID")),
                 packageType = reader["PackageType"]?.ToString() ?? string.Empty,
                 assignedCoach = reader["AssignedCoach"]?.ToString() ?? string.Empty,
@@ -974,18 +961,6 @@ VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @emplo
 
         private TraineeModel MapTraineeFromReader(SqlDataReader reader)
         {
-            Bitmap? picture = null;
-
-            if (!reader.IsDBNull(reader.GetOrdinal("ProfilePicture")))
-            {
-                var pictureBytes = (byte[])reader["ProfilePicture"];
-                if (pictureBytes.Length > 0)
-                {
-                    using var ms = new MemoryStream(pictureBytes);
-                    picture = new Bitmap(ms);
-                }
-            }
-
             return new TraineeModel
             {
                 ID = reader.GetInt32(reader.GetOrdinal("CustomerID")),
@@ -996,7 +971,6 @@ VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @emplo
                 PackageType = reader["PackageType"]?.ToString() ?? string.Empty,
                 PackageID = reader.GetInt32(reader.GetOrdinal("PackageID")),
                 SessionLeft = reader.GetInt32(reader.GetOrdinal("SessionsLeft")),
-                Picture = picture ?? new Bitmap(AssetLoader.Open(new Uri("avares://AHON_TRACK/Assets/MainWindowView/user.png")))
             };
         }
 

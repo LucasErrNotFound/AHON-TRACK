@@ -279,13 +279,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
             foreach (var t in trainings)
             {
-                Bitmap? bitmap = null;
-                if (t.picture is { Length: > 0 })
-                {
-                    using var ms = new MemoryStream(t.picture);
-                    bitmap = new Bitmap(ms);
-                }
-
                 people.Add(new ScheduledPerson
                 {
                     TrainingID = t.trainingID,
@@ -299,7 +292,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
                     ScheduledTimeStart = TimeOnly.FromDateTime(t.scheduledTimeStart),
                     ScheduledTimeEnd = TimeOnly.FromDateTime(t.scheduledTimeEnd),
                     Attendance = t.attendance,
-                    Picture = bitmap != null ? null : string.Empty
                 });
             }
 
