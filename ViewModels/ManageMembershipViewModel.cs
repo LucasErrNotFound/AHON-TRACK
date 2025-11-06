@@ -187,7 +187,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
         eventService.MemberAdded += OnMemberChanged;
         eventService.MemberUpdated += OnMemberChanged;
-        eventService.MemberUpdated += OnMemberChanged;
+        eventService.MemberDeleted += OnMemberChanged;
         eventService.CheckinAdded += OnMemberChanged;
         eventService.CheckoutAdded += OnMemberChanged;
         eventService.ProductPurchased += OnMemberChanged;
