@@ -303,18 +303,36 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private Product ConvertToProduct(SellingModel selling)
     {
-        // ✅ KEY: Store both original price and discounted price separately
+        Bitmap? poster = null;
+
+        if (selling.ImagePath != null && selling.ImagePath.Length > 0)
+        {
+            try
+            {
+                poster = new Bitmap(new MemoryStream(selling.ImagePath));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load product image: {ex.Message}");
+                poster = null;
+            }
+        }
+        else if (!string.IsNullOrEmpty(selling.Title))
+        {
+            poster = null;
+        }
+
         return new Product
         {
             ID = selling.SellingID,
             Title = selling.Title ?? string.Empty,
             Description = selling.Description ?? string.Empty,
             Category = selling.Category ?? string.Empty,
-            Price = (int)selling.Price,  // ✅ Original: ₱1,500
+            Price = (int)selling.Price,
             StockCount = selling.Stock,
-            Poster = selling.ImagePath != null ? new Bitmap(new MemoryStream(selling.ImagePath)) : null,
-            DiscountedPrice = selling.DiscountedPrice,  // ✅ Final: ₱750
-            HasDiscount = selling.HasDiscount  // ✅ true
+            Poster = poster,
+            DiscountedPrice = selling.DiscountedPrice,
+            HasDiscount = selling.HasDiscount
         };
     }
 
@@ -324,7 +342,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             PackageId = selling.SellingID,
             Title = selling.Title ?? string.Empty,
-            Description = selling.Description ?? string.Empty,  // ✅ ADD THIS - or fetch from DB if separate field
+            Description = selling.Description ?? string.Empty,
             BasePrice = (int)selling.Price,
             BaseDiscountedPrice = (int)selling.DiscountedPrice,
             Price = (int)selling.Price,
@@ -334,9 +352,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             DiscountFor = selling.DiscountFor ?? "All",
             IsAddedToCart = false,
             Features = selling.Features?.Split('|').ToList() ?? new List<string>(),
-            IsDiscountChecked = selling.HasDiscount,  // ✅ ADD THIS
-            SelectedDiscountFor = selling.DiscountFor ?? "All",  // ✅ ADD THIS
-            SelectedDiscountType = selling.DiscountType ?? string.Empty  // ✅ ADD THIS
+            IsDiscountChecked = selling.HasDiscount,
+            SelectedDiscountFor = selling.DiscountFor ?? "All",
+            SelectedDiscountType = selling.DiscountType ?? string.Empty
         };
 
         if (SelectedCustomer != null)

@@ -17,6 +17,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Platform;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -57,6 +58,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     public bool CanEditExpiry => !ProductExpiry.HasValue || ProductExpiry.Value.Date > DateTime.Today;
     public DateTime TodayDate => DateTime.Today;
+    private const string DEFAULT_IMAGE_PATH = "avares://AHON_TRACK/Assets/ProductStockView/DefaultPurchaseIcon.png";
     
     private bool _suppliersLoaded = false;
     private int? _productID;
@@ -109,6 +111,25 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         if (!_suppliersLoaded)
         {
             await LoadSuppliersAsync();
+        }
+
+        // ✅ Wait for control and set default image for new products
+        if (ViewContext == ProductViewContext.AddProduct)
+        {
+            int maxAttempts = 20;
+            int attempts = 0;
+            while (ProductImageControl == null && attempts < maxAttempts)
+            {
+                await Task.Delay(50);
+                attempts++;
+            }
+
+            if (ProductImageControl != null)
+            {
+                ProductImageControl.Source = DefaultProductBitmap;
+                ProductImageControl.IsVisible = true;
+                Console.WriteLine("ℹ️ Set default image for new product");
+            }
         }
     }
 
@@ -214,7 +235,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             await Task.Delay(50);
         }
 
-        PopulateFormWithProductData(product);
+        await PopulateFormWithProductDataAsync(product);
 
         OnPropertyChanged(nameof(CurrentStock));
     }
@@ -253,7 +274,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 }
             }
 
-            // ✅ FIX: Use null-coalescing to ensure 0 is treated as valid
             int currentStock = CurrentStock.HasValue ? CurrentStock.Value : 0;
             Console.WriteLine($"📦 Current Stock Value: {currentStock}");
 
@@ -267,8 +287,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 calculatedStatus = currentStock > 0 ? "In Stock" : "Out Of Stock";
             }
 
-            // ✅ FIX: Handle image bytes properly for update
             byte[]? imageBytesToSave = ProductImageBytes;
+            string? imagePathToSave = _productImageFilePath;
+
+            if (imageBytesToSave == null && string.IsNullOrEmpty(imagePathToSave))
+            {
+                imagePathToSave = DEFAULT_IMAGE_PATH; // Save the default path
+            }
 
             var productModel = new ProductModel
             {
@@ -279,15 +304,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 Description = ProductDescription,
                 Price = ProductPrice ?? 0,
                 DiscountedPrice = ProductDiscountedPrice,
-                ProductImageFilePath = _productImageFilePath,
-                ProductImageBytes = imageBytesToSave, // ✅ Pass the image bytes
+                ProductImageFilePath = imagePathToSave,
+                ProductImageBytes = imageBytesToSave,
                 ExpiryDate = ProductExpiry,
                 Status = calculatedStatus,
                 Category = SelectedProductCategory ?? "None",
-                CurrentStock = currentStock // ✅ Explicitly 0 or positive
+                CurrentStock = currentStock
             };
 
-            Console.WriteLine($"💾 Saving product with Stock: {productModel.CurrentStock}, Status: {productModel.Status}");
+            Console.WriteLine($"💾 Saving product with Stock: {productModel.CurrentStock}, Status: {productModel.Status}, Image: {imagePathToSave}");
 
             (bool success, string message, int? productId) result;
             if (ViewContext == ProductViewContext.EditProduct)
@@ -343,6 +368,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     {
         try
         {
+            if (ProductImageControl == null)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent("Image control not initialized")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
             var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
                 ? desktop.MainWindow
                 : null;
@@ -355,13 +389,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 FileTypeFilter =
                 [
                     new FilePickerFileType("Image Files")
-                {
-                    Patterns = ["*.png", "*.jpg", "*.jpeg"]
-                },
-                new FilePickerFileType("All Files")
-                {
-                    Patterns = ["*.*"]
-                }
+                    {
+                        Patterns = ["*.png", "*.jpg", "*.jpeg"]
+                    },
+                    new FilePickerFileType("All Files")
+                    {
+                        Patterns = ["*.*"]
+                    }
                 ]
             });
 
@@ -373,27 +407,18 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                     .DismissOnClick()
                     .ShowInfo();
 
-                // ✅ Read the file and convert to bytes for database
                 await using var stream = await selectedFile.OpenReadAsync();
-
-                // Create bitmap for display
                 var bitmap = new Bitmap(stream);
 
-                if (ProductImageControl != null)
-                {
-                    ProductImageControl.Source = bitmap;
-                    ProductImageControl.IsVisible = true;
-                }
+                ProductImageControl.Source = bitmap;
+                ProductImageControl.IsVisible = true;
 
-                // ✅ IMPORTANT: Reset stream position and read bytes for database
                 stream.Position = 0;
                 using var memoryStream = new System.IO.MemoryStream();
                 await stream.CopyToAsync(memoryStream);
                 ProductImageBytes = memoryStream.ToArray();
 
                 Console.WriteLine($"✅ Image loaded: {ProductImageBytes.Length} bytes");
-
-                // ✅ Store the file path as well (optional, for reference)
                 _productImageFilePath = selectedFile.Path.LocalPath;
             }
         }
@@ -432,7 +457,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         _pageManager.Navigate<ProductStockViewModel>();
     }
 
-    private void PopulateFormWithProductData(ProductStock product)
+    private async Task PopulateFormWithProductDataAsync(ProductStock product)
     {
         ProductID = product.ID;
         ProductName = product.Name;
@@ -441,7 +466,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductExpiry = product.Expiry;
         ProductDiscountedPrice = product.DiscountedPrice;
         BatchCode = product.BatchCode;
-        CurrentStock = product.CurrentStock; // ✅ This includes 0
+        CurrentStock = product.CurrentStock;
 
         if (!string.IsNullOrEmpty(product.Supplier) &&
             ProductSupplierItems.Contains(product.Supplier))
@@ -455,38 +480,89 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         SelectedProductCategory = product.Category;
 
-        // ✅ FIX: Properly handle image display
-        if (!string.IsNullOrEmpty(product.Poster))
+        // Wait for ProductImageControl to be initialized
+        int maxAttempts = 20; // 1 second max wait
+        int attempts = 0;
+        while (ProductImageControl == null && attempts < maxAttempts)
         {
-            if (product.Poster.StartsWith("data:image/png;base64,"))
+            await Task.Delay(50);
+            attempts++;
+        }
+
+        if (ProductImageControl == null)
+        {
+            Console.WriteLine("⚠️ ProductImageControl still null after waiting");
+            return;
+        }
+
+        bool imageLoaded = await TryLoadProductImageAsync(product.Poster);
+
+        if (!imageLoaded)
+        {
+            ProductImageControl.Source = DefaultProductBitmap;
+            ProductImageControl.IsVisible = true;
+            ProductImageBytes = null;
+            Console.WriteLine("ℹ️ Using default product image");
+        }
+    }
+    
+    private async Task<bool> TryLoadProductImageAsync(string? posterData)
+    {
+        if (string.IsNullOrEmpty(posterData))
+        {
+            return false;
+        }
+
+        try
+        {
+            // Case 1: Base64 encoded image
+            if (posterData.StartsWith("data:image/"))
             {
-                var base64Data = product.Poster.Replace("data:image/png;base64,", "");
-                try
+                string base64Data = posterData;
+                if (base64Data.Contains("base64,"))
                 {
-                    ProductImageBytes = Convert.FromBase64String(base64Data);
-
-                    // ✅ Create bitmap and display it
-                    if (ProductImageControl != null)
-                    {
-                        using var memoryStream = new System.IO.MemoryStream(ProductImageBytes);
-                        var bitmap = new Avalonia.Media.Imaging.Bitmap(memoryStream);
-                        ProductImageControl.Source = bitmap;
-                        ProductImageControl.IsVisible = true;
-                    }
-
-                    Console.WriteLine($"✅ Image loaded successfully: {ProductImageBytes.Length} bytes");
+                    base64Data = base64Data.Substring(base64Data.IndexOf("base64,") + 7);
                 }
-                catch (Exception ex)
+
+                ProductImageBytes = Convert.FromBase64String(base64Data);
+
+                if (ProductImageBytes.Length > 0)
                 {
-                    Console.WriteLine($"❌ Failed to convert Base64 image: {ex.Message}");
+                    await using var memoryStream = new System.IO.MemoryStream(ProductImageBytes);
+                    var bitmap = new Bitmap(memoryStream);
+                
+                    ProductImageControl!.Source = bitmap;
+                    ProductImageControl.IsVisible = true;
+                
+                    Console.WriteLine($"✅ Base64 image loaded: {ProductImageBytes.Length} bytes");
+                    return true;
                 }
             }
-            else if (!product.Poster.StartsWith("avares://"))
+            // Case 2: File path
+            else if (!posterData.StartsWith("avares://") && System.IO.File.Exists(posterData))
             {
-                // Handle file path
-                ProductImageFilePath = product.Poster;
+                ProductImageFilePath = posterData;
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(posterData);
+                ProductImageBytes = fileBytes;
+
+                await using var memoryStream = new System.IO.MemoryStream(fileBytes);
+                var bitmap = new Bitmap(memoryStream);
+            
+                ProductImageControl!.Source = bitmap;
+                ProductImageControl.IsVisible = true;
+            
+                Console.WriteLine($"✅ File image loaded: {fileBytes.Length} bytes");
+                return true;
             }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Failed to load image: {ex.Message}");
+            ProductImageBytes = null;
+            ProductImageFilePath = null;
+        }
+
+        return false;
     }
 
     public string ViewTitle => ViewContext switch
@@ -508,6 +584,25 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ViewContext = context;
         OnPropertyChanged(nameof(ViewTitle));
         OnPropertyChanged(nameof(ViewDescription));
+    }
+    
+    private static Bitmap? _defaultProductBitmap;
+    public static Bitmap DefaultProductBitmap
+    {
+        get
+        {
+            if (_defaultProductBitmap != null) return _defaultProductBitmap;
+            try
+            {
+                var uri = new Uri(DEFAULT_IMAGE_PATH);
+                _defaultProductBitmap = new Bitmap(AssetLoader.Open(uri));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to load default product image: {ex.Message}");
+            }
+            return _defaultProductBitmap!;
+        }
     }
 
     public int? ProductID
