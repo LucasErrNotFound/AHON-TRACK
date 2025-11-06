@@ -32,8 +32,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string? _selectedProductStatusItem = "In Stock";
 
     [ObservableProperty]
-    private string[] _productCategoryItems = ["None", "Drinks", "Supplements", "Apparel", "Products"];
-    private string? _selectedProductCategoryItem = "None";
+    private string[] _productCategoryItems = ["Drinks", "Supplements", "Apparel", "Products", "Merchandise"];
+    private string? _selectedProductCategoryItem = "Drinks";
 
     [ObservableProperty]
     private string[] _productSupplierItems = ["None"];
