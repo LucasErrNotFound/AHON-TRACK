@@ -180,7 +180,8 @@
 													Header="Action"
 													IsReadOnly="True"
 													FontSize="14"
-													Width="237" />
+													MinWidth="250"
+													Width="*" />
 											</DataGrid.Columns>
 										</DataGrid>
 									</StackPanel>
