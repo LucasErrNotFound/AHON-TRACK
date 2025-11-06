@@ -27,6 +27,14 @@ namespace AHON_TRACK.ViewModels;
 [Page("manage-billing")]
 public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 {
+    private EventHandler? _salesUpdatedHandler;
+    private EventHandler? _productPurchasedHandler;
+    private EventHandler? _chartDataUpdatedHandler;
+    private EventHandler? _memberAddedHandler;
+    private EventHandler? _memberUpdatedHandler;
+
+    private bool _isLoadingData = false;
+
     [ObservableProperty]
     private DateTime _selectedDate = DateTime.Today;
 
@@ -143,24 +151,37 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         var eventService = DashboardEventService.Instance;
 
-        eventService.SalesUpdated += OnBillingDataChanged;
-        eventService.ProductPurchased += OnBillingDataChanged;
-        eventService.ChartDataUpdated += OnBillingDataChanged;
-        eventService.MemberAdded += OnBillingDataChanged;
-        eventService.MemberUpdated += OnBillingDataChanged;
+        // Store handlers in fields so we can unsubscribe later
+        _salesUpdatedHandler = OnBillingDataChanged;
+        _productPurchasedHandler = OnBillingDataChanged;
+        _chartDataUpdatedHandler = OnBillingDataChanged;
+        _memberAddedHandler = OnBillingDataChanged;
+        _memberUpdatedHandler = OnBillingDataChanged;
+
+        eventService.SalesUpdated += _salesUpdatedHandler;
+        eventService.ProductPurchased += _productPurchasedHandler;
+        eventService.ChartDataUpdated += _chartDataUpdatedHandler;
+        eventService.MemberAdded += _memberAddedHandler;
+        eventService.MemberUpdated += _memberUpdatedHandler;
 
     }
 
     private async void OnBillingDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadInvoicesFromDatabaseAsync();
             await LoadRecentPurchasesFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingData = false;
         }
     }
 
@@ -709,11 +730,17 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
     {
         // Unsubscribe from events
         var eventService = DashboardEventService.Instance;
-        eventService.SalesUpdated -= OnBillingDataChanged;
-        eventService.ProductPurchased -= OnBillingDataChanged;
-        eventService.ChartDataUpdated -= OnBillingDataChanged;
-        eventService.MemberAdded -= OnBillingDataChanged;
-        eventService.MemberUpdated -= OnBillingDataChanged;
+
+        if (_salesUpdatedHandler != null)
+            eventService.SalesUpdated -= _salesUpdatedHandler;
+        if (_productPurchasedHandler != null)
+            eventService.ProductPurchased -= _productPurchasedHandler;
+        if (_chartDataUpdatedHandler != null)
+            eventService.ChartDataUpdated -= _chartDataUpdatedHandler;
+        if (_memberAddedHandler != null)
+            eventService.MemberAdded -= _memberAddedHandler;
+        if (_memberUpdatedHandler != null)
+            eventService.MemberUpdated -= _memberUpdatedHandler;
 
         // Unsubscribe from property changed events
         foreach (var invoice in InvoiceList)
@@ -728,6 +755,8 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
         PackageOptions.Clear();
         RecentActivities.Clear();
         FilteredRecentActivities.Clear();
+
+        base.DisposeManagedResources();
     }
 }
 
@@ -764,7 +793,7 @@ public partial class Invoices : ObservableObject
 
     [ObservableProperty]
     private int? _amount;
-    
+
     [ObservableProperty]
     private string _paymentMethod = string.Empty;
 

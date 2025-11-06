@@ -26,7 +26,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 {
     [ObservableProperty]
     private string[] _statusFilterItems = ["All", "Active", "Inactive", "Suspended"];
-    
+
     [ObservableProperty]
     private string _selectedStatusFilterItem = "All";
 
@@ -59,6 +59,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private bool _isLoading;
+
+    private bool _isLoadingData = false;
 
     [ObservableProperty]
     private Supplier? _selectedSupplier;
@@ -95,7 +97,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
         _settingsService = new SettingsService();
         _supplierService = null!; // This should be injected in real scenario
-        
+
         SelectedStatusFilterItem = "All";
 
         _ = LoadSupplierDataFromDatabaseAsync();
@@ -107,7 +109,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         if (IsInitialized) return;
         SelectedStatusFilterItem = "All";
-        
+
         await LoadSettingsAsync();
 
         if (_supplierService != null)
@@ -124,6 +126,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     private async Task LoadSupplierDataFromDatabaseAsync()
     {
+        if (_isLoadingData) return; // ✅ Prevent duplicate loads
+
+        _isLoadingData = true;
         IsLoading = true;
 
         try
@@ -147,7 +152,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 }).ToList();
 
                 OriginalSupplierData = suppliers;
-                
+
                 await CheckAndUpdateSupplierStatusesAsync();
 
                 // Let ApplySupplierFilter populate SupplierItems according to the current SelectedStatusFilterItem
@@ -179,6 +184,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         finally
         {
             IsLoading = false;
+            _isLoadingData = false; // ✅ Reset flag
         }
     }
 
@@ -188,7 +194,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         var sampleSupplier = GetSampleSupplierData();
         OriginalSupplierData = sampleSupplier;
 
-        // Use ApplySupplierFilter so the current filter is applied
+        // ✅ ApplySupplierFilter already handles unsubscribe correctly
         ApplySupplierFilter();
 
         UpdateSupplierCounts();
@@ -309,7 +315,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             {
                 var newContractTerms = _supplierDialogCardViewModel.ContractTerms;
                 var currentStatus = _supplierDialogCardViewModel.Status ?? "Active";
-            
+
                 if (newContractTerms.HasValue)
                 {
                     var today = DateTime.Today;
@@ -403,6 +409,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
+            // ✅ Unsubscribe before clearing
+            foreach (var supplier in SupplierItems)
+            {
+                supplier.PropertyChanged -= OnSupplierPropertyChanged;
+            }
+
             SupplierItems.Clear();
             foreach (var equipment in CurrentFilteredSupplierData)
             {
@@ -431,6 +443,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                           supplier.Products.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                           supplier.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
+
+            // ✅ Unsubscribe before clearing
+            foreach (var supplier in SupplierItems)
+            {
+                supplier.PropertyChanged -= OnSupplierPropertyChanged;
+            }
 
             SupplierItems.Clear();
             foreach (var supplier in filteredSuppliers)
@@ -533,7 +551,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 .ShowError();
         }
     }
-    
+
     public bool CanDeleteSelectedSuppliers
     {
         get
@@ -551,8 +569,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             }
 
             // Only allow deletion if ALL selected members are Expired
-            return selectedSuppliers.All(supplier 
-                => supplier.Status != null && 
+            return selectedSuppliers.All(supplier
+                => supplier.Status != null &&
                    supplier.Status.Equals("Suspended", StringComparison.OrdinalIgnoreCase));
         }
     }
@@ -568,13 +586,13 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         if (SelectedStatusFilterItem != "All")
         {
             filteredList = filteredList
-                .Where(supplier => supplier.Status != null && 
+                .Where(supplier => supplier.Status != null &&
                                   supplier.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
-        
+
         CurrentFilteredSupplierData = filteredList;
-        
+
         // Unsubscribe from old items
         foreach (var item in SupplierItems)
         {
@@ -587,7 +605,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             supplier.PropertyChanged += OnSupplierPropertyChanged;
             SupplierItems.Add(supplier);
         }
-        
+
         UpdateSupplierCounts();
     }
 
@@ -660,7 +678,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 .ShowSuccess();
         }
     }
-    
+
     private async Task CheckAndUpdateSupplierStatusesAsync()
     {
         var today = DateTime.Today;
@@ -670,12 +688,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         {
             if (supplier.ContractTerms.HasValue && supplier.Status != null)
             {
-                if (supplier.ContractTerms.Value.Date <= today && 
+                if (supplier.ContractTerms.Value.Date <= today &&
                     supplier.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
                 {
                     suppliersToUpdate.Add(supplier);
                 }
-                else if (supplier.ContractTerms.Value.Date > today && 
+                else if (supplier.ContractTerms.Value.Date > today &&
                          supplier.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
                 {
                     suppliersToUpdate.Add(supplier);
@@ -688,7 +706,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             if (supplier.ID.HasValue)
             {
                 var newStatus = supplier.ContractTerms!.Value.Date <= today ? "Inactive" : "Active";
-            
+
                 var updatedSupplier = new SupplierManagementModel
                 {
                     SupplierID = supplier.ID.Value,
@@ -732,12 +750,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         ApplySupplierFilter();
     }
-    
+
     partial void OnSelectedSupplierChanged(Supplier? value)
     {
         OnPropertyChanged(nameof(CanDeleteSelectedSuppliers));
     }
-    
+
     protected override void DisposeManagedResources()
     {
         // Unsubscribe from property changed events
@@ -784,7 +802,7 @@ public partial class Supplier : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected;
-    
+
     public string FormattedContractTerms => ContractTerms.HasValue ? $"{ContractTerms.Value:MM/dd/yyyy}" : string.Empty;
 
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch

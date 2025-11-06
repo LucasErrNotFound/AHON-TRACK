@@ -37,6 +37,8 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
     [ObservableProperty]
     private PieData[] _genderPieDataCollection;
 
+    private bool _isLoadingData = false;
+
     public Axis[] XAxes { get; set; }
     public Axis[] YAxes { get; set; }
 
@@ -51,47 +53,42 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         _pageManager = pageManager;
         _dataCountingService = dataCountingService;
 
-        /*UpdateSeriesFill(Color.DodgerBlue);
-        UpdateDemographicsGroupChart();
-        UpdatePopulationChart();*/
-
         XAxes =
         [
             new Axis
-            {
-                Name = "Age Range",
-                NameTextSize = 16,
-                Labels = ["18-29", "30-39", "40-54", "55+"],
-                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
-                TextSize = 12,
-                MinStep = 1
-            }
+        {
+            Name = "Age Range",
+            NameTextSize = 16,
+            Labels = ["18-29", "30-39", "40-54", "55+"],
+            LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+            TextSize = 12,
+            MinStep = 1
+        }
         ];
 
         YAxes =
         [
             new Axis
+        {
+            Name = "Age Population",
+            NameTextSize = 16,
+            Labeler = Labelers.Default,
+            LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
+            TextSize = 12,
+            MinStep = 1,
+            ShowSeparatorLines = true,
+            SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
             {
-                Name = "Age Population",
-                NameTextSize = 16,
-                Labeler = Labelers.Default,
-                LabelsPaint = new SolidColorPaint { Color = SKColors.Gray },
-                TextSize = 12,
-                MinStep = 1,
-                ShowSeparatorLines = true,
-                SeparatorsPaint = new SolidColorPaint(SKColors.Gray)
-                {
-                    StrokeThickness = 1,
-                    PathEffect = new DashEffect([3, 3])
-                }
+                StrokeThickness = 1,
+                PathEffect = new DashEffect([3, 3])
             }
+        }
         ];
 
         _ = LoadDemographicsAsync();
-        DashboardEventService.Instance.OnPopulationDataChanged += async () =>
-        {
-            await LoadDemographicsAsync();
-        };
+
+        // ? Store reference to unsubscribe later
+        DashboardEventService.Instance.OnPopulationDataChanged += OnPopulationDataChangedHandler;
     }
 
     public GymDemographicsViewModel()
@@ -109,8 +106,17 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         _ = LoadDemographicsAsync();
     }
 
+    private async void OnPopulationDataChangedHandler()
+    {
+        await LoadDemographicsAsync();
+    }
+
     private async Task LoadDemographicsAsync()
     {
+        if (_isLoadingData) return; // ? Prevent duplicate loads
+
+        _isLoadingData = true;
+
         try
         {
             var from = DemographicsGroupSelectedFromDate;
@@ -188,6 +194,10 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         catch (Exception ex)
         {
             _toastManager.CreateToast($"Failed to load demographics: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingData = false; // ? Reset flag
         }
     }
 
@@ -349,20 +359,20 @@ public partial class GymDemographicsViewModel : ViewModelBase, INavigable, INoti
         /*UpdateDemographicsGroupChart();
         UpdatePopulationChart();*/
     }
-    
+
     protected override void DisposeManagedResources()
     {
-        // Unsubscribe from events
-        // var eventService = DashboardEventService.Instance;
-    
+        // ? Unsubscribe from event
+        DashboardEventService.Instance.OnPopulationDataChanged -= OnPopulationDataChangedHandler;
+
         // Clear chart data
         PopulationSeriesCollection = [];
         PopulationLineChartXAxes = [];
-        PopulationLineChartXAxes = [];
         GenderPieDataCollection = [];
+        AgeSeries = [];
         XAxes = [];
         YAxes = [];
-    
+
         base.DisposeManagedResources();
     }
 }

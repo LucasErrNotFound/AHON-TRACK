@@ -44,7 +44,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     private string _salesSummary = "You made 0 sales this month.";
     private string _trainingSessionsSummary = "You have 0 upcoming training schedules this week";
     private string _recentLogsSummary = "You have 0 recent action logs today";
-    
+
     public string SelectedYearDisplay => _selectedDate?.Year + " Sales Overview";
 
     public event EventHandler RecentLogsUpdated;
@@ -53,7 +53,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     #endregion
 
     #region Public Properties
-    
+
     public DateTimeOffset? SelectedDate
     {
         get => _selectedDate;
@@ -601,7 +601,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
                         Name = $"{selectedYear} Sales"
                     }
                 ];
-            
+
                 // Update the title display
                 OnPropertyChanged(nameof(SelectedYearDisplay));
             }
@@ -705,11 +705,11 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     #endregion
-    
+
     private void SubscribeToEvents()
     {
         var eventService = DashboardEventService.Instance;
-    
+
         _recentLogsHandler = async (s, e) => await RefreshRecentLogs();
         _chartDataHandler = async (s, e) => await UpdateChartDataFromTable();
         _salesHandler = async (s, e) =>
@@ -720,7 +720,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         _checkinHandler = async (s, e) => await LoadDashboardSummary();
         _checkoutHandler = async (s, e) => await LoadDashboardSummary();
         _trainingHandler = async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
-    
+
         eventService.RecentLogsUpdated += _recentLogsHandler;
         eventService.ChartDataUpdated += _chartDataHandler;
         eventService.SalesUpdated += _salesHandler;
@@ -728,11 +728,11 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         eventService.CheckoutAdded += _checkoutHandler;
         eventService.TrainingSessionsUpdated += _trainingHandler;
     }
-    
+
     private void UnsubscribeFromEvents()
     {
         var eventService = DashboardEventService.Instance;
-    
+
         if (_recentLogsHandler != null)
             eventService.RecentLogsUpdated -= _recentLogsHandler;
         if (_chartDataHandler != null)
@@ -751,8 +751,8 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     {
         // CRITICAL: Unsubscribe from events FIRST
         UnsubscribeFromEvents();
-        
-        var eventService = DashboardEventService.Instance;
+
+        /*var eventService = DashboardEventService.Instance;
         eventService.RecentLogsUpdated -= async (s, e) => await RefreshRecentLogs();
         eventService.ChartDataUpdated -= async (s, e) => await UpdateChartDataFromTable();
         eventService.SalesUpdated -= async (s, e) =>
@@ -762,7 +762,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         };
         eventService.CheckinAdded -= async (s, e) => await LoadDashboardSummary();
         eventService.CheckoutAdded -= async (s, e) => await LoadDashboardSummary();
-        eventService.TrainingSessionsUpdated -= async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();
+        eventService.TrainingSessionsUpdated -= async (s, e) => await LoadTrainingSessionsFromDatabaseAsync();*/
 
         // Unregister notification callbacks
         _inventoryService.UnregisterNotificationCallback();
@@ -790,7 +790,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
         base.DisposeManagedResources();
         ForceGarbageCollection();
     }
-    
+
     private EventHandler? _recentLogsHandler;
     private EventHandler? _chartDataHandler;
     private EventHandler? _salesHandler;

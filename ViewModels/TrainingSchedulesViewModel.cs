@@ -85,6 +85,8 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private bool _disposed = false;
 
+    private bool _isLoadingDataFlag = false;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -247,55 +249,73 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private void OnPackageDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return;
         try
         {
+            _isLoadingDataFlag = true;
             _ = LoadPackagesAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to reload packages: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingDataFlag = false;
+        }
     }
 
     public async Task LoadTrainingsAsync()
     {
-        IsLoading = true;
-        var trainings = await _trainingService.GetTrainingSchedulesAsync();
-        var people = new List<ScheduledPerson>();
+        if (_isLoadingDataFlag) return; // ✅ Prevent duplicate loads
 
-        foreach (var t in trainings)
+        _isLoadingDataFlag = true;
+        IsLoading = true;
+
+        try
         {
-            Bitmap? bitmap = null;
-            if (t.picture is { Length: > 0 })
+            var trainings = await _trainingService.GetTrainingSchedulesAsync();
+            var people = new List<ScheduledPerson>();
+
+            foreach (var t in trainings)
             {
-                using var ms = new MemoryStream(t.picture);
-                bitmap = new Bitmap(ms);
+                Bitmap? bitmap = null;
+                if (t.picture is { Length: > 0 })
+                {
+                    using var ms = new MemoryStream(t.picture);
+                    bitmap = new Bitmap(ms);
+                }
+
+                people.Add(new ScheduledPerson
+                {
+                    TrainingID = t.trainingID,
+                    ID = t.customerID,
+                    FirstName = t.firstName,
+                    LastName = t.lastName,
+                    ContactNumber = t.contactNumber,
+                    PackageType = t.packageType,
+                    AssignedCoach = t.assignedCoach,
+                    ScheduledDate = t.scheduledDate.Date,
+                    ScheduledTimeStart = TimeOnly.FromDateTime(t.scheduledTimeStart),
+                    ScheduledTimeEnd = TimeOnly.FromDateTime(t.scheduledTimeEnd),
+                    Attendance = t.attendance,
+                    Picture = bitmap != null ? null : string.Empty
+                });
             }
 
-            people.Add(new ScheduledPerson
-            {
-                TrainingID = t.trainingID,
-                ID = t.customerID,
-                FirstName = t.firstName,
-                LastName = t.lastName,
-                ContactNumber = t.contactNumber,
-                PackageType = t.packageType,
-                AssignedCoach = t.assignedCoach,
-                ScheduledDate = t.scheduledDate.Date,
-                ScheduledTimeStart = TimeOnly.FromDateTime(t.scheduledTimeStart),
-                ScheduledTimeEnd = TimeOnly.FromDateTime(t.scheduledTimeEnd),
-                Attendance = t.attendance,
-                Picture = bitmap != null ? null : string.Empty // Set appropriately based on your needs
-            });
+            // Store all data in OriginalScheduledPeople
+            OriginalScheduledPeople = people;
+
+            // Now filter based on current date and package selection
+            // ✅ FilterDataByPackageAndDate already handles unsubscribe correctly
+            FilterDataByPackageAndDate();
+            UpdateDashboardStatistics();
         }
-
-        // Store all data in OriginalScheduledPeople
-        OriginalScheduledPeople = people;
-
-        // Now filter based on current date and package selection
-        FilterDataByPackageAndDate();
-        UpdateDashboardStatistics();
-        IsLoading = false;
+        finally
+        {
+            IsLoading = false;
+            _isLoadingDataFlag = false; // ✅ Reset flag
+        }
     }
 
     private async Task LoadCoachesAsync()
@@ -515,8 +535,8 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     private void FilterDataByPackageAndDate()
     {
         var filteredScheduledData = OriginalScheduledPeople
-            .Where(w => w.ScheduledDate?.Date == SelectedDate.Date)
-            .ToList();
+        .Where(w => w.ScheduledDate?.Date == SelectedDate.Date)
+        .ToList();
 
         if (SelectedPackageFilterItem is not "All")
         {
@@ -538,7 +558,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
         foreach (var schedule in filteredScheduledData)
         {
-            schedule.PropertyChanged -= OnScheduledChanged;
+            schedule.PropertyChanged -= OnScheduledChanged; // ✅ Already unsubscribing
             schedule.PropertyChanged += OnScheduledChanged;
             ScheduledPeople.Add(schedule);
         }
@@ -566,13 +586,19 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private void OnTrainingDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return;
         try
         {
+            _isLoadingDataFlag = true;
             _ = LoadTrainingsAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingDataFlag = false;
         }
     }
 
@@ -591,13 +617,19 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private async void OnCoachDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return;
         try
         {
+            _isLoadingDataFlag = true;
             await LoadCoachesAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to reload coaches: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingDataFlag = false;
         }
     }
 
@@ -614,9 +646,10 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         eventService.EmployeeUpdated -= OnCoachDataChanged;
         eventService.EmployeeDeleted -= OnCoachDataChanged;
 
-        eventService.PackageAdded += OnPackageDataChanged;
-        eventService.PackageUpdated += OnPackageDataChanged;
-        eventService.PackageDeleted += OnPackageDataChanged;
+        // 🔴 CRITICAL BUG FIX - These were using += instead of -=
+        eventService.PackageAdded -= OnPackageDataChanged;   // ✅ Changed from +=
+        eventService.PackageUpdated -= OnPackageDataChanged; // ✅ Changed from +=
+        eventService.PackageDeleted -= OnPackageDataChanged; // ✅ Changed from +=
 
         // Unsubscribe from property changed events
         foreach (var schedule in ScheduledPeople)
@@ -629,6 +662,7 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         OriginalScheduledPeople.Clear();
         CurrentScheduledPeople.Clear();
         CoachFilterItems = [];
+        PackageFilterItems = [];
     }
 }
 

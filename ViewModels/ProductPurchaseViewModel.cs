@@ -24,9 +24,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
     private string[] _productFilterItems = [
-        CategoryConstants.Supplements, 
-        CategoryConstants.Drinks, 
-        CategoryConstants.Equipment, 
+        CategoryConstants.Supplements,
+        CategoryConstants.Drinks,
+        CategoryConstants.Equipment,
         CategoryConstants.GymPackage,
         CategoryConstants.Merchandise,
         CategoryConstants.Apparel
@@ -124,6 +124,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private int _lastIdNumber = 1234;
 
+    private bool _isLoadingData = false;
+
     private readonly Dictionary<string, Bitmap> _imageCache = new();
 
     private readonly DialogManager _dialogManager;
@@ -195,37 +197,55 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadCustomerListFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingData = false;
+        }
     }
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadProductsFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingData = false;
+        }
     }
 
     private async void OnPackageDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadPackagesFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingData = false;
         }
     }
 
@@ -518,7 +538,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         CurrentCustomerList = filteredList;
 
+        // ✅ CRITICAL: Unsubscribe from old customers BEFORE clearing
+        foreach (var customer in CustomerList)
+        {
+            customer.PropertyChanged -= OnCustomerPropertyChanged;
+        }
+
         CustomerList.Clear();
+
         foreach (var customer in filteredList)
         {
             customer.PropertyChanged += OnCustomerPropertyChanged;
@@ -1035,20 +1062,19 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         eventService.PackageUpdated -= OnPackageDataChanged;
         eventService.PackageDeleted -= OnPackageDataChanged;
 
-        // 2) Unsubscribe from PropertyChanged events on customers
+        // ✅ Unsubscribe from PropertyChanged events
         foreach (var customer in CustomerList)
             customer.PropertyChanged -= OnCustomerPropertyChanged;
 
-        // 3) Unsubscribe from PropertyChanged events on cart items
         foreach (var cartItem in CartItems)
             cartItem.PropertyChanged -= OnCartItemPropertyChanged;
 
-        // 4) Dispose and clear cached bitmaps
+        // ✅ Dispose cached bitmaps
         foreach (var bmp in _imageCache.Values)
             bmp?.Dispose();
         _imageCache.Clear();
 
-        // 5) Clear collections and lists
+        // ✅ Clear collections
         CustomerList.Clear();
         ProductList.Clear();
         PackageList.Clear();
@@ -1060,22 +1086,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         CurrentProductList?.Clear();
         OriginalPackageList?.Clear();
 
-        switch (_productPurchaseService)
+        // ✅ Dispose service if needed
+        if (_productPurchaseService is IDisposable disposableService)
         {
-            // 6) Dispose service if applicable
-            case IDisposable disposableService:
-                disposableService.Dispose();
-                break;
-            case IAsyncDisposable asyncDisposableService:
-                asyncDisposableService.DisposeAsync().AsTask().Wait();
-                break;
+            disposableService.Dispose();
         }
 
-        // 7) Reset transient references and state
         SelectedCustomer = null;
         IsInitialized = false;
-        CustomerSearchStringResult = string.Empty;
-        ProductSearchStringResult = string.Empty;
     }
 }
 

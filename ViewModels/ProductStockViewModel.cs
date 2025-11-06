@@ -28,7 +28,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 {
     [ObservableProperty]
     private string[] _productFilterItems = ["All", "Products", "Drinks", "Supplements", "Apparel"];
-    
+
     [ObservableProperty]
     private string[] _statusFilterItems = ["All", "In Stock", "Out of Stock", "Expired"];
 
@@ -71,6 +71,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     [ObservableProperty]
     private bool _isLoading;
 
+    private bool _isLoadingData = false;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -87,10 +89,10 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _pageManager = pageManager;
         _settingsService = settingsService;
         _productService = productService;
-        
+
         SelectedProductFilterItem = "All";
         SelectedStatusFilterItem = "All";
-        
+
         SubscribeToEvent();
         _ = LoadProductDataAsync(showAlerts: true);
         UpdateProductCounts();
@@ -103,7 +105,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         _pageManager = new PageManager(new ServiceProvider());
         _settingsService = new SettingsService();
         _productService = null!;
-        
+
         SelectedProductFilterItem = "All";
         SelectedStatusFilterItem = "All";
 
@@ -116,10 +118,10 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     {
         if (IsInitialized) return;
         SubscribeToEvent();
-        
+
         SelectedProductFilterItem = "All";
         SelectedStatusFilterItem = "All";
-        
+
         await LoadSettingsAsync();
         await LoadProductDataAsync();
 
@@ -144,25 +146,37 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadProductDataAsync(showAlerts: false);
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingData = false;
+        }
     }
 
     private async void OnProductPurchased(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadProductDataAsync(showAlerts: true);
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingData = false;
         }
     }
 
@@ -192,6 +206,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
             OriginalProductData = productStocks;
             CurrentFilteredProductData = [.. productStocks];
+
+            // ✅ CRITICAL: Unsubscribe from old products BEFORE clearing
+            foreach (var product in ProductItems)
+            {
+                product.PropertyChanged -= OnProductPropertyChanged;
+            }
 
             ProductItems.Clear();
             foreach (var product in productStocks)
@@ -231,6 +251,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         var sampleProduct = GetSampleProductdata();
         OriginalProductData = sampleProduct;
         CurrentFilteredProductData = [.. sampleProduct];
+
+        // ✅ CRITICAL: Unsubscribe from old products BEFORE clearing
+        foreach (var product in ProductItems)
+        {
+            product.PropertyChanged -= OnProductPropertyChanged;
+        }
 
         ProductItems.Clear();
         foreach (var product in sampleProduct)
@@ -404,6 +430,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
+            // ✅ Unsubscribe before clearing
+            foreach (var product in ProductItems)
+            {
+                product.PropertyChanged -= OnProductPropertyChanged;
+            }
+
             ProductItems.Clear();
             foreach (var product in CurrentFilteredProductData)
             {
@@ -428,6 +460,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                      product.BatchCode?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) == true ||
                      product.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
+
+            // ✅ Unsubscribe before clearing
+            foreach (var product in ProductItems)
+            {
+                product.PropertyChanged -= OnProductPropertyChanged;
+            }
 
             ProductItems.Clear();
             foreach (var product in filteredProducts)
@@ -536,7 +574,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     private void ApplyProductFilter()
     {
         if (OriginalProductData.Count == 0) return;
-    
+
         List<ProductStock> filteredList = OriginalProductData.ToList();
 
         // Apply Product Category filter
@@ -551,7 +589,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         if (SelectedStatusFilterItem != "All")
         {
             filteredList = filteredList
-                .Where(product => product.Status != null && 
+                .Where(product => product.Status != null &&
                                   product.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
@@ -570,7 +608,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             product.PropertyChanged += OnProductPropertyChanged;
             ProductItems.Add(product);
         }
-    
+
         UpdateProductCounts();
     }
 
@@ -581,11 +619,11 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 
         SelectAll = ProductItems.Count > 0 && ProductItems.All(x => x.IsSelected);
     }
-    
+
     public bool CanDeleteSelectedProducts
     {
         get
-        {            
+        {
             var selectedProducts = ProductItems.Where(item => item.IsSelected).ToList();
             if (selectedProducts.Count == 0) return false;
 
@@ -596,8 +634,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
                 return false;
             }
 
-            return selectedProducts.All(product 
-                => product.Status != null && 
+            return selectedProducts.All(product
+                => product.Status != null &&
                    (product.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase) ||
                     product.Status.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase)));
         }
@@ -625,7 +663,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
     {
         OnPropertyChanged(nameof(CanDeleteSelectedProducts));
     }
-    
+
     partial void OnSelectedStatusFilterItemChanged(string value)
     {
         ApplyProductFilter();
@@ -656,12 +694,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             DiscountedPrice = model.DiscountedPrice,
             Poster = posterPath
         };
-        
+
         if (productStock.Expiry.HasValue && productStock.Expiry.Value.Date <= DateTime.Today)
         {
             productStock.Status = "Expired";
         }
-    
+
         return productStock;
     }
 

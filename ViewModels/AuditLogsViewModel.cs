@@ -82,6 +82,8 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     [ObservableProperty]
     private bool _isLoading;
 
+    private bool _isLoadingDataFlag = false;
+
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly DialogManager _dialogManager;
@@ -142,18 +144,27 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 
     private async void OnAuditDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return;
         try
         {
+            _isLoadingDataFlag = true;
             await LoadDataFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingDataFlag = false;
+        }
     }
 
     private async Task LoadDataFromDatabaseAsync()
     {
+        if (_isLoadingDataFlag) return; // ? Prevent duplicate loads
+
+        _isLoadingDataFlag = true;
         IsLoading = true;
 
         try
@@ -162,6 +173,8 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             var auditLogItems = (await _dashboardService.GetAuditLogsAsync()).ToList();
 
             OriginalAuditLogData = auditLogItems;
+
+            // ? FilterDataByDate already handles unsubscribe via RefreshAuditLogItems
             FilterDataByDate();
         }
         catch (Exception ex)
@@ -179,6 +192,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         finally
         {
             IsLoading = false;
+            _isLoadingDataFlag = false; // ? Reset flag
         }
     }
 
@@ -282,6 +296,12 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
+            // ? Unsubscribe before clearing
+            foreach (var auditLog in AuditLogs)
+            {
+                auditLog.PropertyChanged -= OnAuditLogPropertyChanged;
+            }
+
             // Reset to current filtered data
             AuditLogs.Clear();
             foreach (var auditLog in CurrentFilteredAuditLogData)
@@ -311,6 +331,12 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
                  log.DateAndTime.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                  log.DateAndTime.ToString("h:mm:ss tt").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase))
             ).ToList();
+
+            // ? Unsubscribe before clearing
+            foreach (var auditLog in AuditLogs)
+            {
+                auditLog.PropertyChanged -= OnAuditLogPropertyChanged;
+            }
 
             AuditLogs.Clear();
             foreach (var auditLog in filteredAuditLogs)
@@ -525,6 +551,12 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 
     private void RefreshAuditLogItems(List<AuditLogItems> auditLogItems)
     {
+        // ? Unsubscribe before clearing
+        foreach (var log in AuditLogs)
+        {
+            log.PropertyChanged -= OnAuditLogPropertyChanged;
+        }
+
         AuditLogs.Clear();
         foreach (var logs in auditLogItems)
         {

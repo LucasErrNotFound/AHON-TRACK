@@ -55,6 +55,12 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     [ObservableProperty] private double _gymPackageGrowthPercent;
     [ObservableProperty] private double _walkInGrowthPercent;
 
+    private EventHandler? _salesUpdatedHandler;
+    private EventHandler? _chartDataUpdatedHandler;
+    private EventHandler? _productPurchasedHandler;
+
+    private bool _isLoadingData = false;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -92,15 +98,22 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
     {
         var eventService = DashboardEventService.Instance;
 
-        eventService.SalesUpdated += OnFinancialDataChanged;
-        eventService.ChartDataUpdated += OnFinancialDataChanged;
-        eventService.ProductPurchased += OnFinancialDataChanged;
+        // Store handlers in fields so we can unsubscribe later
+        _salesUpdatedHandler = OnFinancialDataChanged;
+        _chartDataUpdatedHandler = OnFinancialDataChanged;
+        _productPurchasedHandler = OnFinancialDataChanged;
+
+        eventService.SalesUpdated += _salesUpdatedHandler;
+        eventService.ChartDataUpdated += _chartDataUpdatedHandler;
+        eventService.ProductPurchased += _productPurchasedHandler;
     }
 
     private async void OnFinancialDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadFinancialDataAsync();
             await LoadFinancialSummaryAsync();
             await UpdateRevenueChartAsync();
@@ -109,6 +122,10 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Error refreshing financial data: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingData = false;
         }
     }
 
@@ -321,8 +338,8 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
                     Name = localPackageType,
                     Fill = new SolidColorPaint(skColor),
                     Stroke = null,
-                  /*  XToolTipLabelFormatter = point =>
-                        $"{localPackageType}: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})" */
+                    /*  XToolTipLabelFormatter = point =>
+                          $"{localPackageType}: ₱{point.Coordinate.PrimaryValue:N0} ({point.StackedValue!.Share:P0})" */
                 });
             }
 
@@ -526,11 +543,15 @@ public partial class FinancialReportsViewModel : ViewModelBase, INavigable, INot
 
     protected override void DisposeManagedResources()
     {
-        // Unsubscribe from events
+        // Unsubscribe from events using stored handlers
         var eventService = DashboardEventService.Instance;
-        eventService.SalesUpdated -= OnFinancialDataChanged;
-        eventService.ChartDataUpdated -= OnFinancialDataChanged;
-        eventService.ProductPurchased -= OnFinancialDataChanged;
+
+        if (_salesUpdatedHandler != null)
+            eventService.SalesUpdated -= _salesUpdatedHandler;
+        if (_chartDataUpdatedHandler != null)
+            eventService.ChartDataUpdated -= _chartDataUpdatedHandler;
+        if (_productPurchasedHandler != null)
+            eventService.ProductPurchased -= _productPurchasedHandler;
 
         // Clear chart data
         RevenueSeriesCollection = [];

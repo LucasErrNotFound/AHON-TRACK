@@ -88,17 +88,31 @@ namespace AHON_TRACK.Services
 
                 await UpdateDailySalesAsync(employeeId, totalAmount, totalTransactions, conn, transaction);
 
+                // ✅ Commit the transaction
                 transaction.Commit();
 
-                await LogSuccessfulPayment(conn, customer, totalAmount, paymentMethod, cartItems);
+                // ✅ Log success AFTER transaction is committed
+                await LogSuccessfulPaymentAsync(customer, totalAmount, paymentMethod, cartItems);
+
                 ShowPaymentSuccess(totalAmount, paymentMethod, cartItems, anyDiscountApplied);
 
                 return true;
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
-                await LogFailedPayment(conn, customer, ex.Message);
+                try
+                {
+                    // ✅ Rollback the transaction
+                    transaction.Rollback();
+                }
+                catch (Exception rollbackEx)
+                {
+                    Console.WriteLine($"Rollback failed: {rollbackEx.Message}");
+                }
+
+                // ✅ Log failure AFTER transaction is rolled back
+                await LogFailedPaymentAsync(customer, ex.Message);
+
                 ShowError("Payment Failed", $"Transaction failed: {ex.Message}");
                 return false;
             }
@@ -126,63 +140,62 @@ namespace AHON_TRACK.Services
         }
 
         private async Task<(decimal itemTotal, bool discountApplied)> ApplyPackageDiscount(
-    SellingModel item,
-    CustomerModel customer,
-    SqlConnection conn,
-    SqlTransaction transaction)
+            SellingModel item,
+            CustomerModel customer,
+            SqlConnection conn,
+            SqlTransaction transaction)
         {
             return (item.Price * item.Quantity, false);
         }
 
-
         private async Task<(decimal itemTotal, bool discountApplied)> ApplyProductDiscount(
-    SellingModel item, SqlConnection conn, SqlTransaction transaction)
+            SellingModel item, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"SELECT Price, DiscountedPrice FROM Products WHERE ProductID = @ProductID";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@ProductID", item.SellingID);
 
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
+            // ✅ Use 'using' to ensure reader is properly disposed
+            using (var reader = await cmd.ExecuteReaderAsync())
             {
-                decimal dbPrice = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0;
-                decimal dbDiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? Convert.ToDecimal(reader["DiscountedPrice"]) : 0;
-
-                decimal finalPrice = dbPrice;
-                bool hasDiscount = false;
-
-                // ✅ Only apply discount if DiscountedPrice is between 0 and 100 (percentage)
-                if (dbDiscountedPrice > 0 && dbDiscountedPrice <= 100)
+                if (await reader.ReadAsync())
                 {
-                    finalPrice = dbPrice - (dbPrice * (dbDiscountedPrice / 100));
-                    hasDiscount = true;
-                }
-                // ✅ Or if DiscountedPrice is less than dbPrice (absolute discounted value)
-                else if (dbDiscountedPrice > 0 && dbDiscountedPrice < dbPrice)
-                {
-                    finalPrice = dbDiscountedPrice;
-                    hasDiscount = true;
-                }
+                    decimal dbPrice = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0;
+                    decimal dbDiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? Convert.ToDecimal(reader["DiscountedPrice"]) : 0;
 
-                await reader.CloseAsync();
+                    decimal finalPrice = dbPrice;
+                    bool hasDiscount = false;
 
-                // ✅ Return total using the correctly computed price
-                decimal itemTotal = finalPrice * item.Quantity;
-                return (itemTotal, hasDiscount);
-            }
+                    // Only apply discount if DiscountedPrice is between 0 and 100 (percentage)
+                    if (dbDiscountedPrice > 0 && dbDiscountedPrice <= 100)
+                    {
+                        finalPrice = dbPrice - (dbPrice * (dbDiscountedPrice / 100));
+                        hasDiscount = true;
+                    }
+                    // Or if DiscountedPrice is less than dbPrice (absolute discounted value)
+                    else if (dbDiscountedPrice > 0 && dbDiscountedPrice < dbPrice)
+                    {
+                        finalPrice = dbDiscountedPrice;
+                        hasDiscount = true;
+                    }
+
+                    // Return total using the correctly computed price
+                    decimal itemTotal = finalPrice * item.Quantity;
+                    return (itemTotal, hasDiscount);
+                }
+            } // ✅ Reader is disposed here
 
             // Fallback
             return (item.Price * item.Quantity, false);
         }
 
-
         private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, string paymentMethod, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
-        INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, PaymentMethod, RecordedBy)
-        VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @PaymentMethod, @RecordedBy);
-        SELECT SCOPE_IDENTITY();";
+                INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, PaymentMethod, RecordedBy)
+                VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @PaymentMethod, @RecordedBy);
+                SELECT SCOPE_IDENTITY();";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@SaleDate", DateTime.Now);
@@ -284,6 +297,7 @@ namespace AHON_TRACK.Services
 
         private async Task HandleMemberSessionsAsync(SellingModel item, CustomerModel customer, SqlConnection conn, SqlTransaction transaction)
         {
+            // Get package duration
             string getDuration = @"SELECT Duration FROM Packages WHERE PackageID = @PackageID;";
             string durationStr = "";
 
@@ -294,6 +308,7 @@ namespace AHON_TRACK.Services
                 durationStr = result?.ToString()?.Trim()?.ToLower() ?? "";
             }
 
+            // Calculate sessions to add
             int sessionsToAdd = item.Quantity;
 
             var parts = durationStr.Split(' ');
@@ -302,25 +317,32 @@ namespace AHON_TRACK.Services
                 sessionsToAdd = parsed * item.Quantity;
             }
 
+            // ✅ Check for existing session and get SessionsLeft in one query
             string checkExisting = @"
                 SELECT SessionID, SessionsLeft 
                 FROM MemberSessions 
                 WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
 
             int? existingSessionId = null;
+            int currentSessions = 0;
 
             using (var checkCmd = new SqlCommand(checkExisting, conn, transaction))
             {
                 checkCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
                 checkCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
 
-                using var reader = await checkCmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
+                // ✅ CRITICAL: Properly close the reader before any other operations
+                using (var reader = await checkCmd.ExecuteReaderAsync())
                 {
-                    existingSessionId = reader.GetInt32(0);
-                }
+                    if (await reader.ReadAsync())
+                    {
+                        existingSessionId = reader.GetInt32(0);
+                        currentSessions = reader.GetInt32(1);
+                    }
+                } // ✅ Reader is disposed here
             }
 
+            // ✅ Now safe to execute UPDATE or INSERT
             if (existingSessionId.HasValue)
             {
                 await UpdateExistingSessionAsync(existingSessionId.Value, sessionsToAdd, conn, transaction);
@@ -333,6 +355,7 @@ namespace AHON_TRACK.Services
 
         private async Task HandleWalkInSessionsAsync(SellingModel item, CustomerModel customer, SqlConnection conn, SqlTransaction transaction)
         {
+            // Get package duration
             string getDuration = @"SELECT Duration FROM Packages WHERE PackageID = @PackageID;";
             string durationStr = "";
 
@@ -343,6 +366,7 @@ namespace AHON_TRACK.Services
                 durationStr = result?.ToString()?.Trim()?.ToLower() ?? "";
             }
 
+            // Calculate sessions to add
             int sessionsToAdd = item.Quantity;
 
             var parts = durationStr.Split(' ');
@@ -351,25 +375,32 @@ namespace AHON_TRACK.Services
                 sessionsToAdd = parsed * item.Quantity;
             }
 
+            // ✅ Check for existing session and get SessionsLeft in one query
             string checkExisting = @"
                 SELECT SessionID, SessionsLeft 
                 FROM WalkInSessions 
                 WHERE CustomerID = @CustomerID AND PackageID = @PackageID;";
 
             int? existingSessionId = null;
+            int currentSessions = 0;
 
             using (var checkCmd = new SqlCommand(checkExisting, conn, transaction))
             {
                 checkCmd.Parameters.AddWithValue("@CustomerID", customer.CustomerID);
                 checkCmd.Parameters.AddWithValue("@PackageID", item.SellingID);
 
-                using var reader = await checkCmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
+                // ✅ CRITICAL: Properly close the reader before any other operations
+                using (var reader = await checkCmd.ExecuteReaderAsync())
                 {
-                    existingSessionId = reader.GetInt32(0);
-                }
+                    if (await reader.ReadAsync())
+                    {
+                        existingSessionId = reader.GetInt32(0);
+                        currentSessions = reader.GetInt32(1);
+                    }
+                } // ✅ Reader is disposed here
             }
 
+            // ✅ Now safe to execute UPDATE or INSERT
             if (existingSessionId.HasValue)
             {
                 await UpdateExistingWalkInSessionAsync(existingSessionId.Value, sessionsToAdd, conn, transaction);
@@ -390,20 +421,37 @@ namespace AHON_TRACK.Services
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@SessionID", sessionId);
             cmd.Parameters.AddWithValue("@NewSessions", sessionsToAdd);
-            await cmd.ExecuteNonQueryAsync();
+
+            int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+            if (rowsAffected == 0)
+            {
+                throw new InvalidOperationException($"Failed to update MemberSession ID: {sessionId}");
+            }
+
+            System.Diagnostics.Debug.WriteLine($"✓ Updated MemberSession ID: {sessionId}, Added: {sessionsToAdd} sessions");
         }
 
         private async Task CreateNewSessionAsync(int customerId, int packageId, int sessions, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
                 INSERT INTO MemberSessions (CustomerID, PackageID, SessionsLeft, StartDate)
-                VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());";
+                VALUES (@CustomerID, @PackageID, @SessionsLeft, GETDATE());
+                SELECT SCOPE_IDENTITY();";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@CustomerID", customerId);
             cmd.Parameters.AddWithValue("@PackageID", packageId);
             cmd.Parameters.AddWithValue("@SessionsLeft", sessions);
-            await cmd.ExecuteNonQueryAsync();
+
+            var newSessionId = await cmd.ExecuteScalarAsync();
+
+            if (newSessionId == null || newSessionId == DBNull.Value)
+            {
+                throw new InvalidOperationException($"Failed to create MemberSession for Customer: {customerId}, Package: {packageId}");
+            }
+
+            System.Diagnostics.Debug.WriteLine($"✓ Created MemberSession ID: {newSessionId} with {sessions} sessions");
         }
 
         private async Task UpdateExistingWalkInSessionAsync(int sessionId, int sessionsToAdd, SqlConnection conn, SqlTransaction transaction)
@@ -417,16 +465,14 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@SessionID", sessionId);
             cmd.Parameters.AddWithValue("@NewSessions", sessionsToAdd);
 
-            try
+            int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+            if (rowsAffected == 0)
             {
-                int rowsAffected = await cmd.ExecuteNonQueryAsync();
-                System.Diagnostics.Debug.WriteLine($"✓ Updated WalkInSession. Rows affected: {rowsAffected}");
+                throw new InvalidOperationException($"Failed to update WalkInSession ID: {sessionId}");
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"✗ ERROR updating WalkInSession: {ex.Message}");
-                throw;
-            }
+
+            System.Diagnostics.Debug.WriteLine($"✓ Updated WalkInSession ID: {sessionId}, Added: {sessionsToAdd} sessions");
         }
 
         private async Task CreateNewWalkInSessionAsync(int customerId, int packageId, int sessions, SqlConnection conn, SqlTransaction transaction)
@@ -441,16 +487,14 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@PackageID", packageId);
             cmd.Parameters.AddWithValue("@SessionsLeft", sessions);
 
-            try
+            var newSessionId = await cmd.ExecuteScalarAsync();
+
+            if (newSessionId == null || newSessionId == DBNull.Value)
             {
-                var newSessionId = await cmd.ExecuteScalarAsync();
-                System.Diagnostics.Debug.WriteLine($"✓ Successfully created WalkInSession ID: {newSessionId}");
+                throw new InvalidOperationException($"Failed to create WalkInSession for Customer: {customerId}, Package: {packageId}");
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"✗ ERROR creating WalkInSession: {ex.Message}");
-                throw;
-            }
+
+            System.Diagnostics.Debug.WriteLine($"✓ Created WalkInSession ID: {newSessionId} with {sessions} sessions");
         }
 
         private async Task UpdateDailySalesAsync(int employeeId, decimal totalAmount, int totalTransactions, SqlConnection conn, SqlTransaction transaction)
@@ -893,24 +937,42 @@ ORDER BY s.SaleDate DESC;";
             }*/
         }
 
-        private async Task LogSuccessfulPayment(SqlConnection conn, CustomerModel customer, decimal totalAmount, string paymentMethod, List<SellingModel> cartItems)
-        {
-            string itemsList = string.Join(", ", cartItems.Select(i => $"{i.Title} x{i.Quantity}"));
-            string description = $"Payment processed for {customer.FirstName} {customer.LastName} ({customer.CustomerType}). Total: ₱{totalAmount:N2} via {paymentMethod}. Items: {itemsList}";
-            await LogActionAsync(conn, "Purchase", description, true);
-        }
-
-        private async Task LogFailedPayment(SqlConnection conn, CustomerModel customer, string errorMessage)
+        private async Task LogSuccessfulPaymentAsync(CustomerModel customer, decimal totalAmount, string paymentMethod, List<SellingModel> cartItems)
         {
             try
             {
+                using var logConn = new SqlConnection(_connectionString);
+                await logConn.OpenAsync();
+
+                string itemsList = string.Join(", ", cartItems.Select(i => $"{i.Title} x{i.Quantity}"));
+                string description = $"Payment processed for {customer.FirstName} {customer.LastName} ({customer.CustomerType}). Total: ₱{totalAmount:N2} via {paymentMethod}. Items: {itemsList}";
+
+                await LogActionAsync(logConn, "Purchase", description, true);
+            }
+            catch (Exception ex)
+            {
+                // Silently log to console but don't throw - logging shouldn't break the main flow
+                Console.WriteLine($"Failed to log successful payment: {ex.Message}");
+            }
+        }
+
+        // ✅ FIXED: Create new connection instead of reusing the old one
+        private async Task LogFailedPaymentAsync(CustomerModel customer, string errorMessage)
+        {
+            try
+            {
+                using var logConn = new SqlConnection(_connectionString);
+                await logConn.OpenAsync();
+
                 DashboardEventService.Instance.NotifyProductUpdated();
                 string description = $"Failed to process payment for {customer?.FirstName} {customer?.LastName}. Error: {errorMessage}";
-                await LogActionAsync(conn, "Purchase", description, false);
+
+                await LogActionAsync(logConn, "Purchase", description, false);
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently ignore logging errors to prevent masking the original exception
+                // Silently log to console but don't throw
+                Console.WriteLine($"Failed to log payment failure: {ex.Message}");
             }
         }
 

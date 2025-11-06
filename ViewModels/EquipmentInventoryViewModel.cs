@@ -78,6 +78,8 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     [ObservableProperty]
     private bool _isLoadingData;
 
+    private bool _isLoadingDataFlag = false;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -142,7 +144,11 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         if (_inventoryService == null) return;
 
+        if (_isLoadingDataFlag) return; // ✅ Prevent duplicate loads
+
+        _isLoadingDataFlag = true;
         IsLoadingData = true;
+
         try
         {
             var (success, message, equipmentModels) = await _inventoryService.GetEquipmentAsync();
@@ -161,6 +167,12 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             OriginalEquipmentData = equipmentList;
             CurrentFilteredEquipmentData = [.. equipmentList];
 
+            // ✅ Unsubscribe before clearing
+            foreach (var item in EquipmentItems)
+            {
+                item.PropertyChanged -= OnEquipmentPropertyChanged;
+            }
+
             EquipmentItems.Clear();
             foreach (var equipment in equipmentList)
             {
@@ -174,6 +186,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 SelectedEquipment = EquipmentItems[0];
             }
 
+            // ✅ ApplyEquipmentFilter already handles unsubscribe correctly
             ApplyEquipmentFilter();
             UpdateEquipmentCounts();
             await _inventoryService.ShowEquipmentAlertsAsync();
@@ -188,6 +201,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         finally
         {
             IsLoadingData = false;
+            _isLoadingDataFlag = false; // ✅ Reset flag
         }
     }
 
@@ -301,7 +315,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     private void ApplyEquipmentFilter()
     {
         if (OriginalEquipmentData.Count == 0) return;
-    
+
         List<Equipment> filteredList = OriginalEquipmentData.ToList();
 
         // Apply Equipment Category filter
@@ -316,7 +330,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         if (SelectedConditionFilterItem != "All")
         {
             filteredList = filteredList
-                .Where(equipment => equipment.Condition != null && 
+                .Where(equipment => equipment.Condition != null &&
                                     equipment.Condition.Equals(SelectedConditionFilterItem, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
@@ -325,14 +339,14 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         if (SelectedStatusFilterItem != "All")
         {
             filteredList = filteredList
-                .Where(equipment => equipment.Status != null && 
+                .Where(equipment => equipment.Status != null &&
                                     equipment.Status.Equals(SelectedStatusFilterItem, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
         CurrentFilteredEquipmentData = filteredList;
 
-        // Unsubscribe from old items
+        // ✅ Already unsubscribing from old items
         foreach (var item in EquipmentItems)
         {
             item.PropertyChanged -= OnEquipmentPropertyChanged;
@@ -344,7 +358,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             equipment.PropertyChanged += OnEquipmentPropertyChanged;
             EquipmentItems.Add(equipment);
         }
-    
+
         UpdateEquipmentCounts();
     }
 
@@ -365,6 +379,12 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
+            // ✅ Unsubscribe before clearing
+            foreach (var item in EquipmentItems)
+            {
+                item.PropertyChanged -= OnEquipmentPropertyChanged;
+            }
+
             EquipmentItems.Clear();
             foreach (var equipment in CurrentFilteredEquipmentData)
             {
@@ -389,6 +409,12 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                  equipment.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                  (equipment.SupplierName?.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ?? false)))
                 .ToList();
+
+            // ✅ Unsubscribe before clearing
+            foreach (var item in EquipmentItems)
+            {
+                item.PropertyChanged -= OnEquipmentPropertyChanged;
+            }
 
             EquipmentItems.Clear();
             foreach (var equipment in filteredEquipments)

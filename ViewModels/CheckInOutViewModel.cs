@@ -58,6 +58,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     [ObservableProperty]
     private bool _isLoadingData;
 
+    private bool _isLoadingDataFlag = false;
+
     private readonly PageManager _pageManager;
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -124,18 +126,28 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return; // Prevent overlapping loads
         try
         {
+            _isLoadingDataFlag = true;
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingDataFlag = false;
+        }
     }
 
     private async Task LoadDataAsync()
     {
+        if (_isLoadingDataFlag) return; // ✅ Prevent duplicate loads
+
+        _isLoadingDataFlag = true;
+
         try
         {
             IsLoadingData = true;
@@ -156,6 +168,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         finally
         {
             IsLoadingData = false;
+            _isLoadingDataFlag = false; // ✅ Reset flag
         }
     }
 
@@ -178,6 +191,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
             OriginalWalkInData = walkInCheckIns;
 
             // Apply date filter to populate the observable collections
+            // ✅ FilterDataByDate already handles unsubscribe correctly - no changes needed
             FilterDataByDate(date);
         }
         catch (Exception ex)
