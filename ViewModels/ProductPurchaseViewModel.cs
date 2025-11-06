@@ -1167,6 +1167,33 @@ public partial class Product : ObservableObject
 
     [ObservableProperty]
     private bool _hasDiscount;
+    
+    private static Bitmap? _defaultProductBitmap;
+        
+    public static Bitmap DefaultProductBitmap
+    {
+        get
+        {
+            if (_defaultProductBitmap != null) return _defaultProductBitmap;
+            try
+            {
+                var uri = new Uri("avares://AHON_TRACK/Assets/ProductPurchaseView/DefaultPurchaseIcon.png");
+                _defaultProductBitmap = new Bitmap(AssetLoader.Open(uri));
+            }
+            catch
+            {
+                // Default bitmap remains null if image fails to load
+            }
+            return _defaultProductBitmap!;
+        }
+    }
+        
+    partial void OnPosterChanged(Bitmap? value)
+    {
+        OnPropertyChanged(nameof(DisplayPoster));
+    }
+    
+    public Bitmap DisplayPoster => Poster ?? DefaultProductBitmap;
 
     public decimal FinalPrice
     {

@@ -58,7 +58,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     public bool CanEditExpiry => !ProductExpiry.HasValue || ProductExpiry.Value.Date > DateTime.Today;
     public DateTime TodayDate => DateTime.Today;
-    private const string DEFAULT_IMAGE_PATH = "avares://AHON_TRACK/Assets/ProductStockView/DefaultPurchaseIcon.png";
+    private const string DEFAULT_IMAGE_PATH = "avares://AHON_TRACK/Assets/ProductStockView/DefaultProductImage.png";
     
     private bool _suppliersLoaded = false;
     private int? _productID;
@@ -92,6 +92,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         _pageManager = pageManager;
         _productService = productService;
         _supplierService = supplierService;
+        _productImageFilePath = DEFAULT_IMAGE_PATH;
 
         _ = LoadSuppliersAsync();
     }
