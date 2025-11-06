@@ -95,53 +95,77 @@ namespace AHON_TRACK.Services
                     }
                 }
 
-                // --- POPULATION TREND ---
                 string populationQuery = @"
-    WITH DailyJoins AS (
-        SELECT CAST(DateJoined AS DATE) AS [Date], COUNT(*) AS NewMembers
-        FROM (
-            SELECT DateJoined FROM Members 
-            WHERE DateJoined BETWEEN @From AND @To 
-            AND IsDeleted = 0
-            UNION ALL
-            SELECT DateJoined FROM WalkInCustomers 
-            WHERE DateJoined BETWEEN @From AND @To 
-            AND IsDeleted = 0
-        ) AS Combined
+    -- Track member additions, removals, and walk-ins
+    WITH InitialPopulation AS (
+        SELECT COUNT(*) AS BaseCount
+        FROM Members
+        WHERE CAST(DateJoined AS DATE) < @From
+        AND (ValidUntil IS NULL OR CAST(ValidUntil AS DATE) >= @From)
+        AND IsDeleted = 0
+    ),
+    DailyMemberJoins AS (
+        SELECT CAST(DateJoined AS DATE) AS [Date], COUNT(*) AS Change
+        FROM Members 
+        WHERE CAST(DateJoined AS DATE) BETWEEN @From AND @To 
+        AND IsDeleted = 0
         GROUP BY CAST(DateJoined AS DATE)
     ),
-    DailyExpiries AS (
-        SELECT CAST(ValidUntil AS DATE) AS [Date], -COUNT(*) AS ExpiredMembers
+    DailyMemberRemovals AS (
+        SELECT CAST(ValidUntil AS DATE) AS [Date], -COUNT(*) AS Change
         FROM Members
-        WHERE ValidUntil BETWEEN @From AND @To
-        AND ValidUntil >= DateJoined  -- Only count if they actually joined before expiring
-        AND Status = 'Expired'
+        WHERE CAST(ValidUntil AS DATE) BETWEEN @From AND @To
+        AND Status IN ('Expired', 'Terminated')
         AND IsDeleted = 0
         GROUP BY CAST(ValidUntil AS DATE)
     ),
-    DailyChanges AS (
-        SELECT [Date], NewMembers AS Change FROM DailyJoins
+    DailyWalkIns AS (
+        SELECT CAST(DateJoined AS DATE) AS [Date], COUNT(*) AS Change
+        FROM WalkInCustomers
+        WHERE CAST(DateJoined AS DATE) BETWEEN @From AND @To
+        AND IsDeleted = 0
+        GROUP BY CAST(DateJoined AS DATE)
+    ),
+    AllChanges AS (
+        SELECT [Date], Change FROM DailyMemberJoins
         UNION ALL
-        SELECT [Date], ExpiredMembers AS Change FROM DailyExpiries
+        SELECT [Date], Change FROM DailyMemberRemovals
+        UNION ALL
+        SELECT [Date], Change FROM DailyWalkIns
+    ),
+    DailyNetChange AS (
+        SELECT [Date], SUM(Change) AS NetChange
+        FROM AllChanges
+        GROUP BY [Date]
     )
     SELECT 
         [Date],
-        SUM(Change) OVER (ORDER BY [Date] ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS CumulativeCount
-    FROM DailyChanges
+        (SELECT BaseCount FROM InitialPopulation) + 
+        SUM(NetChange) OVER (ORDER BY [Date] ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS Population
+    FROM DailyNetChange
     ORDER BY [Date];";
 
                 using (var cmd = new SqlCommand(populationQuery, conn))
                 {
-                    cmd.Parameters.AddWithValue("@From", from);
-                    cmd.Parameters.AddWithValue("@To", to);
+                    cmd.Parameters.AddWithValue("@From", from.Date); // Ensure time is 00:00:00
+                    cmd.Parameters.AddWithValue("@To", to.Date.AddDays(1));
+
+
+                    _toastManager.CreateToast($"Querying from {from:yyyy-MM-dd} to {to:yyyy-MM-dd}");
 
                     using var reader = await cmd.ExecuteReaderAsync();
+                    int rowCount = 0;
                     while (await reader.ReadAsync())
                     {
                         DateTime date = reader.GetDateTime(0);
                         int cumulativeCount = reader.GetInt32(1);
                         populationCounts[date] = cumulativeCount;
+                        rowCount++;
+
+                        _toastManager.CreateToast($"Date: {date:yyyy-MM-dd}, Population: {cumulativeCount}");
                     }
+
+                    _toastManager.CreateToast($"Total rows returned: {rowCount}");
                 }
 
                 return (ageGroups, genderCounts, populationCounts);
@@ -152,6 +176,7 @@ namespace AHON_TRACK.Services
                 return (ageGroups, genderCounts, populationCounts);
             }
         }
+
         #endregion
 
         #region ATTENDANCE
