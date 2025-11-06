@@ -653,7 +653,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     }
 
     [Required(ErrorMessage = "Stock must be set")]
-    [Range(0, 1000, ErrorMessage = "Stock must be between 0 and 1,000")]
+    [Range(0, 100, ErrorMessage = "Stock must be between 0 and 100")]
     public int? CurrentStock
     {
         get => _currentStock;
