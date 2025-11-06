@@ -97,14 +97,38 @@ namespace AHON_TRACK.Services
 
                 // --- POPULATION TREND ---
                 string populationQuery = @"
-                    SELECT CAST(DateJoined AS DATE) AS [Date], COUNT(*) AS Count
-                    FROM (
-                        SELECT DateJoined FROM Members WHERE DateJoined BETWEEN @From AND @To AND IsDeleted = 0
-                        UNION ALL
-                        SELECT DateJoined FROM WalkInCustomers WHERE DateJoined BETWEEN @From AND @To AND IsDeleted = 0
-                    ) AS Combined
-                    GROUP BY CAST(DateJoined AS DATE)
-                    ORDER BY [Date];";
+    WITH DailyJoins AS (
+        SELECT CAST(DateJoined AS DATE) AS [Date], COUNT(*) AS NewMembers
+        FROM (
+            SELECT DateJoined FROM Members 
+            WHERE DateJoined BETWEEN @From AND @To 
+            AND IsDeleted = 0
+            UNION ALL
+            SELECT DateJoined FROM WalkInCustomers 
+            WHERE DateJoined BETWEEN @From AND @To 
+            AND IsDeleted = 0
+        ) AS Combined
+        GROUP BY CAST(DateJoined AS DATE)
+    ),
+    DailyExpiries AS (
+        SELECT CAST(ValidUntil AS DATE) AS [Date], -COUNT(*) AS ExpiredMembers
+        FROM Members
+        WHERE ValidUntil BETWEEN @From AND @To
+        AND ValidUntil >= DateJoined  -- Only count if they actually joined before expiring
+        AND Status = 'Expired'
+        AND IsDeleted = 0
+        GROUP BY CAST(ValidUntil AS DATE)
+    ),
+    DailyChanges AS (
+        SELECT [Date], NewMembers AS Change FROM DailyJoins
+        UNION ALL
+        SELECT [Date], ExpiredMembers AS Change FROM DailyExpiries
+    )
+    SELECT 
+        [Date],
+        SUM(Change) OVER (ORDER BY [Date] ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS CumulativeCount
+    FROM DailyChanges
+    ORDER BY [Date];";
 
                 using (var cmd = new SqlCommand(populationQuery, conn))
                 {
@@ -115,8 +139,8 @@ namespace AHON_TRACK.Services
                     while (await reader.ReadAsync())
                     {
                         DateTime date = reader.GetDateTime(0);
-                        int count = reader.GetInt32(1);
-                        populationCounts[date] = count;
+                        int cumulativeCount = reader.GetInt32(1);
+                        populationCounts[date] = cumulativeCount;
                     }
                 }
 
