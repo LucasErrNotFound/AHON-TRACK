@@ -38,7 +38,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     private string _selectedSortFilterItem = "By newest to oldest";
 
     [ObservableProperty]
-    private string[] _sortPositionItems = ["All", "Administrator", "Gym Staff"];
+    private string[] _sortPositionItems = ["All", "Gym Admin", "Gym Staff"];
 
     [ObservableProperty]
     private string _selectedSortPositionItem = "All";
@@ -82,6 +82,8 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     [ObservableProperty]
     private bool _isLoading;
 
+    private bool _isLoadingDataFlag = false;
+
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly DialogManager _dialogManager;
@@ -100,8 +102,8 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         _dashboardService = dashboardService;
         _settingsService = settingsService;
 
-        SubscribeToEvents();
         _ = LoadDataFromDatabaseAsync();
+        SubscribeToEvents();
         UpdateCounts();
     }
 
@@ -142,18 +144,27 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
 
     private async void OnAuditDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return;
         try
         {
+            _isLoadingDataFlag = true;
             await LoadDataFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingDataFlag = false;
+        }
     }
 
     private async Task LoadDataFromDatabaseAsync()
     {
+        if (_isLoadingDataFlag) return; // ? Prevent duplicate loads
+
+        _isLoadingDataFlag = true;
         IsLoading = true;
 
         try
@@ -162,6 +173,8 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
             var auditLogItems = (await _dashboardService.GetAuditLogsAsync()).ToList();
 
             OriginalAuditLogData = auditLogItems;
+
+            // ? FilterDataByDate already handles unsubscribe via RefreshAuditLogItems
             FilterDataByDate();
         }
         catch (Exception ex)
@@ -179,16 +192,7 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         finally
         {
             IsLoading = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task RefreshDataAsync()
-    {
-        if (_dashboardService != null)
-        {
-            await LoadDataFromDatabaseAsync();
-            _toastManager.CreateToast($"Success. Audit logs refreshed {NotificationType.Success}");
+            _isLoadingDataFlag = false; // ? Reset flag
         }
     }
 
@@ -282,6 +286,12 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
+            // ? Unsubscribe before clearing
+            foreach (var auditLog in AuditLogs)
+            {
+                auditLog.PropertyChanged -= OnAuditLogPropertyChanged;
+            }
+
             // Reset to current filtered data
             AuditLogs.Clear();
             foreach (var auditLog in CurrentFilteredAuditLogData)
@@ -311,6 +321,12 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
                  log.DateAndTime.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                  log.DateAndTime.ToString("h:mm:ss tt").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase))
             ).ToList();
+
+            // ? Unsubscribe before clearing
+            foreach (var auditLog in AuditLogs)
+            {
+                auditLog.PropertyChanged -= OnAuditLogPropertyChanged;
+            }
 
             AuditLogs.Clear();
             foreach (var auditLog in filteredAuditLogs)
@@ -523,17 +539,24 @@ public partial class AuditLogsViewModel : ViewModelBase, INavigable, INotifyProp
         RefreshAuditLogItems(sortedList);
     }
 
-    private void RefreshAuditLogItems(List<AuditLogItems> auditLogItems)
+    private void RefreshAuditLogItems(List<AuditLogItems> items)
     {
-        AuditLogs.Clear();
-        foreach (var logs in auditLogItems)
-        {
-            logs.PropertyChanged += OnAuditLogPropertyChanged;
-            AuditLogs.Add(logs);
-        }
+        // 1?? Unsubscribe before replacing collection
+        foreach (var log in AuditLogs)
+            log.PropertyChanged -= OnAuditLogPropertyChanged;
+
+        // 2?? Replace collection reference
+        AuditLogs = new ObservableCollection<AuditLogItems>(items);
+
+        // 3?? Subscribe to new items
+        foreach (var log in AuditLogs)
+            log.PropertyChanged += OnAuditLogPropertyChanged;
+
+        // 4?? Update state
         UpdateCounts();
         UpdateGaugeValue();
     }
+
 
     private void UpdateGaugeValue()
     {

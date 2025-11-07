@@ -85,6 +85,8 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private bool _disposed = false;
 
+    private bool _isLoadingDataFlag = false;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -177,7 +179,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         if (yesterdayCount > 0)
         {
             CurrentSchedulePercentageChange = ((double)(CurrentScheduleCount - yesterdayCount) / yesterdayCount) * 100;
-            // Cap at ±100%
             CurrentSchedulePercentageChange = Math.Max(-100, Math.Min(100, CurrentSchedulePercentageChange));
             CurrentScheduleChangeText = $"{(CurrentSchedulePercentageChange >= 0 ? "+" : "")}{CurrentSchedulePercentageChange:F1}% from yesterday";
         }
@@ -196,7 +197,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         if (yesterdayUpcomingCount > 0)
         {
             UpcomingSchedulePercentageChange = ((double)(UpcomingScheduleCount - yesterdayUpcomingCount) / yesterdayUpcomingCount) * 100;
-            // Cap at ±100%
             UpcomingSchedulePercentageChange = Math.Max(-100, Math.Min(100, UpcomingSchedulePercentageChange));
             UpcomingScheduleChangeText = $"{(UpcomingSchedulePercentageChange >= 0 ? "+" : "")}{UpcomingSchedulePercentageChange:F1}% from yesterday";
         }
@@ -217,13 +217,11 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         {
             var packages = await _trainingService.GetPackageNamesAsync();
 
-            // Add "All" at the beginning, then add the package names
             var packageList = new List<string> { "All" };
             packageList.AddRange(packages.Where(p => !string.IsNullOrEmpty(p)).OrderBy(p => p));
 
             PackageFilterItems = packageList.ToArray();
 
-            // Reset selection if current selection is no longer valid
             if (!PackageFilterItems.Contains(SelectedPackageFilterItem))
             {
                 SelectedPackageFilterItem = "All";
@@ -247,55 +245,65 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private void OnPackageDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return;
         try
         {
+            _isLoadingDataFlag = true;
             _ = LoadPackagesAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to reload packages: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingDataFlag = false;
+        }
     }
 
     public async Task LoadTrainingsAsync()
     {
-        IsLoading = true;
-        var trainings = await _trainingService.GetTrainingSchedulesAsync();
-        var people = new List<ScheduledPerson>();
+        if (_isLoadingDataFlag) return;
 
-        foreach (var t in trainings)
+        _isLoadingDataFlag = true;
+        IsLoading = true;
+
+        try
         {
-            Bitmap? bitmap = null;
-            if (t.picture is { Length: > 0 })
+            var trainings = await _trainingService.GetTrainingSchedulesAsync();
+            var people = new List<ScheduledPerson>();
+
+            foreach (var t in trainings)
             {
-                using var ms = new MemoryStream(t.picture);
-                bitmap = new Bitmap(ms);
+                people.Add(new ScheduledPerson
+                {
+                    TrainingID = t.trainingID,
+                    ID = t.customerID,
+                    FirstName = t.firstName,
+                    LastName = t.lastName,
+                    ContactNumber = t.contactNumber,
+                    PackageType = t.packageType,
+                    AssignedCoach = t.assignedCoach,
+                    ScheduledDate = t.scheduledDate.Date,
+                    ScheduledTimeStart = TimeOnly.FromDateTime(t.scheduledTimeStart),
+                    ScheduledTimeEnd = TimeOnly.FromDateTime(t.scheduledTimeEnd),
+                    Attendance = t.attendance,
+                });
             }
 
-            people.Add(new ScheduledPerson
-            {
-                TrainingID = t.trainingID,
-                ID = t.customerID,
-                FirstName = t.firstName,
-                LastName = t.lastName,
-                ContactNumber = t.contactNumber,
-                PackageType = t.packageType,
-                AssignedCoach = t.assignedCoach,
-                ScheduledDate = t.scheduledDate.Date,
-                ScheduledTimeStart = TimeOnly.FromDateTime(t.scheduledTimeStart),
-                ScheduledTimeEnd = TimeOnly.FromDateTime(t.scheduledTimeEnd),
-                Attendance = t.attendance,
-                Picture = bitmap != null ? null : string.Empty // Set appropriately based on your needs
-            });
+            OriginalScheduledPeople = people;
+
+            // ✅ Auto-mark absent for past schedules
+            await AutoMarkAbsentForPastSchedulesAsync();
+
+            FilterDataByPackageAndDate();
+            UpdateDashboardStatistics();
         }
-
-        // Store all data in OriginalScheduledPeople
-        OriginalScheduledPeople = people;
-
-        // Now filter based on current date and package selection
-        FilterDataByPackageAndDate();
-        UpdateDashboardStatistics();
-        IsLoading = false;
+        finally
+        {
+            IsLoading = false;
+            _isLoadingDataFlag = false;
+        }
     }
 
     private async Task LoadCoachesAsync()
@@ -339,87 +347,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         }
     }
 
-    private void LoadSampleData()
-    {
-        var scheduledClients = CreateSampleData();
-        OriginalScheduledPeople = scheduledClients;
-        FilterDataByPackageAndDate();
-    }
-
-    private List<ScheduledPerson> CreateSampleData()
-    {
-        var today = DateTime.Today;
-        return
-        [
-            new ScheduledPerson
-            {
-                ID = 1001, Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png", FirstName = "Rome",
-                LastName = "Calubayan", ContactNumber = "09182736273", PackageType = "Boxing", AssignedCoach = "Coach Jho", ScheduledDate = today,
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(1)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(2)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1002, Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png", FirstName = "Sianrey",
-                LastName = "Flora", ContactNumber = "09198656372", PackageType = "Boxing", AssignedCoach = "Coach Jho", ScheduledDate = today,
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(11)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(12)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1003, Picture = "", FirstName = "Mardie",
-                LastName = "Dela Cruz", ContactNumber = "09138545322", PackageType = "Muay Thai", AssignedCoach = "Coach Jedd", ScheduledDate = today,
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(11)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(12)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1004, Picture = "avares://AHON_TRACK/Assets/MainWindowView/user-admin.png", FirstName = "JL",
-                LastName = "Taberdo", ContactNumber = "09237645212", PackageType = "Crossfit", AssignedCoach = "Coach Rey", ScheduledDate = today.AddDays(1),
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(14)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(16)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1005, Picture = "", FirstName = "Jav",
-                LastName = "Agustin", ContactNumber = "09686643211", PackageType = "Muay Thai", AssignedCoach = "Coach Jedd", ScheduledDate = today.AddDays(1),
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(15)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(16)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1006, Picture = "", FirstName = "Dave",
-                LastName = "Dapitillo", ContactNumber = "09676544212", PackageType = "Muay Thai", AssignedCoach = "Coach Jedd", ScheduledDate = today.AddDays(2),
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(17)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(18)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1007, Picture = "", FirstName = "Daniel",
-                LastName = "Empinado", ContactNumber = "09666452211", PackageType = "Crossfit", AssignedCoach = "Coach Rey", ScheduledDate = today.AddDays(2),
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(17)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(18)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1008, Picture = "", FirstName = "Marc",
-                LastName = "Torres", ContactNumber = "098273647382", PackageType = "Crossfit", AssignedCoach = "Coach Rey", ScheduledDate = today.AddDays(2),
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(17)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(18)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1009, Picture = "", FirstName = "Mark",
-                LastName = "Dela Cruz", ContactNumber = "091827362837", PackageType = "Crossfit", AssignedCoach = "Coach Rey", ScheduledDate = today.AddDays(3),
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(19)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(20)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1010, Picture = "", FirstName = "Adriel",
-                LastName = "Del Rosario", ContactNumber = "09182837748", PackageType = "Boxing", AssignedCoach = "Coach Jho", ScheduledDate = today.AddDays(3),
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(19)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(20)), Attendance = null
-            },
-            new ScheduledPerson
-            {
-                ID = 1011, Picture = "", FirstName = "JC",
-                LastName = "Casidor", ContactNumber = "09192818827", PackageType = "Boxing", AssignedCoach = "Coach Jho", ScheduledDate = today.AddDays(3),
-                ScheduledTimeStart = TimeOnly.FromDateTime(today.AddHours(21)), ScheduledTimeEnd = TimeOnly.FromDateTime(today.AddHours(22)), Attendance = null
-            }
-        ];
-    }
-
     [RelayCommand]
     private void OpenAddScheduleDialog()
     {
@@ -427,7 +354,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         _dialogManager.CreateDialog(_addTrainingScheduleDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
-                // Reload the data after successfully adding a schedule
                 await LoadTrainingsAsync();
 
                 _toastManager.CreateToast("Added new training schedule")
@@ -448,6 +374,16 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     {
         if (scheduledPerson is null || scheduledPerson.TrainingID is null) return;
 
+        // ✅ Check if schedule is in the valid time range (today only)
+        if (!IsScheduleEligibleForAttendance(scheduledPerson))
+        {
+            _toastManager.CreateToast("Invalid Action")
+                .WithContent("Attendance can only be marked for today's schedules.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
         scheduledPerson.Attendance = "Present";
 
         var success = await _trainingService.UpdateAttendanceAsync(scheduledPerson.TrainingID.Value, "Present");
@@ -467,10 +403,21 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
                 .ShowError();
         }
     }
+
     [RelayCommand]
     private async Task MarkAsAbsentAsync(ScheduledPerson? scheduledPerson)
     {
         if (scheduledPerson is null || scheduledPerson.TrainingID is null) return;
+
+        // ✅ Check if schedule is in the valid time range (today only)
+        if (!IsScheduleEligibleForAttendance(scheduledPerson))
+        {
+            _toastManager.CreateToast("Invalid Action")
+                .WithContent("Attendance can only be marked for today's schedules.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
 
         scheduledPerson.Attendance = "Absent";
 
@@ -497,6 +444,16 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     {
         if (scheduledPerson is null) return;
 
+        // ✅ Check if attendance has already been marked
+        if (IsAttendanceMarked(scheduledPerson))
+        {
+            _toastManager.CreateToast("Schedule Locked")
+                .WithContent($"Cannot change schedule for {scheduledPerson.FirstName} {scheduledPerson.LastName} because attendance has already been marked as {scheduledPerson.Attendance}.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
         _changeScheduleDialogCardViewModel.Initialize(scheduledPerson);
         _dialogManager.CreateDialog(_changeScheduleDialogCardViewModel)
             .WithSuccessCallback(_ =>
@@ -508,15 +465,101 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
                 _toastManager.CreateToast("Changing training schedule cancelled")
                     .WithContent("Changing training schedule cancelled")
                     .DismissOnClick()
-                    .ShowWarning()).WithMaxWidth(800) // originally Width: 400
+                    .ShowWarning()).WithMaxWidth(800)
             .Show();
+    }
+
+    /// <summary>
+    /// Checks if a schedule is eligible for attendance marking (only today's schedules)
+    /// </summary>
+    private bool IsScheduleEligibleForAttendance(ScheduledPerson scheduledPerson)
+    {
+        if (scheduledPerson.ScheduledDate == null) return false;
+
+        var today = DateTime.Today;
+        var scheduleDate = scheduledPerson.ScheduledDate.Value.Date;
+
+        // Only allow marking attendance for today's schedules
+        return scheduleDate == today;
+    }
+
+    /// <summary>
+    /// Checks if attendance has already been marked (Present or Absent)
+    /// </summary>
+    private bool IsAttendanceMarked(ScheduledPerson scheduledPerson)
+    {
+        if (string.IsNullOrEmpty(scheduledPerson.Attendance)) return false;
+
+        var attendance = scheduledPerson.Attendance.Trim().ToLowerInvariant();
+        return attendance == "present" || attendance == "absent";
+    }
+
+    /// <summary>
+    /// Automatically marks pending schedules as absent if the schedule end time has passed + 1 hour grace period
+    /// </summary>
+    private async Task AutoMarkAbsentForPastSchedulesAsync()
+    {
+        try
+        {
+            var now = DateTime.Now;
+            var pendingExpiredSchedules = OriginalScheduledPeople
+                .Where(s => s.ScheduledDate.HasValue
+                    && s.ScheduledTimeEnd.HasValue
+                    && s.TrainingID.HasValue
+                    && (string.IsNullOrEmpty(s.Attendance) || s.Attendance.Trim().ToLowerInvariant() == "pending"))
+                .ToList();
+
+            var schedulesToMarkAbsent = new List<ScheduledPerson>();
+
+            foreach (var schedule in pendingExpiredSchedules)
+            {
+                // Combine date and end time to get the exact end datetime
+                var scheduleEndDateTime = schedule.ScheduledDate.Value.Date
+                    .Add(schedule.ScheduledTimeEnd!.Value.ToTimeSpan());
+
+                // Add 1 hour grace period after schedule ends
+                var graceEndDateTime = scheduleEndDateTime.AddHours(1);
+
+                // If current time is past the grace period, mark as absent
+                if (now > graceEndDateTime)
+                {
+                    schedulesToMarkAbsent.Add(schedule);
+                }
+            }
+
+            if (!schedulesToMarkAbsent.Any()) return;
+
+            int markedCount = 0;
+            foreach (var schedule in schedulesToMarkAbsent)
+            {
+                var success = await _trainingService.UpdateAttendanceAsync(schedule.TrainingID!.Value, "Absent");
+                if (success)
+                {
+                    schedule.Attendance = "Absent";
+                    markedCount++;
+                }
+            }
+
+            if (markedCount > 0)
+            {
+                _toastManager?.CreateToast("Auto-Marked Absent")
+                    .WithContent($"Automatically marked {markedCount} schedule(s) as absent (1 hour after end time)")
+                    .DismissOnClick()
+                    .ShowInfo();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AutoMarkAbsentForPastSchedulesAsync] Error: {ex.Message}");
+            // Don't show error toast to user as this is a background operation
+        }
     }
 
     private void FilterDataByPackageAndDate()
     {
         var filteredScheduledData = OriginalScheduledPeople
-            .Where(w => w.ScheduledDate?.Date == SelectedDate.Date)
-            .ToList();
+        .Where(w => w.ScheduledDate?.Date == SelectedDate.Date)
+        .ToList();
 
         if (SelectedPackageFilterItem is not "All")
         {
@@ -525,7 +568,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
                 .ToList();
         }
 
-        // Add coach filtering
         if (!string.IsNullOrEmpty(SelectedCoachFilterItem) && SelectedCoachFilterItem != "All Coaches")
         {
             filteredScheduledData = filteredScheduledData
@@ -566,13 +608,19 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private void OnTrainingDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return;
         try
         {
+            _isLoadingDataFlag = true;
             _ = LoadTrainingsAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingDataFlag = false;
         }
     }
 
@@ -591,19 +639,24 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private async void OnCoachDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return;
         try
         {
+            _isLoadingDataFlag = true;
             await LoadCoachesAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to reload coaches: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingDataFlag = false;
+        }
     }
 
     protected override void DisposeManagedResources()
     {
-        // Unsubscribe from events
         var eventService = DashboardEventService.Instance;
         eventService.TrainingSessionsUpdated -= OnTrainingDataChanged;
         eventService.ScheduleAdded -= OnTrainingDataChanged;
@@ -614,21 +667,20 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         eventService.EmployeeUpdated -= OnCoachDataChanged;
         eventService.EmployeeDeleted -= OnCoachDataChanged;
 
-        eventService.PackageAdded += OnPackageDataChanged;
-        eventService.PackageUpdated += OnPackageDataChanged;
-        eventService.PackageDeleted += OnPackageDataChanged;
+        eventService.PackageAdded -= OnPackageDataChanged;
+        eventService.PackageUpdated -= OnPackageDataChanged;
+        eventService.PackageDeleted -= OnPackageDataChanged;
 
-        // Unsubscribe from property changed events
         foreach (var schedule in ScheduledPeople)
         {
             schedule.PropertyChanged -= OnScheduledChanged;
         }
 
-        // Clear collections
         ScheduledPeople.Clear();
         OriginalScheduledPeople.Clear();
         CurrentScheduledPeople.Clear();
         CoachFilterItems = [];
+        PackageFilterItems = [];
     }
 }
 

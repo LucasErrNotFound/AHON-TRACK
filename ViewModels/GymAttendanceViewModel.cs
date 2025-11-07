@@ -36,6 +36,8 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
     [ObservableProperty]
     private bool _isLoading;
 
+    private bool _isLoadingData = false;
+
     // === Totals & Percentages ===
     [ObservableProperty] private int _totalWalkIns;
     [ObservableProperty] private int _totalMembers;
@@ -77,8 +79,10 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
 
     private async void OnAttendanceDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await UpdateAttendanceChartAsync();
             await UpdateCustomerTypeGroupChartAsync();
         }
@@ -86,10 +90,18 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingData = false;
+        }
     }
 
     private async Task LoadDataAsync()
     {
+        if (_isLoadingData) return; // ? Prevent duplicate loads
+
+        _isLoadingData = true;
+
         try
         {
             IsLoading = true;
@@ -103,8 +115,10 @@ public partial class GymAttendanceViewModel : ViewModelBase, INavigable, INotify
         finally
         {
             IsLoading = false;
+            _isLoadingData = false; // ? Reset flag
         }
     }
+
 
     private async Task UpdateAttendanceChartAsync()
     {

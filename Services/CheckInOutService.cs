@@ -121,12 +121,30 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region DATE VALIDATION
+
+        private bool IsValidCheckInDate(DateTime selectedDate)
+        {
+            return selectedDate.Date == DateTime.Today;
+        }
+
+        #endregion
+
         #region CREATE (Check-In)
 
-        public async Task<bool> CheckInMemberAsync(int memberId)
+        public async Task<bool> CheckInMemberAsync(int memberId, DateTime selectedDate)
         {
             if (!CheckPermission(CanCreate, "perform this action"))
                 return false;
+
+            // Validate check-in date
+            if (!IsValidCheckInDate(selectedDate))
+            {
+                _toastManager.CreateToast("Invalid Date")
+                    .WithContent("Check-in is only allowed for today's date.")
+                    .ShowWarning();
+                return false;
+            }
 
             try
             {
@@ -137,7 +155,12 @@ namespace AHON_TRACK.Services
                 await AutoCheckoutPreviousDaysAsync();
 
                 if (await IsMemberAlreadyCheckedInAsync(connection, memberId))
+                {
+                    _toastManager.CreateToast("Already Checked In")
+                        .WithContent("This member is already checked in today.")
+                        .ShowWarning();
                     return false;
+                }
 
                 if (await InsertMemberCheckInAsync(connection, memberId))
                 {
@@ -156,6 +179,8 @@ namespace AHON_TRACK.Services
             return false;
         }
 
+
+        // Update CheckInWalkInAsync method
         public async Task<bool> CheckInWalkInAsync(int customerID)
         {
             if (!CheckPermission(CanCreate, "perform this action"))

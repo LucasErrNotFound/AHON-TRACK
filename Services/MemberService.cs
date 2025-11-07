@@ -378,10 +378,7 @@ namespace AHON_TRACK.Services
         {
             if (!CanView())
             {
-                _toastManager?.CreateToast("Access Denied")
-                    .WithContent("You don't have permission to view members.")
-                    .DismissOnClick()
-                    .ShowError();
+                ShowAccessDeniedToast("view members");
                 return (false, "Insufficient permissions to view members.", null);
             }
 
@@ -390,89 +387,93 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                string query = @"
-            SELECT 
-                m.MemberID,
-                m.Firstname,
-                m.MiddleInitial,
-                m.Lastname,
-                LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
-                m.Gender,
-                m.ContactNumber,
-                
-                -- Calculate age dynamically from DateOfBirth
-                CASE 
-                    WHEN m.DateOfBirth IS NOT NULL THEN
-                        DATEDIFF(YEAR, m.DateOfBirth, GETDATE()) - 
-                        CASE 
-                            WHEN DATEADD(YEAR, DATEDIFF(YEAR, m.DateOfBirth, GETDATE()), m.DateOfBirth) > GETDATE() 
-                            THEN 1 
-                            ELSE 0 
-                        END
-                    ELSE m.Age  -- Fallback to stored age if no DOB
-                END AS CalculatedAge,
-                
-                m.DateOfBirth,
-                m.ValidUntil,
-                m.PackageID,
-                p.PackageName,
-                m.Status,
-                m.PaymentMethod,
-                m.ProfilePicture
-            FROM Members m
-            LEFT JOIN Packages p ON m.PackageID = p.PackageID
-            WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
-            ORDER BY Name";
+                // Replace the query in GetMembersAsync method in MemberService.cs
+
+                const string query = @"
+    SELECT 
+        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname,
+        LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
+        m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil,
+        m.PackageID, 
+        
+        -- Get gym membership package name
+        p.PackageName AS GymPackageName,
+        
+        -- Get all session-based packages the member has (with sessions left > 0)
+        STUFF((
+            SELECT ', ' + pkg.PackageName
+            FROM MemberSessions ms
+            INNER JOIN Packages pkg ON ms.PackageID = pkg.PackageID
+            WHERE ms.CustomerID = m.MemberID 
+                AND ms.SessionsLeft > 0
+                AND (ms.IsDeleted = 0 OR ms.IsDeleted IS NULL)
+                AND (pkg.IsDeleted = 0 OR pkg.IsDeleted IS NULL)
+            FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS SessionPackages,
+        
+        CASE 
+            WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
+            WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
+            ELSE m.Status
+        END AS Status,
+        
+        m.PaymentMethod, m.ProfilePicture, m.DateJoined,
+        
+        (SELECT TOP 1 CheckIn FROM MemberCheckIns 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY CheckIn DESC) AS LastCheckIn,
+        
+        (SELECT TOP 1 CheckOut FROM MemberCheckIns 
+         WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY CheckOut DESC) AS LastCheckOut,
+        
+        (SELECT TOP 1 
+            CASE 
+                WHEN s.ProductID IS NOT NULL THEN pr.ProductName
+                WHEN s.PackageID IS NOT NULL THEN pk.PackageName
+                ELSE 'Unknown'
+            END
+         FROM Sales s
+         LEFT JOIN Products pr ON s.ProductID = pr.ProductID
+         LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
+         WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+         ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+        
+        (SELECT TOP 1 SaleDate FROM Sales 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY SaleDate DESC) AS RecentPurchaseDate,
+        
+        (SELECT TOP 1 Quantity FROM Sales 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
+    
+    FROM Members m
+    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+    WHERE (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
+    ORDER BY Name";
 
                 var members = new List<ManageMemberModel>();
 
                 using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@ExpirationThreshold", EXPIRATION_THRESHOLD_DAYS);
+
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
                 {
-                    members.Add(new ManageMemberModel
-                    {
-                        MemberID = reader.GetInt32(0),
-                        FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                        MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
-                        Name = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                        Gender = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
-                        ContactNumber = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
-                        Age = reader.IsDBNull(7) ? null : reader.GetInt32(7), // Now uses CalculatedAge
-                        DateOfBirth = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
-                        ValidUntil = reader.IsDBNull(9) ? null : reader.GetDateTime(9).ToString("MMM dd, yyyy"),
-                        PackageID = reader.IsDBNull(10) ? null : reader.GetInt32(10),
-                        MembershipType = reader.IsDBNull(11) ? "None" : reader.GetString(11),
-                        Status = reader.IsDBNull(12) ? "Active" : reader.GetString(12),
-                        PaymentMethod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
-                        AvatarBytes = reader.IsDBNull(14) ? null : (byte[])reader[14],
-                        AvatarSource = reader.IsDBNull(14)
-                            ? ImageHelper.GetDefaultAvatar()
-                            : ImageHelper.BytesToBitmap((byte[])reader[14])
-                    });
+                    members.Add(MapMemberFromReader(reader));
                 }
 
                 return (true, "Members retrieved successfully.", members);
             }
             catch (SqlException ex)
             {
-                _toastManager?.CreateToast("Database Error")
-                    .WithContent($"Failed to load members: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
+                ShowDatabaseErrorToast("load members", ex.Message);
                 Debug.WriteLine($"GetMembersAsync Error: {ex}");
                 return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
-                _toastManager?.CreateToast("Error")
-                    .WithContent($"An unexpected error occurred: {ex.Message}")
-                    .DismissOnClick()
-                    .ShowError();
-
+                ShowErrorToast(ex.Message);
                 Debug.WriteLine($"GetMembersAsync Error: {ex}");
                 return (false, $"Error: {ex.Message}", null);
             }
@@ -491,77 +492,63 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 const string query = @"
-SELECT 
-    m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
-    m.ContactNumber, 
-    
-    -- Calculate age dynamically from DateOfBirth
-    CASE 
-        WHEN m.DateOfBirth IS NOT NULL THEN
-            DATEDIFF(YEAR, m.DateOfBirth, GETDATE()) - 
-            CASE 
-                WHEN DATEADD(YEAR, DATEDIFF(YEAR, m.DateOfBirth, GETDATE()), m.DateOfBirth) > GETDATE() 
-                THEN 1 
-                ELSE 0 
-            END
-        ELSE m.Age  -- Fallback to stored age if no DOB
-    END AS CalculatedAge,
-    
-    m.DateOfBirth, m.ValidUntil, m.PackageID, 
-    
-    -- Get gym membership package name
-    p.PackageName AS GymPackageName,
-    
-    -- Get all session-based packages (with sessions left > 0)
-    STUFF((
-        SELECT ', ' + pkg.PackageName
-        FROM MemberSessions ms
-        INNER JOIN Packages pkg ON ms.PackageID = pkg.PackageID
-        WHERE ms.CustomerID = m.MemberID 
-            AND ms.SessionsLeft > 0
-            AND (ms.IsDeleted = 0 OR ms.IsDeleted IS NULL)
-            AND (pkg.IsDeleted = 0 OR pkg.IsDeleted IS NULL)
-        FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS SessionPackages,
-    
-    CASE 
-        WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
-        WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
-        ELSE m.Status
-    END AS Status,
-    
-    m.PaymentMethod, m.RegisteredByEmployeeID, m.DateJoined,
-    
-    (SELECT TOP 1 CheckIn FROM MemberCheckIns 
-     WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-     ORDER BY CheckIn DESC) AS LastCheckIn,
-    
-    (SELECT TOP 1 CheckOut FROM MemberCheckIns 
-     WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
-     ORDER BY CheckOut DESC) AS LastCheckOut,
-    
-    (SELECT TOP 1 
+    SELECT 
+        m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
+        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, 
+        
+        -- Get gym membership package name
+        p.PackageName AS GymPackageName,
+        
+        -- Get all session-based packages (with sessions left > 0)
+        STUFF((
+            SELECT ', ' + pkg.PackageName
+            FROM MemberSessions ms
+            INNER JOIN Packages pkg ON ms.PackageID = pkg.PackageID
+            WHERE ms.CustomerID = m.MemberID 
+                AND ms.SessionsLeft > 0
+                AND (ms.IsDeleted = 0 OR ms.IsDeleted IS NULL)
+                AND (pkg.IsDeleted = 0 OR pkg.IsDeleted IS NULL)
+            FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS SessionPackages,
+        
         CASE 
-            WHEN s.ProductID IS NOT NULL THEN pr.ProductName
-            WHEN s.PackageID IS NOT NULL THEN pk.PackageName
-            ELSE 'Unknown'
-        END
-     FROM Sales s
-     LEFT JOIN Products pr ON s.ProductID = pr.ProductID
-     LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
-     WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-     ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+            WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
+            WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
+            ELSE m.Status
+        END AS Status,
+        
+        m.PaymentMethod, m.RegisteredByEmployeeID, m.DateJoined,
+        
+        (SELECT TOP 1 CheckIn FROM MemberCheckIns 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY CheckIn DESC) AS LastCheckIn,
+        
+        (SELECT TOP 1 CheckOut FROM MemberCheckIns 
+         WHERE MemberID = m.MemberID AND CheckOut IS NOT NULL AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY CheckOut DESC) AS LastCheckOut,
+        
+        (SELECT TOP 1 
+            CASE 
+                WHEN s.ProductID IS NOT NULL THEN pr.ProductName
+                WHEN s.PackageID IS NOT NULL THEN pk.PackageName
+                ELSE 'Unknown'
+            END
+         FROM Sales s
+         LEFT JOIN Products pr ON s.ProductID = pr.ProductID
+         LEFT JOIN Packages pk ON s.PackageID = pk.PackageID
+         WHERE s.MemberID = m.MemberID AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+         ORDER BY s.SaleDate DESC) AS RecentPurchaseItem,
+        
+        (SELECT TOP 1 SaleDate FROM Sales 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY SaleDate DESC) AS RecentPurchaseDate,
+        
+        (SELECT TOP 1 Quantity FROM Sales 
+         WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
+         ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
     
-    (SELECT TOP 1 SaleDate FROM Sales 
-     WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-     ORDER BY SaleDate DESC) AS RecentPurchaseDate,
-    
-    (SELECT TOP 1 Quantity FROM Sales 
-     WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
-     ORDER BY SaleDate DESC) AS RecentPurchaseQuantity
-
-FROM Members m
-LEFT JOIN Packages p ON m.PackageID = p.PackageID
-WHERE m.MemberID = @Id AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
+    FROM Members m
+    LEFT JOIN Packages p ON m.PackageID = p.PackageID
+    WHERE m.MemberID = @Id AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Id", memberId);

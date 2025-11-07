@@ -16,6 +16,7 @@ using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
 using Avalonia.Media.Imaging;
 using AHON_TRACK.Services.Events;
+using AHON_TRACK.Validators;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -57,6 +58,11 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     [ObservableProperty]
     private bool _isLoadingData;
+
+    private bool _isLoadingDataFlag = false;
+
+    [ObservableProperty]
+    private bool _canCheckIn = true;
 
     private readonly PageManager _pageManager;
     private readonly DialogManager _dialogManager;
@@ -124,18 +130,28 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingDataFlag) return; // Prevent overlapping loads
         try
         {
+            _isLoadingDataFlag = true;
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingDataFlag = false;
+        }
     }
 
     private async Task LoadDataAsync()
     {
+        if (_isLoadingDataFlag) return; // ✅ Prevent duplicate loads
+
+        _isLoadingDataFlag = true;
+
         try
         {
             IsLoadingData = true;
@@ -156,6 +172,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         finally
         {
             IsLoadingData = false;
+            _isLoadingDataFlag = false; // ✅ Reset flag
         }
     }
 
@@ -178,6 +195,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
             OriginalWalkInData = walkInCheckIns;
 
             // Apply date filter to populate the observable collections
+            // ✅ FilterDataByDate already handles unsubscribe correctly - no changes needed
             FilterDataByDate(date);
         }
         catch (Exception ex)
@@ -399,10 +417,18 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     {
         if (_checkInOutService == null)
         {
-            await LoadDataAsync();
             _toastManager.CreateToast("Service Unavailable")
                 .WithContent("System service is not available")
                 .ShowError();
+            return;
+        }
+
+        // Check if selected date is today
+        if (!CanCheckIn)
+        {
+            _toastManager.CreateToast("Check-In Not Allowed")
+                .WithContent("You can only check in members for today's date. Please select today to check in.")
+                .ShowWarning();
             return;
         }
 
@@ -410,7 +436,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         {
             IsLoadingData = true;
 
-            // Initialize dialog - it will load available members from the service automatically
+            // Initialize dialog
             _logGymMemberDialogCardViewModel.Initialize();
 
             _dialogManager.CreateDialog(_logGymMemberDialogCardViewModel)
@@ -419,9 +445,10 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                     var selectedMember = _logGymMemberDialogCardViewModel.LastSelectedMember;
                     if (selectedMember != null)
                     {
-                        // Use MemberID for check-in (the actual member ID from the database)
                         var memberId = selectedMember.ID != 0 ? selectedMember.ID : selectedMember.ID;
-                        var success = await _checkInOutService.CheckInMemberAsync(memberId);
+
+                        // Pass selected date to check-in method
+                        var success = await _checkInOutService.CheckInMemberAsync(memberId, SelectedDate);
 
                         if (success)
                         {
@@ -430,16 +457,9 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                                 .DismissOnClick()
                                 .ShowSuccess();
 
-                            // Reload data to show the new check-in
                             await LoadCheckInDataFromService(SelectedDate);
                         }
-                        else
-                        {
-                            _toastManager.CreateToast("Check-in Failed")
-                                .WithContent("Failed to check in member - they may already be checked in today")
-                                .DismissOnClick()
-                                .ShowError();
-                        }
+                        // Error messages are now handled in the service
                     }
                     else
                     {
@@ -469,6 +489,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
             IsLoadingData = false;
         }
     }
+
 
     [RelayCommand]
     private async Task StampWalkInCheckOut(WalkInPerson? walkIn)
@@ -545,8 +566,18 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
     [RelayCommand]
     private async Task OpenLogWalkInPurchase()
     {
+        if (!CanCheckIn)
+        {
+            _toastManager.CreateToast("Check-In Not Allowed")
+                .WithContent("You can only register walk-ins for today's date. Please select today.")
+                .ShowWarning();
+            return;
+        }
+
+        // ✅ Set the shared date BEFORE navigating
+        NavigationDate.SelectedCheckInDate = SelectedDate;
+
         _pageManager.Navigate<LogWalkInPurchaseViewModel>();
-        await LoadCheckInDataFromService(SelectedDate);
     }
 
     private void OnWalkInPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -567,8 +598,19 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     partial void OnSelectedDateChanged(DateTime value)
     {
-        //FilterDataByDate(value);
+        // Update CanCheckIn based on selected date
+        CanCheckIn = value.Date == DateTime.Today;
+
+        // Load data for selected date
         _ = LoadCheckInDataFromService(value);
+
+        // Show warning if trying to view non-today date
+        if (!CanCheckIn)
+        {
+            _toastManager.CreateToast("View Only Mode")
+                .WithContent("You can only check in members for today's date. Currently viewing historical data.")
+                .ShowInfo();
+        }
     }
 
     private void FilterDataByDate(DateTime selectedDate)

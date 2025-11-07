@@ -680,7 +680,6 @@ ORDER BY sl.LogDateTime DESC;";
 
                 queryBuilder.Append(@"
             ID,
-            ProfilePicture,
             Name,
             Username,
             Position,
@@ -713,29 +712,9 @@ ORDER BY sl.LogDateTime DESC;";
 
                 while (await reader.ReadAsync().ConfigureAwait(false))
                 {
-                    Bitmap? profilePicture = null;
-
-                    if (reader["ProfilePicture"] != DBNull.Value)
-                    {
-                        try
-                        {
-                            var bytes = (byte[])reader["ProfilePicture"];
-                            profilePicture = ImageHelper.BytesToBitmap(bytes);
-                        }
-                        catch
-                        {
-                            profilePicture = ImageHelper.GetDefaultAvatarSafe() ?? ImageHelper.CreateFallbackBitmap();
-                        }
-                    }
-                    else
-                    {
-                        profilePicture = ImageHelper.GetDefaultAvatarSafe() ?? ImageHelper.CreateFallbackBitmap();
-                    }
-
                     logs.Add(new AuditLogItems
                     {
                         ID = reader["ID"]?.ToString() ?? "0",
-                        AvatarSource = profilePicture,
                         Name = reader["Name"]?.ToString() ?? "Unknown",
                         Username = reader["Username"]?.ToString() ?? "Unknown",
                         Position = reader["Position"]?.ToString() ?? "Unknown",

@@ -24,9 +24,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 {
     [ObservableProperty]
     private string[] _productFilterItems = [
-        CategoryConstants.Supplements, 
-        CategoryConstants.Drinks, 
-        CategoryConstants.Equipment, 
+        CategoryConstants.Supplements,
+        CategoryConstants.Drinks,
+        CategoryConstants.Equipment,
         CategoryConstants.GymPackage,
         CategoryConstants.Merchandise,
         CategoryConstants.Apparel
@@ -124,6 +124,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private int _lastIdNumber = 1234;
 
+    private bool _isLoadingData = false;
+
     private readonly Dictionary<string, Bitmap> _imageCache = new();
 
     private readonly DialogManager _dialogManager;
@@ -195,37 +197,55 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadCustomerListFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingData = false;
+        }
     }
 
     private async void OnProductDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadProductsFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
         }
+        finally
+        {
+            _isLoadingData = false;
+        }
     }
 
     private async void OnPackageDataChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadPackagesFromDatabaseAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingData = false;
         }
     }
 
@@ -283,18 +303,36 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     private Product ConvertToProduct(SellingModel selling)
     {
-        // ✅ KEY: Store both original price and discounted price separately
+        Bitmap? poster = null;
+
+        if (selling.ImagePath != null && selling.ImagePath.Length > 0)
+        {
+            try
+            {
+                poster = new Bitmap(new MemoryStream(selling.ImagePath));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load product image: {ex.Message}");
+                poster = null;
+            }
+        }
+        else if (!string.IsNullOrEmpty(selling.Title))
+        {
+            poster = null;
+        }
+
         return new Product
         {
             ID = selling.SellingID,
             Title = selling.Title ?? string.Empty,
             Description = selling.Description ?? string.Empty,
             Category = selling.Category ?? string.Empty,
-            Price = (int)selling.Price,  // ✅ Original: ₱1,500
+            Price = (int)selling.Price,
             StockCount = selling.Stock,
-            Poster = selling.ImagePath != null ? new Bitmap(new MemoryStream(selling.ImagePath)) : null,
-            DiscountedPrice = selling.DiscountedPrice,  // ✅ Final: ₱750
-            HasDiscount = selling.HasDiscount  // ✅ true
+            Poster = poster,
+            DiscountedPrice = selling.DiscountedPrice,
+            HasDiscount = selling.HasDiscount
         };
     }
 
@@ -304,7 +342,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             PackageId = selling.SellingID,
             Title = selling.Title ?? string.Empty,
-            Description = selling.Description ?? string.Empty,  // ✅ ADD THIS - or fetch from DB if separate field
+            Description = selling.Description ?? string.Empty,
             BasePrice = (int)selling.Price,
             BaseDiscountedPrice = (int)selling.DiscountedPrice,
             Price = (int)selling.Price,
@@ -314,9 +352,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             DiscountFor = selling.DiscountFor ?? "All",
             IsAddedToCart = false,
             Features = selling.Features?.Split('|').ToList() ?? new List<string>(),
-            IsDiscountChecked = selling.HasDiscount,  // ✅ ADD THIS
-            SelectedDiscountFor = selling.DiscountFor ?? "All",  // ✅ ADD THIS
-            SelectedDiscountType = selling.DiscountType ?? string.Empty  // ✅ ADD THIS
+            IsDiscountChecked = selling.HasDiscount,
+            SelectedDiscountFor = selling.DiscountFor ?? "All",
+            SelectedDiscountType = selling.DiscountType ?? string.Empty
         };
 
         if (SelectedCustomer != null)
@@ -518,7 +556,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         CurrentCustomerList = filteredList;
 
+        // ✅ CRITICAL: Unsubscribe from old customers BEFORE clearing
+        foreach (var customer in CustomerList)
+        {
+            customer.PropertyChanged -= OnCustomerPropertyChanged;
+        }
+
         CustomerList.Clear();
+
         foreach (var customer in filteredList)
         {
             customer.PropertyChanged += OnCustomerPropertyChanged;
@@ -1035,20 +1080,19 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         eventService.PackageUpdated -= OnPackageDataChanged;
         eventService.PackageDeleted -= OnPackageDataChanged;
 
-        // 2) Unsubscribe from PropertyChanged events on customers
+        // ✅ Unsubscribe from PropertyChanged events
         foreach (var customer in CustomerList)
             customer.PropertyChanged -= OnCustomerPropertyChanged;
 
-        // 3) Unsubscribe from PropertyChanged events on cart items
         foreach (var cartItem in CartItems)
             cartItem.PropertyChanged -= OnCartItemPropertyChanged;
 
-        // 4) Dispose and clear cached bitmaps
+        // ✅ Dispose cached bitmaps
         foreach (var bmp in _imageCache.Values)
             bmp?.Dispose();
         _imageCache.Clear();
 
-        // 5) Clear collections and lists
+        // ✅ Clear collections
         CustomerList.Clear();
         ProductList.Clear();
         PackageList.Clear();
@@ -1060,22 +1104,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         CurrentProductList?.Clear();
         OriginalPackageList?.Clear();
 
-        switch (_productPurchaseService)
+        // ✅ Dispose service if needed
+        if (_productPurchaseService is IDisposable disposableService)
         {
-            // 6) Dispose service if applicable
-            case IDisposable disposableService:
-                disposableService.Dispose();
-                break;
-            case IAsyncDisposable asyncDisposableService:
-                asyncDisposableService.DisposeAsync().AsTask().Wait();
-                break;
+            disposableService.Dispose();
         }
 
-        // 7) Reset transient references and state
         SelectedCustomer = null;
         IsInitialized = false;
-        CustomerSearchStringResult = string.Empty;
-        ProductSearchStringResult = string.Empty;
     }
 }
 
@@ -1131,6 +1167,33 @@ public partial class Product : ObservableObject
 
     [ObservableProperty]
     private bool _hasDiscount;
+    
+    private static Bitmap? _defaultProductBitmap;
+        
+    public static Bitmap DefaultProductBitmap
+    {
+        get
+        {
+            if (_defaultProductBitmap != null) return _defaultProductBitmap;
+            try
+            {
+                var uri = new Uri("avares://AHON_TRACK/Assets/ProductPurchaseView/DefaultPurchaseIcon.png");
+                _defaultProductBitmap = new Bitmap(AssetLoader.Open(uri));
+            }
+            catch
+            {
+                // Default bitmap remains null if image fails to load
+            }
+            return _defaultProductBitmap!;
+        }
+    }
+        
+    partial void OnPosterChanged(Bitmap? value)
+    {
+        OnPropertyChanged(nameof(DisplayPoster));
+    }
+    
+    public Bitmap DisplayPoster => Poster ?? DefaultProductBitmap;
 
     public decimal FinalPrice
     {

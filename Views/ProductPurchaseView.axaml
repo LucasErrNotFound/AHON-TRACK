@@ -782,7 +782,7 @@
 														<Image
 															Width="250"
 															Height="250"
-															Source="{CompiledBinding Poster}" />
+															Source="{CompiledBinding DisplayPoster}" />
 														<Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
 															<TextBlock
 																Grid.Row="0"
@@ -938,7 +938,7 @@
 														<Image
 															Width="250"
 															Height="250"
-															Source="{CompiledBinding Poster}" />
+															Source="{CompiledBinding DisplayPoster}" />
 														<Grid RowDefinitions="Auto Auto Auto" ColumnDefinitions="* Auto">
 															<TextBlock
 																Grid.Row="0"

@@ -11,7 +11,7 @@ namespace AHON_TRACK.Services.Interface
     public interface ICheckInOutService
     {
         Task<List<MemberPerson>> GetMemberCheckInsAsync(DateTime date);
-        Task<bool> CheckInMemberAsync(int memberId);
+        Task<bool> CheckInMemberAsync(int memberId, DateTime selectedDate);
         Task<bool> CheckOutMemberAsync(int memberCheckInId);
         Task<MemberPerson?> GetMemberCheckInByIdAsync(int memberCheckInId);
 

@@ -61,7 +61,7 @@
 			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,10,90,0" Spacing="16">
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
-						<UniformGrid Margin="-6,30,-6,0" Columns="4">
+						<UniformGrid Margin="-6,30,-6,0" Columns="3">
 							<UniformGrid.Resources>
 								<LinearGradientBrush
 									x:Key="GreenGradient"
@@ -126,18 +126,6 @@
 								CardBackground="{StaticResource PurpleGradient}"
 								Foreground="White"
 								Value="{CompiledBinding GymPackageRevenue, StringFormat='+{0}'}">
-								<dashboard:OverviewCard.Icon>
-									<Svg
-										Width="30"
-										Height="30"
-										Path="/Assets/DashboardView/sales-icon.svg" />
-								</dashboard:OverviewCard.Icon>
-							</dashboard:OverviewCard>
-							<dashboard:OverviewCard
-								Title="Walk-In/Membership Revenue"
-								CardBackground="{StaticResource OrangeGradient}"
-								Foreground="White"
-								Value="{CompiledBinding WalkInMember, StringFormat='+{0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
 										Width="30"
@@ -148,7 +136,7 @@
 						</UniformGrid>
 					</shadui:BreakpointView>
 					<shadui:BreakpointView Breakpoint="XlAndDown">
-						<UniformGrid Margin="-6,30,-6,0" Columns="2">
+						<UniformGrid Margin="-6,30,-6,0" Columns="3">
 							<UniformGrid.Resources>
 								<LinearGradientBrush
 									x:Key="GreenGradient"
@@ -213,18 +201,6 @@
 								CardBackground="{StaticResource PurpleGradient}"
 								Foreground="White"
 								Value="{CompiledBinding GymPackageRevenue, StringFormat='+{0}'}">
-								<dashboard:OverviewCard.Icon>
-									<Svg
-										Width="30"
-										Height="30"
-										Path="/Assets/DashboardView/sales-icon.svg" />
-								</dashboard:OverviewCard.Icon>
-							</dashboard:OverviewCard>
-							<dashboard:OverviewCard
-								Title="Walk-In/Membership Revenue"
-								CardBackground="{StaticResource OrangeGradient}"
-								Foreground="White"
-								Value="{CompiledBinding WalkInMember, StringFormat='+{0}'}">
 								<dashboard:OverviewCard.Icon>
 									<Svg
 										Width="30"

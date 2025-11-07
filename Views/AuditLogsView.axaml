@@ -138,24 +138,6 @@
 													FontSize="15"
 													MinWidth="80" />
 
-												<!--Picture/Avatar Header Column-->
-												<DataGridTemplateColumn
-													CanUserSort="False"
-													Header="Picture"
-													MinWidth="100">
-													<DataGridTemplateColumn.CellTemplate>
-														<DataTemplate DataType="viewModels:AuditLogItems">
-															<shadui:Avatar
-																Width="36"
-																Height="36"
-																VerticalAlignment="Center"
-																HorizontalAlignment="Left"
-																Source="{CompiledBinding AvatarSource}"
-																Margin="8" />
-														</DataTemplate>
-													</DataGridTemplateColumn.CellTemplate>
-												</DataGridTemplateColumn>
-
 												<!--Name Header Column-->
 												<DataGridTextColumn
 													Binding="{CompiledBinding Name}"
@@ -198,7 +180,8 @@
 													Header="Action"
 													IsReadOnly="True"
 													FontSize="14"
-													Width="237" />
+													MinWidth="250"
+													Width="*" />
 											</DataGrid.Columns>
 										</DataGrid>
 									</StackPanel>
@@ -362,24 +345,6 @@
 													IsReadOnly="True"
 													FontSize="13"
 													MaxWidth="80" />
-
-												<!--Picture/Avatar Header Column-->
-												<DataGridTemplateColumn
-													CanUserSort="False"
-													Header="Picture"
-													MaxWidth="100">
-													<DataGridTemplateColumn.CellTemplate>
-														<DataTemplate DataType="viewModels:AuditLogItems">
-															<shadui:Avatar
-																Width="26"
-																Height="26"
-																VerticalAlignment="Center"
-																HorizontalAlignment="Left"
-																Source="{CompiledBinding AvatarSource}"
-																Margin="8" />
-														</DataTemplate>
-													</DataGridTemplateColumn.CellTemplate>
-												</DataGridTemplateColumn>
 
 												<!--Name Header Column-->
 												<DataGridTextColumn

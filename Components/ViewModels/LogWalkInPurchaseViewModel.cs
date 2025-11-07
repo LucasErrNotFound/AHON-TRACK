@@ -11,6 +11,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Linq;
+using AHON_TRACK.Validators;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -53,6 +54,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
     public int? LastRegisteredCustomerID { get; private set; }
 
+    [ObservableProperty]
+    private DateTime _selectedDate = DateTime.Today;
+
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
@@ -74,6 +78,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         _pageManager = pageManager;
         _walkInService = walkInService;
         _ = LoadAvailablePackagesAsync();
+
+        SelectedDate = NavigationDate.SelectedCheckInDate;
     }
 
     public LogWalkInPurchaseViewModel()
@@ -344,9 +350,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     public bool IsMale
     {
         get => WalkInGender == "Male";
-        set 
-        { 
-            if (value) 
+        set
+        {
+            if (value)
                 WalkInGender = "Male";
             else if (WalkInGender == "Male")
                 WalkInGender = string.Empty;
@@ -356,9 +362,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     public bool IsFemale
     {
         get => WalkInGender == "Female";
-        set 
-        { 
-            if (value) 
+        set
+        {
+            if (value)
                 WalkInGender = "Female";
             else if (WalkInGender == "Female")
                 WalkInGender = string.Empty;
@@ -374,7 +380,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             {
                 _isCashSelected = value; // Set directly first
                 OnPropertyChanged(nameof(IsCashSelected)); // Notify manually
-            
+
                 if (value)
                 {
                     // Directly set backing fields to avoid triggering setters
@@ -383,7 +389,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                     OnPropertyChanged(nameof(IsGCashSelected));
                     OnPropertyChanged(nameof(IsMayaSelected));
                 }
-            
+
                 OnPropertyChanged(nameof(IsCashVisible));
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
@@ -402,7 +408,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             {
                 _isGCashSelected = value; // Set directly first
                 OnPropertyChanged(nameof(IsGCashSelected)); // Notify manually
-            
+
                 if (value)
                 {
                     // Directly set backing fields to avoid triggering setters
@@ -411,7 +417,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                     OnPropertyChanged(nameof(IsCashSelected));
                     OnPropertyChanged(nameof(IsMayaSelected));
                 }
-            
+
                 OnPropertyChanged(nameof(IsCashVisible));
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
@@ -430,7 +436,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             {
                 _isMayaSelected = value; // Set directly first
                 OnPropertyChanged(nameof(IsMayaSelected)); // Notify manually
-            
+
                 if (value)
                 {
                     // Directly set backing fields to avoid triggering setters
@@ -439,7 +445,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                     OnPropertyChanged(nameof(IsCashSelected));
                     OnPropertyChanged(nameof(IsGCashSelected));
                 }
-            
+
                 OnPropertyChanged(nameof(IsCashVisible));
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
@@ -511,7 +517,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod && !IsProcessing;
+            // ✅ Add date validation
+            bool isValidDate = SelectedDate.Date == DateTime.Today;
+
+            return hasValidInputs && hasValidQuantity && hasPaymentMethod && isValidDate && !IsProcessing;
         }
     }
 
@@ -733,6 +742,30 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
     #endregion  
 
+    public void OnNavigatedTo(Dictionary<string, object>? parameters)
+    {
+        if (parameters != null && parameters.TryGetValue("SelectedDate", out var dateObj))
+        {
+            if (dateObj is DateTime selectedDate)
+            {
+                SelectedDate = selectedDate;
+            }
+        }
+
+        // Always validate on navigation
+        ValidateSelectedDate();
+    }
+
+    private void ValidateSelectedDate()
+    {
+        if (SelectedDate.Date != DateTime.Today)
+        {
+            _toastManager?.CreateToast("Invalid Date")
+                .WithContent("Walk-in registration is only allowed for today's date. The form will be locked.")
+                .ShowWarning();
+        }
+    }
+
     [RelayCommand]
     private async Task PaymentAsync()
     {
@@ -741,6 +774,15 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             _toastManager.CreateToast("Service Unavailable")
                 .WithContent("Walk-in service is not available")
                 .ShowError();
+            return;
+        }
+
+        // ✅ CRITICAL: Validate date before proceeding
+        if (SelectedDate.Date != DateTime.Today)
+        {
+            _toastManager.CreateToast("Invalid Date")
+                    .WithContent("Walk-in registration is only allowed for today's date. Please return to Check-In page and select today.")
+                    .ShowError();
             return;
         }
 
@@ -769,11 +811,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 WalkInPackage = SelectedSpecializedPackageItem,
                 PaymentMethod = paymentMethod,
                 Quantity = SelectedSpecializedPackageItem != "None" ? SpecializedPackageQuantity : null
-
             };
 
-            // Register walk-in customer
-            var (success, message, customerId) = await _walkInService.AddWalkInCustomerAsync(walkIn);
+            // ✅ Pass SelectedDate to the service (even though it should be today)
+            var (success, message, customerId) = await _walkInService.AddWalkInCustomerAsync(walkIn, SelectedDate);
 
             if (success)
             {
@@ -785,9 +826,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 // Clear form
                 ClearForm();
 
-                //GoBack to previous page
+                // Go back to previous page
                 _pageManager.Navigate<CheckInOutViewModel>();
-
             }
             else
             {

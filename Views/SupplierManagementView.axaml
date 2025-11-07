@@ -266,7 +266,7 @@
                                                                     Foreground="{DynamicResource MutedColor}" />
                                                             </shadui:MenuItemAssist.Label>
                                                             <MenuItem
-                                                                Header="Edit Equipment"
+                                                                Header="Edit Supplier"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowEditSupplierDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}" />
                                                             <Separator />
@@ -526,7 +526,7 @@
                                                                     Foreground="{DynamicResource MutedColor}" />
                                                             </shadui:MenuItemAssist.Label>
                                                             <MenuItem
-                                                                Header="Edit Equipment"
+                                                                Header="Edit Supplier"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowEditSupplierDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}" />
                                                             <Separator />

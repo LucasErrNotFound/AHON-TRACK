@@ -88,6 +88,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     [ObservableProperty]
     private ManageMembersItem? _selectedMember;
 
+    private bool _isLoadingData = false;
+
     public bool CanDeleteSelectedMembers
     {
         get
@@ -187,7 +189,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
         eventService.MemberAdded += OnMemberChanged;
         eventService.MemberUpdated += OnMemberChanged;
-        eventService.MemberUpdated += OnMemberChanged;
+        eventService.MemberDeleted += OnMemberChanged;
         eventService.CheckinAdded += OnMemberChanged;
         eventService.CheckoutAdded += OnMemberChanged;
         eventService.ProductPurchased += OnMemberChanged;
@@ -207,13 +209,19 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     private async void OnMemberChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             await LoadMemberDataAsync();
         }
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingData = false;
         }
     }
 
@@ -223,12 +231,10 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
         try
         {
-            // Use the new tuple-based service method
             var result = await _memberService.GetMembersAsync();
 
             if (result.Success && result.Members is { Count: > 0 })
             {
-                // Map ManageMemberModel → ManageMemberItems
                 var memberItems = result.Members.Select(m => new ManageMembersItem
                 {
                     ID = m.MemberID.ToString(),
@@ -248,9 +254,14 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     RecentPurchaseQuantity = m.RecentPurchaseQuantity
                 }).ToList();
 
-
                 OriginalMemberData = memberItems;
                 CurrentFilteredData = [.. memberItems];
+
+                // ✅ CRITICAL: Unsubscribe from old members BEFORE clearing
+                foreach (var member in MemberItems)
+                {
+                    member.PropertyChanged -= OnMemberPropertyChanged;
+                }
 
                 MemberItems.Clear();
                 foreach (var member in memberItems)
@@ -266,8 +277,9 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 ApplyMemberStatusFilter();
                 ApplyMemberSort();
                 await _memberService.ShowMemberExpirationAlertsAsync();
-                return; // Successfully loaded from database
+                return;
             }
+
             if (!result.Success)
             {
                 Debug.WriteLine($"[ManageMembership] Failed to load members: {result.Message}");
@@ -286,7 +298,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 .ShowWarning();
         }
 
-        // Fallback to sample data if database fails
         LoadSampleData();
     }
 
@@ -295,7 +306,13 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         var sampleMembers = GetSampleMembersData();
 
         OriginalMemberData = sampleMembers;
-        CurrentFilteredData = [.. sampleMembers]; // Initialize current state
+        CurrentFilteredData = [.. sampleMembers];
+
+        // ✅ CRITICAL: Unsubscribe from old members BEFORE clearing
+        foreach (var member in MemberItems)
+        {
+            member.PropertyChanged -= OnMemberPropertyChanged;
+        }
 
         MemberItems.Clear();
         foreach (var member in sampleMembers)
@@ -413,7 +430,12 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
-            // Reset to current filtered data instead of original data
+            // ✅ Unsubscribe before clearing
+            foreach (var member in MemberItems)
+            {
+                member.PropertyChanged -= OnMemberPropertyChanged;
+            }
+
             MemberItems.Clear();
             foreach (var member in CurrentFilteredData)
             {
@@ -423,13 +445,13 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             UpdateCounts();
             return;
         }
+
         IsSearchingMember = true;
 
         try
         {
             await Task.Delay(500);
 
-            // Search within the current filtered data instead of original data
             var filteredMembers = CurrentFilteredData.Where(emp =>
                 emp.ID.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                 emp.Name.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
@@ -438,6 +460,12 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 emp.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase) ||
                 emp.Validity.ToString("MMMM d, yyyy").Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)
             ).ToList();
+
+            // ✅ Unsubscribe before clearing
+            foreach (var member in MemberItems)
+            {
+                member.PropertyChanged -= OnMemberPropertyChanged;
+            }
 
             MemberItems.Clear();
             foreach (var members in filteredMembers)
@@ -525,7 +553,14 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
 
     private void RefreshMemberItems(List<ManageMembersItem> items)
     {
+        // ✅ CRITICAL: Unsubscribe from old members BEFORE clearing
+        foreach (var member in MemberItems)
+        {
+            member.PropertyChanged -= OnMemberPropertyChanged;
+        }
+
         MemberItems.Clear();
+
         foreach (var item in items)
         {
             item.PropertyChanged += OnMemberPropertyChanged;
@@ -1160,20 +1195,49 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         var eventService = DashboardEventService.Instance;
         eventService.MemberAdded -= OnMemberChanged;
         eventService.MemberUpdated -= OnMemberChanged;
+        eventService.MemberDeleted -= OnMemberChanged;  // ✅ ADD THIS
         eventService.CheckinAdded -= OnMemberChanged;
         eventService.CheckoutAdded -= OnMemberChanged;
         eventService.ProductPurchased -= OnMemberChanged;
 
-        // Unsubscribe from property changed events
+        // ✅ Unsubscribe from property changed events
         foreach (var member in MemberItems)
         {
             member.PropertyChanged -= OnMemberPropertyChanged;
+
+            // ✅ Dispose bitmaps if they exist
+            if (member.AvatarSource != null &&
+                member.AvatarSource != ManageMemberModel.DefaultAvatarSource)
+            {
+                member.AvatarSource?.Dispose();
+            }
+        }
+
+        // ✅ Also dispose from other collections
+        foreach (var member in OriginalMemberData)
+        {
+            if (member.AvatarSource != null &&
+                member.AvatarSource != ManageMemberModel.DefaultAvatarSource)
+            {
+                member.AvatarSource?.Dispose();
+            }
+        }
+
+        foreach (var member in CurrentFilteredData)
+        {
+            if (member.AvatarSource != null &&
+                member.AvatarSource != ManageMemberModel.DefaultAvatarSource)
+            {
+                member.AvatarSource?.Dispose();
+            }
         }
 
         // Clear collections
         MemberItems.Clear();
         OriginalMemberData.Clear();
         CurrentFilteredData.Clear();
+
+        SelectedMember = null;
     }
 }
 

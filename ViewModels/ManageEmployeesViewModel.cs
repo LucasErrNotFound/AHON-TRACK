@@ -26,8 +26,12 @@ namespace AHON_TRACK.ViewModels;
 [Page("manageEmployees")]
 public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 {
+    private EventHandler? _employeeAddedHandler;
+    private EventHandler? _employeeUpdatedHandler;
+    private EventHandler? _employeeDeletedHandler;
+
     [ObservableProperty]
-    private List<string> _sortOptions = 
+    private List<string> _sortOptions =
     [
         "By ID",
         "Names by A-Z",
@@ -38,16 +42,16 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         "By oldest to newest",
         "Reset Data"
     ];
-    
+
     [ObservableProperty]
-    private List<string> _filterOptions = 
+    private List<string> _filterOptions =
     [
         "All",
         "By active",
         "By inactive",
         "By terminated"
     ];
-    
+
     [ObservableProperty]
     private List<ManageEmployeesItem> _originalEmployeeData = [];
 
@@ -105,6 +109,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     [ObservableProperty]
     private bool _isInitialized;
 
+    private bool _isLoadingData = false;
+
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     private readonly PageManager _pageManager;
@@ -122,8 +128,8 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         ToastManager toastManager,
         PageManager pageManager,
         ServiceProvider serviceProvider,
-        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel, 
-        EmployeeProfileInformationViewModel employeeProfileInformationViewModel, 
+        AddNewEmployeeDialogCardViewModel addNewEmployeeDialogCardViewModel,
+        EmployeeProfileInformationViewModel employeeProfileInformationViewModel,
         IEmployeeService employeeService)
     {
         _pageManager = pageManager;
@@ -133,10 +139,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         _employeeProfileInformationViewModel = employeeProfileInformationViewModel;
         _serviceProvider = serviceProvider;
         _employeeService = employeeService;
-        
+
         SelectedSortIndex = 0;
         SelectedFilterIndex = 0;
-        
+
         SubscribToEvent();
         _ = LoadEmployeesFromDatabaseAsync(); ;
         _ = UpdateCounts();
@@ -179,15 +185,22 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
     {
         var eventService = DashboardEventService.Instance;
 
-        eventService.EmployeeAdded += OnEmployeeChanged;
-        eventService.EmployeeUpdated += OnEmployeeChanged;
-        eventService.EmployeeUpdated += OnEmployeeChanged;
+        // Store handlers in fields so we can unsubscribe later
+        _employeeAddedHandler = OnEmployeeChanged;
+        _employeeUpdatedHandler = OnEmployeeChanged;
+        _employeeDeletedHandler = OnEmployeeChanged;
+
+        eventService.EmployeeAdded += _employeeAddedHandler;
+        eventService.EmployeeUpdated += _employeeUpdatedHandler;
+        eventService.EmployeeDeleted += _employeeDeletedHandler;
     }
 
     private async void OnEmployeeChanged(object? sender, EventArgs e)
     {
+        if (_isLoadingData) return;
         try
         {
+            _isLoadingData = true;
             Debug.WriteLine("🔁 Detected employee data change — refreshing...");
             await LoadEmployeesFromDatabaseAsync();
             await UpdateCounts();
@@ -195,6 +208,10 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         catch (Exception ex)
         {
             _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingData = false;
         }
     }
 
@@ -312,7 +329,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                 Status = emp.Status,
                 DateJoined = emp.DateJoined
             }).ToList();
-            
+
             foreach (var employee in EmployeeItems)
             {
                 employee.PropertyChanged -= OnEmployeePropertyChanged;
@@ -327,12 +344,12 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             CurrentFilteredData = [.. employeeItems];
 
             EmployeeItems.Clear();
-            
+
             if (employeeItems.Count >= 1) // Only for large datasets
             {
                 GC.Collect(0, GCCollectionMode.Optimized);
             }
-            
+
             foreach (var employee in employeeItems)
             {
                 employee.PropertyChanged += OnEmployeePropertyChanged;
@@ -458,9 +475,9 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .WithContent("Welcome, new employee!")
                     .DismissOnClick()
                     .ShowSuccess();
-                
+
                 (dialogVm as IDisposable).Dispose();
-            
+
                 // Suggest GC for image cleanup
                 // GC.Collect(0, GCCollectionMode.Optimized);
                 // ForceGarbageCollection();
@@ -471,7 +488,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .WithContent("Add a new employee to continue")
                     .DismissOnClick()
                     .ShowWarning();
-            
+
                 (dialogVm as IDisposable).Dispose();
             })
             .WithMaxWidth(950)
@@ -502,7 +519,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .WithContent($"You have successfully modified {employee.Name}'s details")
                     .DismissOnClick()
                     .ShowSuccess();
-                
+
                 (dialogVm as IDisposable).Dispose();
             })
             .WithCancelCallback(() =>
@@ -511,7 +528,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
                     .WithContent("Click the three-dots if you want to modify your employees' details")
                     .DismissOnClick()
                     .ShowWarning();
-            
+
                 (dialogVm as IDisposable).Dispose();
             })
             .WithMaxWidth(950)
@@ -556,7 +573,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         {
             EmployeeItems.Add(employees);
         }
-        
+
         CurrentFilteredData = [.. sortedById];
     }
 
@@ -644,7 +661,7 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         var filtered = OriginalEmployeeData
             .Where(e => e.Status.Equals("active", StringComparison.OrdinalIgnoreCase))
             .ToList();
-    
+
         ApplyCurrentSortToFilteredData(filtered);
     }
 
@@ -654,17 +671,17 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         var filtered = OriginalEmployeeData
             .Where(e => e.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase))
             .ToList();
-    
+
         ApplyCurrentSortToFilteredData(filtered);
     }
-    
+
     [RelayCommand]
     private void FilterTerminatedStatus()
     {
         var filtered = OriginalEmployeeData
             .Where(e => e.Status.Equals("terminated", StringComparison.OrdinalIgnoreCase))
             .ToList();
-    
+
         ApplyCurrentSortToFilteredData(filtered);
     }
 
@@ -1027,19 +1044,19 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
             6 => filtered.OrderBy(e => e.DateJoined).ToList(),
             _ => filtered
         };
-    
+
         CurrentFilteredData = [.. sorted];
-        
+
         EmployeeItems.Clear();
         foreach (var employee in sorted)
         {
             employee.PropertyChanged += OnEmployeePropertyChanged;
             EmployeeItems.Add(employee);
         }
-        
+
         _ = UpdateCounts();
     }
-    
+
     private void ExecuteFilterCommand(int selectedIndex)
     {
         switch (selectedIndex)
@@ -1074,15 +1091,25 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
 
     protected override void DisposeManagedResources()
     {
-        // Unsubscribe from events
         var eventService = DashboardEventService.Instance;
-        eventService.EmployeeAdded -= OnEmployeeChanged;
-        eventService.EmployeeUpdated -= OnEmployeeChanged;
+
+        if (_employeeAddedHandler != null)
+            eventService.EmployeeAdded -= _employeeAddedHandler;
+        if (_employeeUpdatedHandler != null)
+            eventService.EmployeeUpdated -= _employeeUpdatedHandler;
+        if (_employeeDeletedHandler != null)
+            eventService.EmployeeDeleted -= _employeeDeletedHandler;
 
         // Unsubscribe from property changed events
         foreach (var employee in EmployeeItems)
         {
             employee.PropertyChanged -= OnEmployeePropertyChanged;
+
+            // Dispose bitmaps to prevent memory leaks
+            if (employee.AvatarSource != ManageEmployeeModel.DefaultAvatarSource)
+            {
+                employee.AvatarSource?.Dispose();
+            }
         }
 
         // Clear collections
@@ -1091,8 +1118,9 @@ public partial class ManageEmployeesViewModel : ViewModelBase, INavigable
         CurrentFilteredData.Clear();
         Employees.Clear();
 
-        (_addNewEmployeeDialogCardViewModel as IDisposable).Dispose();
-        (_employeeProfileInformationViewModel as IDisposable).Dispose();
+        // Dispose dialog view models
+        (_addNewEmployeeDialogCardViewModel as IDisposable)?.Dispose();
+        (_employeeProfileInformationViewModel as IDisposable)?.Dispose();
 
         base.DisposeManagedResources();
         ForceGarbageCollection();
