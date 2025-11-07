@@ -69,7 +69,20 @@ namespace AHON_TRACK.Services
                         return await RestoreDeletedEmployeeAsync(conn, transaction, employee, deletedId.Value, oldPosition);
                     }
 
-                    // Proceed with normal add operation
+                    // NEW: Check for existing employee with same personal info
+                    var (existingEmployeeId, existingUsername) = await GetExistingEmployeeByPersonalInfoAsync(conn, transaction, employee);
+
+                    if (existingEmployeeId.HasValue)
+                    {
+                        transaction.Rollback();
+                        ShowWarningToast("Duplicate Employee",
+                            $"An employee with the name '{employee.FirstName} {employee.LastName}' and contact number '{employee.ContactNumber}' already exists.\n\n" +
+                            $"Existing Username: {existingUsername}\n\n" +
+                            $"Please verify if this is the same person or update the contact number.");
+                        return (false, "Employee with same name and contact number already exists.", null);
+                    }
+
+                    // Check for duplicate username
                     if (await IsDuplicateUsernameAsync(conn, transaction, employee.Username))
                     {
                         transaction.Rollback();
@@ -114,6 +127,7 @@ namespace AHON_TRACK.Services
                 return (false, $"Error: {ex.Message}", null);
             }
         }
+
 
         #endregion
 
@@ -321,6 +335,19 @@ namespace AHON_TRACK.Services
                         transaction.Rollback();
                         ShowWarningToast("Employee Not Found", "The employee you're trying to update doesn't exist.");
                         return (false, "Employee not found.");
+                    }
+
+                    // NEW: Check for duplicate personal info
+                    var (existingEmployeeId, existingUsername) = await GetExistingEmployeeByPersonalInfoForUpdateAsync(conn, transaction, employee);
+
+                    if (existingEmployeeId.HasValue)
+                    {
+                        transaction.Rollback();
+                        ShowWarningToast("Duplicate Employee",
+                            $"Another employee with the name '{employee.FirstName} {employee.LastName}' and contact number '{employee.ContactNumber}' already exists.\n\n" +
+                            $"Existing Username: {existingUsername}\n\n" +
+                            $"Please verify the information or update the contact number.");
+                        return (false, "Employee with same name and contact number already exists.");
                     }
 
                     if (await IsDuplicateUsernameForUpdateAsync(conn, transaction, employee.Username, employee.EmployeeId))
@@ -735,6 +762,65 @@ AND e.IsDeleted = 0";
                 Console.WriteLine($"[LogActionAsync] {ex.Message}");
             }
         }
+        private async Task<(int? EmployeeId, string? Username)> GetExistingEmployeeByPersonalInfoAsync(
+    SqlConnection conn, SqlTransaction transaction, ManageEmployeeModel employee)
+        {
+            const string query = @"
+        SELECT e.EmployeeID, COALESCE(a.Username, c.Username, s.Username) AS Username
+        FROM Employees e
+        LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
+        LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
+        LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
+        WHERE e.FirstName = @firstName 
+        AND e.LastName = @lastName 
+        AND e.ContactNumber = @contactNumber
+        AND e.IsDeleted = 0";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@firstName", employee.FirstName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@lastName", employee.LastName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@contactNumber", employee.ContactNumber ?? (object)DBNull.Value);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return (reader.GetInt32(0), reader.IsDBNull(1) ? null : reader.GetString(1));
+            }
+
+            return (null, null);
+        }
+
+
+        private async Task<(int? EmployeeId, string? Username)> GetExistingEmployeeByPersonalInfoForUpdateAsync(
+    SqlConnection conn, SqlTransaction transaction, ManageEmployeeModel employee)
+        {
+            const string query = @"
+        SELECT e.EmployeeID, COALESCE(a.Username, c.Username, s.Username) AS Username
+        FROM Employees e
+        LEFT JOIN Admins a ON e.EmployeeID = a.AdminID AND a.IsDeleted = 0
+        LEFT JOIN Coach c ON e.EmployeeID = c.CoachID AND c.IsDeleted = 0
+        LEFT JOIN Staffs s ON e.EmployeeID = s.StaffID AND s.IsDeleted = 0
+        WHERE e.FirstName = @firstName 
+        AND e.LastName = @lastName 
+        AND e.ContactNumber = @contactNumber
+        AND e.EmployeeID != @employeeId
+        AND e.IsDeleted = 0";
+
+            using var cmd = new SqlCommand(query, conn, transaction);
+            cmd.Parameters.AddWithValue("@firstName", employee.FirstName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@lastName", employee.LastName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@contactNumber", employee.ContactNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@employeeId", employee.EmployeeId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return (reader.GetInt32(0), reader.IsDBNull(1) ? null : reader.GetString(1));
+            }
+
+            return (null, null);
+        }
+
 
         public async Task<int> GetTotalEmployeeCountAsync()
         {
