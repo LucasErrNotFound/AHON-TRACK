@@ -76,7 +76,7 @@
                     <Svg
                         Width="20"
                         Height="20"
-                        Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/cancel-icon.svg"
+                        Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/cancel-icon2.svg"
                         Margin="0,0,7,0"
                         VerticalAlignment="Center" />
                     <TextBlock Text="Cancel" VerticalAlignment="Center" />
