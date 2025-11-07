@@ -89,7 +89,7 @@
 							<TabItem Header="General">
 								<StackPanel>
 									<Grid ColumnDefinitions="Auto Auto">
-										<StackPanel Grid.Column="0">
+										<StackPanel Grid.Column="0" Orientation="Vertical">
 											<TextBlock
 												Text="Set Download Path"
 												FontSize="16"
@@ -103,44 +103,14 @@
 													Text="{CompiledBinding DownloadPath, Mode=TwoWay}"
 													IsReadOnly="True"
 													IsEnabled="True"
-													Classes="Clearable"
-													Width="270"/>
-												<Button
-													Classes="Outline"
-													Content="Browse"
-													Command="{CompiledBinding SetDownloadPathCommand}"/>
+													Classes="Clearable"/>
 											</StackPanel>
-										</StackPanel>
-									</Grid>
-									<Separator Margin="0,20"/>
-									<Grid ColumnDefinitions="1.5* *" ColumnSpacing="50">
-										<StackPanel Grid.Column="0">
-											<TextBlock
-												Text="Software Theme"
-												FontSize="16"
-												FontWeight="SemiBold"/>
-											<TextBlock
-												Text="Change how the app looks."
-												Classes="Caption Muted" />
-										</StackPanel>
-										<StackPanel
-											Grid.Column="1"
-											HorizontalAlignment="Left"
-											VerticalAlignment="Center">
-											<ToggleSwitch IsChecked="{CompiledBinding IsDarkMode, Mode=TwoWay}">
-												<ToggleSwitch.OffContent>
-													<TextBlock
-														VerticalAlignment="Center"
-														Classes="Small"
-														Text="Light Mode" />
-												</ToggleSwitch.OffContent>
-												<ToggleSwitch.OnContent>
-													<TextBlock
-														VerticalAlignment="Center"
-														Classes="Small"
-														Text="Dark Mode" />
-												</ToggleSwitch.OnContent>
-											</ToggleSwitch>
+											<Button
+												Classes="Outline"
+												Margin="0,10,0,0"
+												Content="Browse"
+												HorizontalAlignment="Left"
+												Command="{CompiledBinding SetDownloadPathCommand}"/>
 										</StackPanel>
 									</Grid>
 									<Separator Margin="0,20"/>
