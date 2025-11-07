@@ -18,6 +18,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Notification = AHON_TRACK.Models.Notification;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -103,6 +104,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         SelectedStatusFilterItem = "All";
         FilteredStatusFilterItems = StatusFilterItems;
 
+        SubscribeToEvents();
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
     }
@@ -121,6 +123,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         SelectedStatusFilterItem = "All";
         FilteredStatusFilterItems = StatusFilterItems;
 
+        SubscribeToEvents();
         _ = LoadEquipmentDataAsync();
         UpdateEquipmentCounts();
     }
@@ -129,6 +132,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     public async Task Initialize()
     {
         if (IsInitialized) return;
+        SubscribeToEvents();
         await LoadSettingsAsync();
         
         SelectedEquipmentFilterItem = "All";
@@ -138,6 +142,21 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         
         _ = LoadEquipmentDataAsync();
         IsInitialized = true;
+    }
+    
+    private void SubscribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        // Unsubscribe first to prevent double subscription
+        eventService.EquipmentAdded -= OnEquipmentDataChanged;
+        eventService.EquipmentUpdated -= OnEquipmentDataChanged;
+        eventService.EquipmentDeleted -= OnEquipmentDataChanged;
+
+        // Subscribe to events
+        eventService.EquipmentAdded += OnEquipmentDataChanged;
+        eventService.EquipmentUpdated += OnEquipmentDataChanged;
+        eventService.EquipmentDeleted += OnEquipmentDataChanged;
     }
 
     private async Task LoadEquipmentDataAsync()
@@ -819,22 +838,48 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         ApplyEquipmentFilter();
     }
+    
+    private async void OnEquipmentDataChanged(object? sender, EventArgs e)
+    {
+        if (_isLoadingDataFlag) return;
+        try
+        {
+            _isLoadingDataFlag = true;
+            await LoadEquipmentDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Error Reloading Equipment")
+                .WithContent($"Failed to reload: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            _isLoadingDataFlag = false;
+        }
+    }
 
     // Add to EquipmentInventoryViewModel class
 
     protected override void DisposeManagedResources()
     {
+        var eventService = DashboardEventService.Instance;
+        eventService.EquipmentAdded -= OnEquipmentDataChanged;
+        eventService.EquipmentUpdated -= OnEquipmentDataChanged;
+        eventService.EquipmentDeleted -= OnEquipmentDataChanged;
+
         // Unsubscribe from property change handlers
         foreach (var equipment in EquipmentItems)
         {
             equipment.PropertyChanged -= OnEquipmentPropertyChanged;
         }
-    
+
         // Clear collections
         EquipmentItems?.Clear();
         OriginalEquipmentData?.Clear();
         CurrentFilteredEquipmentData?.Clear();
-    
+
         base.DisposeManagedResources();
     }
 }

@@ -6,6 +6,7 @@ using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Notification = AHON_TRACK.Models.Notification;
 
@@ -32,17 +33,6 @@ namespace AHON_TRACK.Services
         public void UnregisterNotificationCallback()
         {
             _notificationCallback = null;
-        }
-
-        private void AddNotification(string title, string message, NotificationType type)
-        {
-            _notificationCallback?.Invoke(new Notification
-            {
-                Type = type,
-                Title = title,
-                Message = message,
-                DateAndTime = DateTime.Today
-            });
         }
 
         #region Role-Based Access Control
@@ -1059,20 +1049,31 @@ namespace AHON_TRACK.Services
 
         public async Task ShowEquipmentAlertsAsync(Action<Notification>? addNotificationCallback = null)
         {
+            _toastManager.CreateToast("Hello there")
+                .WithContent("Outside the try statement in alerts")
+                .DismissOnClick()
+                .Show();
             try
             {
+                _toastManager.CreateToast("Hello there")
+                    .WithContent("Inside the try statement in alerts")
+                    .DismissOnClick()
+                    .Show();
+                var summary = await GetEquipmentAlertSummaryAsync();
+                
                 var maintenanceDueCount = await GetMaintenanceDueCountAsync();
                 var warrantyExpiringCount = await GetWarrantyExpiringCountAsync();
                 var conditionAlertCount = await GetConditionAlertCountAsync();
 
                 // Use provided callback OR internal callback
                 var notifyCallback = addNotificationCallback ?? _notificationCallback;
+                
 
                 // HIGHEST PRIORITY: Equipment condition issues
-                if (conditionAlertCount > 0)
+                if (summary.ConditionAlertCount > 0)
                 {
                     var title = "Equipment Condition Alert";
-                    var message = $"{conditionAlertCount} equipment item(s) need attention (Repairing/Broken)!";
+                    var message = $"{summary.ConditionAlertCount} equipment item(s) need attention (Repairing/Broken)!";
 
                     _toastManager?.CreateToast(title)
                         .WithContent(message)
@@ -1088,10 +1089,10 @@ namespace AHON_TRACK.Services
                     });
                 }
 
-                if (maintenanceDueCount > 0)
+                if (summary.MaintenanceDueCount > 0)
                 {
                     var title = "Maintenance Alert";
-                    var message = $"{maintenanceDueCount} equipment item(s) require maintenance within 7 days!";
+                    var message = $"{summary.MaintenanceDueCount} equipment item(s) require maintenance within 7 days!";
 
                     _toastManager?.CreateToast(title)
                         .WithContent(message)
@@ -1107,10 +1108,10 @@ namespace AHON_TRACK.Services
                     });
                 }
 
-                if (warrantyExpiringCount > 0)
+                if (summary.WarrantyExpiringCount > 0)
                 {
                     var title = "Warranty Expiring";
-                    var message = $"{warrantyExpiringCount} equipment warranty(ies) expiring within 30 days!";
+                    var message = $"{summary.WarrantyExpiringCount} equipment warranty(ies) expiring within 30 days!";
 
                     _toastManager?.CreateToast(title)
                         .WithContent(message)
