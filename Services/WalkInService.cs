@@ -47,9 +47,18 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region DATE VALIDATION
+
+        private bool IsValidCheckInDate(DateTime selectedDate)
+        {
+            return selectedDate.Date == DateTime.Today;
+        }
+
+        #endregion
+
         #region CREATE
 
-        public async Task<(bool Success, string Message, int? CustomerID)> AddWalkInCustomerAsync(ManageWalkInModel walkIn)
+        public async Task<(bool Success, string Message, int? CustomerID)> AddWalkInCustomerAsync(ManageWalkInModel walkIn, DateTime selectedDate)
         {
             if (!CanCreate())
             {
@@ -57,6 +66,12 @@ namespace AHON_TRACK.Services
                 return (false, "Insufficient permissions to register walk-in customers.", null);
             }
 
+            if (!IsValidCheckInDate(selectedDate))
+            {
+                ShowWarningToast("Invalid Date",
+                    "Walk-in check-in is only allowed for today's date.");
+                return (false, "Check-in is only allowed for today's date.", null);
+            }
             try
             {
                 using var conn = new SqlConnection(_connectionString);
