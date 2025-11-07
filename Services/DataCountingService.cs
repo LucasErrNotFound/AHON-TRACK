@@ -35,68 +35,93 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // --- AGE GROUPS ---
+                // --- AGE GROUPS (FILTERED BY DATE RANGE) ---
                 string ageGroupQuery = @"
-                    SELECT AgeGroup, COUNT(*) AS Count
-                    FROM (
-                        SELECT 
-                            CASE 
-                                WHEN Age BETWEEN 18 AND 29 THEN '18-29'
-                                WHEN Age BETWEEN 30 AND 39 THEN '30-39'
-                                WHEN Age BETWEEN 40 AND 54 THEN '40-54'
-                                WHEN Age >= 55 THEN '55+'
-                                ELSE 'Unknown'
-                            END AS AgeGroup
-                        FROM Members
-                        WHERE Age IS NOT NULL AND IsDeleted = 0
-                        UNION ALL
-                        SELECT 
-                            CASE 
-                                WHEN Age BETWEEN 18 AND 29 THEN '18-29'
-                                WHEN Age BETWEEN 30 AND 39 THEN '30-39'
-                                WHEN Age BETWEEN 40 AND 54 THEN '40-54'
-                                WHEN Age >= 55 THEN '55+'
-                                ELSE 'Unknown'
-                            END AS AgeGroup
-                        FROM WalkInCustomers
-                        WHERE Age IS NOT NULL AND IsDeleted = 0
-                    ) AS Combined
-                    GROUP BY AgeGroup;";
+            SELECT AgeGroup, COUNT(*) AS Count
+            FROM (
+                SELECT 
+                    CASE 
+                        WHEN Age BETWEEN 18 AND 29 THEN '18-29'
+                        WHEN Age BETWEEN 30 AND 39 THEN '30-39'
+                        WHEN Age BETWEEN 40 AND 54 THEN '40-54'
+                        WHEN Age >= 55 THEN '55+'
+                        ELSE 'Unknown'
+                    END AS AgeGroup
+                FROM Members
+                WHERE Age IS NOT NULL 
+                    AND IsDeleted = 0
+                    AND CAST(DateJoined AS DATE) >= @From 
+                    AND CAST(DateJoined AS DATE) < @To
+                UNION ALL
+                SELECT 
+                    CASE 
+                        WHEN Age BETWEEN 18 AND 29 THEN '18-29'
+                        WHEN Age BETWEEN 30 AND 39 THEN '30-39'
+                        WHEN Age BETWEEN 40 AND 54 THEN '40-54'
+                        WHEN Age >= 55 THEN '55+'
+                        ELSE 'Unknown'
+                    END AS AgeGroup
+                FROM WalkInCustomers
+                WHERE Age IS NOT NULL
+                    AND IsDeleted = 0
+                    AND CAST(DateJoined AS DATE) >= @From 
+                    AND CAST(DateJoined AS DATE) < @To
+            ) AS Combined
+            GROUP BY AgeGroup;";
 
                 using (var cmd = new SqlCommand(ageGroupQuery, conn))
-                using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    while (await reader.ReadAsync())
+                    cmd.Parameters.AddWithValue("@From", from.Date);
+                    cmd.Parameters.AddWithValue("@To", to.Date);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        string group = reader.GetString(0);
-                        int count = reader.GetInt32(1);
-                        ageGroups[group] = count;
+                        while (await reader.ReadAsync())
+                        {
+                            string group = reader.GetString(0);
+                            int count = reader.GetInt32(1);
+                            ageGroups[group] = count;
+                        }
                     }
                 }
 
-                // --- GENDER COUNTS ---
+                // --- GENDER COUNTS (FILTERED BY DATE RANGE) ---
                 string genderQuery = @"
-                    SELECT Gender, COUNT(*) AS Count
-                    FROM (
-                        SELECT Gender FROM Members WHERE Gender IN ('Male', 'Female') AND IsDeleted = 0
-                        UNION ALL
-                        SELECT Gender FROM WalkInCustomers WHERE Gender IN ('Male', 'Female') AND IsDeleted = 0
-                    ) AS Combined
-                    GROUP BY Gender;";
+            SELECT Gender, COUNT(*) AS Count
+            FROM (
+                SELECT Gender 
+                FROM Members 
+                WHERE Gender IN ('Male', 'Female') 
+                    AND IsDeleted = 0
+                    AND CAST(DateJoined AS DATE) >= @From 
+                    AND CAST(DateJoined AS DATE) < @To
+                UNION ALL
+                SELECT Gender 
+                FROM WalkInCustomers 
+                WHERE Gender IN ('Male', 'Female') 
+                    AND IsDeleted = 0
+                    AND CAST(DateJoined AS DATE) >= @From 
+                    AND CAST(DateJoined AS DATE) < @To
+            ) AS Combined
+            GROUP BY Gender;";
 
                 using (var cmd = new SqlCommand(genderQuery, conn))
-                using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    while (await reader.ReadAsync())
+                    cmd.Parameters.AddWithValue("@From", from.Date);
+                    cmd.Parameters.AddWithValue("@To", to.Date);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        string gender = reader.GetString(0);
-                        int count = reader.GetInt32(1);
-                        genderCounts[gender] = count;
+                        while (await reader.ReadAsync())
+                        {
+                            string gender = reader.GetString(0);
+                            int count = reader.GetInt32(1);
+                            genderCounts[gender] = count;
+                        }
                     }
                 }
 
                 string populationQuery = @"
-    -- Track member additions, removals, and walk-ins
     WITH InitialPopulation AS (
         SELECT COUNT(*) AS BaseCount
         FROM Members
@@ -107,14 +132,14 @@ namespace AHON_TRACK.Services
     DailyMemberJoins AS (
         SELECT CAST(DateJoined AS DATE) AS [Date], COUNT(*) AS Change
         FROM Members 
-        WHERE CAST(DateJoined AS DATE) BETWEEN @From AND @To 
+        WHERE CAST(DateJoined AS DATE) >= @From AND CAST(DateJoined AS DATE) < @To
         AND IsDeleted = 0
         GROUP BY CAST(DateJoined AS DATE)
     ),
     DailyMemberRemovals AS (
         SELECT CAST(ValidUntil AS DATE) AS [Date], -COUNT(*) AS Change
         FROM Members
-        WHERE CAST(ValidUntil AS DATE) BETWEEN @From AND @To
+        WHERE CAST(ValidUntil AS DATE) >= @From AND CAST(ValidUntil AS DATE) < @To
         AND Status IN ('Expired', 'Terminated')
         AND IsDeleted = 0
         GROUP BY CAST(ValidUntil AS DATE)
@@ -122,7 +147,7 @@ namespace AHON_TRACK.Services
     DailyWalkIns AS (
         SELECT CAST(DateJoined AS DATE) AS [Date], COUNT(*) AS Change
         FROM WalkInCustomers
-        WHERE CAST(DateJoined AS DATE) BETWEEN @From AND @To
+        WHERE CAST(DateJoined AS DATE) >= @From AND CAST(DateJoined AS DATE) < @To
         AND IsDeleted = 0
         GROUP BY CAST(DateJoined AS DATE)
     ),
@@ -148,7 +173,7 @@ namespace AHON_TRACK.Services
                 using (var cmd = new SqlCommand(populationQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@From", from.Date); // Ensure time is 00:00:00
-                    cmd.Parameters.AddWithValue("@To", to.Date.AddDays(1));
+                    cmd.Parameters.AddWithValue("@To", to.Date);
 
 
                     _toastManager.CreateToast($"Querying from {from:yyyy-MM-dd} to {to:yyyy-MM-dd}");
