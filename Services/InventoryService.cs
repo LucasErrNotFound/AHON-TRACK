@@ -1049,16 +1049,8 @@ namespace AHON_TRACK.Services
 
         public async Task ShowEquipmentAlertsAsync(Action<Notification>? addNotificationCallback = null)
         {
-            _toastManager.CreateToast("Hello there")
-                .WithContent("Outside the try statement in alerts")
-                .DismissOnClick()
-                .Show();
             try
             {
-                _toastManager.CreateToast("Hello there")
-                    .WithContent("Inside the try statement in alerts")
-                    .DismissOnClick()
-                    .Show();
                 var summary = await GetEquipmentAlertSummaryAsync();
                 
                 var maintenanceDueCount = await GetMaintenanceDueCountAsync();
