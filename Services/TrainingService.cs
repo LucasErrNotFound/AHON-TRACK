@@ -115,6 +115,13 @@ namespace AHON_TRACK.Services
                         return false;
                     }
 
+                    // Check for package time conflicts (different packages cannot overlap)
+                    if (await CheckPackageTimeConflictAsync(connection, transaction, training.packageID,
+                        training.scheduledDate, training.scheduledTimeStart, training.scheduledTimeEnd))
+                    {
+                        return false; // Toast already shown in method
+                    }
+
                     // Handle schedule (get existing or create new)
                     var scheduleId = await GetOrCreateScheduleAsync(connection, transaction, coachId.Value,
                         training.scheduledDate, training.scheduledTimeStart, training.scheduledTimeEnd);
@@ -507,33 +514,76 @@ WHERE TrainingID = @TrainingID";
             {
                 using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
+                using var transaction = connection.BeginTransaction();
 
-                using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@TrainingID", training.trainingID);
-                command.Parameters.AddWithValue("@CustomerID", training.customerID);
-                command.Parameters.AddWithValue("@FirstName", training.firstName);
-                command.Parameters.AddWithValue("@LastName", training.lastName);
-                command.Parameters.AddWithValue("@ContactNumber", ToDbValue(training.contactNumber));
-                command.Parameters.AddWithValue("@ProfilePicture", ToDbValue(training.picture));
-                command.Parameters.AddWithValue("@PackageType", training.packageType);
-                command.Parameters.AddWithValue("@AssignedCoach", training.assignedCoach);
-                command.Parameters.AddWithValue("@ScheduledDate", training.scheduledDate);
-                command.Parameters.AddWithValue("@ScheduledTimeStart", training.scheduledTimeStart);
-                command.Parameters.AddWithValue("@ScheduledTimeEnd", training.scheduledTimeEnd);
-                command.Parameters.AddWithValue("@Attendance", ToDbValue(training.attendance));
-
-                var rowsAffected = await command.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
+                try
                 {
-                    DashboardEventService.Instance.NotifyScheduleUpdated();
-                    await LogActionAsync(connection, "UPDATE",
-                        $"Updated training schedule for {training.firstName} {training.lastName} (ID: {training.trainingID})", true);
+                    // Check for package time conflicts (excluding current training)
+                    const string conflictQuery = @"
+                    SELECT TOP 1 PackageType, ScheduledTimeStart, ScheduledTimeEnd
+                    FROM Trainings
+                    WHERE PackageID != (SELECT PackageID FROM Trainings WHERE TrainingID = @TrainingID)
+                      AND TrainingID != @TrainingID
+                      AND ScheduledDate = @ScheduledDate
+                      AND Attendance IN ('Pending', 'Present')
+                      AND (@ScheduledTimeStart < ScheduledTimeEnd AND @ScheduledTimeEnd > ScheduledTimeStart)";
 
-                    return true;
+                    using (var conflictCmd = new SqlCommand(conflictQuery, connection, transaction))
+                    {
+                        conflictCmd.Parameters.AddWithValue("@TrainingID", training.trainingID);
+                        conflictCmd.Parameters.AddWithValue("@ScheduledDate", training.scheduledDate.Date);
+                        conflictCmd.Parameters.AddWithValue("@ScheduledTimeStart", training.scheduledTimeStart);
+                        conflictCmd.Parameters.AddWithValue("@ScheduledTimeEnd", training.scheduledTimeEnd);
+
+                        using var reader = await conflictCmd.ExecuteReaderAsync();
+                        if (await reader.ReadAsync())
+                        {
+                            string conflictingPackage = reader["PackageType"]?.ToString() ?? "Unknown";
+                            DateTime conflictStart = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeStart"));
+                            DateTime conflictEnd = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeEnd"));
+
+                            ShowToast("Package Time Conflict",
+                                $"'{conflictingPackage}' is already scheduled from {conflictStart:hh\\:mm tt} to {conflictEnd:hh\\:mm tt}. Different packages cannot overlap.",
+                                ToastType.Warning);
+
+                            transaction.Rollback();
+                            return false;
+                        }
+                    }
+
+                    using var command = new SqlCommand(query, connection, transaction);
+                    command.Parameters.AddWithValue("@TrainingID", training.trainingID);
+                    command.Parameters.AddWithValue("@CustomerID", training.customerID);
+                    command.Parameters.AddWithValue("@FirstName", training.firstName);
+                    command.Parameters.AddWithValue("@LastName", training.lastName);
+                    command.Parameters.AddWithValue("@ContactNumber", ToDbValue(training.contactNumber));
+                    command.Parameters.AddWithValue("@PackageType", training.packageType);
+                    command.Parameters.AddWithValue("@AssignedCoach", training.assignedCoach);
+                    command.Parameters.AddWithValue("@ScheduledDate", training.scheduledDate);
+                    command.Parameters.AddWithValue("@ScheduledTimeStart", training.scheduledTimeStart);
+                    command.Parameters.AddWithValue("@ScheduledTimeEnd", training.scheduledTimeEnd);
+                    command.Parameters.AddWithValue("@Attendance", ToDbValue(training.attendance));
+
+                    var rowsAffected = await command.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        transaction.Commit();
+                        DashboardEventService.Instance.NotifyScheduleUpdated();
+                        await LogActionAsync(connection, "UPDATE",
+                            $"Updated training schedule for {training.firstName} {training.lastName} (ID: {training.trainingID})", true);
+
+                        return true;
+                    }
+
+                    transaction.Rollback();
+                    return false;
                 }
-
-                return false;
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
             }
             catch (Exception ex)
             {
@@ -716,6 +766,45 @@ WHERE TrainingID = @TrainingID";
             return count > 0; // Returns true if package already used that day
         }
 
+        /// <summary>
+        /// Checks if a different package is already scheduled during the requested time slot.
+        /// Same packages can overlap, but different packages cannot.
+        /// </summary>
+        private async Task<bool> CheckPackageTimeConflictAsync(SqlConnection connection, SqlTransaction transaction,
+            int packageID, DateTime scheduledDate, DateTime scheduledTimeStart, DateTime scheduledTimeEnd)
+        {
+            const string query = @"
+            SELECT TOP 1 PackageType, ScheduledTimeStart, ScheduledTimeEnd
+            FROM Trainings
+            WHERE PackageID != @PackageID
+              AND ScheduledDate = @ScheduledDate
+              AND Attendance IN ('Pending', 'Present')
+              AND (@ScheduledTimeStart < ScheduledTimeEnd AND @ScheduledTimeEnd > ScheduledTimeStart)";
+
+            using var cmd = new SqlCommand(query, connection, transaction);
+            cmd.Parameters.AddWithValue("@PackageID", packageID);
+            cmd.Parameters.AddWithValue("@ScheduledDate", scheduledDate.Date);
+            cmd.Parameters.AddWithValue("@ScheduledTimeStart", scheduledTimeStart);
+            cmd.Parameters.AddWithValue("@ScheduledTimeEnd", scheduledTimeEnd);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            if (await reader.ReadAsync())
+            {
+                string conflictingPackage = reader["PackageType"]?.ToString() ?? "Unknown";
+                DateTime conflictStart = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeStart"));
+                DateTime conflictEnd = reader.GetDateTime(reader.GetOrdinal("ScheduledTimeEnd"));
+
+                ShowToast("Package Time Conflict",
+                    $"'{conflictingPackage}' is already scheduled from {conflictStart:hh\\:mm tt} to {conflictEnd:hh\\:mm tt}. Different packages cannot overlap.",
+                    ToastType.Warning);
+
+                return true; // Conflict found
+            }
+
+            return false; // No conflict
+        }
+
         private async Task<int?> GetOrCreateScheduleAsync(SqlConnection connection, SqlTransaction transaction,
             int coachId, DateTime date, DateTime start, DateTime end)
         {
@@ -723,15 +812,6 @@ WHERE TrainingID = @TrainingID";
             var scheduleId = await GetExactScheduleAsync(connection, transaction, coachId, date, start, end);
             if (scheduleId.HasValue)
                 return scheduleId;
-
-            /*// Check for overlap
-            if (await HasScheduleOverlapAsync(connection, transaction, coachId, date, start, end))
-            {
-                ShowToast("Conflict Detected",
-                    $"Coach already has a schedule overlapping this time slot ({start:hh\\:mm tt}–{end:hh\\:mm tt}).",
-                    ToastType.Warning);
-                return null;
-            }*/
 
             // Create new schedule
             return await CreateCoachScheduleAsync(connection, transaction, coachId, date, start, end);
@@ -775,27 +855,6 @@ WHERE TrainingID = @TrainingID";
 
             return null;
         }
-        /*
-        private async Task<bool> HasScheduleOverlapAsync(SqlConnection connection, SqlTransaction transaction,
-            int coachId, DateTime date, DateTime start, DateTime end)
-        {
-            const string query = @"
-                SELECT TOP 1 ScheduleID
-                FROM CoachSchedule
-                WHERE CoachID = @CoachID 
-              AND ScheduledDate = @Date
-              AND IsDeleted = 0
-              AND (@Start < ScheduledTimeEnd AND @End > ScheduledTimeStart)";
-
-            using var cmd = new SqlCommand(query, connection, transaction);
-            cmd.Parameters.AddWithValue("@CoachID", coachId);
-            cmd.Parameters.AddWithValue("@Date", date.Date);
-            cmd.Parameters.AddWithValue("@Start", start);
-            cmd.Parameters.AddWithValue("@End", end);
-
-            var result = await cmd.ExecuteScalarAsync();
-            return result != null && result != DBNull.Value;
-        }*/
 
         private async Task<int?> CreateCoachScheduleAsync(SqlConnection connection, SqlTransaction transaction,
             int coachId, DateTime date, DateTime start, DateTime end)
