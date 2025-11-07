@@ -196,8 +196,8 @@ namespace AHON_TRACK.Services
         }
 
         private async Task<(bool Success, string Message, int? CustomerID)> HandleExistingCustomerAsync(
-            SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn,
-            int existingCustomerId, string? existingType)
+    SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn,
+    int existingCustomerId, string? existingType)
         {
             // Prevent Regular customers from downgrading to Free Trial
             if (IsRegular(existingType) && IsFreeTrial(walkIn.WalkInType))
@@ -218,6 +218,14 @@ namespace AHON_TRACK.Services
             // Free Trial upgrading to Regular
             if (IsFreeTrial(existingType) && IsRegular(walkIn.WalkInType))
             {
+                // Check if already checked in today before upgrading
+                if (await HasCheckedInTodayAsync(conn, transaction, existingCustomerId))
+                {
+                    ShowWarningToast("Already Checked In",
+                        $"{walkIn.FirstName} {walkIn.LastName} has already checked in today.");
+                    return (false, "Customer has already checked in today.", existingCustomerId);
+                }
+
                 await UpgradeToRegularAsync(conn, transaction, existingCustomerId, walkIn);
                 await CreateCheckInRecordAsync(conn, transaction, existingCustomerId);
                 await LogActionAsync(conn, transaction, "UPDATE",
@@ -226,12 +234,35 @@ namespace AHON_TRACK.Services
                 return (true, "Customer updated to Regular and checked in.", existingCustomerId);
             }
 
-            // Regular customer returning
+            // Regular customer returning - CHECK IF ALREADY CHECKED IN TODAY
+            if (await HasCheckedInTodayAsync(conn, transaction, existingCustomerId))
+            {
+                ShowWarningToast("Already Checked In",
+                    $"{walkIn.FirstName} {walkIn.LastName} has already checked in today.");
+                return (false, "Customer has already checked in today.", existingCustomerId);
+            }
+
             await CreateCheckInRecordAsync(conn, transaction, existingCustomerId);
             await LogActionAsync(conn, transaction, "CREATE",
                 $"Checked in existing walk-in customer: {walkIn.FirstName} {walkIn.LastName}", true);
 
+            ShowSuccessToast("Walk-in Checked In",
+                $"{walkIn.FirstName} {walkIn.LastName} checked in successfully.");
+
             return (true, "Existing customer checked in.", existingCustomerId);
+        }
+
+        private async Task<bool> HasCheckedInTodayAsync(SqlConnection conn, SqlTransaction transaction, int customerId)
+        {
+            using var cmd = new SqlCommand(
+                @"SELECT COUNT(1) FROM WalkInRecords 
+          WHERE CustomerID = @customerId 
+          AND CAST(CheckIn AS DATE) = CAST(GETDATE() AS DATE)", conn, transaction);
+
+            cmd.Parameters.AddWithValue("@customerId", customerId);
+
+            var count = (int)await cmd.ExecuteScalarAsync();
+            return count > 0;
         }
 
         private async Task<int> CreateNewCustomerAsync(SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn)
