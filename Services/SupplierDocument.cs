@@ -113,12 +113,11 @@ public class SupplierDocument : IDocument
                 columns.ConstantColumn(30);
                 columns.RelativeColumn(55);
                 columns.ConstantColumn(60);
-                columns.RelativeColumn(80);
+                columns.RelativeColumn(100);
                 columns.RelativeColumn(45);
                 columns.RelativeColumn(50);
                 columns.RelativeColumn(40);
-                columns.RelativeColumn(40);
-                columns.RelativeColumn(40);
+                columns.ConstantColumn(40);
             });
 
             table.Header(header =>
@@ -130,8 +129,7 @@ public class SupplierDocument : IDocument
                 header.Cell().Element(CellStyle).AlignLeft().Text("Phone Number").FontSize(10);
                 header.Cell().Element(CellStyle).Text("Products").FontSize(10);
                 header.Cell().Element(CellStyle).Text("Delivery Schedule").FontSize(10);
-                header.Cell().Element(CellStyle).Text("Contract Terms").FontSize(10);
-                header.Cell().Element(CellStyle).AlignLeft().Text("Status").FontSize(10);
+                header.Cell().Element(CellStyle).Text("Contract Terms").AlignRight().FontSize(10);
 
                 static IContainer CellStyle(IContainer container)
                 {
@@ -152,16 +150,9 @@ public class SupplierDocument : IDocument
                 table.Cell().Element(CellStyle).Text(item.PhoneNumber).FontSize(9);
                 table.Cell().Element(CellStyle).Text(item.Products).FontSize(9);
                 table.Cell().Element(CellStyle).Text(item.DeliverySchedule).FontSize(9);
-                table.Cell().Element(CellStyle)
+                table.Cell().Element(CellStyle).AlignRight()
                     .Text(item.ContractTerms.HasValue ? item.ContractTerms.Value.ToString("MM/dd/yy") : string.Empty)
                     .FontSize(8);
-                table.Cell().Element(CellStyle).AlignLeft().Text(item.Status).FontSize(9);
-                
-                /* This might be the delivery schedule thingy
-                table.Cell().Element(CellStyle)
-                    .Text(item.PurchasedDate.HasValue ? item.DeliveryDate.Value.ToString("MM/dd/yy") : string.Empty)
-                    .FontSize(9);
-                */
                 
 
                 static IContainer CellStyle(IContainer container)
