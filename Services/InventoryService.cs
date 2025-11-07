@@ -1168,8 +1168,8 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT COUNT(*) FROM Equipment 
               WHERE NextMaintenance <= DATEADD(day, 7, GETDATE())
-              AND NextMaintenance IS NOT NULL
-              AND Status = 'Active'
+              OR NextMaintenance IS NOT NULL
+              OR Status = 'Active'
               AND IsDeleted = 0", conn);
 
                 return (int)await cmd.ExecuteScalarAsync();
@@ -1190,8 +1190,8 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT COUNT(*) FROM Equipment 
               WHERE WarrantyExpiry <= DATEADD(day, 30, GETDATE())
-              AND WarrantyExpiry >= GETDATE()
-              AND Status = 'Active'
+              OR WarrantyExpiry >= GETDATE()
+              OR Status = 'Active'
               AND IsDeleted = 0", conn);
 
                 return (int)await cmd.ExecuteScalarAsync();
@@ -1213,7 +1213,7 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT COUNT(*) FROM Equipment 
               WHERE (Condition = 'Repairing' OR Condition = 'Broken')
-              AND Status = 'Active'
+              OR Status = 'Active'
               AND IsDeleted = 0", conn);
 
                 return (int)await cmd.ExecuteScalarAsync();
@@ -1234,8 +1234,8 @@ namespace AHON_TRACK.Services
                     @"SELECT EquipmentID, EquipmentName, NextMaintenance 
               FROM Equipment 
               WHERE NextMaintenance <= DATEADD(day, 7, GETDATE())
-              AND NextMaintenance IS NOT NULL
-              AND Status = 'Active'
+              OR NextMaintenance IS NOT NULL
+              OR Status = 'Active'
               AND IsDeleted = 0
               ORDER BY NextMaintenance ASC", conn);
 
@@ -1275,8 +1275,8 @@ namespace AHON_TRACK.Services
                     @"SELECT EquipmentID, EquipmentName, WarrantyExpiry 
               FROM Equipment 
               WHERE WarrantyExpiry <= DATEADD(day, 30, GETDATE())
-              AND WarrantyExpiry >= GETDATE()
-              AND Status = 'Active'
+              OR WarrantyExpiry >= GETDATE()
+              OR Status = 'Active'
               AND IsDeleted = 0
               ORDER BY WarrantyExpiry ASC", conn);
 
@@ -1315,7 +1315,7 @@ namespace AHON_TRACK.Services
                     @"SELECT EquipmentID, EquipmentName, Condition, Quantity 
               FROM Equipment 
               WHERE (Condition = 'Repairing' OR Condition = 'Broken')
-              AND Status = 'Active'
+              OR Status = 'Active'
               AND IsDeleted = 0
               ORDER BY 
                 CASE Condition 
