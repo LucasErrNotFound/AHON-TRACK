@@ -292,6 +292,18 @@
 											</ToggleButton>
 										</StackPanel>
 									</Grid>
+									<StackPanel 
+										Orientation="Horizontal" 
+										Margin="0,25,0,0" 
+										IsVisible="{CompiledBinding IsReferenceNumberVisible}">
+										<TextBlock
+											Text="Reference Number: "
+											Classes="h4" />
+										<TextBox
+											Classes="Clearable"
+											Text="{CompiledBinding ReferenceNumber}"
+											Width="280"/>
+									</StackPanel>
 									<Button
 										HorizontalAlignment="Right"
 										VerticalAlignment="Center"
@@ -403,21 +415,28 @@
 													<StackPanel Spacing="5" Margin="0,20,0,0">
 														<TextBlock
 															Text="{CompiledBinding PackageSubtotal}"
+															TextAlignment="Right"
+															HorizontalAlignment="Right"
 															Classes="h5" />
 														<TextBlock
 															Text="{CompiledBinding PackageDiscount}"
+															TextAlignment="Right"
+															HorizontalAlignment="Right"
 															Classes="h5SuccessColor" />
 														<TextBlock
 															Text="{CompiledBinding PackageTotal}"
+															TextAlignment="Right"
+															HorizontalAlignment="Right"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
 											</StackPanel>
 										</Grid>
-										<Separator Background="{StaticResource ForegroundColor}"
-										           IsVisible="{CompiledBinding IsPackageDetailsVisible}" />
-										<Grid RowDefinitions="Auto" ColumnDefinitions="Auto">
-											<StackPanel Spacing="0">
+										<Separator
+											Background="{StaticResource ForegroundColor}"
+											IsVisible="{CompiledBinding IsPackageDetailsVisible}" />
+										<Grid ColumnDefinitions="* Auto" Margin="0,0,0,0">
+											<StackPanel Grid.Column="0" Orientation="Vertical">
 												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
 													<Svg
 														Path="avares://AHON_TRACK/Assets/CheckInOutView/payment-icon.svg"
@@ -474,6 +493,27 @@
 															Foreground="{DynamicResource WarningColor}" />
 													</Border>
 												</StackPanel>
+											</StackPanel>
+											<StackPanel 
+												Grid.Column="1" 
+												Orientation="Vertical" 
+												Margin="0,30"
+												IsVisible="{CompiledBinding IsReferenceNumberVisibleInReceipt}">
+												<TextBlock
+													Classes="h4"
+													Text="Reference No."
+													TextAlignment="Right"
+													TextWrapping="WrapWithOverflow"
+													HorizontalAlignment="Right"
+													VerticalAlignment="Center" />
+												<TextBlock
+													Classes="Muted"
+													Text="{CompiledBinding ReferenceNumber}"
+													TextAlignment="Right"
+													Width="160"
+													TextWrapping="WrapWithOverflow"
+													HorizontalAlignment="Right"
+													VerticalAlignment="Center" />
 											</StackPanel>
 										</Grid>
 										<Separator Background="{StaticResource ForegroundColor}" />
@@ -865,6 +905,18 @@
 											</ToggleButton>
 										</StackPanel>
 									</Grid>
+									<StackPanel 
+										Orientation="Horizontal" 
+										Margin="0,25,0,0" 
+										IsVisible="{CompiledBinding IsReferenceNumberVisible}">
+										<TextBlock
+											Text="Reference Number: "
+											Classes="h4" />
+										<TextBox
+											Classes="Clearable"
+											Text="{CompiledBinding ReferenceNumber}"
+											Width="280"/>
+									</StackPanel>
 									<Button
 										HorizontalAlignment="Right"
 										VerticalAlignment="Center"
@@ -976,12 +1028,18 @@
 													<StackPanel Spacing="5" Margin="0,20,0,0">
 														<TextBlock
 															Text="{CompiledBinding PackageSubtotal}"
+															TextAlignment="Right"
+															HorizontalAlignment="Right"
 															Classes="h5" />
 														<TextBlock
 															Text="{CompiledBinding PackageDiscount}"
+															TextAlignment="Right"
+															HorizontalAlignment="Right"
 															Classes="h5SuccessColor" />
 														<TextBlock
 															Text="{CompiledBinding PackageTotal}"
+															TextAlignment="Right"
+															HorizontalAlignment="Right"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
@@ -990,8 +1048,8 @@
 										<Separator 
 											Background="{StaticResource ForegroundColor}"
 											IsVisible="{CompiledBinding IsPackageDetailsVisible}" />
-										<Grid RowDefinitions="Auto" ColumnDefinitions="Auto">
-											<StackPanel Spacing="0">
+										<Grid ColumnDefinitions="* Auto" Margin="0,0,0,0">
+											<StackPanel Grid.Column="0" Orientation="Vertical">
 												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
 													<Svg
 														Path="avares://AHON_TRACK/Assets/CheckInOutView/payment-icon.svg"
@@ -1049,8 +1107,28 @@
 													</Border>
 												</StackPanel>
 											</StackPanel>
+											<StackPanel 
+												Grid.Column="1" 
+												Orientation="Vertical" 
+												Margin="0,30"
+												IsVisible="{CompiledBinding IsReferenceNumberVisibleInReceipt}">
+												<TextBlock
+													Classes="h4"
+													Text="Reference No."
+													TextAlignment="Right"
+													TextWrapping="WrapWithOverflow"
+													HorizontalAlignment="Right"
+													VerticalAlignment="Center" />
+												<TextBlock
+													Classes="Muted"
+													Text="{CompiledBinding ReferenceNumber}"
+													TextAlignment="Right"
+													Width="160"
+													TextWrapping="WrapWithOverflow"
+													HorizontalAlignment="Right"
+													VerticalAlignment="Center" />
+											</StackPanel>
 										</Grid>
-										<Separator Background="{StaticResource ForegroundColor}" />
 										<Grid RowDefinitions="Auto" ColumnDefinitions="4* 2*" IsVisible="{CompiledBinding IsPaymentPossible}">
 											<!-- Left Column -->
 											<StackPanel Grid.Column="0" Spacing="0">

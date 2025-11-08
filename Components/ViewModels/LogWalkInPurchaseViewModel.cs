@@ -32,6 +32,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     private string _walkInLastName = string.Empty;
     private string _walkInContactNumber = string.Empty;
     private int? _walkInAge;
+    private string? _referenceNumber = string.Empty;
     private string? _walkInGender = string.Empty;
     private string _selectedWalkInTypeItem = string.Empty;
     private string _selectedSpecializedPackageItem = "";
@@ -65,7 +66,11 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     public bool IsCashVisible => IsCashSelected;
     public bool IsGCashVisible => IsGCashSelected;
     public bool IsMayaVisible => IsMayaSelected;
+    public bool IsReferenceNumberVisible => IsMayaSelected || IsGCashSelected;
     public string SelectedWalkInType => SelectedWalkInTypeItem;
+    
+    public bool IsReferenceNumberVisibleInReceipt => 
+        (IsGCashSelected || IsMayaSelected) && !string.IsNullOrWhiteSpace(ReferenceNumber);
 
     private bool _isCashSelected;
     private bool _isGCashSelected;
@@ -317,6 +322,19 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             OnPropertyChanged(nameof(GrandTotal));
         }
     }
+    
+    [Required(ErrorMessage = "Reference number is required")]
+    [RegularExpression(@"^\d{13}$", ErrorMessage = "Reference number must be 13 digits long")]
+    public string? ReferenceNumber 
+    {
+        get => _referenceNumber;
+        set
+        {
+            SetProperty(ref _referenceNumber, value, true);
+            OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
+        } 
+    }
 
     public bool IsQuantityVisible =>
         !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
@@ -394,6 +412,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
+                OnPropertyChanged(nameof(IsReferenceNumberVisible));
+                OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
                 OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
@@ -414,6 +434,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                     // Directly set backing fields to avoid triggering setters
                     _isCashSelected = false;
                     _isMayaSelected = false;
+                    ReferenceNumber = string.Empty;
                     OnPropertyChanged(nameof(IsCashSelected));
                     OnPropertyChanged(nameof(IsMayaSelected));
                 }
@@ -422,6 +443,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
+                OnPropertyChanged(nameof(IsReferenceNumberVisible));
+                OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
                 OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
@@ -442,6 +465,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                     // Directly set backing fields to avoid triggering setters
                     _isCashSelected = false;
                     _isGCashSelected = false;
+                    ReferenceNumber = string.Empty;
                     OnPropertyChanged(nameof(IsCashSelected));
                     OnPropertyChanged(nameof(IsGCashSelected));
                 }
@@ -450,6 +474,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 OnPropertyChanged(nameof(IsGCashVisible));
                 OnPropertyChanged(nameof(IsMayaVisible));
                 OnPropertyChanged(nameof(IsPaymentPossible));
+                OnPropertyChanged(nameof(IsReferenceNumberVisible));
+                OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
                 OnPropertyChanged(nameof(SelectedPaymentMethod));
             }
         }
@@ -519,8 +545,15 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
             // ✅ Add date validation
             bool isValidDate = SelectedDate.Date == DateTime.Today;
+            
+            bool hasValidReferenceNumber = true;
+            if (IsGCashSelected || IsMayaSelected)
+            {
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber) 
+                                          && ReferenceNumberRegex().IsMatch(ReferenceNumber);
+            }
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod && isValidDate && !IsProcessing;
+            return hasValidInputs && hasValidQuantity && hasPaymentMethod && isValidDate && hasValidReferenceNumber && !IsProcessing;
         }
     }
 
@@ -872,6 +905,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
+    
+    [GeneratedRegex(@"^\d{13}$")]
+    private static partial Regex ReferenceNumberRegex();
 
     protected override void DisposeManagedResources()
     {

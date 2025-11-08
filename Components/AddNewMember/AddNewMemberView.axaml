@@ -462,8 +462,8 @@
 										<Separator
 											Background="{StaticResource ForegroundColor}"
 											IsVisible="{CompiledBinding IsMembershipPlanVisible}" />
-										<Grid RowDefinitions="Auto" ColumnDefinitions="Auto">
-											<StackPanel Spacing="0">
+										<Grid RowDefinitions="Auto" ColumnDefinitions="* Auto">
+											<StackPanel Grid.Column="0" Orientation="Vertical">
 												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
 													<Svg
 														Path="avares://AHON_TRACK/Assets/CheckInOutView/payment-icon.svg"
@@ -520,6 +520,27 @@
 															Foreground="{DynamicResource WarningColor}" />
 													</Border>
 												</StackPanel>
+											</StackPanel>
+											<StackPanel 
+												Grid.Column="1" 
+												Orientation="Vertical" 
+												Margin="0,30"
+												IsVisible="{CompiledBinding IsReferenceNumberVisibleInReceipt}">
+												<TextBlock
+													Classes="h4"
+													Text="Reference No."
+													TextAlignment="Right"
+													TextWrapping="WrapWithOverflow"
+													HorizontalAlignment="Right"
+													VerticalAlignment="Center" />
+												<TextBlock
+													Classes="Muted"
+													Text="{CompiledBinding ReferenceNumber}"
+													TextAlignment="Right"
+													Width="160"
+													TextWrapping="WrapWithOverflow"
+													HorizontalAlignment="Right"
+													VerticalAlignment="Center" />
 											</StackPanel>
 										</Grid>
 										<Separator Background="{StaticResource ForegroundColor}" />
@@ -1086,8 +1107,8 @@
 										<Separator
 											Background="{StaticResource ForegroundColor}"
 											IsVisible="{CompiledBinding IsMembershipPlanVisible}" />
-										<Grid RowDefinitions="Auto" ColumnDefinitions="Auto">
-											<StackPanel Spacing="0">
+										<Grid RowDefinitions="Auto" ColumnDefinitions="* Auto">
+											<StackPanel Grid.Column="0" Orientation="Vertical">
 												<StackPanel Orientation="Horizontal" Margin="0,30" Spacing="15">
 													<Svg
 														Path="avares://AHON_TRACK/Assets/CheckInOutView/payment-icon.svg"
@@ -1144,6 +1165,27 @@
 															Foreground="{DynamicResource WarningColor}" />
 													</Border>
 												</StackPanel>
+											</StackPanel>
+											<StackPanel 
+												Grid.Column="1" 
+												Orientation="Vertical" 
+												Margin="0,30"
+												IsVisible="{CompiledBinding IsReferenceNumberVisibleInReceipt}">
+												<TextBlock
+													Classes="h4"
+													Text="Reference No."
+													TextAlignment="Right"
+													TextWrapping="WrapWithOverflow"
+													HorizontalAlignment="Right"
+													VerticalAlignment="Center" />
+												<TextBlock
+													Classes="Muted"
+													Text="{CompiledBinding ReferenceNumber}"
+													TextAlignment="Right"
+													Width="160"
+													TextWrapping="WrapWithOverflow"
+													HorizontalAlignment="Right"
+													VerticalAlignment="Center" />
 											</StackPanel>
 										</Grid>
 										<Separator Background="{StaticResource ForegroundColor}" />

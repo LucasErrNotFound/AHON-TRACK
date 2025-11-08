@@ -90,6 +90,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     public bool IsGCashVisible => IsGCashSelected;
     public bool IsMayaVisible => IsMayaSelected;
     public bool IsReferenceNumberVisible => IsMayaSelected || IsGCashSelected;
+    
+    public bool IsReferenceNumberVisibleInReceipt => 
+        (IsGCashSelected || IsMayaSelected) && !string.IsNullOrWhiteSpace(ReferenceNumber);
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -279,6 +282,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         {
             SetProperty(ref _referenceNumber, value, true);
             OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
         } 
     }
 
@@ -314,6 +318,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(IsGCashVisible));
             OnPropertyChanged(nameof(IsMayaVisible));
             OnPropertyChanged(nameof(IsReferenceNumberVisible));
+            OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
@@ -340,6 +345,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(IsGCashVisible));
             OnPropertyChanged(nameof(IsMayaVisible));
             OnPropertyChanged(nameof(IsReferenceNumberVisible));
+            OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
@@ -366,6 +372,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(IsGCashVisible));
             OnPropertyChanged(nameof(IsMayaVisible));
             OnPropertyChanged(nameof(IsReferenceNumberVisible));
+            OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
