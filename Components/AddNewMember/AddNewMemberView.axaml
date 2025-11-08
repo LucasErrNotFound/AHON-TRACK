@@ -325,6 +325,18 @@
 											</ToggleButton>
 										</StackPanel>
 									</Grid>
+									<StackPanel 
+										Orientation="Horizontal" 
+										Margin="0,25,0,0" 
+										IsVisible="{CompiledBinding IsReferenceNumberVisible}">
+										<TextBlock
+											Text="Reference Number: "
+											Classes="h4" />
+										<TextBox
+											Classes="Clearable"
+											Text="{CompiledBinding ReferenceNumber}"
+											Width="280"/>
+									</StackPanel>
 									<Button
 										HorizontalAlignment="Right"
 										VerticalAlignment="Center"
@@ -937,6 +949,18 @@
 											</ToggleButton>
 										</StackPanel>
 									</Grid>
+									<StackPanel 
+										Orientation="Horizontal" 
+										Margin="0,25,0,0" 
+										IsVisible="{CompiledBinding IsReferenceNumberVisible}">
+										<TextBlock
+											Text="Reference Number: "
+											Classes="h4" />
+										<TextBox
+											Classes="Clearable"
+											Text="{CompiledBinding ReferenceNumber}"
+											Width="280"/>
+									</StackPanel>
 									<Button
 										HorizontalAlignment="Right"
 										VerticalAlignment="Center"

@@ -67,6 +67,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     private string? _memberGender = string.Empty;
     private string _memberContactNumber = string.Empty;
     private int? _memberAge;
+    private string? _referenceNumber = string.Empty;
     private int _selectedMemberId = 0;
     private DateTime? _memberBirthDate;
     private DateTime _currentMemberValidUntil = DateTime.MinValue;
@@ -88,6 +89,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     public bool IsCashVisible => IsCashSelected;
     public bool IsGCashVisible => IsGCashSelected;
     public bool IsMayaVisible => IsMayaSelected;
+    public bool IsReferenceNumberVisible => IsMayaSelected || IsGCashSelected;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -267,6 +269,18 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             _ = AutoSelectMonthlyPackageAsync();
         }
     }
+    
+    [Required(ErrorMessage = "Reference number is required")]
+    [RegularExpression(@"^\d{13}$", ErrorMessage = "Reference number must be 13 digits long")]
+    public string? ReferenceNumber 
+    {
+        get => _referenceNumber;
+        set
+        {
+            SetProperty(ref _referenceNumber, value, true);
+            OnPropertyChanged(nameof(IsPaymentPossible));
+        } 
+    }
 
     private byte[]? _profileImage;
     public byte[]? ProfileImage
@@ -299,6 +313,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(IsCashVisible));
             OnPropertyChanged(nameof(IsGCashVisible));
             OnPropertyChanged(nameof(IsMayaVisible));
+            OnPropertyChanged(nameof(IsReferenceNumberVisible));
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
@@ -315,6 +330,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 _isCashSelected = false;
                 _isMayaSelected = false;
+                ReferenceNumber = string.Empty;
             }
 
             OnPropertyChanged();
@@ -323,6 +339,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(IsCashVisible));
             OnPropertyChanged(nameof(IsGCashVisible));
             OnPropertyChanged(nameof(IsMayaVisible));
+            OnPropertyChanged(nameof(IsReferenceNumberVisible));
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
@@ -339,6 +356,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 _isCashSelected = false;
                 _isGCashSelected = false;
+                ReferenceNumber = string.Empty;
             }
 
             OnPropertyChanged();
@@ -347,6 +365,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(IsCashVisible));
             OnPropertyChanged(nameof(IsGCashVisible));
             OnPropertyChanged(nameof(IsMayaVisible));
+            OnPropertyChanged(nameof(IsReferenceNumberVisible));
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
@@ -1023,14 +1042,21 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                                   && !string.IsNullOrWhiteSpace(MemberLastName)
                                   && !string.IsNullOrWhiteSpace(MemberContactNumber)
                                   && ContactNumberRegex().IsMatch(MemberContactNumber)
-                                  && (MemberAge >= 3 && MemberAge <= 100)
+                                  && MemberAge >= 3 && MemberAge <= 100
                                   && !string.IsNullOrWhiteSpace(MemberGender);
 
             bool hasValidQuantity = (MembershipDuration.HasValue && MembershipDuration > 0);
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
             bool hasPackage = SelectedMonthlyPackage != null;
+            
+            bool hasValidReferenceNumber = true;
+            if (IsGCashSelected || IsMayaSelected)
+            {
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber) 
+                                          && ReferenceNumberRegex().IsMatch(ReferenceNumber);
+            }
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod && hasPackage;
+            return hasValidInputs && hasValidQuantity && hasPaymentMethod && hasPackage && hasValidReferenceNumber;
         }
     }
 
@@ -1199,6 +1225,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
+    
+    [GeneratedRegex(@"^\d{13}$")]
+    private static partial Regex ReferenceNumberRegex();
 
     public event Action? ImageResetRequested;
     
