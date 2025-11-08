@@ -1213,7 +1213,6 @@ namespace AHON_TRACK.Services
                 using var cmd = new SqlCommand(
                     @"SELECT COUNT(*) FROM Equipment 
               WHERE (Condition = 'Repairing' OR Condition = 'Broken')
-              OR Status = 'Active'
               AND IsDeleted = 0", conn);
 
                 return (int)await cmd.ExecuteScalarAsync();
@@ -1315,7 +1314,6 @@ namespace AHON_TRACK.Services
                     @"SELECT EquipmentID, EquipmentName, Condition, Quantity 
               FROM Equipment 
               WHERE (Condition = 'Repairing' OR Condition = 'Broken')
-              OR Status = 'Active'
               AND IsDeleted = 0
               ORDER BY 
                 CASE Condition 
