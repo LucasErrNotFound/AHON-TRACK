@@ -1023,7 +1023,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                                   && !string.IsNullOrWhiteSpace(MemberLastName)
                                   && !string.IsNullOrWhiteSpace(MemberContactNumber)
                                   && ContactNumberRegex().IsMatch(MemberContactNumber)
-                                  && (MemberAge >= 18 && MemberAge <= 80)
+                                  && (MemberAge >= 3 && MemberAge <= 100)
                                   && !string.IsNullOrWhiteSpace(MemberGender);
 
             bool hasValidQuantity = (MembershipDuration.HasValue && MembershipDuration > 0);
