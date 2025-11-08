@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -118,6 +119,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private bool _isMayaSelected;
+    
+    private string? _referenceNumber = string.Empty;
 
     [ObservableProperty]
     private string _currentTransactionId = "GM-2025-001234";
@@ -193,6 +196,18 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         eventService.PackageAdded += OnPackageDataChanged;
         eventService.PackageUpdated += OnPackageDataChanged;
         eventService.PackageDeleted += OnPackageDataChanged;
+    }
+    
+    [Required(ErrorMessage = "Reference number is required")]
+    [RegularExpression(@"^\d{13}$", ErrorMessage = "Reference number must be 13 digits long")]
+    public string? ReferenceNumber 
+    {
+        get => _referenceNumber;
+        set
+        {
+            SetProperty(ref _referenceNumber, value, true);
+            OnPropertyChanged(nameof(IsPaymentPossible));
+        } 
     }
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
@@ -1049,8 +1064,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             IsCashSelected = false;
             IsMayaSelected = false;
+            ReferenceNumber = string.Empty;
         }
         OnPropertyChanged(nameof(IsPaymentPossible));
+        OnPropertyChanged(nameof(IsReferenceNumberVisible));
     }
 
     partial void OnIsMayaSelectedChanged(bool value)
@@ -1059,14 +1076,33 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             IsCashSelected = false;
             IsGCashSelected = false;
+            ReferenceNumber = string.Empty;
         }
         OnPropertyChanged(nameof(IsPaymentPossible));
+        OnPropertyChanged(nameof(IsReferenceNumberVisible));
     }
 
-    public bool IsPaymentPossible =>
-        SelectedCustomer != null &&
-        !IsCartEmpty &&
-        (IsCashSelected || IsGCashSelected || IsMayaSelected);
+    public bool IsReferenceNumberVisible => IsGCashSelected || IsMayaSelected;
+
+    public bool IsPaymentPossible
+    {
+        get
+        {
+            bool hasCustomer = SelectedCustomer != null;
+            bool hasItems = !IsCartEmpty;
+            bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
+
+            bool hasValidReferenceNumber = true;
+            if (IsGCashSelected || IsMayaSelected)
+            {
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber) 
+                                          && ReferenceNumber.Length == 13
+                                          && ReferenceNumber.All(char.IsDigit);
+            }
+
+            return hasCustomer && hasItems && hasPaymentMethod && hasValidReferenceNumber;
+        }
+    }
 
     protected override void DisposeManagedResources()
     {

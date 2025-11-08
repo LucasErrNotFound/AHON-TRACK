@@ -301,7 +301,7 @@
 											Classes="h4" />
 										<TextBox
 											Classes="Clearable"
-											Text="{CompiledBinding ReferenceNumber}"
+											Text="{CompiledBinding ReferenceNumber, Mode=TwoWay}"
 											Width="280"/>
 									</StackPanel>
 									<Button
@@ -914,7 +914,7 @@
 											Classes="h4" />
 										<TextBox
 											Classes="Clearable"
-											Text="{CompiledBinding ReferenceNumber}"
+											Text="{CompiledBinding ReferenceNumber, Mode=TwoWay}"
 											Width="280"/>
 									</StackPanel>
 									<Button

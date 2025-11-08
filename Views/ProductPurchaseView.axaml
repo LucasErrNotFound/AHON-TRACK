@@ -229,6 +229,25 @@
 												</ToggleButton>
 											</StackPanel>
 										</Grid>
+										<StackPanel 
+											Orientation="Horizontal" 
+											Spacing="20"
+											Margin="0,20,0,0"
+											IsVisible="{CompiledBinding IsReferenceNumberVisible}">
+											<TextBlock
+												Classes="h4"
+												Text="Reference No.:"
+												TextAlignment="Right"
+												TextWrapping="WrapWithOverflow"
+												HorizontalAlignment="Right"
+												VerticalAlignment="Center" />
+											<TextBox
+												Classes="Clearable"
+												Text="{CompiledBinding ReferenceNumber, Mode=TwoWay}"
+												Watermark="13-digit reference"
+												MaxLength="13"
+												Width="250"/>
+										</StackPanel>
 									</StackPanel>
 									<Separator Background="{StaticResource ForegroundColor}" Margin="0,0,20,0" />
 									<StackPanel Spacing="10">
@@ -567,6 +586,25 @@
 												</ToggleButton>
 											</StackPanel>
 										</Grid>
+										<StackPanel 
+											Orientation="Horizontal" 
+											Spacing="20"
+											Margin="0,20,0,0"
+											IsVisible="{CompiledBinding IsReferenceNumberVisible}">
+											<TextBlock
+												Classes="h4"
+												Text="Reference No.:"
+												TextAlignment="Right"
+												TextWrapping="WrapWithOverflow"
+												HorizontalAlignment="Right"
+												VerticalAlignment="Center" />
+											<TextBox
+												Classes="Clearable"
+												Text="{CompiledBinding ReferenceNumber, Mode=TwoWay}"
+												Watermark="13-digit reference"
+												MaxLength="13"
+												Width="250"/>
+										</StackPanel>
 									</StackPanel>
 									<Separator Background="{StaticResource ForegroundColor}" Margin="0,0,20,0" />
 									<StackPanel Spacing="10">
