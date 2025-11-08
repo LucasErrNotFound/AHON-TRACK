@@ -45,7 +45,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     private string _trainingSessionsSummary = "You have 0 upcoming training schedules this week";
     private string _recentLogsSummary = "You have 0 recent action logs today";
 
-    public string SelectedYearDisplay => _selectedDate?.Year + " Sales Overview";
+    public string SelectedYearDisplay => _selectedDate?.Year + " Revenue Overview";
 
     public event EventHandler RecentLogsUpdated;
     public void NotifyRecentLogsUpdated() => RecentLogsUpdated?.Invoke(this, EventArgs.Empty);
