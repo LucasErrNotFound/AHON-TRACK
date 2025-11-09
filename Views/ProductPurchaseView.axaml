@@ -240,7 +240,7 @@
 												TextAlignment="Right"
 												TextWrapping="WrapWithOverflow"
 												HorizontalAlignment="Right"
-												VerticalAlignment="Center" />
+												VerticalAlignment="Top" />
 											<TextBox
 												Classes="Clearable"
 												Text="{CompiledBinding ReferenceNumber, Mode=TwoWay}"
@@ -597,7 +597,7 @@
 												TextAlignment="Right"
 												TextWrapping="WrapWithOverflow"
 												HorizontalAlignment="Right"
-												VerticalAlignment="Center" />
+												VerticalAlignment="Top" />
 											<TextBox
 												Classes="Clearable"
 												Text="{CompiledBinding ReferenceNumber, Mode=TwoWay}"

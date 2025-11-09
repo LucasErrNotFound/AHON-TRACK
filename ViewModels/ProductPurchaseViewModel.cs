@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AHON_TRACK.Services.Events;
+using AHON_TRACK.Validators;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -198,8 +199,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         eventService.PackageDeleted += OnPackageDataChanged;
     }
     
-    [Required(ErrorMessage = "Reference number is required")]
-    [RegularExpression(@"^\d{13}$", ErrorMessage = "Reference number must be 13 digits long")]
+    [UppercaseReferenceNumberValidator]
     public string? ReferenceNumber 
     {
         get => _referenceNumber;
@@ -1054,6 +1054,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             IsGCashSelected = false;
             IsMayaSelected = false;
+            ReferenceNumber = null;
         }
         OnPropertyChanged(nameof(IsPaymentPossible));
     }
@@ -1064,7 +1065,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             IsCashSelected = false;
             IsMayaSelected = false;
-            ReferenceNumber = string.Empty;
         }
         OnPropertyChanged(nameof(IsPaymentPossible));
         OnPropertyChanged(nameof(IsReferenceNumberVisible));
@@ -1076,7 +1076,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             IsCashSelected = false;
             IsGCashSelected = false;
-            ReferenceNumber = string.Empty;
         }
         OnPropertyChanged(nameof(IsPaymentPossible));
         OnPropertyChanged(nameof(IsReferenceNumberVisible));
