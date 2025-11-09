@@ -80,15 +80,30 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         _logWalkInPurchaseViewModel = logWalkInPurchaseViewModel;
         _checkInOutService = checkInOutService;
 
-        /*LoadSampleData();
-        UpdateWalkInCounts();
-        UpdateMemberCounts();*/
-        Debug.WriteLine($"SystemService is null: {checkInOutService == null}");
+        // Initialize collections
+        WalkInPersons = new ObservableCollection<WalkInPerson>();
+        MemberPersons = new ObservableCollection<MemberPerson>();
+        OriginalWalkInData = new List<WalkInPerson>();
+        OriginalMemberData = new List<MemberPerson>();
+        CurrentWalkInFilteredData = new List<WalkInPerson>();
+        CurrentMemberFilteredData = new List<MemberPerson>();
 
         SubscribeToEvents();
-        // Load actual data from service
-        _ = LoadDataAsync();
 
+        // Load data asynchronously
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await LoadCheckInDataFromService(SelectedDate);
+                UpdateWalkInCounts();
+                UpdateMemberCounts();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Constructor] Error loading initial data: {ex.Message}");
+            }
+        });
     }
 
     public CheckInOutViewModel()
@@ -100,8 +115,16 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         _logWalkInPurchaseViewModel = new LogWalkInPurchaseViewModel();
         _checkInOutService = null!;
 
+        // Initialize collections
+        WalkInPersons = new ObservableCollection<WalkInPerson>();
+        MemberPersons = new ObservableCollection<MemberPerson>();
+        OriginalWalkInData = new List<WalkInPerson>();
+        OriginalMemberData = new List<MemberPerson>();
+        CurrentWalkInFilteredData = new List<WalkInPerson>();
+        CurrentMemberFilteredData = new List<MemberPerson>();
+
         SubscribeToEvents();
-        _ = LoadDataAsync();
+        _ = LoadCheckInDataFromService(SelectedDate);
         UpdateWalkInCounts();
         UpdateMemberCounts();
     }
@@ -112,12 +135,55 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         if (IsInitialized) return;
 
         SubscribeToEvents();
-        _ = LoadDataAsync();
-        /*LoadSampleData();
-        UpdateWalkInCounts();
-        UpdateMemberCounts();*/
+        _ = LoadCheckInDataFromService(SelectedDate);
         IsInitialized = true;
     }
+
+    #region INavigable Implementation
+
+    public async Task OnNavigatedToAsync()
+    {
+        Debug.WriteLine("[CheckInOutViewModel] OnNavigatedToAsync called");
+
+        if (_isLoadingDataFlag)
+        {
+            Debug.WriteLine("[CheckInOutViewModel] Already loading, skipping");
+            return;
+        }
+
+        try
+        {
+            _isLoadingDataFlag = true;
+            IsLoadingData = true;
+
+            // Reload data for the selected date
+            await LoadCheckInDataFromService(SelectedDate);
+
+            Debug.WriteLine($"[CheckInOutViewModel] Data reloaded: {WalkInPersons.Count} walk-ins, {MemberPersons.Count} members");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CheckInOutViewModel] Error loading data on navigation: {ex.Message}");
+            _toastManager?.CreateToast("Load Error")
+                .WithContent($"Failed to load check-in data: {ex.Message}")
+                .ShowError();
+        }
+        finally
+        {
+            _isLoadingDataFlag = false;
+            IsLoadingData = false;
+        }
+    }
+
+    public Task OnNavigatedFromAsync()
+    {
+        Debug.WriteLine("[CheckInOutViewModel] OnNavigatedFromAsync called");
+        return Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Event Subscriptions
 
     private void SubscribeToEvents()
     {
@@ -130,15 +196,27 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
     {
-        if (_isLoadingDataFlag) return; // Prevent overlapping loads
+        Debug.WriteLine("[OnCheckInOutDataChanged] Event triggered");
+
+        // Small delay to ensure DB operations complete
+        await Task.Delay(100);
+
+        if (_isLoadingDataFlag)
+        {
+            Debug.WriteLine("[OnCheckInOutDataChanged] Already loading, skipping");
+            return;
+        }
+
         try
         {
             _isLoadingDataFlag = true;
-            await LoadDataAsync();
+            await LoadCheckInDataFromService(SelectedDate);
+            Debug.WriteLine($"[OnCheckInOutDataChanged] Data refreshed: {WalkInPersons.Count} walk-ins, {MemberPersons.Count} members");
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+            Debug.WriteLine($"[OnCheckInOutDataChanged] Error: {ex.Message}");
+            _toastManager?.CreateToast($"Failed to refresh: {ex.Message}");
         }
         finally
         {
@@ -146,62 +224,42 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         }
     }
 
-    private async Task LoadDataAsync()
-    {
-        if (_isLoadingDataFlag) return; // ✅ Prevent duplicate loads
+    #endregion
 
-        _isLoadingDataFlag = true;
-
-        try
-        {
-            IsLoadingData = true;
-            await LoadCheckInDataFromService(SelectedDate);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error loading data from service: {ex.Message}");
-            // Fallback to sample data if service fails
-            LoadSampleData();
-            UpdateWalkInCounts();
-            UpdateMemberCounts();
-
-            _toastManager.CreateToast("Data Load Warning")
-                .WithContent("Using sample data - service unavailable")
-                .ShowWarning();
-        }
-        finally
-        {
-            IsLoadingData = false;
-            _isLoadingDataFlag = false; // ✅ Reset flag
-        }
-    }
+    #region Data Loading
 
     private async Task LoadCheckInDataFromService(DateTime date)
     {
         if (_checkInOutService == null)
         {
+            Debug.WriteLine("[LoadCheckInDataFromService] Service is null, loading sample data");
             LoadSampleData();
             return;
         }
 
         try
         {
+            Debug.WriteLine($"[LoadCheckInDataFromService] Loading data for {date:yyyy-MM-dd}");
+
             // Load member check-ins from service
             var memberCheckIns = await _checkInOutService.GetMemberCheckInsAsync(date);
-            OriginalMemberData = memberCheckIns;
+            OriginalMemberData = memberCheckIns ?? new List<MemberPerson>();
+            Debug.WriteLine($"[LoadCheckInDataFromService] Loaded {OriginalMemberData.Count} member check-ins from service");
 
             // Load walk-in check-ins from service  
             var walkInCheckIns = await _checkInOutService.GetWalkInCheckInsAsync(date);
-            OriginalWalkInData = walkInCheckIns;
+            OriginalWalkInData = walkInCheckIns ?? new List<WalkInPerson>();
+            Debug.WriteLine($"[LoadCheckInDataFromService] Loaded {OriginalWalkInData.Count} walk-in check-ins from service");
 
             // Apply date filter to populate the observable collections
-            // ✅ FilterDataByDate already handles unsubscribe correctly - no changes needed
             FilterDataByDate(date);
+
+            Debug.WriteLine($"[LoadCheckInDataFromService] After filter: {WalkInPersons.Count} walk-ins, {MemberPersons.Count} members visible");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error loading check-in data from service: {ex.Message}");
-            _toastManager.CreateToast("Service Error")
+            Debug.WriteLine($"[LoadCheckInDataFromService] Error: {ex.Message}");
+            _toastManager?.CreateToast("Service Error")
                 .WithContent($"Failed to load check-in data: {ex.Message}")
                 .ShowError();
             throw;
@@ -210,6 +268,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     private void LoadSampleData()
     {
+        Debug.WriteLine("[LoadSampleData] Loading sample data");
+
         var walkInPeople = GetSampleWalkInPeople();
         var memberPeople = GetSampleMemberPeople();
 
@@ -217,38 +277,19 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         OriginalMemberData = memberPeople;
 
         FilterDataByDate(SelectedDate);
-
-        /*
-		CurrentWalkInFilteredData = [..walkInPeople];
-		CurrentMemberFilteredData = [..memberPeople];
-		
-		WalkInPersons.Clear();
-		MemberPersons.Clear();
-
-		foreach (var walkIn in walkInPeople)
-		{
-			walkIn.PropertyChanged += OnWalkInPropertyChanged;
-			WalkInPersons.Add(walkIn);
-		}
-		
-		foreach (var member in memberPeople)
-		{
-			member.PropertyChanged += OnMemberPropertyChanged;
-			MemberPersons.Add(member);
-		}
-		
-		TotalCount = WalkInPersons.Count;
-		TotalCount = MemberPersons.Count;
-		*/
     }
+
+    #endregion
+
+    #region Sample Data
 
     private List<WalkInPerson> GetSampleWalkInPeople()
     {
         var today = DateTime.Today;
         return
         [
-			// Today's data
-			new WalkInPerson
+            // Today's data
+            new WalkInPerson
             {
                 ID = 1018, FirstName = "Rome", LastName = "Calubayan", Age = 21, ContactNumber = "09283374574",
                 PackageType = "Gym", DateAttendance = today, CheckInTime = today.AddHours(8), CheckOutTime = null
@@ -264,8 +305,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                 PackageType = "Boxing", DateAttendance = today, CheckInTime = today.AddHours(10), CheckOutTime = null
             },
         
-			// Yesterday's data
-			new WalkInPerson
+            // Yesterday's data
+            new WalkInPerson
             {
                 ID = 1015, FirstName = "JC", LastName = "Casidor", Age = 30, ContactNumber = "09123456789",
                 PackageType = "Boxing", DateAttendance = today.AddDays(-1), CheckInTime = today.AddHours(8), CheckOutTime = null
@@ -283,8 +324,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                 CheckOutTime = null
             },
         
-			// 2 days ago
-			new WalkInPerson
+            // 2 days ago
+            new WalkInPerson
             {
                 ID = 1012, FirstName = "Marc", LastName = "Torres", Age = 26, ContactNumber = "09123456789",
                 PackageType = "Boxing", DateAttendance = today.AddDays(-2), CheckInTime = today.AddHours(8), CheckOutTime = null
@@ -302,8 +343,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                 CheckOutTime = null
             },
         
-			// 3 days ago
-			new WalkInPerson
+            // 3 days ago
+            new WalkInPerson
             {
                 ID = 1009, FirstName = "JL", LastName = "Taberdo", Age = 21, ContactNumber = "09123456789",
                 PackageType = "CrossFit", DateAttendance = today.AddDays(-3), CheckInTime = today.AddHours(8),
@@ -322,8 +363,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                 CheckOutTime = null
             },
         
-			// 4 days ago
-			new WalkInPerson
+            // 4 days ago
+            new WalkInPerson
             {
                 ID = 1006, FirstName = "Marion", LastName = "Dela Roca", Age = 20, ContactNumber = "09123456789",
                 PackageType = "Boxing", DateAttendance = today.AddDays(-4), CheckInTime = today.AddHours(8), CheckOutTime = null
@@ -339,8 +380,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                 PackageType = "Boxing", DateAttendance = today.AddDays(-4), CheckInTime = today.AddHours(10), CheckOutTime = null
             },
         
-			// 5 days ago
-			new WalkInPerson
+            // 5 days ago
+            new WalkInPerson
             {
                 ID = 1003, FirstName = "Mark", LastName = "Dela Cruz", Age = 21, ContactNumber = "09123456789",
                 PackageType = "Muay Thai", DateAttendance = today.AddDays(-5), CheckInTime = today.AddHours(8),
@@ -365,8 +406,8 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         var today = DateTime.Today;
         return
         [
-			// Today's data
-			new MemberPerson
+            // Today's data
+            new MemberPerson
             {
                 ID = 2006, AvatarSource = ManageMemberModel.DefaultAvatarSource,
                 FirstName = "Mardie", LastName = "Dela Cruz", ContactNumber = "09123456789",
@@ -380,24 +421,24 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                 CheckInTime = today.AddHours(9), DateAttendance = today, CheckOutTime = null
             },
         
-			// Yesterday's data
-			new MemberPerson
+            // Yesterday's data
+            new MemberPerson
             {
                 ID = 2004, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Raymart", LastName = "Soneja",
                 ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Expired",
                 DateAttendance = today.AddDays(-1), CheckInTime = today.AddHours(8), CheckOutTime = null
             },
         
-			// 2 days ago
-			new MemberPerson
+            // 2 days ago
+            new MemberPerson
             {
                 ID = 2003, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Xyrus", LastName = "Jawili",
                 ContactNumber = "09123456789", MembershipType = "Gym Member", Status = "Active",
                 DateAttendance = today.AddDays(-2), CheckInTime = today.AddHours(8), CheckOutTime = null
             },
         
-			// 3 days ago
-			new MemberPerson
+            // 3 days ago
+            new MemberPerson
             {
                 ID = 2002, AvatarSource = ManageMemberModel.DefaultAvatarSource, FirstName = "Nash", LastName = "Floralde",
                 ContactNumber = "09123456789", MembershipType = "Free Trial", Status = "Expired",
@@ -411,6 +452,10 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
             }
         ];
     }
+
+    #endregion
+
+    #region Commands
 
     [RelayCommand]
     private async Task AddMemberPerson()
@@ -489,7 +534,6 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
             IsLoadingData = false;
         }
     }
-
 
     [RelayCommand]
     private async Task StampWalkInCheckOut(WalkInPerson? walkIn)
@@ -574,11 +618,15 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
             return;
         }
 
-        // ✅ Set the shared date BEFORE navigating
+        // Set the shared date BEFORE navigating
         NavigationDate.SelectedCheckInDate = SelectedDate;
 
         _pageManager.Navigate<LogWalkInPurchaseViewModel>();
     }
+
+    #endregion
+
+    #region Property Changed Handlers
 
     private void OnWalkInPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -598,6 +646,9 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
     partial void OnSelectedDateChanged(DateTime value)
     {
+        Debug.WriteLine($"[OnSelectedDateChanged] Date changed to {value:yyyy-MM-dd}");
+        Debug.WriteLine($"[OnSelectedDateChanged] Original data count: Walk-ins={OriginalWalkInData?.Count ?? 0}, Members={OriginalMemberData?.Count ?? 0}");
+
         // Update CanCheckIn based on selected date
         CanCheckIn = value.Date == DateTime.Today;
 
@@ -607,44 +658,71 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         // Show warning if trying to view non-today date
         if (!CanCheckIn)
         {
-            _toastManager.CreateToast("View Only Mode")
+            _toastManager?.CreateToast("View Only Mode")
                 .WithContent("You can only check in members for today's date. Currently viewing historical data.")
                 .ShowInfo();
         }
     }
 
+    #endregion
+
+    #region Filtering and Counts
+
     private void FilterDataByDate(DateTime selectedDate)
     {
-        var filteredWalkInData = OriginalWalkInData
+        Debug.WriteLine($"[FilterDataByDate] Filtering for date: {selectedDate:yyyy-MM-dd}");
+        Debug.WriteLine($"[FilterDataByDate] Before filter - Original Walk-ins: {OriginalWalkInData?.Count ?? 0}, Original Members: {OriginalMemberData?.Count ?? 0}");
+
+        // Filter walk-in data
+        var filteredWalkInData = (OriginalWalkInData ?? new List<WalkInPerson>())
             .Where(w => w.DateAttendance?.Date == selectedDate.Date)
             .ToList();
 
         CurrentWalkInFilteredData = filteredWalkInData;
+        Debug.WriteLine($"[FilterDataByDate] Filtered walk-ins: {filteredWalkInData.Count}");
 
-        WalkInPersons.Clear();
-        foreach (var walkIn in filteredWalkInData)
+        // Unsubscribe all existing handlers first
+        foreach (var walkIn in WalkInPersons.ToList())
         {
             walkIn.PropertyChanged -= OnWalkInPropertyChanged;
+        }
+
+        WalkInPersons.Clear();
+
+        // Add new data with handlers
+        foreach (var walkIn in filteredWalkInData)
+        {
             walkIn.PropertyChanged += OnWalkInPropertyChanged;
             WalkInPersons.Add(walkIn);
         }
 
-        var filteredMemberData = OriginalMemberData
+        // Filter member data
+        var filteredMemberData = (OriginalMemberData ?? new List<MemberPerson>())
             .Where(m => m.DateAttendance?.Date == selectedDate.Date)
             .ToList();
 
         CurrentMemberFilteredData = filteredMemberData;
+        Debug.WriteLine($"[FilterDataByDate] Filtered members: {filteredMemberData.Count}");
 
-        MemberPersons.Clear();
-        foreach (var member in filteredMemberData)
+        // Unsubscribe all existing handlers first
+        foreach (var member in MemberPersons.ToList())
         {
             member.PropertyChanged -= OnMemberPropertyChanged;
+        }
+
+        MemberPersons.Clear();
+
+        // Add new data with handlers
+        foreach (var member in filteredMemberData)
+        {
             member.PropertyChanged += OnMemberPropertyChanged;
             MemberPersons.Add(member);
         }
 
         UpdateWalkInCounts();
         UpdateMemberCounts();
+
+        Debug.WriteLine($"[FilterDataByDate] After filter - WalkInPersons: {WalkInPersons.Count}, MemberPersons: {MemberPersons.Count}");
     }
 
     private void UpdateWalkInCounts()
@@ -663,10 +741,14 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
         SelectAll = MemberPersons.Count > 0 && MemberPersons.All(x => x.IsSelected);
     }
 
-    // Add to CheckInOutViewModel class
+    #endregion
+
+    #region Dispose
 
     protected override void DisposeManagedResources()
     {
+        Debug.WriteLine("[CheckInOutViewModel] Disposing resources");
+
         // Unsubscribe from events
         var eventService = DashboardEventService.Instance;
         eventService.CheckinAdded -= OnCheckInOutDataChanged;
@@ -694,7 +776,11 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
         base.DisposeManagedResources();
     }
+
+    #endregion
 }
+
+#region Person Models
 
 public partial class WalkInPerson : ObservableObject
 {
@@ -769,6 +855,7 @@ public partial class MemberPerson : ViewModelBase
         "expired" => "● Expired",
         _ => Status ?? ""
     };
+
     public void OnStatusChanged(string value)
     {
         OnPropertyChanged(nameof(StatusForeground));
@@ -776,3 +863,5 @@ public partial class MemberPerson : ViewModelBase
         OnPropertyChanged(nameof(StatusDisplayText));
     }
 }
+
+#endregion
