@@ -323,8 +323,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         }
     }
     
-    [Required(ErrorMessage = "Reference number is required")]
-    [RegularExpression(@"^\d{13}$", ErrorMessage = "Reference number must be 13 digits long")]
+    [UppercaseReferenceNumberValidator]
     public string? ReferenceNumber 
     {
         get => _referenceNumber;
@@ -404,6 +403,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                     // Directly set backing fields to avoid triggering setters
                     _isGCashSelected = false;
                     _isMayaSelected = false;
+                    ReferenceNumber = null;
                     OnPropertyChanged(nameof(IsGCashSelected));
                     OnPropertyChanged(nameof(IsMayaSelected));
                 }
@@ -434,7 +434,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                     // Directly set backing fields to avoid triggering setters
                     _isCashSelected = false;
                     _isMayaSelected = false;
-                    ReferenceNumber = string.Empty;
                     OnPropertyChanged(nameof(IsCashSelected));
                     OnPropertyChanged(nameof(IsMayaSelected));
                 }
@@ -465,7 +464,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                     // Directly set backing fields to avoid triggering setters
                     _isCashSelected = false;
                     _isGCashSelected = false;
-                    ReferenceNumber = string.Empty;
                     OnPropertyChanged(nameof(IsCashSelected));
                     OnPropertyChanged(nameof(IsGCashSelected));
                 }
@@ -536,10 +534,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 && WalkInAge >= 3 && WalkInAge <= 100
                 && !string.IsNullOrWhiteSpace(WalkInGender)
                 && !string.IsNullOrWhiteSpace(SelectedWalkInTypeItem)
-                && !string.IsNullOrWhiteSpace(SelectedSpecializedPackageItem);
+                && !string.IsNullOrWhiteSpace(SelectedSpecializedPackageItem)
+                && SelectedSpecializedPackageItem != "None";
 
-            bool hasValidQuantity = SelectedSpecializedPackageItem == "None" ||
-                                   (SpecializedPackageQuantity.HasValue && SpecializedPackageQuantity > 0);
+            bool hasValidQuantity = SpecializedPackageQuantity.HasValue && SpecializedPackageQuantity > 0;
 
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
 
@@ -906,7 +904,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
     
-    [GeneratedRegex(@"^\d{13}$")]
+    [GeneratedRegex(@"^[A-Z0-9]{12,13}$")]
     private static partial Regex ReferenceNumberRegex();
 
     protected override void DisposeManagedResources()
