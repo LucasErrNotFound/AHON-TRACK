@@ -1060,13 +1060,19 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
             // ✅ VALIDATE REFERENCE NUMBER FOR GCASH/MAYA
             bool hasValidReferenceNumber = true;
-            if (IsGCashSelected || IsMayaSelected)
+            if (IsGCashSelected)
             {
                 hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber)
-                                          && ReferenceNumberRegex().IsMatch(ReferenceNumber);
+                                          && GCashReferenceRegex().IsMatch(ReferenceNumber);
+            }
+            else if (IsMayaSelected)
+            {
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber)
+                                          && MayaReferenceRegex().IsMatch(ReferenceNumber);
             }
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod && hasPackage && hasValidReferenceNumber;
+            return hasValidInputs && hasValidQuantity && hasPaymentMethod
+                   && hasPackage && hasValidReferenceNumber;
         }
     }
 
@@ -1227,8 +1233,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
 
+    // GCash: Exactly 13 digits
     [GeneratedRegex(@"^\d{13}$")]
-    private static partial Regex ReferenceNumberRegex();
+    private static partial Regex GCashReferenceRegex();
+
+    // Maya: Exactly 12 alphanumeric characters
+    [GeneratedRegex(@"^\d{6}$")]
+    private static partial Regex MayaReferenceRegex();
 
     public event Action? ImageResetRequested;
 

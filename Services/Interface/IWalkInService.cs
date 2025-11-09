@@ -19,5 +19,6 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message, int DeletedCount)> DeleteMultipleWalkInCustomersAsync(List<int> customerIds);
         Task<(bool Success, bool HasUsedFreeTrial, string Message)> CheckFreeTrialEligibilityAsync(string firstName, string lastName, string? contactNumber);
         Task<List<SellingModel>> GetAvailablePackagesForWalkInAsync(string? walkInType = null);
+        (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(ManageWalkInModel walkIn);
     }
 }

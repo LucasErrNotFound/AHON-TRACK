@@ -20,6 +20,7 @@ namespace AHON_TRACK.Models
         public string? WalkInType { get; set; }
         public string? WalkInPackage { get; set; }
         public string? PaymentMethod { get; set; }
+        public string? ReferenceNumber { get; set; }
         public int? Quantity { get; set; } // If the Walk In Package choosen is Boxing, Muay Thai, Cross Fit
         public decimal? TotalAmount { get; set; }
 

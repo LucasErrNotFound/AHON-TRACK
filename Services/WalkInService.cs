@@ -56,6 +56,104 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region PAYMENT & REFERENCE NUMBER HANDLING
+
+        /// <summary>
+        /// Processes reference number based on payment method:
+        /// - Cash → "PAID"
+        /// - GCash/Maya → User-provided reference number
+        /// - Other → Reference number as-is or empty
+        /// </summary>
+        private string ProcessReferenceNumber(ManageWalkInModel walkIn)
+        {
+            // Normalize payment method to uppercase for comparison
+            string paymentMethod = walkIn.PaymentMethod?.Trim().ToUpper() ?? "";
+
+            // If payment method is CASH, store "PAID"
+            if (paymentMethod == "CASH")
+            {
+                Debug.WriteLine("[ProcessReferenceNumber] Cash payment detected - storing 'PAID'");
+                return "PAID";
+            }
+
+            // If payment method is GCash or Maya, use the user-provided reference number
+            if (paymentMethod == "GCASH" || paymentMethod == "MAYA")
+            {
+                string refNumber = walkIn.ReferenceNumber?.Trim() ?? "";
+
+                if (string.IsNullOrWhiteSpace(refNumber))
+                {
+                    Debug.WriteLine($"[ProcessReferenceNumber] Warning: {paymentMethod} payment but no reference number provided");
+                    return $"{paymentMethod}_NO_REF";
+                }
+
+                Debug.WriteLine($"[ProcessReferenceNumber] {paymentMethod} payment - Reference: {refNumber}");
+                return refNumber;
+            }
+
+            // For other payment methods, return the reference number as-is or empty
+            Debug.WriteLine($"[ProcessReferenceNumber] Other payment method: {paymentMethod}");
+            return walkIn.ReferenceNumber?.Trim() ?? "";
+        }
+
+        /// <summary>
+        /// Validates payment method and reference number before saving walk-in customer.
+        /// Call this from your ViewModel before saving.
+        /// </summary>
+        public (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(ManageWalkInModel walkIn)
+        {
+            if (string.IsNullOrWhiteSpace(walkIn.PaymentMethod))
+            {
+                return (false, "Payment method is required.");
+            }
+
+            string paymentMethod = walkIn.PaymentMethod.Trim().ToUpper();
+
+            // Cash doesn't need reference number
+            if (paymentMethod == "CASH")
+            {
+                return (true, "");
+            }
+
+            // GCash: 13 digits only
+            if (paymentMethod == "GCASH")
+            {
+                if (string.IsNullOrWhiteSpace(walkIn.ReferenceNumber))
+                {
+                    return (false, "GCash payment requires a reference number.");
+                }
+
+                string refNum = walkIn.ReferenceNumber.Trim();
+                if (refNum.Length != 13 || !refNum.All(char.IsDigit))
+                {
+                    return (false, "GCash reference number must be exactly 13 digits.");
+                }
+
+                return (true, "");
+            }
+
+            // Maya: 6 digits
+            if (paymentMethod == "MAYA")
+            {
+                if (string.IsNullOrWhiteSpace(walkIn.ReferenceNumber))
+                {
+                    return (false, "Maya payment requires a reference number.");
+                }
+
+                string refNum = walkIn.ReferenceNumber.Trim();
+                if (refNum.Length != 6 || !refNum.All(char.IsDigit))
+                {
+                    return (false, "Maya reference number must be exactly 6 digits.");
+                }
+
+                return (true, "");
+            }
+
+            return (true, "");
+        }
+
+        #endregion
+
         #region CREATE
 
         public async Task<(bool Success, string Message, int? CustomerID)> AddWalkInCustomerAsync(ManageWalkInModel walkIn, DateTime selectedDate)
@@ -267,34 +365,61 @@ namespace AHON_TRACK.Services
 
         private async Task<int> CreateNewCustomerAsync(SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn)
         {
+            // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
+            string processedRefNumber = ProcessReferenceNumber(walkIn);
+
             using var cmd = new SqlCommand(
                 @"INSERT INTO WalkInCustomers (FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, 
-                  WalkInType, WalkInPackage, PaymentMethod, Quantity, RegisteredByEmployeeID, IsDeleted) 
-                  OUTPUT INSERTED.CustomerID
-                  VALUES (@firstName, @middleInitial, @lastName, @contactNumber, @age, @gender, 
-                  @walkInType, @walkInPackage, @paymentMethod, @quantity, @employeeID, 0)", conn, transaction);
+          WalkInType, WalkInPackage, PaymentMethod, ReferenceNumber, Quantity, RegisteredByEmployeeID, IsDeleted) 
+          OUTPUT INSERTED.CustomerID
+          VALUES (@firstName, @middleInitial, @lastName, @contactNumber, @age, @gender, 
+          @walkInType, @walkInPackage, @paymentMethod, @referenceNumber, @quantity, @employeeID, 0)", conn, transaction);
 
-            AddWalkInParameters(cmd, walkIn);
+            cmd.Parameters.AddWithValue("@firstName", walkIn.FirstName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@middleInitial", walkIn.MiddleInitial ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@lastName", walkIn.LastName ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@contactNumber", walkIn.ContactNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@age", walkIn.Age);
+            cmd.Parameters.AddWithValue("@gender", walkIn.Gender ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@walkInType", walkIn.WalkInType ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@walkInPackage", walkIn.WalkInPackage ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@paymentMethod", walkIn.PaymentMethod ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@referenceNumber", string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
+            cmd.Parameters.AddWithValue("@quantity", walkIn.Quantity ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+            Debug.WriteLine($"[CreateNewCustomerAsync] Payment Method: {walkIn.PaymentMethod}");
+            Debug.WriteLine($"[CreateNewCustomerAsync] Reference Number: {processedRefNumber}");
+
             return (int)await cmd.ExecuteScalarAsync();
         }
 
         private async Task UpgradeToRegularAsync(SqlConnection conn, SqlTransaction transaction,
-            int customerId, ManageWalkInModel walkIn)
+    int customerId, ManageWalkInModel walkIn)
         {
+            // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
+            string processedRefNumber = ProcessReferenceNumber(walkIn);
+
             using var cmd = new SqlCommand(
                 @"UPDATE WalkInCustomers 
-                  SET WalkinType = @walkInType, WalkinPackage = @walkInPackage, PaymentMethod = @paymentMethod,
-                      Quantity = @quantity, Age = @age, Gender = @gender, MiddleInitial = @middleInitial
-                  WHERE CustomerID = @customerId", conn, transaction);
+          SET WalkinType = @walkInType, WalkinPackage = @walkInPackage, 
+              PaymentMethod = @paymentMethod, ReferenceNumber = @referenceNumber,
+              Quantity = @quantity, Age = @age, Gender = @gender, MiddleInitial = @middleInitial
+          WHERE CustomerID = @customerId", conn, transaction);
 
             cmd.Parameters.AddWithValue("@customerId", customerId);
             cmd.Parameters.AddWithValue("@walkInType", walkIn.WalkInType ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@walkInPackage", walkIn.WalkInPackage ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@paymentMethod", walkIn.PaymentMethod ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@referenceNumber",
+                string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
             cmd.Parameters.AddWithValue("@quantity", walkIn.Quantity ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@age", walkIn.Age);
             cmd.Parameters.AddWithValue("@gender", walkIn.Gender ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@middleInitial", walkIn.MiddleInitial ?? (object)DBNull.Value);
+
+            Debug.WriteLine($"[UpgradeToRegularAsync] Payment Method: {walkIn.PaymentMethod}");
+            Debug.WriteLine($"[UpgradeToRegularAsync] Reference Number: {processedRefNumber}");
 
             await cmd.ExecuteNonQueryAsync();
         }
@@ -313,7 +438,7 @@ namespace AHON_TRACK.Services
         }
 
         private async Task ProcessPackageSaleAsync(SqlConnection conn, SqlTransaction transaction,
-            int customerId, ManageWalkInModel walkIn)
+    int customerId, ManageWalkInModel walkIn)
         {
             var (packageId, price) = await GetPackageDetailsAsync(conn, transaction, walkIn.WalkInPackage);
 
@@ -321,9 +446,23 @@ namespace AHON_TRACK.Services
 
             decimal totalAmount = price * (walkIn.Quantity ?? 1);
 
-            await RecordSaleAsync(conn, transaction, packageId.Value, customerId, walkIn.Quantity ?? 1, totalAmount);
+            // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
+            string processedRefNumber = ProcessReferenceNumber(walkIn);
+
+            // ✅ PASS PAYMENT METHOD AND REFERENCE NUMBER TO SALES RECORD
+            await RecordSaleAsync(conn, transaction, packageId.Value, customerId,
+                walkIn.Quantity ?? 1, totalAmount, walkIn.PaymentMethod, processedRefNumber);
+
             await UpdateDailySalesAsync(conn, transaction, totalAmount);
+
+            Debug.WriteLine($"[ProcessPackageSaleAsync] Package sale processed:");
+            Debug.WriteLine($"  Package: {walkIn.WalkInPackage}");
+            Debug.WriteLine($"  Quantity: {walkIn.Quantity ?? 1}");
+            Debug.WriteLine($"  Total Amount: ₱{totalAmount:N2}");
+            Debug.WriteLine($"  Payment Method: {walkIn.PaymentMethod}");
+            Debug.WriteLine($"  Reference Number: {processedRefNumber}");
         }
+
 
         private async Task<(int? PackageId, decimal Price)> GetPackageDetailsAsync(
             SqlConnection conn, SqlTransaction transaction, string? packageName)
@@ -344,17 +483,29 @@ namespace AHON_TRACK.Services
         }
 
         private async Task RecordSaleAsync(SqlConnection conn, SqlTransaction transaction,
-            int packageId, int customerId, int quantity, decimal amount)
+    int packageId, int customerId, int quantity, decimal amount,
+    string? paymentMethod = null, string? referenceNumber = null)
         {
             using var cmd = new SqlCommand(
-                @"INSERT INTO Sales (SaleDate, PackageID, CustomerID, Quantity, Amount, RecordedBy)
-                  VALUES (GETDATE(), @packageId, @customerId, @quantity, @amount, @employeeId)", conn, transaction);
+                @"INSERT INTO Sales (SaleDate, PackageID, CustomerID, Quantity, Amount, RecordedBy, PaymentMethod, ReferenceNumber)
+          VALUES (GETDATE(), @packageId, @customerId, @quantity, @amount, @employeeId, @paymentMethod, @referenceNumber)",
+                conn, transaction);
 
             cmd.Parameters.AddWithValue("@packageId", packageId);
             cmd.Parameters.AddWithValue("@customerId", customerId);
             cmd.Parameters.AddWithValue("@quantity", quantity);
             cmd.Parameters.AddWithValue("@amount", amount);
             cmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+            // ✅ CAPTURE PAYMENT METHOD AND REFERENCE NUMBER FOR THIS SPECIFIC TRANSACTION
+            cmd.Parameters.AddWithValue("@paymentMethod", paymentMethod ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@referenceNumber", referenceNumber ?? (object)DBNull.Value);
+
+            Debug.WriteLine($"[RecordSaleAsync] Sale recorded:");
+            Debug.WriteLine($"  Package ID: {packageId}, Customer ID: {customerId}");
+            Debug.WriteLine($"  Quantity: {quantity}, Amount: ₱{amount:N2}");
+            Debug.WriteLine($"  Payment Method: {paymentMethod ?? "N/A"}");
+            Debug.WriteLine($"  Reference Number: {referenceNumber ?? "N/A"}");
 
             await cmd.ExecuteNonQueryAsync();
         }
@@ -398,10 +549,10 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, 
-                      WalkinType, WalkinPackage, PaymentMethod, RegisteredByEmployeeID 
-                      FROM WalkInCustomers 
-                      WHERE IsDeleted = 0 OR IsDeleted IS NULL
-                      ORDER BY CustomerID DESC", conn);
+              WalkinType, WalkinPackage, PaymentMethod, ReferenceNumber, RegisteredByEmployeeID 
+              FROM WalkInCustomers 
+              WHERE IsDeleted = 0 OR IsDeleted IS NULL
+              ORDER BY CustomerID DESC", conn);
 
                 var walkIns = await ReadWalkInCustomersAsync(cmd);
                 return (true, "Walk-in customers retrieved successfully.", walkIns);
@@ -619,15 +770,29 @@ namespace AHON_TRACK.Services
                     return (false, "Walk-in customer not found.");
                 }
 
+                // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
+                string processedRefNumber = ProcessReferenceNumber(walkIn);
+
                 using var cmd = new SqlCommand(
                     @"UPDATE WalkInCustomers 
-                      SET FirstName = @firstName, MiddleInitial = @middleInitial, LastName = @lastName,
-                          ContactNumber = @contactNumber, Age = @age, Gender = @gender,
-                          WalkinType = @walkInType, WalkinPackage = @walkInPackage, PaymentMethod = @paymentMethod
-                      WHERE CustomerID = @customerId", conn);
+              SET FirstName = @firstName, MiddleInitial = @middleInitial, LastName = @lastName,
+                  ContactNumber = @contactNumber, Age = @age, Gender = @gender,
+                  WalkinType = @walkInType, WalkinPackage = @walkInPackage, 
+                  PaymentMethod = @paymentMethod, ReferenceNumber = @referenceNumber
+              WHERE CustomerID = @customerId", conn);
 
                 cmd.Parameters.AddWithValue("@customerId", walkIn.WalkInID);
-                AddWalkInParameters(cmd, walkIn);
+                cmd.Parameters.AddWithValue("@firstName", walkIn.FirstName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@middleInitial", walkIn.MiddleInitial ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@lastName", walkIn.LastName ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@contactNumber", walkIn.ContactNumber ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@age", walkIn.Age);
+                cmd.Parameters.AddWithValue("@gender", walkIn.Gender ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@walkInType", walkIn.WalkInType ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@walkInPackage", walkIn.WalkInPackage ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@paymentMethod", walkIn.PaymentMethod ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@referenceNumber",
+                    string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
 
                 await cmd.ExecuteNonQueryAsync();
                 await LogActionAsync(conn, "UPDATE", $"Updated walk-in customer: {walkIn.FirstName} {walkIn.LastName}", true);
@@ -1071,7 +1236,8 @@ namespace AHON_TRACK.Services
                 WalkInType = reader.IsDBNull(7) ? null : reader.GetString(7),
                 WalkInPackage = reader.IsDBNull(8) ? null : reader.GetString(8),
                 PaymentMethod = reader.IsDBNull(9) ? null : reader.GetString(9),
-                RegisteredByEmployeeID = reader.IsDBNull(10) ? null : reader.GetInt32(10)
+                ReferenceNumber = reader.IsDBNull(10) ? null : reader.GetString(10), // ✅ Add ReferenceNumber
+                RegisteredByEmployeeID = reader.IsDBNull(11) ? null : reader.GetInt32(11) // ✅ Update index
             };
         }
 
