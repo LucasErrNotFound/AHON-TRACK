@@ -1,6 +1,8 @@
 using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Validators;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -15,9 +17,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using AHON_TRACK.Services.Events;
-using AHON_TRACK.Validators;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -62,7 +63,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     private List<Product> _currentProductList = [];
 
     [ObservableProperty]
-    private ObservableCollection<PurchasePackage> _packageList = [];  // ✅ Changed from Package
+    private ObservableCollection<PurchasePackage> _packageList = [];
 
     [ObservableProperty]
     private List<PurchasePackage> _originalPackageList = [];
@@ -120,7 +121,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private bool _isMayaSelected;
-    
+
     private string? _referenceNumber = string.Empty;
 
     [ObservableProperty]
@@ -198,16 +199,16 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         eventService.PackageUpdated += OnPackageDataChanged;
         eventService.PackageDeleted += OnPackageDataChanged;
     }
-    
+
     [UppercaseReferenceNumberValidator]
-    public string? ReferenceNumber 
+    public string? ReferenceNumber
     {
         get => _referenceNumber;
         set
         {
             SetProperty(ref _referenceNumber, value, true);
             OnPropertyChanged(nameof(IsPaymentPossible));
-        } 
+        }
     }
 
     private async void OnCheckInOutDataChanged(object? sender, EventArgs e)
@@ -750,7 +751,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             };
             product.IsAddedToCart = true;
         }
-        else if (item is PurchasePackage package)  // ✅ Changed from Package
+        else if (item is PurchasePackage package)
         {
             var existingItem = CartItems.FirstOrDefault(c =>
                 c.ItemType == CartItemType.Package && c.SellingID == package.PackageId);
@@ -779,7 +780,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 MaxQuantity = 999,
                 Quantity = 1,
                 Poster = null,
-                SourcePurchasePackage = package  // ✅ Changed property name
+                SourcePurchasePackage = package
             };
             package.IsAddedToCart = true;
         }
@@ -801,7 +802,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         if (cartItem.SourceProduct != null)
             cartItem.SourceProduct.IsAddedToCart = false;
 
-        if (cartItem.SourcePurchasePackage != null)  // ✅ Changed
+        if (cartItem.SourcePurchasePackage != null)
             cartItem.SourcePurchasePackage.IsAddedToCart = false;
 
         cartItem.PropertyChanged -= OnCartItemPropertyChanged;
@@ -838,6 +839,19 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             return;
         }
 
+        // ✅ VALIDATE REFERENCE NUMBER FOR GCASH/MAYA
+        if (IsGCashSelected || IsMayaSelected)
+        {
+            if (string.IsNullOrWhiteSpace(ReferenceNumber))
+            {
+                string method = IsGCashSelected ? "GCash" : "Maya";
+                _toastManager.CreateToast("Reference Number Required")
+                    .WithContent($"{method} payment requires a reference number.")
+                    .ShowWarning();
+                return;
+            }
+        }
+
         try
         {
             // Determine payment method
@@ -867,22 +881,17 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             // Get logged-in employee ID
             int employeeId = CurrentUserModel.UserId ?? 0;
 
-            // Process payment
+            // ✅ PASS REFERENCE NUMBER TO SERVICE
             bool success = await _productPurchaseService.ProcessPaymentAsync(
                 sellingItems,
                 customerModel,
                 employeeId,
-                paymentMethod
+                paymentMethod,
+                ReferenceNumber  // ✅ Pass reference number from UI
             );
 
             if (success)
             {
-                // I remove this toast for complexity of discount from the packages if available to lessen confussion.
-
-                /* _toastManager.CreateToast("Purchase Complete")
-                     .WithContent($"Purchase successful for {SelectedCustomer.FirstName} {SelectedCustomer.LastName}!\nPayment: {paymentMethod}")
-                     .ShowSuccess(); */
-
                 ClearCart();
                 CurrentTransactionId = GenerateNewTransactionId();
 
@@ -907,7 +916,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             if (cartItem.SourceProduct != null)
                 cartItem.SourceProduct.IsAddedToCart = false;
 
-            if (cartItem.SourcePurchasePackage != null)  // ✅ Changed
+            if (cartItem.SourcePurchasePackage != null)
                 cartItem.SourcePurchasePackage.IsAddedToCart = false;
 
             cartItem.PropertyChanged -= OnCartItemPropertyChanged;
@@ -920,6 +929,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
+        ReferenceNumber = null;  // ✅ Clear reference number
         SelectedCustomer = null;
     }
 
@@ -981,7 +991,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         // ✅ Update packages already in cart
         foreach (var cartItem in CartItems.Where(c => c.ItemType == CartItemType.Package).ToList())
         {
-            if (cartItem.SourcePurchasePackage != null)  // ✅ Changed
+            if (cartItem.SourcePurchasePackage != null)
             {
                 cartItem.SourcePurchasePackage.UpdatePriceForCustomer(value?.CustomerType);
 
@@ -1092,15 +1102,28 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
 
             bool hasValidReferenceNumber = true;
-            if (IsGCashSelected || IsMayaSelected)
+            if (IsGCashSelected)
             {
-                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber) 
-                                          && ReferenceNumber.Length is 12 or 13;
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber)
+                                          && GCashReferenceRegex().IsMatch(ReferenceNumber);
+            }
+            else if (IsMayaSelected)
+            {
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber)
+                                          && MayaReferenceRegex().IsMatch(ReferenceNumber);
             }
 
             return hasCustomer && hasItems && hasPaymentMethod && hasValidReferenceNumber;
         }
     }
+
+    // GCash: Exactly 13 digits
+    [GeneratedRegex(@"^\d{13}$")]
+    private static partial Regex GCashReferenceRegex();
+
+    // Maya: Exactly 12 alphanumeric characters
+    [GeneratedRegex(@"^\d{6}$")]
+    private static partial Regex MayaReferenceRegex();
 
     protected override void DisposeManagedResources()
     {
@@ -1201,9 +1224,9 @@ public partial class Product : ObservableObject
 
     [ObservableProperty]
     private bool _hasDiscount;
-    
+
     private static Bitmap? _defaultProductBitmap;
-        
+
     public static Bitmap DefaultProductBitmap
     {
         get
@@ -1221,12 +1244,12 @@ public partial class Product : ObservableObject
             return _defaultProductBitmap!;
         }
     }
-        
+
     partial void OnPosterChanged(Bitmap? value)
     {
         OnPropertyChanged(nameof(DisplayPoster));
     }
-    
+
     public Bitmap DisplayPoster => Poster ?? DefaultProductBitmap;
 
     public decimal FinalPrice
@@ -1307,7 +1330,7 @@ public partial class PurchasePackage : ObservableObject
     public int PackageId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string Duration { get; set; } = string.Empty;  // ✅ ADD THIS
+    public string Duration { get; set; } = string.Empty;
 
     // ✅ Store original prices from database
     private int _basePrice;
@@ -1507,7 +1530,7 @@ public partial class CartItem : ObservableObject
     private Bitmap? _poster;
 
     public Product? SourceProduct { get; set; }
-    public PurchasePackage? SourcePurchasePackage { get; set; }  // ✅ Changed from SourcePackage
+    public PurchasePackage? SourcePurchasePackage { get; set; }
 
     public decimal EffectivePrice
     {

@@ -11,11 +11,13 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface IProductPurchaseService
     {
-        Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod);
+        Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod, string? referenceNumber = null);
         Task<List<CustomerModel>> GetAllCustomersAsync();
         Task<List<SellingModel>> GetAllProductsAsync();
         Task<List<SellingModel>> GetAllGymPackagesAsync();
         Task<List<InvoiceModel>> GetInvoicesByDateAsync(DateTime date);
         Task<List<RecentPurchaseModel>> GetRecentPurchasesAsync(int limit = 50);
+
+        (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(string paymentMethod, string? referenceNumber);
     }
 }

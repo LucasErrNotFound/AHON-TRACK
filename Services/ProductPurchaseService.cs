@@ -38,9 +38,107 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region PAYMENT & REFERENCE NUMBER HANDLING
+
+        /// <summary>
+        /// Processes reference number based on payment method:
+        /// - Cash → "PAID"
+        /// - GCash/Maya → User-provided reference number
+        /// - Other → Reference number as-is or empty
+        /// </summary>
+        private string ProcessReferenceNumber(string paymentMethod, string? referenceNumber)
+        {
+            // Normalize payment method to uppercase for comparison
+            string normalizedMethod = paymentMethod?.Trim().ToUpper() ?? "";
+
+            // If payment method is CASH, store "PAID"
+            if (normalizedMethod == "CASH")
+            {
+                Debug.WriteLine("[ProcessReferenceNumber] Cash payment detected - storing 'PAID'");
+                return "PAID";
+            }
+
+            // If payment method is GCash or Maya, use the user-provided reference number
+            if (normalizedMethod == "GCASH" || normalizedMethod == "MAYA")
+            {
+                string refNumber = referenceNumber?.Trim() ?? "";
+
+                if (string.IsNullOrWhiteSpace(refNumber))
+                {
+                    Debug.WriteLine($"[ProcessReferenceNumber] Warning: {normalizedMethod} payment but no reference number provided");
+                    return $"{normalizedMethod}_NO_REF";
+                }
+
+                Debug.WriteLine($"[ProcessReferenceNumber] {normalizedMethod} payment - Reference: {refNumber}");
+                return refNumber;
+            }
+
+            // For other payment methods, return the reference number as-is or empty
+            Debug.WriteLine($"[ProcessReferenceNumber] Other payment method: {normalizedMethod}");
+            return referenceNumber?.Trim() ?? "";
+        }
+
+        /// <summary>
+        /// Validates payment method and reference number before processing payment.
+        /// Call this from your ViewModel before processing.
+        /// </summary>
+        public (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(string paymentMethod, string? referenceNumber)
+        {
+            if (string.IsNullOrWhiteSpace(paymentMethod))
+            {
+                return (false, "Payment method is required.");
+            }
+
+            string normalizedMethod = paymentMethod.Trim().ToUpper();
+
+            // Cash doesn't need reference number
+            if (normalizedMethod == "CASH")
+            {
+                return (true, "");
+            }
+
+            // GCash: 13 digits only
+            if (normalizedMethod == "GCASH")
+            {
+                if (string.IsNullOrWhiteSpace(referenceNumber))
+                {
+                    return (false, "GCash payment requires a reference number.");
+                }
+
+                string refNum = referenceNumber.Trim();
+                if (refNum.Length != 13 || !refNum.All(char.IsDigit))
+                {
+                    return (false, "GCash reference number must be exactly 13 digits.");
+                }
+
+                return (true, "");
+            }
+
+            // Maya: 6 digits
+            if (normalizedMethod == "MAYA")
+            {
+                if (string.IsNullOrWhiteSpace(referenceNumber))
+                {
+                    return (false, "Maya payment requires a reference number.");
+                }
+
+                string refNum = referenceNumber.Trim();
+                if (refNum.Length != 6 || !refNum.All(char.IsDigit))
+                {
+                    return (false, "Maya reference number must be exactly 6 digits.");
+                }
+
+                return (true, "");
+            }
+
+            return (true, "");
+        }
+
+        #endregion
+
         #region CREATE
 
-        public async Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod)
+        public async Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod, string? referenceNumber = null)
         {
             if (!CanCreate())
             {
@@ -60,6 +158,14 @@ namespace AHON_TRACK.Services
                 return false;
             }
 
+            // ✅ VALIDATE PAYMENT METHOD AND REFERENCE NUMBER
+            var (isValid, errorMessage) = ValidatePaymentReferenceNumber(paymentMethod, referenceNumber);
+            if (!isValid)
+            {
+                ShowError("Payment Validation Failed", errorMessage);
+                return false;
+            }
+
             using var conn = new SqlConnection(_connectionString);
             await conn.OpenAsync();
             using var transaction = conn.BeginTransaction(System.Data.IsolationLevel.ReadCommitted);
@@ -69,6 +175,13 @@ namespace AHON_TRACK.Services
                 decimal totalAmount = 0;
                 int totalTransactions = 0;
                 bool anyDiscountApplied = false;
+
+                // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
+                string processedRefNumber = ProcessReferenceNumber(paymentMethod, referenceNumber);
+
+                Debug.WriteLine($"[ProcessPaymentAsync] Payment Method: {paymentMethod}");
+                Debug.WriteLine($"[ProcessPaymentAsync] Reference Number (Input): {referenceNumber ?? "NULL"}");
+                Debug.WriteLine($"[ProcessPaymentAsync] Reference Number (Processed): {processedRefNumber}");
 
                 foreach (var item in cartItems)
                 {
@@ -81,7 +194,8 @@ namespace AHON_TRACK.Services
                         anyDiscountApplied = true;
                     }
 
-                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, conn, transaction);
+                    // ✅ PASS PROCESSED REFERENCE NUMBER TO SALES RECORD
+                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, processedRefNumber, conn, transaction);
                     await RecordPurchaseAsync(item, customer, itemTotal, conn, transaction);
                     await HandleInventoryAndSessionsAsync(item, customer, conn, transaction);
                 }
@@ -190,11 +304,11 @@ namespace AHON_TRACK.Services
             return (item.Price * item.Quantity, false);
         }
 
-        private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, string paymentMethod, SqlConnection conn, SqlTransaction transaction)
+        private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, string paymentMethod, string referenceNumber, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
-                INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, PaymentMethod, RecordedBy)
-                VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @PaymentMethod, @RecordedBy);
+                INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, PaymentMethod, ReferenceNumber, RecordedBy)
+                VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @PaymentMethod, @ReferenceNumber, @RecordedBy);
                 SELECT SCOPE_IDENTITY();";
 
             using var cmd = new SqlCommand(query, conn, transaction);
@@ -206,6 +320,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
             cmd.Parameters.AddWithValue("@Amount", itemTotal);
             cmd.Parameters.AddWithValue("@PaymentMethod", paymentMethod ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@ReferenceNumber", string.IsNullOrWhiteSpace(referenceNumber) ? (object)DBNull.Value : referenceNumber);
             cmd.Parameters.AddWithValue("@RecordedBy", employeeId);
 
             await cmd.ExecuteScalarAsync();
@@ -518,6 +633,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@TotalTransactions", totalTransactions);
             await cmd.ExecuteNonQueryAsync();
         }
+
 
         #endregion
 
