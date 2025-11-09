@@ -23,5 +23,7 @@ namespace AHON_TRACK.Services.Interface
         Task AutoInactivateExpiredMembersAsync();
         Task ShowMemberExpirationAlertsAsync(Action<Notification>? addNotificationCallback = null);
         Task<MemberExpirationSummary> GetMemberExpirationSummaryAsync();
+
+        (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(ManageMemberModel member);
     }
 }
