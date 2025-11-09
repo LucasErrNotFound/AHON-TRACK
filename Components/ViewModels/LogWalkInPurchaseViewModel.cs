@@ -1,6 +1,7 @@
-﻿using AHON_TRACK.ViewModels;
-using AHON_TRACK.Models;
+﻿using AHON_TRACK.Models;
 using AHON_TRACK.Services.Interface;
+using AHON_TRACK.Validators;
+using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
@@ -8,10 +9,10 @@ using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Linq;
-using AHON_TRACK.Validators;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -543,15 +544,21 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
             // ✅ Add date validation
             bool isValidDate = SelectedDate.Date == DateTime.Today;
-            
+
+            // ✅ VALIDATE REFERENCE NUMBER FOR GCASH/MAYA
             bool hasValidReferenceNumber = true;
-            if (IsGCashSelected || IsMayaSelected)
+            if (IsGCashSelected)
             {
-                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber) 
-                                          && ReferenceNumberRegex().IsMatch(ReferenceNumber);
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber)
+                                          && GCashReferenceRegex().IsMatch(ReferenceNumber);
+            }
+            else if (IsMayaSelected)
+            {
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber)
+                                          && MayaReferenceRegex().IsMatch(ReferenceNumber);
             }
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod && isValidDate && hasValidReferenceNumber && !IsProcessing;
+            return hasValidInputs && hasValidQuantity && hasPaymentMethod && isValidDate && hasValidReferenceNumber;
         }
     }
 
@@ -841,16 +848,42 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 WalkInType = SelectedWalkInTypeItem,
                 WalkInPackage = SelectedSpecializedPackageItem,
                 PaymentMethod = paymentMethod,
+                ReferenceNumber = ReferenceNumber, // ✅ Pass reference number from UI
                 Quantity = SelectedSpecializedPackageItem != "None" ? SpecializedPackageQuantity : null
             };
 
-            // ✅ Pass SelectedDate to the service (even though it should be today)
+            // ✅ VALIDATE PAYMENT & REFERENCE NUMBER BEFORE SAVING
+            var (isValid, errorMessage) = _walkInService.ValidatePaymentReferenceNumber(walkIn);
+
+            if (!isValid)
+            {
+                _toastManager?.CreateToast("Validation Error")
+                    .WithContent(errorMessage)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            Debug.WriteLine($"[PaymentAsync] ========== WALK-IN REGISTRATION ==========");
+            Debug.WriteLine($"[PaymentAsync] Name: {walkIn.FirstName} {walkIn.LastName}");
+            Debug.WriteLine($"[PaymentAsync] Type: {walkIn.WalkInType}");
+            Debug.WriteLine($"[PaymentAsync] Package: {walkIn.WalkInPackage}");
+            Debug.WriteLine($"[PaymentAsync] Quantity: {walkIn.Quantity}");
+            Debug.WriteLine($"[PaymentAsync] Payment Method: {walkIn.PaymentMethod}");
+            Debug.WriteLine($"[PaymentAsync] Reference Number: {walkIn.ReferenceNumber ?? "N/A"}");
+            Debug.WriteLine($"[PaymentAsync] =======================================");
+
+            // ✅ Pass SelectedDate to the service
             var (success, message, customerId) = await _walkInService.AddWalkInCustomerAsync(walkIn, SelectedDate);
 
             if (success)
             {
+                string paymentInfo = paymentMethod == "Cash"
+                    ? "Cash payment"
+                    : $"{paymentMethod} - Ref: {ReferenceNumber}";
+
                 _toastManager.CreateToast("Payment Successful!")
-                    .WithContent($"Walk-in customer registered with ID: {customerId}")
+                    .WithContent($"Walk-in customer registered with ID: {customerId}\n{paymentInfo}")
                     .DismissOnClick()
                     .ShowSuccess();
 
@@ -870,6 +903,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         }
         catch (Exception ex)
         {
+            Debug.WriteLine($"[PaymentAsync] ❌ Error: {ex.Message}");
+            Debug.WriteLine($"[PaymentAsync] Stack trace: {ex.StackTrace}");
             _toastManager.CreateToast("Error")
                 .WithContent($"An error occurred: {ex.Message}")
                 .ShowError();
@@ -879,6 +914,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             IsProcessing = false;
         }
     }
+
 
     private void ClearForm()
     {
@@ -891,6 +927,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         SelectedWalkInTypeItem = string.Empty;
         SelectedSpecializedPackageItem = "None";
         SpecializedPackageQuantity = 1;
+        ReferenceNumber = string.Empty; // ✅ Clear reference number
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
@@ -901,11 +938,17 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         OnPropertyChanged(nameof(TransactionID));
     }
 
+
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
-    
-    [GeneratedRegex(@"^[A-Z0-9]{12,13}$")]
-    private static partial Regex ReferenceNumberRegex();
+
+    // GCash: Exactly 13 digits
+    [GeneratedRegex(@"^\d{13}$")]
+    private static partial Regex GCashReferenceRegex();
+
+    // Maya: Exactly 12 alphanumeric characters
+    [GeneratedRegex(@"^\d{6}$")]
+    private static partial Regex MayaReferenceRegex();
 
     protected override void DisposeManagedResources()
     {

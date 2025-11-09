@@ -16,15 +16,9 @@ namespace AHON_TRACK.Validators
             string input = value.ToString() ?? string.Empty;
 
             // Must be alphanumeric, uppercase only, 12–13 characters
-            if (!Regex.IsMatch(input, @"^[A-Z0-9]{12,13}$"))
+            if (!Regex.IsMatch(input, @"^(\d{13}|\d{6})$"))
             {
-                return new ValidationResult("Reference number must be 12–13 characters, uppercase letters and digits only.");
-            }
-
-            // Explicit uppercase check (safety)
-            if (input.Any(char.IsLetter) && input != input.ToUpper())
-            {
-                return new ValidationResult("Reference number must use uppercase letters only.");
+                return new ValidationResult("Reference number must be exactly 13 digits for GCash or 6 digits for Maya");
             }
 
             return ValidationResult.Success;

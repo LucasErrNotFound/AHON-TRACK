@@ -115,31 +115,46 @@ namespace AHON_TRACK.Services
 
             string paymentMethod = member.PaymentMethod.Trim().ToUpper();
 
-            // Cash doesn't need reference number - it will be auto-filled with "PAID"
+            // Cash doesn't need reference number
             if (paymentMethod == "CASH")
             {
                 return (true, "");
             }
 
-            // GCash and Maya REQUIRE a reference number
-            if (paymentMethod == "GCASH" || paymentMethod == "MAYA")
+            // GCash: 13 digits only
+            if (paymentMethod == "GCASH")
             {
                 if (string.IsNullOrWhiteSpace(member.ReferenceNumber))
                 {
-                    return (false, $"{paymentMethod} payment requires a reference number.");
+                    return (false, "GCash payment requires a reference number.");
                 }
 
-                // Validate reference number format (13 digits as per your regex)
                 string refNum = member.ReferenceNumber.Trim();
                 if (refNum.Length != 13 || !refNum.All(char.IsDigit))
                 {
-                    return (false, "Reference number must be exactly 13 digits.");
+                    return (false, "GCash reference number must be exactly 13 digits.");
                 }
 
                 return (true, "");
             }
 
-            // For other payment methods, reference number is optional
+            // Maya: 6 digits
+            if (paymentMethod == "MAYA")
+            {
+                if (string.IsNullOrWhiteSpace(member.ReferenceNumber))
+                {
+                    return (false, "Maya payment requires a reference number.");
+                }
+
+                string refNum = member.ReferenceNumber.Trim();
+                if (refNum.Length != 6 || !refNum.All(char.IsDigit))
+                {
+                    return (false, "Maya reference number must be exactly 6 digits.");
+                }
+
+                return (true, "");
+            }
+
             return (true, "");
         }
 
@@ -308,8 +323,8 @@ namespace AHON_TRACK.Services
         }
 
         private async Task RecordPackageSaleAsync(
-            SqlConnection conn, SqlTransaction transaction,
-            ManageMemberModel member, int memberId, ManageMemberModel? originalMember = null)
+    SqlConnection conn, SqlTransaction transaction,
+    ManageMemberModel member, int memberId, ManageMemberModel? originalMember = null)
         {
             var (packagePrice, packageName, duration) = await GetPackageDetailsAsync(
                 conn, transaction, member.PackageID!.Value);
@@ -340,10 +355,19 @@ namespace AHON_TRACK.Services
 
             decimal totalAmount = packagePrice * quantity;
 
-            await InsertSaleRecordAsync(conn, transaction, member.PackageID!.Value, memberId, quantity, totalAmount);
+            // ✅ PROCESS REFERENCE NUMBER BASED ON CURRENT PAYMENT METHOD
+            string processedRefNumber = ProcessReferenceNumber(member);
+
+            // ✅ PASS PAYMENT METHOD AND REFERENCE NUMBER TO SALES RECORD
+            await InsertSaleRecordAsync(
+                conn, transaction, member.PackageID!.Value, memberId,
+                quantity, totalAmount, member.PaymentMethod, processedRefNumber);
+
             await UpdateDailySalesAsync(conn, transaction, totalAmount);
 
             Debug.WriteLine($"[RecordPackageSaleAsync] Sale recorded: {packageName} x{quantity} months = ₱{totalAmount:N2}");
+            Debug.WriteLine($"  Payment Method: {member.PaymentMethod}");
+            Debug.WriteLine($"  Reference Number: {processedRefNumber}");
         }
 
         private int CalculateMonthsAdded(string? oldValidUntil, string? newValidUntil)
@@ -392,11 +416,12 @@ namespace AHON_TRACK.Services
         }
 
         private async Task InsertSaleRecordAsync(
-            SqlConnection conn, SqlTransaction transaction, int packageId, int memberId, int quantity, decimal amount)
+    SqlConnection conn, SqlTransaction transaction, int packageId, int memberId,
+    int quantity, decimal amount, string? paymentMethod = null, string? referenceNumber = null)
         {
             const string query = @"
-                INSERT INTO Sales (SaleDate, PackageID, MemberID, Quantity, Amount, RecordedBy)
-                VALUES (GETDATE(), @packageId, @memberId, @quantity, @amount, @employeeId)";
+        INSERT INTO Sales (SaleDate, PackageID, MemberID, Quantity, Amount, RecordedBy, PaymentMethod, ReferenceNumber)
+        VALUES (GETDATE(), @packageId, @memberId, @quantity, @amount, @employeeId, @paymentMethod, @referenceNumber)";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@packageId", packageId);
@@ -404,6 +429,10 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@quantity", quantity);
             cmd.Parameters.AddWithValue("@amount", amount);
             cmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+            // ✅ CAPTURE PAYMENT METHOD AND REFERENCE NUMBER FOR THIS SPECIFIC TRANSACTION
+            cmd.Parameters.AddWithValue("@paymentMethod", paymentMethod ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@referenceNumber", referenceNumber ?? (object)DBNull.Value);
 
             await cmd.ExecuteNonQueryAsync();
         }
