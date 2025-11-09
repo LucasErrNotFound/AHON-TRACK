@@ -807,6 +807,7 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                 ShowError("Access Denied", "You do not have permission to view invoice data.");
                 return invoices;
             }
+
             try
             {
                 using var conn = new SqlConnection(_connectionString);
@@ -815,71 +816,101 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                 string query = @"
             SELECT 
                 s.SaleID,
+                -- ✅ PRIORITIZE Sales.PaymentMethod, fallback to Members/WalkIn only if NULL
                 COALESCE(
-                    NULLIF(s.ReferenceNumber, ''),           -- First: from Sales table (ignore empty strings)
+                    s.PaymentMethod,                              -- First: Sales table (NEW DATA)
                     CASE 
-                        WHEN s.MemberID IS NOT NULL THEN NULLIF(m.ReferenceNumber, '')
-                        WHEN s.CustomerID IS NOT NULL THEN NULLIF(wc.ReferenceNumber, '')
+                        WHEN s.MemberID IS NOT NULL THEN m.PaymentMethod
+                        WHEN s.CustomerID IS NOT NULL THEN wc.PaymentMethod
                         ELSE NULL
                     END,
-                    ''                                        -- Final fallback (empty string)
+                    'Unknown'                                     -- Final fallback
+                ) AS PaymentMethod,
+                
+                -- ✅ PRIORITIZE Sales.ReferenceNumber, fallback to Members/WalkIn only if NULL
+                COALESCE(
+                    s.ReferenceNumber,                            -- First: Sales table (NEW DATA)
+                    CASE 
+                        WHEN s.MemberID IS NOT NULL THEN m.ReferenceNumber
+                        WHEN s.CustomerID IS NOT NULL THEN wc.ReferenceNumber
+                        ELSE NULL
+                    END,
+                    ''                                            -- Final fallback (empty string)
                 ) AS ReferenceNumber,
+                
+                -- Customer name
                 CASE 
                     WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
                     WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
                     ELSE 'Unknown Customer'
                 END AS CustomerName,
+                
+                -- Purchased item
                 CASE 
                     WHEN s.ProductID IS NOT NULL THEN p.ProductName
                     WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                     ELSE 'Unknown Item'
                 END AS PurchasedItem,
+                
                 s.Quantity,
                 s.Amount,
-                COALESCE(
-                    NULLIF(s.PaymentMethod, ''),             -- First: from Sales table (ignore empty strings)
-                    CASE 
-                        WHEN s.MemberID IS NOT NULL THEN NULLIF(m.PaymentMethod, '')
-                        WHEN s.CustomerID IS NOT NULL THEN NULLIF(wc.PaymentMethod, '')
-                        ELSE NULL
-                    END,
-                    'Unknown'                                 -- Final fallback
-                ) AS PaymentMethod,
                 s.SaleDate
+                
             FROM Sales s
             LEFT JOIN Products p ON s.ProductID = p.ProductID
             LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
             LEFT JOIN Members m ON s.MemberID = m.MemberID
             LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
             WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
+                AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
             ORDER BY s.SaleDate DESC;";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@SelectedDate", date.Date);
+
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 while (await reader.ReadAsync())
                 {
+                    string paymentMethod = reader["PaymentMethod"]?.ToString() ?? "Unknown";
+                    string referenceNumber = reader["ReferenceNumber"]?.ToString() ?? string.Empty;
+
+                    // ✅ DISPLAY "PAID" FOR CASH PAYMENTS WITH "PAID" REFERENCE
+                    if (paymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase) &&
+                        referenceNumber.Equals("PAID", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Keep as-is: Cash with PAID reference
+                    }
+                    else if (paymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase) &&
+                             string.IsNullOrWhiteSpace(referenceNumber))
+                    {
+                        // For old cash records without reference, assume PAID
+                        referenceNumber = "PAID";
+                    }
+
                     invoices.Add(new InvoiceModel
                     {
                         ID = reader.GetInt32(reader.GetOrdinal("SaleID")),
-                        ReferenceNumber = reader["ReferenceNumber"]?.ToString() ?? string.Empty,
+                        ReferenceNumber = referenceNumber,
                         CustomerName = reader["CustomerName"]?.ToString() ?? "Unknown",
                         PurchasedItem = reader["PurchasedItem"]?.ToString() ?? "Unknown",
                         Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
                         Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
-                        PaymentMethod = reader["PaymentMethod"]?.ToString() ?? "Unknown",
+                        PaymentMethod = paymentMethod,
                         DatePurchased = reader.GetDateTime(reader.GetOrdinal("SaleDate"))
                     });
+
+                    Debug.WriteLine($"[Invoice] SaleID: {reader.GetInt32(0)}, Payment: {paymentMethod}, Ref: {referenceNumber}");
                 }
 
-                Debug.WriteLine($"Total invoices found: {invoices.Count}");
+                Debug.WriteLine($"✅ Total invoices found: {invoices.Count}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"ERROR in GetInvoicesByDateAsync: {ex.ToString()}");
+                Debug.WriteLine($"❌ ERROR in GetInvoicesByDateAsync: {ex.ToString()}");
                 ShowError("Database Error", $"Error loading invoices: {ex.Message}");
             }
+
             return invoices;
         }
 
