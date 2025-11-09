@@ -364,6 +364,11 @@
 																Header="Payment Method"
 																Binding="{CompiledBinding PaymentMethod}" />
 															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="180"
+																Header="Reference No."
+																Binding="{CompiledBinding ReferenceNumber}" />
+															<DataGridTextColumn
 																Width="*"
 																MinWidth="120"
 																Header="Date Purchased"
@@ -444,6 +449,11 @@
 																MinWidth="90"
 																Header="Payment Method"
 																Binding="{CompiledBinding PaymentMethod}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="90"
+																Header="Reference No."
+																Binding="{CompiledBinding ReferenceNumber}" />
 															<DataGridTextColumn
 																Width="*"
 																MinWidth="120"
