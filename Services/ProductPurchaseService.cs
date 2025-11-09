@@ -811,59 +811,59 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
+
                 string query = @"
             SELECT 
-    s.SaleID,
-    CASE 
-        WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
-        WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
-        ELSE 'Unknown Customer'
-    END AS CustomerName,
-    CASE 
-        WHEN s.ProductID IS NOT NULL THEN p.ProductName
-        WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
-        ELSE 'Unknown Item'
-    END AS PurchasedItem,
-    s.Quantity,
-    s.Amount,
-    COALESCE(
-        s.PaymentMethod,  -- First priority: payment method from Sales table
-        CASE 
-            WHEN s.MemberID IS NOT NULL THEN m.PaymentMethod  -- Second: from Members
-            WHEN s.CustomerID IS NOT NULL THEN wc.PaymentMethod  -- Third: from WalkInCustomers
-            ELSE NULL
-        END,
-        'Unknown'  -- Fallback if all are NULL
-    ) AS PaymentMethod,
-    s.SaleDate
-FROM Sales s
-LEFT JOIN Products p ON s.ProductID = p.ProductID
-LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
-LEFT JOIN Members m ON s.MemberID = m.MemberID
-LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
-WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
-ORDER BY s.SaleDate DESC;";
+                s.SaleID,
+                COALESCE(
+                    NULLIF(s.ReferenceNumber, ''),           -- First: from Sales table (ignore empty strings)
+                    CASE 
+                        WHEN s.MemberID IS NOT NULL THEN NULLIF(m.ReferenceNumber, '')
+                        WHEN s.CustomerID IS NOT NULL THEN NULLIF(wc.ReferenceNumber, '')
+                        ELSE NULL
+                    END,
+                    ''                                        -- Final fallback (empty string)
+                ) AS ReferenceNumber,
+                CASE 
+                    WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
+                    WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
+                    ELSE 'Unknown Customer'
+                END AS CustomerName,
+                CASE 
+                    WHEN s.ProductID IS NOT NULL THEN p.ProductName
+                    WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
+                    ELSE 'Unknown Item'
+                END AS PurchasedItem,
+                s.Quantity,
+                s.Amount,
+                COALESCE(
+                    NULLIF(s.PaymentMethod, ''),             -- First: from Sales table (ignore empty strings)
+                    CASE 
+                        WHEN s.MemberID IS NOT NULL THEN NULLIF(m.PaymentMethod, '')
+                        WHEN s.CustomerID IS NOT NULL THEN NULLIF(wc.PaymentMethod, '')
+                        ELSE NULL
+                    END,
+                    'Unknown'                                 -- Final fallback
+                ) AS PaymentMethod,
+                s.SaleDate
+            FROM Sales s
+            LEFT JOIN Products p ON s.ProductID = p.ProductID
+            LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
+            LEFT JOIN Members m ON s.MemberID = m.MemberID
+            LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
+            WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
+            ORDER BY s.SaleDate DESC;";
+
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@SelectedDate", date.Date);
                 using var reader = await cmd.ExecuteReaderAsync();
-                int recordCount = 0;
+
                 while (await reader.ReadAsync())
                 {
-                    recordCount++;
-
-                    // Debug: Log each record's data
-                    Debug.WriteLine($"--- Record {recordCount} ---");
-                    Debug.WriteLine($"SaleID: {reader.GetInt32(reader.GetOrdinal("SaleID"))}");
-                    Debug.WriteLine($"CustomerName: {reader["CustomerName"]?.ToString() ?? "NULL"}");
-                    Debug.WriteLine($"PurchasedItem: {reader["PurchasedItem"]?.ToString() ?? "NULL"}");
-                    Debug.WriteLine($"Quantity: {reader.GetInt32(reader.GetOrdinal("Quantity"))}");
-                    Debug.WriteLine($"Amount: {reader.GetDecimal(reader.GetOrdinal("Amount"))}");
-                    Debug.WriteLine($"PaymentMethod: {reader["PaymentMethod"]?.ToString() ?? "NULL"}");
-                    Debug.WriteLine($"SaleDate: {reader.GetDateTime(reader.GetOrdinal("SaleDate"))}");
-
                     invoices.Add(new InvoiceModel
                     {
                         ID = reader.GetInt32(reader.GetOrdinal("SaleID")),
+                        ReferenceNumber = reader["ReferenceNumber"]?.ToString() ?? string.Empty,
                         CustomerName = reader["CustomerName"]?.ToString() ?? "Unknown",
                         PurchasedItem = reader["PurchasedItem"]?.ToString() ?? "Unknown",
                         Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
@@ -873,12 +873,10 @@ ORDER BY s.SaleDate DESC;";
                     });
                 }
 
-                // Debug: Log total records found
-                Debug.WriteLine($"Total invoices found: {recordCount}");
+                Debug.WriteLine($"Total invoices found: {invoices.Count}");
             }
             catch (Exception ex)
             {
-                // Debug: Log the full exception
                 Debug.WriteLine($"ERROR in GetInvoicesByDateAsync: {ex.ToString()}");
                 ShowError("Database Error", $"Error loading invoices: {ex.Message}");
             }

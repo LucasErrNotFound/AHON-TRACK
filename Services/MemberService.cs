@@ -21,7 +21,7 @@ namespace AHON_TRACK.Services
         private Action<Notification>? _notificationCallback;
         private bool _disposed;
 
-        private const int EXPIRATION_THRESHOLD_DAYS = 4;
+        private const int EXPIRATION_THRESHOLD_DAYS = 7;
         private const string MEMBER_NOT_DELETED_FILTER = "(IsDeleted = 0 OR IsDeleted IS NULL)";
 
         public MemberService(string connectionString, ToastManager toastManager)
@@ -62,6 +62,89 @@ namespace AHON_TRACK.Services
 
         #endregion
 
+        #region PAYMENT & REFERENCE NUMBER HANDLING
+
+        /// <summary>
+        /// Processes reference number based on payment method:
+        /// - Cash → "PAID"
+        /// - GCash/Maya → User-provided reference number
+        /// - Other → Reference number as-is or empty
+        /// </summary>
+        private string ProcessReferenceNumber(ManageMemberModel member)
+        {
+            // Normalize payment method to uppercase for comparison
+            string paymentMethod = member.PaymentMethod?.Trim().ToUpper() ?? "";
+
+            // If payment method is CASH, store "PAID"
+            if (paymentMethod == "CASH")
+            {
+                Debug.WriteLine("[ProcessReferenceNumber] Cash payment detected - storing 'PAID'");
+                return "PAID";
+            }
+
+            // If payment method is GCash or Maya, use the user-provided reference number
+            if (paymentMethod == "GCASH" || paymentMethod == "MAYA")
+            {
+                string refNumber = member.ReferenceNumber?.Trim() ?? "";
+
+                if (string.IsNullOrWhiteSpace(refNumber))
+                {
+                    Debug.WriteLine($"[ProcessReferenceNumber] Warning: {paymentMethod} payment but no reference number provided");
+                    return $"{paymentMethod}_NO_REF";
+                }
+
+                Debug.WriteLine($"[ProcessReferenceNumber] {paymentMethod} payment - Reference: {refNumber}");
+                return refNumber;
+            }
+
+            // For other payment methods, return the reference number as-is or empty
+            Debug.WriteLine($"[ProcessReferenceNumber] Other payment method: {paymentMethod}");
+            return member.ReferenceNumber?.Trim() ?? "";
+        }
+
+        /// <summary>
+        /// Validates payment method and reference number before saving member.
+        /// Call this from your ViewModel before saving.
+        /// </summary>
+        public (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(ManageMemberModel member)
+        {
+            if (string.IsNullOrWhiteSpace(member.PaymentMethod))
+            {
+                return (false, "Payment method is required.");
+            }
+
+            string paymentMethod = member.PaymentMethod.Trim().ToUpper();
+
+            // Cash doesn't need reference number - it will be auto-filled with "PAID"
+            if (paymentMethod == "CASH")
+            {
+                return (true, "");
+            }
+
+            // GCash and Maya REQUIRE a reference number
+            if (paymentMethod == "GCASH" || paymentMethod == "MAYA")
+            {
+                if (string.IsNullOrWhiteSpace(member.ReferenceNumber))
+                {
+                    return (false, $"{paymentMethod} payment requires a reference number.");
+                }
+
+                // Validate reference number format (13 digits as per your regex)
+                string refNum = member.ReferenceNumber.Trim();
+                if (refNum.Length != 13 || !refNum.All(char.IsDigit))
+                {
+                    return (false, "Reference number must be exactly 13 digits.");
+                }
+
+                return (true, "");
+            }
+
+            // For other payment methods, reference number is optional
+            return (true, "");
+        }
+
+        #endregion
+
         #region CREATE
 
         public async Task<(bool Success, string Message, int? MemberId)> AddMemberAsync(ManageMemberModel member)
@@ -98,7 +181,6 @@ namespace AHON_TRACK.Services
                     if (migratedWalkInId.HasValue)
                     {
                         Debug.WriteLine($"[AddMemberAsync] Successfully migrated walk-in customer {migratedWalkInId.Value} to member");
-                        // Optional: You could also notify the dashboard about the migration
                         DashboardEventService.Instance.NotifyPopulationDataChanged();
                     }
 
@@ -186,6 +268,7 @@ namespace AHON_TRACK.Services
                     PackageID = @PackageID,
                     Status = @Status,
                     PaymentMethod = @PaymentMethod,
+                    ReferenceNumber = @ReferenceNumber,
                     RegisteredByEmployeeID = @RegisteredByEmployeeID
                 WHERE MemberID = @MemberID";
 
@@ -211,11 +294,11 @@ namespace AHON_TRACK.Services
             const string query = @"
                 INSERT INTO Members 
                 (Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
-                 ValidUntil, PackageID, Status, PaymentMethod, RegisteredByEmployeeID, IsDeleted)
+                 ValidUntil, PackageID, Status, PaymentMethod, ReferenceNumber, RegisteredByEmployeeID, IsDeleted)
                 OUTPUT INSERTED.MemberID
                 VALUES 
                 (@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
-                 @ValidUntil, @PackageID, @Status, @PaymentMethod, @RegisteredByEmployeeID, 0)";
+                 @ValidUntil, @PackageID, @Status, @PaymentMethod, @ReferenceNumber, @RegisteredByEmployeeID, 0)";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             AddMemberParameters(cmd, member);
@@ -225,8 +308,8 @@ namespace AHON_TRACK.Services
         }
 
         private async Task RecordPackageSaleAsync(
-    SqlConnection conn, SqlTransaction transaction,
-    ManageMemberModel member, int memberId, ManageMemberModel? originalMember = null)
+            SqlConnection conn, SqlTransaction transaction,
+            ManageMemberModel member, int memberId, ManageMemberModel? originalMember = null)
         {
             var (packagePrice, packageName, duration) = await GetPackageDetailsAsync(
                 conn, transaction, member.PackageID!.Value);
@@ -272,15 +355,12 @@ namespace AHON_TRACK.Services
                 !DateTime.TryParse(newValidUntil, out DateTime newDate))
                 return 1;
 
-            // ✅ Calculate ONLY the months being ADDED
-            // Example: Old = Feb 1, New = May 1 → 3 months added
             int monthsAdded = ((newDate.Year - oldDate.Year) * 12) + (newDate.Month - oldDate.Month);
 
             Debug.WriteLine($"[CalculateMonthsAdded] {oldDate:MMM dd, yyyy} → {newDate:MMM dd, yyyy} = {monthsAdded} months");
 
             return Math.Max(1, monthsAdded);
         }
-
 
         private async Task<(decimal Price, string Name, string Duration)> GetPackageDetailsAsync(
             SqlConnection conn, SqlTransaction transaction, int packageId)
@@ -367,6 +447,12 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
             cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
+
+            // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
+            string processedRefNumber = ProcessReferenceNumber(member);
+            cmd.Parameters.AddWithValue("@ReferenceNumber",
+                string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
+
             cmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
         }
 
@@ -386,8 +472,6 @@ namespace AHON_TRACK.Services
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
-
-                // Replace the query in GetMembersAsync method in MemberService.cs
 
                 const string query = @"
     SELECT 
@@ -637,15 +721,11 @@ namespace AHON_TRACK.Services
 
         private ManageMemberModel MapMemberFromReader(SqlDataReader reader, bool includeRegisteredBy = false)
         {
-            int baseIndex = includeRegisteredBy ? 0 : 1; // Skip "Name" column if not includeRegisteredBy
+            int baseIndex = includeRegisteredBy ? 0 : 1;
 
-            // Get gym membership package name
             string gymPackageName = reader.IsDBNull(11) ? null : reader.GetString(11);
-
-            // Get session-based package names
             string sessionPackages = reader.IsDBNull(12) ? null : reader.GetString(12);
 
-            // Combine gym membership and session packages
             string combinedPackages;
             if (!string.IsNullOrEmpty(gymPackageName) && !string.IsNullOrEmpty(sessionPackages))
             {
@@ -677,10 +757,7 @@ namespace AHON_TRACK.Services
                 DateOfBirth = reader.IsDBNull(includeRegisteredBy ? 8 : 8) ? null : reader.GetDateTime(includeRegisteredBy ? 8 : 8),
                 ValidUntil = reader.IsDBNull(includeRegisteredBy ? 9 : 9) ? null : reader.GetDateTime(includeRegisteredBy ? 9 : 9).ToString("MMM dd, yyyy"),
                 PackageID = reader.IsDBNull(includeRegisteredBy ? 10 : 10) ? null : reader.GetInt32(includeRegisteredBy ? 10 : 10),
-
-                // Use combined packages
                 MembershipType = combinedPackages,
-
                 Status = reader.IsDBNull(includeRegisteredBy ? 13 : 13) ? "Active" : reader.GetString(includeRegisteredBy ? 13 : 13),
                 PaymentMethod = reader.IsDBNull(includeRegisteredBy ? 14 : 14) ? string.Empty : reader.GetString(includeRegisteredBy ? 14 : 14),
                 AvatarBytes = reader.IsDBNull(includeRegisteredBy ? 5 : 15) ? null : (byte[])reader[includeRegisteredBy ? 5 : 15],
@@ -732,7 +809,6 @@ namespace AHON_TRACK.Services
                         return (false, "Member not found.");
                     }
 
-                    // ✅ Get original member data BEFORE updating
                     var originalMember = await GetOriginalMemberDataAsync(conn, member.MemberID, transaction);
                     byte[]? imageToSave = await GetImageToSaveAsync(conn, member, transaction);
 
@@ -749,6 +825,7 @@ namespace AHON_TRACK.Services
                     PackageID = @PackageID,
                     Status = @Status,
                     PaymentMethod = @PaymentMethod,
+                    ReferenceNumber = @ReferenceNumber,
                     ProfilePicture = @ProfilePicture
                 WHERE MemberID = @MemberID";
 
@@ -763,13 +840,11 @@ namespace AHON_TRACK.Services
 
                     if (rows > 0)
                     {
-                        // ✅ Check if this is a gym membership package renewal/upgrade
                         bool isGymMembershipRenewal = await IsGymMembershipRenewalAsync(
                             conn, transaction, originalMember, member);
 
                         if (isGymMembershipRenewal && member.PackageID.HasValue && member.PackageID.Value > 0)
                         {
-                            // ✅ Record the package sale with ORIGINAL member data
                             await RecordPackageSaleAsync(conn, transaction, member, member.MemberID, originalMember);
 
                             string actionType = originalMember?.PackageID == member.PackageID ? "RENEWAL" : "UPGRADE";
@@ -1316,10 +1391,7 @@ namespace AHON_TRACK.Services
 
             if (disposing)
             {
-                // Clear callback reference
                 _notificationCallback = null;
-
-                // Dispose ToastManager if it's disposable
                 _toastManager.DismissAll();
             }
 
@@ -1376,12 +1448,12 @@ namespace AHON_TRACK.Services
         #region HELPER METHODS FOR RENEWAL/UPGRADE
 
         private async Task<ManageMemberModel?> GetOriginalMemberDataAsync(
-    SqlConnection conn, int memberId, SqlTransaction transaction)
+            SqlConnection conn, int memberId, SqlTransaction transaction)
         {
             const string query = @"
-        SELECT PackageID, ValidUntil, PaymentMethod
-        FROM Members 
-        WHERE MemberID = @MemberId";
+                SELECT PackageID, ValidUntil, PaymentMethod
+                FROM Members 
+                WHERE MemberID = @MemberId";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@MemberId", memberId);
@@ -1408,17 +1480,14 @@ namespace AHON_TRACK.Services
             if (originalMember == null || !updatedMember.PackageID.HasValue)
                 return false;
 
-            // Check if the new package is a GYM MEMBERSHIP package (not session-based)
             bool isGymMembershipPackage = await IsGymMembershipPackageAsync(
                 conn, transaction, updatedMember.PackageID.Value);
 
             if (!isGymMembershipPackage)
                 return false;
 
-            // Check if package changed (upgrade/downgrade)
             bool packageChanged = originalMember.PackageID != updatedMember.PackageID;
 
-            // Check if validity was extended (renewal)
             bool validityExtended = originalMember.PackageID == updatedMember.PackageID &&
                                    !string.IsNullOrEmpty(updatedMember.ValidUntil) &&
                                    !string.IsNullOrEmpty(originalMember.ValidUntil) &&
@@ -1433,10 +1502,10 @@ namespace AHON_TRACK.Services
             SqlConnection conn, SqlTransaction transaction, int packageId)
         {
             const string query = @"
-        SELECT Duration 
-        FROM Packages 
-        WHERE PackageID = @PackageID 
-            AND IsDeleted = 0";
+                SELECT Duration 
+                FROM Packages 
+                WHERE PackageID = @PackageID 
+                    AND IsDeleted = 0";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@PackageID", packageId);
@@ -1447,35 +1516,29 @@ namespace AHON_TRACK.Services
 
             string duration = result.ToString()?.Trim().ToLower() ?? "";
 
-            // Gym memberships are NOT session-based or one-time
             bool isSessionBased = duration.Contains("session") ||
                                  duration.Contains("one-time only") ||
                                  duration.Contains("one time only");
 
             return !isSessionBased;
         }
+
         #endregion
 
         #region WALK-IN TO MEMBER MIGRATION
 
-        /// <summary>
-        /// STRICT MATCHING: Checks if FirstName + LastName matches ANY walk-in customer
-        /// Migrates ALL matching walk-in records (soft delete) when person becomes a member
-        /// </summary>
         private async Task<int?> CheckAndMigrateWalkInCustomerEnhancedAsync(
             SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
         {
             try
             {
-                // STRICT QUERY: Match by FirstName + LastName only
-                // This ensures ANY walk-in with the same name gets migrated
                 const string checkQuery = @"
-            SELECT CustomerID, FirstName, LastName, Age, ContactNumber, WalkinType 
-            FROM WalkInCustomers 
-            WHERE FirstName = @FirstName 
-                AND LastName = @LastName 
-                AND (IsDeleted = 0 OR IsDeleted IS NULL)
-            ORDER BY CustomerID DESC";
+                    SELECT CustomerID, FirstName, LastName, Age, ContactNumber, WalkinType 
+                    FROM WalkInCustomers 
+                    WHERE FirstName = @FirstName 
+                        AND LastName = @LastName 
+                        AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                    ORDER BY CustomerID DESC";
 
                 using var checkCmd = new SqlCommand(checkQuery, conn, transaction);
                 checkCmd.Parameters.AddWithValue("@FirstName", member.FirstName ?? (object)DBNull.Value);
@@ -1510,16 +1573,15 @@ namespace AHON_TRACK.Services
                     return null;
                 }
 
-                // MIGRATE ALL MATCHING WALK-IN RECORDS
                 int totalMigrated = 0;
                 var migratedIds = new List<int>();
 
                 foreach (var match in walkInMatches)
                 {
                     const string deleteQuery = @"
-                UPDATE WalkInCustomers 
-                SET IsDeleted = 1 
-                WHERE CustomerID = @CustomerID";
+                        UPDATE WalkInCustomers 
+                        SET IsDeleted = 1 
+                        WHERE CustomerID = @CustomerID";
 
                     using var deleteCmd = new SqlCommand(deleteQuery, conn, transaction);
                     deleteCmd.Parameters.AddWithValue("@CustomerID", match.CustomerId);
@@ -1537,14 +1599,12 @@ namespace AHON_TRACK.Services
 
                 if (totalMigrated > 0)
                 {
-                    // LOG THE MIGRATION
                     string migrationDetails = totalMigrated == 1
                         ? $"Migrated walk-in customer {member.FirstName} {member.LastName} (ID: {migratedIds[0]}) to member"
                         : $"Migrated {totalMigrated} walk-in records for {member.FirstName} {member.LastName} (IDs: {string.Join(", ", migratedIds)}) to member";
 
                     await LogActionAsync(conn, transaction, "MIGRATION", migrationDetails, true);
 
-                    // SHOW SUCCESS TOAST
                     string toastMessage = totalMigrated == 1
                         ? $"{member.FirstName} {member.LastName} has been successfully converted from walk-in to member."
                         : $"{member.FirstName} {member.LastName} - {totalMigrated} walk-in record(s) have been archived and converted to member.";
@@ -1564,71 +1624,6 @@ namespace AHON_TRACK.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] Error: {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Basic version - kept for backward compatibility
-        /// Matches by FirstName + LastName + Age
-        /// </summary>
-        private async Task<int?> CheckAndMigrateWalkInCustomerAsync(
-            SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
-        {
-            try
-            {
-                const string checkQuery = @"
-            SELECT CustomerID 
-            FROM WalkInCustomers 
-            WHERE FirstName = @FirstName 
-                AND LastName = @LastName 
-                AND Age = @Age
-                AND (IsDeleted = 0 OR IsDeleted IS NULL)";
-
-                using var checkCmd = new SqlCommand(checkQuery, conn, transaction);
-                checkCmd.Parameters.AddWithValue("@FirstName", member.FirstName ?? (object)DBNull.Value);
-                checkCmd.Parameters.AddWithValue("@LastName", member.LastName ?? (object)DBNull.Value);
-                checkCmd.Parameters.AddWithValue("@Age", member.Age ?? (object)DBNull.Value);
-
-                var result = await checkCmd.ExecuteScalarAsync();
-
-                if (result == null || result == DBNull.Value)
-                {
-                    Debug.WriteLine("[CheckAndMigrateWalkInCustomerAsync] No matching walk-in customer found");
-                    return null;
-                }
-
-                int walkInCustomerId = Convert.ToInt32(result);
-
-                const string deleteQuery = @"
-            UPDATE WalkInCustomers 
-            SET IsDeleted = 1 
-            WHERE CustomerID = @CustomerID";
-
-                using var deleteCmd = new SqlCommand(deleteQuery, conn, transaction);
-                deleteCmd.Parameters.AddWithValue("@CustomerID", walkInCustomerId);
-
-                int rowsAffected = await deleteCmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
-                {
-                    Debug.WriteLine($"[CheckAndMigrateWalkInCustomerAsync] Migrated walk-in customer {walkInCustomerId} to member");
-                    await LogActionAsync(conn, transaction, "MIGRATION",
-                        $"Migrated walk-in customer {member.FirstName} {member.LastName} (ID: {walkInCustomerId}) to member", true);
-
-                    _toastManager?.CreateToast("Walk-in Customer Migrated")
-                        .WithContent($"{member.FirstName} {member.LastName} has been converted from walk-in to member.")
-                        .DismissOnClick()
-                        .ShowInfo();
-
-                    return walkInCustomerId;
-                }
-
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[CheckAndMigrateWalkInCustomerAsync] Error: {ex.Message}");
                 return null;
             }
         }

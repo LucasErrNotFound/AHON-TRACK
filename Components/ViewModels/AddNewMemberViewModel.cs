@@ -41,7 +41,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             "I", "J", "K", "L", "M", "N", "O", "P",
             "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
-    // Store monthly membership packages from SellingModel
     [ObservableProperty]
     private List<SellingModel> _monthlyPackages = new();
 
@@ -56,7 +55,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
     [ObservableProperty]
     private Image? _memberProfileImageControl;
-    
+
     [ObservableProperty]
     private Image? _memberProfileImageControl2;
 
@@ -90,8 +89,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     public bool IsGCashVisible => IsGCashSelected;
     public bool IsMayaVisible => IsMayaSelected;
     public bool IsReferenceNumberVisible => IsMayaSelected || IsGCashSelected;
-    
-    public bool IsReferenceNumberVisibleInReceipt => 
+
+    public bool IsReferenceNumberVisibleInReceipt =>
         (IsGCashSelected || IsMayaSelected) && !string.IsNullOrWhiteSpace(ReferenceNumber);
 
     private readonly DialogManager _dialogManager;
@@ -174,13 +173,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
-    
+
     public bool IsMale
     {
         get => MemberGender == "Male";
-        set 
-        { 
-            if (value) 
+        set
+        {
+            if (value)
                 MemberGender = "Male";
             else if (MemberGender == "Male")
                 MemberGender = string.Empty;
@@ -190,9 +189,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     public bool IsFemale
     {
         get => MemberGender == "Female";
-        set 
-        { 
-            if (value) 
+        set
+        {
+            if (value)
                 MemberGender = "Female";
             else if (MemberGender == "Female")
                 MemberGender = string.Empty;
@@ -268,14 +267,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(ValidityTo));
             OnPropertyChanged(nameof(MembershipDurationSummary));
 
-            // Auto-select monthly package when duration is set
             _ = AutoSelectMonthlyPackageAsync();
         }
     }
-    
+
     [Required(ErrorMessage = "Reference number is required")]
     [RegularExpression(@"^\d{13}$", ErrorMessage = "Reference number must be 13 digits long")]
-    public string? ReferenceNumber 
+    public string? ReferenceNumber
     {
         get => _referenceNumber;
         set
@@ -283,7 +281,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             SetProperty(ref _referenceNumber, value, true);
             OnPropertyChanged(nameof(IsPaymentPossible));
             OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
-        } 
+        }
     }
 
     private byte[]? _profileImage;
@@ -309,6 +307,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 _isGCashSelected = false;
                 _isMayaSelected = false;
+                ReferenceNumber = string.Empty; // ✅ Clear reference when switching to cash
             }
 
             OnPropertyChanged();
@@ -335,7 +334,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 _isCashSelected = false;
                 _isMayaSelected = false;
-                ReferenceNumber = string.Empty;
+                ReferenceNumber = string.Empty; // ✅ Clear for fresh input
             }
 
             OnPropertyChanged();
@@ -362,7 +361,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 _isCashSelected = false;
                 _isGCashSelected = false;
-                ReferenceNumber = string.Empty;
+                ReferenceNumber = string.Empty; // ✅ Clear for fresh input
             }
 
             OnPropertyChanged();
@@ -518,17 +517,16 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     public async Task Initialize()
     {
         IsActiveSelected = true;
-        
+
         if (ViewContext == MemberViewContext.AddNew)
         {
             ProfileImageSource = ManageMemberModel.DefaultAvatarSource;
             ProfileImage = null;
         }
-        
+
         await LoadMonthlyPackagesAsync();
     }
 
-    // Load monthly membership packages using GetAvailablePackagesForMembersAsync
     private async Task LoadMonthlyPackagesAsync()
     {
         try
@@ -562,7 +560,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         }
     }
 
-    // Auto-select monthly package when duration is entered
     private async Task AutoSelectMonthlyPackageAsync()
     {
         if (!MembershipDuration.HasValue || MembershipDuration <= 0)
@@ -583,13 +580,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             return;
         }
 
-        // If packages not loaded yet, load them
         if (!MonthlyPackages.Any())
         {
             await LoadMonthlyPackagesAsync();
         }
 
-        // Auto-select the first monthly package (you can add logic to select a specific one based on price/tier)
         if (MonthlyPackages.Any())
         {
             SelectedMonthlyPackage = MonthlyPackages.First();
@@ -887,15 +882,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 return;
             }
 
-            // ✅ FIX: Calculate ValidUntil based on context
+            // Calculate ValidUntil based on context
             DateTime validUntilDate;
 
             if (ViewContext == MemberViewContext.Renew || ViewContext == MemberViewContext.Upgrade)
             {
-                // For RENEW or UPGRADE: Extend from current ValidUntil date
                 DateTime currentValidUntil = _currentMemberValidUntil;
 
-                // If no valid date stored, try to get it from the database
                 if (currentValidUntil == DateTime.MinValue && _selectedMemberId > 0)
                 {
                     var result = await _memberService.GetMemberByIdAsync(_selectedMemberId);
@@ -905,19 +898,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                     }
                 }
 
-                // ✅ CRITICAL FIX: Always add months to existing expiry (even if expired)
-                // This ensures the sale records the EXACT months the user is purchasing
                 if (currentValidUntil == DateTime.MinValue)
                 {
-                    // Only use today if we have NO expiry date at all (shouldn't happen in renew/upgrade)
                     validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
                     Debug.WriteLine($"[Payment] {ViewContext}: No existing date, starting from today → {validUntilDate:MMM dd, yyyy}");
                 }
                 else
                 {
-                    // ✅ Always extend from existing expiry, even if it's in the past
-                    // Example: Expired on Feb 1, user buys 3 months → Feb 1 + 3 = May 1
-                    // CalculateMonthsAdded(Feb 1, May 1) = 3 months ✓
                     validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
 
                     string status = currentValidUntil < DateTime.Now ? "expired" : "active";
@@ -930,11 +917,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             }
             else
             {
-                // For ADD NEW: Start from today
                 validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
                 Debug.WriteLine($"[Payment] ADD NEW: Starting from today to {validUntilDate:MMM dd, yyyy}");
             }
 
+            // ✅ CREATE MEMBER MODEL
             var member = new ManageMemberModel
             {
                 FirstName = MemberFirstName,
@@ -949,8 +936,21 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 PackageID = SelectedMonthlyPackage.SellingID,
                 Status = GetSelectedStatus() ?? "Active",
                 PaymentMethod = GetSelectedPaymentMethod(),
+                ReferenceNumber = ReferenceNumber, // ✅ Pass reference number from UI
                 ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
             };
+
+            // ✅ VALIDATE PAYMENT & REFERENCE NUMBER BEFORE SAVING
+            var (isValid, errorMessage) = _memberService.ValidatePaymentReferenceNumber(member);
+
+            if (!isValid)
+            {
+                _toastManager?.CreateToast("Validation Error")
+                    .WithContent(errorMessage)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
 
             bool isSuccess;
             string successMessage;
@@ -965,6 +965,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months");
                 Debug.WriteLine($"[Payment] Total Amount: ₱{SelectedMonthlyPackage.Price * MembershipDuration:N2}");
                 Debug.WriteLine($"[Payment] ValidUntil: {member.ValidUntil}");
+                Debug.WriteLine($"[Payment] Payment Method: {member.PaymentMethod}");
+                Debug.WriteLine($"[Payment] Reference Number: {member.ReferenceNumber ?? "N/A"}");
                 Debug.WriteLine($"[Payment] =======================================");
 
                 var result = await _memberService.AddMemberAsync(member);
@@ -992,9 +994,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 Debug.WriteLine($"[Payment] New Package: {SelectedMonthlyPackage.Title}");
                 Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months added");
                 Debug.WriteLine($"[Payment] New ValidUntil: {member.ValidUntil}");
+                Debug.WriteLine($"[Payment] Payment Method: {member.PaymentMethod}");
+                Debug.WriteLine($"[Payment] Reference Number: {member.ReferenceNumber ?? "N/A"}");
                 Debug.WriteLine($"[Payment] =======================================");
 
-                // Set the MemberID from the member being upgraded/renewed
                 member.MemberID = _selectedMemberId;
 
                 var result = await _memberService.UpdateMemberAsync(member);
@@ -1019,7 +1022,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 return;
             }
 
-            // Calculate total amount
             decimal totalAmount = SelectedMonthlyPackage.Price * MembershipDuration.Value;
 
             _toastManager?.CreateToast(successMessage)
@@ -1055,11 +1057,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             bool hasValidQuantity = (MembershipDuration.HasValue && MembershipDuration > 0);
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
             bool hasPackage = SelectedMonthlyPackage != null;
-            
+
+            // ✅ VALIDATE REFERENCE NUMBER FOR GCASH/MAYA
             bool hasValidReferenceNumber = true;
             if (IsGCashSelected || IsMayaSelected)
             {
-                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber) 
+                hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber)
                                           && ReferenceNumberRegex().IsMatch(ReferenceNumber);
             }
 
@@ -1088,6 +1091,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         MemberStatus = string.Empty;
         MembershipDuration = null;
         SelectedMonthlyPackage = null;
+        ReferenceNumber = string.Empty; // ✅ Clear reference number
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
@@ -1138,14 +1142,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         ? $"ID: GM-2025-{_selectedMemberId:D6}"
         : "ID: GM-2025-001234";
 
-    // ✅ ADD: Transaction Details
     public string CurrentDate => DateTime.Now.ToString("MMMM dd, yyyy");
 
     public string CurrentTime => DateTime.Now.ToString("h:mm tt");
 
     public string TransactionID => $"TX-{DateTime.Now:yyyy}-{new Random().Next(1000, 9999)}";
 
-    // ✅ ADD: Membership Validity Dates
     public string ValidFromDate
     {
         get
@@ -1154,20 +1156,17 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 DateTime currentValidUntil = _currentMemberValidUntil;
 
-                // If membership already expired or no valid date, start from today
                 if (currentValidUntil == DateTime.MinValue || currentValidUntil < DateTime.Now)
                 {
                     return DateTime.Now.ToString("MMMM dd, yyyy");
                 }
                 else
                 {
-                    // If still valid, start from current expiry date
                     return currentValidUntil.ToString("MMMM dd, yyyy");
                 }
             }
             else
             {
-                // For ADD NEW: Start from today
                 return DateTime.Now.ToString("MMMM dd, yyyy");
             }
         }
@@ -1184,23 +1183,19 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
             if (ViewContext == MemberViewContext.Renew || ViewContext == MemberViewContext.Upgrade)
             {
-                // For RENEW or UPGRADE: Extend from current ValidUntil date
                 DateTime currentValidUntil = _currentMemberValidUntil;
 
-                // If membership already expired or no valid date, extend from today
                 if (currentValidUntil == DateTime.MinValue || currentValidUntil < DateTime.Now)
                 {
                     validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
                 }
                 else
                 {
-                    // If still valid, extend from current expiry date
                     validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
                 }
             }
             else
             {
-                // For ADD NEW: Start from today
                 validUntilDate = DateTime.Now.AddMonths(MembershipDuration.Value);
             }
 
@@ -1211,7 +1206,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     public string ValidityFrom => $"Valid from: {ValidFromDate}";
     public string ValidityTo => $"Valid to: {ValidUntilDate}";
 
-    // ✅ ADD: Formatted membership duration for Purchase Summary
     public string MembershipDurationSummary
     {
         get
@@ -1232,30 +1226,26 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
-    
+
     [GeneratedRegex(@"^\d{13}$")]
     private static partial Regex ReferenceNumberRegex();
 
     public event Action? ImageResetRequested;
-    
+
     protected override void DisposeManagedResources()
     {
-        // Dispose / null bitmaps and image bytes
         if (ProfileImageSource is IDisposable d0) d0.Dispose();
         ProfileImageSource = null;
         MemberProfileImageControl = null;
         MemberProfileImageControl2 = null;
         ProfileImage = null;
 
-        // Clear collections
         MonthlyPackages.Clear();
         MonthlyPackages = [];
 
-        // Clear suggestions & arrays
         MiddleInitialItems = [];
         MemberStatusItems = [];
 
-        // Null references to large objects
         SelectedMonthlyPackage = null;
 
         base.DisposeManagedResources();

@@ -22,8 +22,8 @@ namespace AHON_TRACK.Services
         private readonly ToastManager _toastManager;
 
         // Constants
-        private const int MAX_DAILY_SESSIONS = 20;
-        private const int MAX_SCHEDULE_CAPACITY = 20;
+        private const int MAX_DAILY_SESSIONS = 5;
+        private const int MAX_SCHEDULE_CAPACITY = 5;
         private const string DEFAULT_CUSTOMER_TYPE = "Member";
         private const string DEFAULT_ATTENDANCE = "Pending";
 
@@ -104,6 +104,16 @@ namespace AHON_TRACK.Services
                             ToastType.Warning);
                         return false;
                     }
+
+                    // Check if customer already has a session scheduled for this date
+                    if (await CheckCustomerDailySessionAsync(connection, transaction, training.customerID, training.scheduledDate))
+                    {
+                        ShowToast("Daily Limit Reached",
+                            $"{training.firstName} {training.lastName} already has a training session scheduled for {training.scheduledDate:MMM dd, yyyy}. Only one session per day is allowed.",
+                            ToastType.Warning);
+                        return false;
+                    }
+
 
                     // Check for duplicate package booking
                     if (await CheckDuplicateBookingAsync(connection, transaction, training.customerID, training.packageID,
@@ -510,6 +520,16 @@ WHERE TrainingID = @TrainingID";
                 await connection.OpenAsync();
                 using var transaction = connection.BeginTransaction();
 
+                // Check if customer already has another session on this date
+                if (await CheckCustomerDailySessionAsync(connection, transaction, training.customerID, training.scheduledDate, training.trainingID))
+                {
+                    ShowToast("Daily Limit Reached",
+                        $"{training.firstName} {training.lastName} already has a training session scheduled for {training.scheduledDate:MMM dd, yyyy}. Only one session per day is allowed.",
+                        ToastType.Warning);
+                    transaction.Rollback();
+                    return false;
+                }
+
                 try
                 {
                     // Check for package time conflicts (excluding current training)
@@ -519,7 +539,7 @@ WHERE TrainingID = @TrainingID";
                     WHERE PackageID != (SELECT PackageID FROM Trainings WHERE TrainingID = @TrainingID)
                       AND TrainingID != @TrainingID
                       AND ScheduledDate = @ScheduledDate
-                      AND Attendance IN ('Pending', 'Present')
+                      AND Attendance IN ('Pending', 'Present', 'Absent')
                       AND (@ScheduledTimeStart < ScheduledTimeEnd AND @ScheduledTimeEnd > ScheduledTimeStart)";
 
                     using (var conflictCmd = new SqlCommand(conflictQuery, connection, transaction))
@@ -926,6 +946,38 @@ WHERE CustomerID = @CustomerID
             }
         }
 
+        /// <summary>
+        /// Checks if a customer already has a session scheduled for the given date
+        /// </summary>
+        private async Task<bool> CheckCustomerDailySessionAsync(SqlConnection connection, SqlTransaction transaction,
+            int customerID, DateTime scheduledDate, int? excludeTrainingID = null)
+        {
+            string query = @"
+    SELECT COUNT(*)
+    FROM Trainings
+    WHERE CustomerID = @CustomerID
+      AND ScheduledDate = @ScheduledDate
+      AND Attendance IN ('Pending', 'Present')";
+
+            // If updating, exclude the current training record
+            if (excludeTrainingID.HasValue)
+            {
+                query += " AND TrainingID != @TrainingID";
+            }
+
+            using var cmd = new SqlCommand(query, connection, transaction);
+            cmd.Parameters.AddWithValue("@CustomerID", customerID);
+            cmd.Parameters.AddWithValue("@ScheduledDate", scheduledDate.Date);
+
+            if (excludeTrainingID.HasValue)
+            {
+                cmd.Parameters.AddWithValue("@TrainingID", excludeTrainingID.Value);
+            }
+
+            var result = await cmd.ExecuteScalarAsync();
+            int count = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            return count > 0; // Returns true if customer already has a session that day
+        }
         #endregion
 
         #region UTILITY METHODS
@@ -1080,8 +1132,8 @@ VALUES (@username, @role, @actionType, @description, @success, GETDATE(), @emplo
         private void NotifyTrainingAdded()
         {
             DashboardEventService.Instance.NotifyScheduleAdded();
+            DashboardEventService.Instance.NotifyScheduleUpdated();
             DashboardEventService.Instance.NotifyMemberUpdated();
-            DashboardEventService.Instance.NotifyTrainingSessionsUpdated();
         }
 
         private static object ToDbValue(object? value)

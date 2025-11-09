@@ -13,6 +13,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AHON_TRACK.ViewModels;
@@ -85,7 +86,9 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
     private bool _disposed = false;
 
-    private bool _isLoadingDataFlag = false;
+    // ✅ Thread-safety for refresh operations
+    private readonly SemaphoreSlim _refreshLock = new SemaphoreSlim(1, 1);
+    private CancellationTokenSource? _refreshCts;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -139,7 +142,6 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     private void SubscribeToEvents()
     {
         var eventService = DashboardEventService.Instance;
-        eventService.TrainingSessionsUpdated += OnTrainingDataChanged;
         eventService.ScheduleAdded += OnTrainingDataChanged;
         eventService.ScheduleUpdated += OnTrainingDataChanged;
         eventService.MemberUpdated += OnTrainingDataChanged;
@@ -243,29 +245,33 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         }
     }
 
-    private void OnPackageDataChanged(object? sender, EventArgs e)
+    // ✅ FIXED: Thread-safe event handler with debouncing
+    private async void OnPackageDataChanged(object? sender, EventArgs e)
     {
-        if (_isLoadingDataFlag) return;
+        if (!await _refreshLock.WaitAsync(0)) return;
+
         try
         {
-            _isLoadingDataFlag = true;
-            _ = LoadPackagesAsync();
+            await Task.Delay(100); // Small debounce
+            await LoadPackagesAsync();
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast($"Failed to reload packages: {ex.Message}");
+            _toastManager?.CreateToast("Refresh Error")
+                .WithContent($"Failed to reload packages: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
         finally
         {
-            _isLoadingDataFlag = false;
+            _refreshLock.Release();
         }
     }
 
+    // ✅ FIXED: Removed _isLoadingDataFlag check at the start
     public async Task LoadTrainingsAsync()
     {
-        if (_isLoadingDataFlag) return;
-
-        _isLoadingDataFlag = true;
+        // ✅ Allow refresh to happen even if currently loading
         IsLoading = true;
 
         try
@@ -299,10 +305,16 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
             FilterDataByPackageAndDate();
             UpdateDashboardStatistics();
         }
+        catch (Exception ex)
+        {
+            _toastManager?.CreateToast("Load Error")
+                .WithContent($"Failed to load training schedules: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
         finally
         {
             IsLoading = false;
-            _isLoadingDataFlag = false;
         }
     }
 
@@ -456,11 +468,16 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
 
         _changeScheduleDialogCardViewModel.Initialize(scheduledPerson);
         _dialogManager.CreateDialog(_changeScheduleDialogCardViewModel)
-            .WithSuccessCallback(_ =>
+            .WithSuccessCallback(async _ =>
+            {
+                // ✅ Reload data after successful update
+                await LoadTrainingsAsync();
+
                 _toastManager.CreateToast("Changed training schedule")
                     .WithContent($"You have changed {scheduledPerson.FirstName} {scheduledPerson.LastName}'s training schedule!")
                     .DismissOnClick()
-                    .ShowSuccess())
+                    .ShowSuccess();
+            })
             .WithCancelCallback(() =>
                 _toastManager.CreateToast("Changing training schedule cancelled")
                     .WithContent("Changing training schedule cancelled")
@@ -606,21 +623,49 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         FilterDataByPackageAndDate();
     }
 
-    private void OnTrainingDataChanged(object? sender, EventArgs e)
+    // ✅ FIXED: Thread-safe event handler with debouncing and cancellation
+    private async void OnTrainingDataChanged(object? sender, EventArgs e)
     {
-        if (_isLoadingDataFlag) return;
+        // Cancel any pending refresh operation
+        _refreshCts?.Cancel();
+        _refreshCts = new CancellationTokenSource();
+        var token = _refreshCts.Token;
+
+        // Wait a bit to debounce multiple rapid events
         try
         {
-            _isLoadingDataFlag = true;
-            _ = LoadTrainingsAsync();
+            await Task.Delay(100, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return; // Another refresh was requested, let that one handle it
+        }
+
+        // Ensure only one refresh runs at a time
+        if (!await _refreshLock.WaitAsync(0))
+        {
+            return; // Already refreshing, skip this call
+        }
+
+        try
+        {
+            if (token.IsCancellationRequested) return;
+            await LoadTrainingsAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // Refresh was cancelled by a newer request
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast($"Failed to load: {ex.Message}");
+            _toastManager?.CreateToast("Refresh Error")
+                .WithContent($"Failed to refresh schedules: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
         finally
         {
-            _isLoadingDataFlag = false;
+            _refreshLock.Release();
         }
     }
 
@@ -637,26 +682,39 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
         SelectAll = ScheduledPeople.Count > 0 && ScheduledPeople.All(x => x.IsSelected);
     }
 
+    // ✅ FIXED: Thread-safe event handler
     private async void OnCoachDataChanged(object? sender, EventArgs e)
     {
-        if (_isLoadingDataFlag) return;
+        if (!await _refreshLock.WaitAsync(0)) return;
+
         try
         {
-            _isLoadingDataFlag = true;
+            await Task.Delay(100); // Small debounce
             await LoadCoachesAsync();
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast($"Failed to reload coaches: {ex.Message}");
+            _toastManager?.CreateToast("Refresh Error")
+                .WithContent($"Failed to reload coaches: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
         }
         finally
         {
-            _isLoadingDataFlag = false;
+            _refreshLock.Release();
         }
     }
 
+    // ✅ FIXED: Proper cleanup of thread-safety resources
     protected override void DisposeManagedResources()
     {
+        // Cancel any pending refresh operations
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+
+        // Dispose the semaphore
+        _refreshLock?.Dispose();
+
         var eventService = DashboardEventService.Instance;
         eventService.TrainingSessionsUpdated -= OnTrainingDataChanged;
         eventService.ScheduleAdded -= OnTrainingDataChanged;
