@@ -245,6 +245,7 @@
 											<NumericUpDown
 												shadui:ControlAssist.Label="Membership Duration (Month)"
 												Minimum="1"
+												Maximum="12"
 												Width="230"
 												FormatString="N0"
 												Watermark="Enter the duration"
@@ -890,6 +891,7 @@
 											<NumericUpDown
 												shadui:ControlAssist.Label="Membership Duration (Month)"
 												Minimum="1"
+												Maximum="12"
 												Width="230"
 												FormatString="N0"
 												Watermark="Enter the duration"

@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AHON_TRACK.Services.Events;
+using AHON_TRACK.Validators;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -271,8 +272,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         }
     }
 
-    [Required(ErrorMessage = "Reference number is required")]
-    [RegularExpression(@"^\d{13}$", ErrorMessage = "Reference number must be 13 digits long")]
+    [UppercaseReferenceNumberValidator]
     public string? ReferenceNumber
     {
         get => _referenceNumber;
@@ -307,7 +307,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 _isGCashSelected = false;
                 _isMayaSelected = false;
-                ReferenceNumber = string.Empty; // ✅ Clear reference when switching to cash
+                ReferenceNumber = null;
             }
 
             OnPropertyChanged();
@@ -334,7 +334,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 _isCashSelected = false;
                 _isMayaSelected = false;
-                ReferenceNumber = string.Empty; // ✅ Clear for fresh input
             }
 
             OnPropertyChanged();
@@ -361,7 +360,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 _isCashSelected = false;
                 _isGCashSelected = false;
-                ReferenceNumber = string.Empty; // ✅ Clear for fresh input
             }
 
             OnPropertyChanged();
@@ -1227,7 +1225,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     [GeneratedRegex(@"^09\d{9}$")]
     private static partial Regex ContactNumberRegex();
 
-    [GeneratedRegex(@"^\d{13}$")]
+    [GeneratedRegex(@"^[A-Z0-9]{12,13}$")]
     private static partial Regex ReferenceNumberRegex();
 
     public event Action? ImageResetRequested;
