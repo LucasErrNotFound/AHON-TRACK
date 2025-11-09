@@ -1095,8 +1095,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             if (IsGCashSelected || IsMayaSelected)
             {
                 hasValidReferenceNumber = !string.IsNullOrWhiteSpace(ReferenceNumber) 
-                                          && ReferenceNumber.Length == 13
-                                          && ReferenceNumber.All(char.IsDigit);
+                                          && ReferenceNumber.Length is 12 or 13;
             }
 
             return hasCustomer && hasItems && hasPaymentMethod && hasValidReferenceNumber;
