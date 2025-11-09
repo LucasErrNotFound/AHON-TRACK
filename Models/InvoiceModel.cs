@@ -14,6 +14,7 @@ namespace AHON_TRACK.Models
         public int Quantity { get; set; }
         public decimal Amount { get; set; }
         public DateTime DatePurchased { get; set; }
-        public string PaymentMethod { get; set; }
+        public string? PaymentMethod { get; set; }
+        public string? ReferenceNumber { get; set; }
     }
 }
