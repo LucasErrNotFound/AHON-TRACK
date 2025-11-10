@@ -32,6 +32,9 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     // Supplier dropdown items - now contains supplier names as strings
     [ObservableProperty]
     private string[] _supplierFilterItems = [];
+    
+    [ObservableProperty]
+    private string[] _brandNameItems = [];
 
     // This maintains the internal list of supplier objects
     private List<SupplierDropdownModel> _supplierModels = [];
@@ -73,9 +76,6 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     }
 
     [Required(ErrorMessage = "Brand name is required")]
-    [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
-    [MinLength(4, ErrorMessage = "Must be at least 4 characters long")]
-    [MaxLength(50, ErrorMessage = "Must not exceed 50 characters")]
     public string? BrandName
     {
         get => _brandName;
@@ -147,23 +147,19 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     }
 
     [Required(ErrorMessage = "Quantity is required")]
-    [Range(0, 500, ErrorMessage = "Quantity must be between 0 and 500")]
+    [Range(1, 100, ErrorMessage = "Quantity must be between 1 and 100")]
     public int? Quantity 
     {
         get => _quantity;
         set => SetProperty(ref _quantity, value, true);
     }
 
-    [Required(ErrorMessage = "Price is required")]
-    [Range(1, 1000000000, ErrorMessage = "Price must be between 1 and 1,000,000,000")]
     public decimal? PurchasePrice
     {
         get => _purchasePrice;
         set => SetProperty(ref _purchasePrice, value, true);
     }
 
-    [Required(ErrorMessage = "Purchased Date is required")]
-    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
     [PurchasedDateValidation(nameof(WarrantyExpiry), ErrorMessage = "Purchase date must be before warranty expiry")]
     [NotFutureDate(ErrorMessage = "Purchase date cannot be in the future")]
     public DateTime? PurchasedDate

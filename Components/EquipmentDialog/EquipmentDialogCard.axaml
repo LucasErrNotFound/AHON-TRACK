@@ -81,16 +81,30 @@
                                 VerticalAlignment="Center"
                                 Margin="10,0,0,0"/>
 						</StackPanel>
-						<Grid RowDefinitions="Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+						<Grid RowDefinitions="Auto Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
 							<StackPanel Grid.Row="0">
-								<TextBox
-                                    Classes="Clearable"
-                                    shadui:ControlAssist.Label="Brand Name"
-                                    Watermark="e.g., Treadmill Pro X12"
-                                    Text="{CompiledBinding BrandName, Mode=TwoWay}">
-								</TextBox>
+								<ComboBox
+									shadui:ControlAssist.Label="Supplier"
+									PlaceholderText="Supplier name"
+									ItemsSource="{CompiledBinding SupplierFilterItems}"
+									SelectedItem="{CompiledBinding Supplier, Mode=TwoWay}" />
 							</StackPanel>
 							<StackPanel Grid.Row="1">
+								<!--
+								<TextBox
+									Classes="Clearable"
+									shadui:ControlAssist.Label="Brand Name"
+									Watermark="e.g., Treadmill Pro X12"
+									Text="{CompiledBinding BrandName, Mode=TwoWay}">
+								</TextBox>
+								-->
+								<ComboBox
+									shadui:ControlAssist.Label="Brand Name"
+									PlaceholderText="e.g., Treadmill Pro X12"
+									ItemsSource="{CompiledBinding BrandNameItems}"
+									SelectedItem="{CompiledBinding BrandName, Mode=TwoWay}" />
+							</StackPanel>
+							<StackPanel Grid.Row="2">
 								<ComboBox
                                     shadui:ControlAssist.Label="Category"
                                     PlaceholderText="Select category"
@@ -98,10 +112,12 @@
                                     SelectedItem="{CompiledBinding Category, Mode=TwoWay}">
 								</ComboBox>
 							</StackPanel>
-							<StackPanel Grid.Row="2">
+							<StackPanel Grid.Row="3">
 								<NumericUpDown
                                     shadui:ControlAssist.Label="Quantity"
                                     Classes="Clearable"
+                                    Minimum="1"
+                                    Maximum="100"
                                     FormatString="N0"
                                     ShowButtonSpinner="False"
                                     Watermark="0"
@@ -128,16 +144,18 @@
                                 VerticalAlignment="Center"
                                 Margin="10,0,0,0"/>
 						</StackPanel>
-						<Grid RowDefinitions="Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+						<Grid RowDefinitions="Auto Auto" Margin="0,20,0,0" RowSpacing="20">
 							<StackPanel Grid.Row="0">
 								<CalendarDatePicker
                                     shadui:ControlAssist.ReadOnly="True"
                                     shadui:ControlAssist.Label="Purchase Date"
+                                    IsEnabled="False"
                                     SelectedDate="{CompiledBinding PurchasedDate}"/>
 							</StackPanel>
 							<StackPanel Grid.Row="1">
 								<NumericUpDown
-                                    shadui:ControlAssist.Label="Purchase Price"
+                                    shadui:ControlAssist.Label="Purchased Price"
+                                    IsEnabled="False"
                                     Classes="Clearable"
                                     FormatString="N2"
                                     ShowButtonSpinner="False"
@@ -147,13 +165,6 @@
 										<TextBlock Margin="8,0,-8,0" Text="₱" />
 									</NumericUpDown.InnerLeftContent>
 								</NumericUpDown>
-							</StackPanel>
-							<StackPanel Grid.Row="2">
-								<ComboBox
-                                    shadui:ControlAssist.Label="Supplier"
-                                    PlaceholderText="Supplier name"
-                                    ItemsSource="{CompiledBinding SupplierFilterItems}"
-                                    SelectedItem="{CompiledBinding Supplier, Mode=TwoWay}" />
 							</StackPanel>
 						</Grid>
 					</StackPanel>
