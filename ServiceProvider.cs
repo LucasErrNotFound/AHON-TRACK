@@ -49,6 +49,7 @@ namespace AHON_TRACK;
 [Transient<AddNewMemberViewModel>]
 [Transient<ChangeScheduleDialogCardViewModel>]
 [Transient<SettingsDialogCardViewModel>]
+[Transient<PurchaseOrderViewModel>]
 [Singleton<DialogManager>]
 [Singleton<ToastManager>]
 [Singleton<SettingsService>]
