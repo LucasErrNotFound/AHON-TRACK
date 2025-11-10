@@ -81,7 +81,7 @@
                                 VerticalAlignment="Center"
                                 Margin="10,0,0,0"/>
                         </StackPanel>
-                        <Grid RowDefinitions="Auto Auto Auto Auto Auto Auto" Margin="0,20,0,0" RowSpacing="20">
+                        <Grid RowDefinitions="Auto Auto Auto Auto" Margin="0,20,0,0" RowSpacing="15">
                             <StackPanel Grid.Row="0">
                                 <Grid ColumnDefinitions="* Auto">
                                     <StackPanel Grid.Column="0" HorizontalAlignment="Left">
@@ -126,48 +126,29 @@
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
-                            <StackPanel Grid.Row="2">
-                                <TextBox
-                                    Classes="Clearable"
-                                    shadui:ControlAssist.Label="Products"
-                                    Watermark="e.g., Cobra Energy Drink"
-                                    Text="{CompiledBinding Products, Mode=TwoWay}">
-                                </TextBox>
-                            </StackPanel>
-                            <Grid Grid.Row="3" ColumnDefinitions="* Auto">
+                            <Grid 
+                                Grid.Row="3"
+                                ColumnDefinitions="* Auto">
                                 <StackPanel Grid.Column="0" HorizontalAlignment="Left">
-                                    <ComboBox
-                                        shadui:ControlAssist.Label="Delivery Schedule (Optional)"
-                                        PlaceholderText="Set Schedule"
+                                    <TextBox
+                                        Classes="Clearable"
                                         Width="250"
-                                        ItemsSource="{CompiledBinding DeliveryScheduleItems}"
-                                        SelectedItem="{CompiledBinding SelectedDeliverySchedule}">
+                                        shadui:ControlAssist.Label="Supplier Address"
+                                        Watermark="Garden Villas 3 Meteor St."
+                                        Text="{CompiledBinding Address, Mode=TwoWay}">
+                                    </TextBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <ComboBox
+                                        Margin="0,-5,0,0"
+                                        Width="250"
+                                        shadui:ControlAssist.Label="Status"
+                                        IsEnabled="{CompiledBinding IsStatusEnabled}"
+                                        ItemsSource="{CompiledBinding StatusFilterItems}"
+                                        SelectedItem="{CompiledBinding Status, Mode=TwoWay}">
                                     </ComboBox>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Schedule Pattern" Classes="LabelField"/>
-                                    <StackPanel Orientation="Horizontal" Margin="10,10,0,0" Spacing="20">
-                                        <RadioButton Content="Day" GroupName="SchedulePattern" Classes="FormRadio" IsChecked="{CompiledBinding IsScheduleDeliveryByDay}"/>
-                                        <RadioButton Content="Month" GroupName="SchedulePattern" Classes="FormRadio" IsChecked="{CompiledBinding IsScheduleDeliveryByMonth}"/>
-                                    </StackPanel>
-                                </StackPanel>
                             </Grid>
-                            <StackPanel Grid.Row="4">
-                                <CalendarDatePicker
-                                    shadui:ControlAssist.Label="Contract Terms Until (Optional)"
-                                    shadui:ControlAssist.ReadOnly="True"
-                                    IsEnabled="{CompiledBinding IsContractTermsEnabled}"
-                                    DisplayDateStart="{CompiledBinding MinimumContractDate}"
-                                    SelectedDate="{CompiledBinding ContractTerms}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="5">
-                                <ComboBox
-                                    shadui:ControlAssist.Label="Status"
-                                    IsEnabled="{CompiledBinding IsStatusEnabled}"
-                                    ItemsSource="{CompiledBinding StatusFilterItems}"
-                                    SelectedItem="{CompiledBinding Status, Mode=TwoWay}">
-                                </ComboBox>
-                            </StackPanel>
                         </Grid>
                     </StackPanel>
                 </shadui:Card>

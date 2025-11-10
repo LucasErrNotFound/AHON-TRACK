@@ -275,11 +275,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     ContactPerson = _supplierDialogCardViewModel.ContactPerson,
                     Email = _supplierDialogCardViewModel.Email,
                     PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
-                    Products = _supplierDialogCardViewModel.Products,
                     Status = _supplierDialogCardViewModel.Status ?? "Active",
-                    DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
-                    DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
-                    ContractTerms = _supplierDialogCardViewModel.ContractTerms
                 };
 
                 var result = await _supplierService.AddSupplierAsync(newSupplier);
@@ -313,21 +309,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _dialogManager.CreateDialog(_supplierDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
-                var newContractTerms = _supplierDialogCardViewModel.ContractTerms;
                 var currentStatus = _supplierDialogCardViewModel.Status ?? "Active";
-
-                if (newContractTerms.HasValue)
-                {
-                    var today = DateTime.Today;
-                    if (newContractTerms.Value.Date <= today && currentStatus.Equals("Active", StringComparison.OrdinalIgnoreCase))
-                    {
-                        currentStatus = "Inactive";
-                    }
-                    else if (newContractTerms.Value.Date > today && currentStatus.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
-                    {
-                        currentStatus = "Active";
-                    }
-                }
 
                 var updatedSupplier = new SupplierManagementModel
                 {
@@ -336,11 +318,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     ContactPerson = _supplierDialogCardViewModel.ContactPerson,
                     Email = _supplierDialogCardViewModel.Email,
                     PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
-                    Products = _supplierDialogCardViewModel.Products,
                     Status = currentStatus,
-                    DeliverySchedule = _supplierDialogCardViewModel.DeliverySchedule,
-                    DeliveryPattern = _supplierDialogCardViewModel.DeliveryPattern,
-                    ContractTerms = newContractTerms
                 };
 
                 var result = await _supplierService.UpdateSupplierAsync(updatedSupplier);
