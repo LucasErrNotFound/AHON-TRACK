@@ -42,24 +42,31 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo, ID
 
     protected void ValidateProperty<T>(T value, string propertyName)
     {
-        ClearErrors(propertyName);
-
-        var validationContext = new ValidationContext(this)
+        try
         {
-            MemberName = propertyName
-        };
-        var validationResults = new List<ValidationResult>();
+            ClearErrors(propertyName);
 
-        object valueToValidate = value;
-        if (value == null && typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(Nullable<>))
-        {
-            valueToValidate = null;
+            var validationContext = new ValidationContext(this)
+            {
+                MemberName = propertyName
+            };
+            var validationResults = new List<ValidationResult>();
+
+            object valueToValidate = value;
+            if (value == null && typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                valueToValidate = null;
+            }
+
+            if (Validator.TryValidateProperty(value, validationContext, validationResults)) return;
+
+            foreach (var validationResult in validationResults)
+                AddError(propertyName, validationResult.ErrorMessage ?? string.Empty);
         }
-
-        if (Validator.TryValidateProperty(value, validationContext, validationResults)) return;
-
-        foreach (var validationResult in validationResults)
-            AddError(propertyName, validationResult.ErrorMessage ?? string.Empty);
+        catch (Exception)
+        {
+            // to avoid closing window
+        }
     }
 
     protected void AddError(string propertyName, string error)
@@ -103,7 +110,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo, ID
             ValidateProperty(value, property.Name);
         }
     }
-    
+
     private bool _disposed;
 
     protected virtual void Dispose(bool disposing)
@@ -118,7 +125,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo, ID
 
         _disposed = true;
     }
-    
+
     /// <summary>
     /// Forces a full garbage collection. Use sparingly, only after major cleanup operations.
     /// </summary>
@@ -127,7 +134,7 @@ public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo, ID
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
-        
+
         Debug.WriteLine($"[{GetType().Name}] Forced garbage collection completed.");
     }
 
