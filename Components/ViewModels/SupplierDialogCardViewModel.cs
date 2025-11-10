@@ -150,7 +150,6 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
     
     [Required(ErrorMessage = "Supplier address is required")]
     [MaxLength(255, ErrorMessage = "Must not exceed 255 characters")]
-    [EmailValidation]
     public string? Address 
     {
         get => _address;
