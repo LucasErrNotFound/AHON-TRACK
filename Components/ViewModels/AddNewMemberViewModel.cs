@@ -903,7 +903,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 }
                 else
                 {
-                    validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
+                    validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value).AddDays(1);
 
                     string status = currentValidUntil < DateTime.Now ? "expired" : "active";
                     int monthsAdded = MembershipDuration.Value;
@@ -1195,7 +1195,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 }
                 else
                 {
-                    validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value);
+                    validUntilDate = currentValidUntil.AddMonths(MembershipDuration.Value).AddDays(1);
                 }
             }
             else
