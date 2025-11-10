@@ -59,12 +59,30 @@
 						<shadui:Card Grid.Row="0" VerticalAlignment="Top">
 							<StackPanel>
 								<shadui:CardTitle Content="Product Details" />
-								<TextBox
-                                    Classes="Clearable"
-                                    shadui:ControlAssist.Label="Product Name"
-                                    Watermark="Enter the product name here"
-                                    Margin="0,30,0,0"
-                                    Text="{CompiledBinding ProductName, Mode=TwoWay}"/>
+								<Grid ColumnDefinitions="* *" ColumnSpacing="30" Margin="0,20,0,0">
+									<ComboBox
+										Margin="0,-4,0,0"
+										Grid.Column="0"
+										PlaceholderText="Select its supplier here"
+										shadui:ControlAssist.Label="Product Supplier"
+										ItemsSource="{CompiledBinding ProductSupplierItems}"
+										SelectedItem="{CompiledBinding SelectedProductSupplier, Mode=TwoWay}" />
+									<ComboBox
+										Grid.Column="1"
+										Margin="0,-5,0,0"
+										PlaceholderText="Select its product here"
+										shadui:ControlAssist.Label="Product Name"
+										ItemsSource="{CompiledBinding  ProductItems}"
+										SelectedItem="{CompiledBinding SelectedProductItem, Mode=TwoWay}" />
+									<!--
+									<TextBox
+										Grid.Column="1"
+										Classes="Clearable"
+										shadui:ControlAssist.Label="Product Name"
+										Watermark="Enter the product name here"
+										Text="{CompiledBinding ProductName, Mode=TwoWay}"/>
+										-->
+								</Grid>
 								<Grid ColumnDefinitions="* *" ColumnSpacing="30" Margin="0,20,0,0">
 									<TextBox
                                         Grid.Column="0"
@@ -73,12 +91,12 @@
                                         shadui:ControlAssist.Label="Batch Code"
                                         Text="{CompiledBinding BatchCode, Mode=TwoWay}"/>
 									<ComboBox
-                                        Margin="0,-4,0,0"
-                                        Grid.Column="1"
-                                        PlaceholderText="Select its supplier here"
-                                        shadui:ControlAssist.Label="Product Supplier"
-                                        ItemsSource="{CompiledBinding ProductSupplierItems}"
-                                        SelectedItem="{CompiledBinding SelectedProductSupplier, Mode=TwoWay}" />
+										Grid.Column="1"
+										Margin="0,-4,0,0"
+										shadui:ControlAssist.Label="Category"
+										ItemsSource="{CompiledBinding ProductCategoryItems}"
+										SelectedItem="{CompiledBinding SelectedProductCategory, Mode=TwoWay}">
+									</ComboBox>
 								</Grid>
 								<TextBox
                                     shadui:ControlAssist.Label="Description (Optional)"
@@ -158,15 +176,45 @@
 						<shadui:Card Grid.Row="0" VerticalAlignment="Top">
 							<StackPanel Orientation="Vertical" Spacing="-5">
 								<shadui:CardTitle Content="Pricing" />
-								<!-- Price -->
+								<!-- Selling Price -->
 								<NumericUpDown
                                     Margin="0,30,0,0"
-                                    shadui:ControlAssist.Label="Price"
+                                    shadui:ControlAssist.Label="Selling Price"
+                                    IsEnabled="False"
                                     Classes="Clearable"
                                     FormatString="N2"
                                     ShowButtonSpinner="False"
                                     Watermark="0.00"
                                     Value="{CompiledBinding ProductPrice, Mode=TwoWay}">
+									<NumericUpDown.InnerLeftContent>
+										<TextBlock Margin="8,0,-8,0" Text="₱" />
+									</NumericUpDown.InnerLeftContent>
+								</NumericUpDown>
+								
+								<!-- Purchased Price -->
+								<NumericUpDown
+									Margin="0,30,0,0"
+									shadui:ControlAssist.Label="Purchased Price"
+									IsEnabled="False"
+									Classes="Clearable"
+									FormatString="N2"
+									ShowButtonSpinner="False"
+									Watermark="0.00"
+									Value="{CompiledBinding ProductPurchasedPrice, Mode=TwoWay}">
+									<NumericUpDown.InnerLeftContent>
+										<TextBlock Margin="8,0,-8,0" Text="₱" />
+									</NumericUpDown.InnerLeftContent>
+								</NumericUpDown>
+								
+								<!-- Markup Price -->
+								<NumericUpDown
+									Margin="0,30,0,0"
+									shadui:ControlAssist.Label="Markup Price"
+									Classes="Clearable"
+									FormatString="N2"
+									ShowButtonSpinner="False"
+									Watermark="0.00"
+									Value="{CompiledBinding ProductMarkupPrice, Mode=TwoWay}">
 									<NumericUpDown.InnerLeftContent>
 										<TextBlock Margin="8,0,-8,0" Text="₱" />
 									</NumericUpDown.InnerLeftContent>
@@ -224,19 +272,8 @@
 							</StackPanel>
 						</shadui:Card>
 
-						<shadui:Card Grid.Row="3" VerticalAlignment="Top">
-							<StackPanel>
-								<shadui:CardTitle Content="Category"/>
-								<ComboBox
-                                    Margin="0,20,0,0"
-                                    shadui:ControlAssist.Hint="Select the appropriate product category"
-                                    ItemsSource="{CompiledBinding ProductCategoryItems}"
-                                    SelectedItem="{CompiledBinding SelectedProductCategory, Mode=TwoWay}">
-								</ComboBox>
-							</StackPanel>
-						</shadui:Card>
 						<StackPanel
-                            Grid.Row="4"
+                            Grid.Row="3"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             Spacing="15">

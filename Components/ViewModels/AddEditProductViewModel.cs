@@ -36,8 +36,12 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string? _selectedProductCategoryItem = "Drinks";
 
     [ObservableProperty]
-    private string[] _productSupplierItems = ["None"];
-    private string? _selectedSupplierCategoryItem = "None";
+    private string[] _productSupplierItems;
+    private string? _selectedSupplierCategoryItem;
+    
+    [ObservableProperty]
+    private string[] _productItems;
+    private string? _selectedProductItem;
 
     private Dictionary<string, int> _supplierNameToIdMap = new();
 
@@ -71,6 +75,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string? _productImageFilePath;
 
     private decimal? _price;
+    private decimal? _purchasedPrice;
+    private decimal? _markupPrice;
     private decimal? _discountedPrice;
 
     private string? _productStatus;
@@ -638,12 +644,23 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _productDescription, value, true);
     }
 
-    [Required(ErrorMessage = "Price must be set")]
-    [Range(5, 5000, ErrorMessage = "Price must be between 5 and 5,000")]
     public decimal? ProductPrice
     {
         get => _price;
         set => SetProperty(ref _price, value, true);
+    }
+    
+    public decimal? ProductPurchasedPrice
+    {
+        get => _purchasedPrice;
+        set => SetProperty(ref _purchasedPrice, value, true);
+    }
+    
+    [Range(0, 10000, ErrorMessage = "Markup must be between 5 and 10,000")]
+    public decimal? ProductMarkupPrice
+    {
+        get => _markupPrice;
+        set => SetProperty(ref _markupPrice, value, true);
     }
 
     [Range(0, 100, ErrorMessage = "Percentage must be between 0 and 100")]
@@ -680,10 +697,18 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _selectedProductCategoryItem, value, true);
     }
 
+    [Required(ErrorMessage = "Select a supplier")]
     public string? SelectedProductSupplier
     {
         get => _selectedSupplierCategoryItem;
         set => SetProperty(ref _selectedSupplierCategoryItem, value, true);
+    }
+    
+    [Required(ErrorMessage = "Select a product")]
+    public string? SelectedProductItem 
+    {
+        get => _selectedProductItem;
+        set => SetProperty(ref _selectedProductItem, value, true);
     }
 
     public Image? ProductImage
