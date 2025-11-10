@@ -344,6 +344,25 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
+    private void ShowProductOrderView()
+    {
+        _pageManager.Navigate<PurchaseOrderViewModel>(new Dictionary<string, object>
+        {
+            ["Context"] = PurchaseOrderContext.AddPurchaseOrder
+        });
+    }
+    
+    [RelayCommand]
+    private void ViewProductOrderView()
+    {
+        _pageManager.Navigate<PurchaseOrderViewModel>(new Dictionary<string, object>
+        {
+            ["Context"] = PurchaseOrderContext.ViewPurchaseOrder,
+            ["SelectedSupplier"] = SelectedSupplier
+        });
+    }
+
+    [RelayCommand]
     private void ShowSingleItemDeletionDialog(Supplier? supplier)
     {
         if (supplier == null) return;

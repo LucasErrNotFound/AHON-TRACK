@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 
 namespace AHON_TRACK.ViewModels;
 
-public abstract class ViewModelBase : ObservableObject, INotifyDataErrorInfo, IDisposable
+public abstract class ViewModelBase : ObservableValidator, INotifyDataErrorInfo, IDisposable
 {
     private readonly Dictionary<string, List<string>> _errors = new();
 

@@ -266,6 +266,14 @@
                                                                     Foreground="{DynamicResource MutedColor}" />
                                                             </shadui:MenuItemAssist.Label>
                                                             <MenuItem
+                                                                Header="Order Product/s"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowProductOrderViewCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}"/>
+                                                            <MenuItem
+                                                                Header="View Purchase Order"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewProductOrderViewCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}"/>
+                                                            <MenuItem
                                                                 Header="Edit Supplier"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowEditSupplierDialogCommand, FallbackValue={x:Null}}"
                                                                 CommandParameter="{CompiledBinding}" />
@@ -525,6 +533,14 @@
                                                                     FontWeight="Regular"
                                                                     Foreground="{DynamicResource MutedColor}" />
                                                             </shadui:MenuItemAssist.Label>
+                                                            <MenuItem
+                                                                Header="Order Product/s"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowProductOrderViewCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}"/>
+                                                            <MenuItem
+                                                                Header="View Purchase Order"
+                                                                Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewProductOrderViewCommand, FallbackValue={x:Null}}"
+                                                                CommandParameter="{CompiledBinding}"/>
                                                             <MenuItem
                                                                 Header="Edit Supplier"
                                                                 Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowEditSupplierDialogCommand, FallbackValue={x:Null}}"
