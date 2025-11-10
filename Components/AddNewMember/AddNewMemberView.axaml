@@ -223,13 +223,31 @@
 										</StackPanel>
 
 										<!-- Date of Birth Field -->
-										<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-75,0,0">
+										<StackPanel 
+											Grid.Row="1" 
+											Grid.Column="2" 
+											Orientation="Vertical"
+											Spacing="10"
+											Margin="-10,-75,0,0">
 											<CalendarDatePicker
 												shadui:ControlAssist.Label="Date of Birth"
 												shadui:ControlAssist.ReadOnly="True"
 												Width="150"
 												HorizontalAlignment="Left"
 												SelectedDate="{CompiledBinding MemberBirthDate}" />
+											<!--
+											<TextBlock
+												Text="Year of Birth"
+												FontSize="15"
+												FontWeight="Regular" />
+											<DatePicker
+												Width="100"
+												Height="35"
+												DayVisible="False"
+												MonthVisible="False" 
+												YearFormat="yyyy"
+												SelectedDate="{CompiledBinding MemberBirthDate}" />
+												-->
 										</StackPanel>
 									</Grid>
 
@@ -829,13 +847,30 @@
 										</StackPanel>
 
 										<!-- Date of Birth Field -->
-										<StackPanel Grid.Row="1" Grid.Column="2" Margin="30,0,0,0">
+										<StackPanel 
+											Grid.Row="1" 
+											Grid.Column="2" 
+											Spacing="6"
+											Margin="30,0,0,0">
 											<CalendarDatePicker
 												shadui:ControlAssist.Label="Date of Birth"
 												shadui:ControlAssist.ReadOnly="True"
 												Width="150"
 												HorizontalAlignment="Left"
 												SelectedDate="{CompiledBinding MemberBirthDate}" />
+											<!--
+											<TextBlock
+												Text="Year of Birth"
+												FontSize="15"
+												FontWeight="Regular" />
+											<DatePicker
+												Width="100"
+												Height="35"
+												DayVisible="False"
+												MonthVisible="False" 
+												YearFormat="yyyy"
+												SelectedDate="{CompiledBinding MemberBirthDate}" />
+												-->
 										</StackPanel>
 										
 										<!-- Profile Image Field -->
