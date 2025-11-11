@@ -270,7 +270,7 @@
 													TextWrapping="Wrap" />
 											</StackPanel>
 										</Border>
-										<StackPanel Orientation="Horizontal" Spacing="10">
+										<StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{CompiledBinding IsMinor}">
 											<TextBox
 												Name="LetterConsentTextBoxControl1"
 												Classes="Clearable"
