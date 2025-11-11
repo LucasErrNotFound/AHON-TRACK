@@ -119,6 +119,7 @@ namespace AHON_TRACK.Services
               ContactPerson = @contactPerson,
               Email = @email,
               PhoneNumber = @phoneNumber,
+              Address = @address,
               Products = @products,
               DeliverySchedule = @deliverySchedule,
               DeliveryPattern = @deliveryPattern,
@@ -135,15 +136,19 @@ namespace AHON_TRACK.Services
         private async Task<int> InsertNewSupplierAsync(SqlConnection conn, SupplierManagementModel supplier)
         {
             using var cmd = new SqlCommand(
-                @"INSERT INTO Suppliers (SupplierName, ContactPerson, Email, PhoneNumber, Products, Status, 
-                                  DeliverySchedule, DeliveryPattern, ContractTerms, AddedByEmployeeID, IsDeleted) 
+                @"INSERT INTO Suppliers (SupplierName, ContactPerson, Email, PhoneNumber, Address, 
+                                  Products, Status, DeliverySchedule, DeliveryPattern, 
+                                  ContractTerms, AddedByEmployeeID, IsDeleted) 
           OUTPUT INSERTED.SupplierID
-          VALUES (@supplierName, @contactPerson, @email, @phoneNumber, @products, @status, 
-                  @deliverySchedule, @deliveryPattern, @contractTerms, @employeeID, 0)", conn);
+          VALUES (@supplierName, @contactPerson, @email, @phoneNumber, @address,
+                  @products, @status, @deliverySchedule, @deliveryPattern, 
+                  @contractTerms, @employeeID, 0)", conn);
 
             cmd.Parameters.AddWithValue("@supplierName", supplier.SupplierName ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@status", supplier.Status ?? "Active");
             cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+            // This call adds all the other parameters including @address
             AddSupplierParameters(cmd, supplier);
 
             return (int)await cmd.ExecuteScalarAsync();
@@ -154,11 +159,12 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@contactPerson", supplier.ContactPerson ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@email", supplier.Email ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@phoneNumber", supplier.PhoneNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@address", supplier.Address ?? (object)DBNull.Value);  // Add this
             cmd.Parameters.AddWithValue("@products", supplier.Products ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@deliverySchedule", supplier.DeliverySchedule ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@deliveryPattern", supplier.DeliveryPattern ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@contractTerms", supplier.ContractTerms.HasValue 
-                ? (object)supplier.ContractTerms.Value 
+            cmd.Parameters.AddWithValue("@contractTerms", supplier.ContractTerms.HasValue
+                ? (object)supplier.ContractTerms.Value
                 : DBNull.Value);
         }
 
@@ -180,8 +186,8 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Products, Status,
-                     DeliverySchedule, DeliveryPattern, ContractTerms
+                    @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Address, 
+                     Products, Status, DeliverySchedule, DeliveryPattern, ContractTerms
               FROM Suppliers 
               WHERE IsDeleted = 0
               ORDER BY SupplierName", conn);
@@ -219,8 +225,8 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Products, Status,
-                     DeliverySchedule, DeliveryPattern, ContractTerms
+                    @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Address,
+                     Products, Status, DeliverySchedule, DeliveryPattern, ContractTerms
               FROM Suppliers 
               WHERE SupplierID = @supplierId AND IsDeleted = 0", conn);
 
@@ -280,16 +286,17 @@ namespace AHON_TRACK.Services
         {
             return new SupplierManagementModel
             {
-                SupplierID = reader.GetInt32(0),
-                SupplierName = reader.GetString(1),
-                ContactPerson = reader.GetString(2),
-                Email = reader.GetString(3),
-                PhoneNumber = reader.GetString(4),
-                Products = reader.GetString(5),
-                Status = reader.GetString(6),
-                DeliverySchedule = reader.IsDBNull(7) ? null : reader.GetString(7),
-                DeliveryPattern = reader.IsDBNull(8) ? null : reader.GetString(8),
-                ContractTerms = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
+                SupplierID = reader.GetInt32(0),           // Column 0
+                SupplierName = reader.GetString(1),        // Column 1
+                ContactPerson = reader.GetString(2),       // Column 2
+                Email = reader.GetString(3),               // Column 3
+                PhoneNumber = reader.GetString(4),         // Column 4
+                Address = reader.IsDBNull(5) ? null : reader.GetString(5),  // Column 5
+                Products = reader.IsDBNull(6) ? null : reader.GetString(6),  // Column 6
+                Status = reader.GetString(7),              // Column 7
+                DeliverySchedule = reader.IsDBNull(8) ? null : reader.GetString(8),  // Column 8
+                DeliveryPattern = reader.IsDBNull(9) ? null : reader.GetString(9),   // Column 9
+                ContractTerms = reader.IsDBNull(10) ? null : reader.GetDateTime(10), // Column 10
                 IsSelected = false
             };
         }
@@ -370,6 +377,7 @@ namespace AHON_TRACK.Services
               ContactPerson = @contactPerson,
               Email = @email,
               PhoneNumber = @phoneNumber,
+              Address = @address,
               Products = @products,
               Status = @status,
               DeliverySchedule = @deliverySchedule,
