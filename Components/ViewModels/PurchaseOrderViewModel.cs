@@ -40,9 +40,17 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     public bool IsInViewMode => IsSaved || ViewContext == PurchaseOrderContext.ViewPurchaseOrder;
     
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDelivered))]
+    [NotifyPropertyChangedFor(nameof(IsShippingStatusEnabled))]
     private string? _shippingStatus;
     
+    public bool IsShippingStatusEnabled => HasInvoice;
+    
+    public bool IsDelivered => ShippingStatus == "Delivered";
+    
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AvailablePaymentStatusOptions))]
+    [NotifyPropertyChangedFor(nameof(IsPaymentStatusEnabled))]
     private string? _paymentStatus;
     
     [ObservableProperty]
@@ -55,7 +63,17 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     
     [ObservableProperty]
     [MaxLength(100, ErrorMessage = "Invoice Number cannot exceed 100 characters")]
+    [NotifyPropertyChangedFor(nameof(AvailablePaymentStatusOptions))]
+    [NotifyPropertyChangedFor(nameof(IsPaymentStatusEnabled))]
+    [NotifyPropertyChangedFor(nameof(IsShippingStatusEnabled))]
+    [NotifyPropertyChangedFor(nameof(HasInvoice))]
     private string? _invoiceNumber;
+    
+    // Property to check if invoice exists
+    public bool HasInvoice => !string.IsNullOrWhiteSpace(InvoiceNumber);
+    
+    // Property to enable/disable payment status control
+    public bool IsPaymentStatusEnabled => HasInvoice;
     
     public string[] ShippingStatusOptions { get; } = 
     [
@@ -63,16 +81,28 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         "Processing", 
         "Shipped/In-Transit", 
         "Delivered", 
-        "Partially Delivered", 
         "Cancelled"
     ];
     
-    public string[] PaymentStatusOptions { get; } = 
+    // Full payment status options (when invoice exists)
+    private readonly string[] _fullPaymentStatusOptions = 
     [
         "Unpaid", 
         "Paid", 
         "Cancelled"
     ];
+    
+    // Limited payment status options (when no invoice)
+    private readonly string[] _limitedPaymentStatusOptions = 
+    [
+        "Unpaid", 
+        "Cancelled"
+    ];
+    
+    // Dynamic property that returns appropriate options based on invoice presence
+    public string[] AvailablePaymentStatusOptions => HasInvoice 
+        ? _fullPaymentStatusOptions 
+        : _limitedPaymentStatusOptions;
     
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -177,7 +207,20 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         
         // Set default values for shipping and payment status
         ShippingStatus = "Pending";
+        
+        // Payment status defaults to Unpaid (no invoice yet)
         PaymentStatus = "Unpaid";
+        
+        // Clear invoice number on save if it was accidentally set
+        // (Since we're creating a PO, we shouldn't have an invoice yet)
+        if (!string.IsNullOrWhiteSpace(InvoiceNumber))
+        {
+            _toastManager.CreateToast("Invoice Number Cleared")
+                .WithContent("Invoice number removed. It should only be set after receiving supplier's invoice.")
+                .DismissOnClick()
+                .ShowWarning();
+            InvoiceNumber = null;
+        }
         
         IsSaved = true;
         
@@ -227,6 +270,22 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     private void NavigateBack()
     {
         _pageManager.Navigate<SupplierManagementViewModel>();
+    }
+    
+    // New method to validate payment status changes
+    partial void OnPaymentStatusChanging(string? value)
+    {
+        // Prevent setting to "Paid" if no invoice exists
+        if (value == "Paid" && !HasInvoice)
+        {
+            _toastManager.CreateToast("Payment Status Error")
+                .WithContent("Cannot mark as 'Paid' without an invoice number. Please add invoice number first.")
+                .DismissOnClick()
+                .ShowError();
+            
+            // Keep current value or default to Unpaid
+            PaymentStatus = string.IsNullOrWhiteSpace(PaymentStatus) ? "Unpaid" : PaymentStatus;
+        }
     }
     
     private void AddInitialItem()
@@ -285,6 +344,16 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
             return false;
         }
         
+        // Validate payment status against invoice
+        if (PaymentStatus == "Paid" && !HasInvoice)
+        {
+            _toastManager.CreateToast("Validation Error")
+                .WithContent("Cannot save with 'Paid' status without an invoice number")
+                .DismissOnClick()
+                .ShowError();
+            return false;
+        }
+        
         return true;
     }
     
@@ -301,6 +370,51 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     private void CalculateTotals()
     {
         Subtotal = Items.Sum(item => item.ItemTotal);
+    }
+    
+    partial void OnInvoiceNumberChanged(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            bool statusesChanged = false;
+        
+            // Reset payment status if it was "Paid"
+            if (PaymentStatus == "Paid")
+            {
+                PaymentStatus = "Unpaid";
+                statusesChanged = true;
+            }
+        
+            // Reset shipping status if it was changed from "Pending"
+            if (!string.IsNullOrWhiteSpace(ShippingStatus) && ShippingStatus != "Pending")
+            {
+                ShippingStatus = "Pending";
+                statusesChanged = true;
+            }
+        
+            // Show single notification for all changes
+            if (statusesChanged)
+            {
+                _toastManager.CreateToast("Statuses Reset")
+                    .WithContent("Payment and shipping statuses reverted to defaults because invoice number was removed.")
+                    .DismissOnClick()
+                    .ShowInfo();
+            }
+        }
+    }
+    
+    partial void OnShippingStatusChanging(string? value)
+    {
+        // Prevent changing from Pending if no invoice exists
+        if (value != "Pending" && !HasInvoice && !string.IsNullOrWhiteSpace(value))
+        {
+            _toastManager.CreateToast("Shipping Status Error")
+                .WithContent("Cannot change shipping status without an invoice number. Please add invoice number first.")
+                .DismissOnClick()
+                .ShowError();
+        
+            ShippingStatus = string.IsNullOrWhiteSpace(ShippingStatus) ? "Pending" : ShippingStatus;
+        }
     }
     
     private void Items_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

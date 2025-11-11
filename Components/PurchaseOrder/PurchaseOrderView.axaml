@@ -49,20 +49,28 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,30,90,0" Spacing="16">
                 <StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="15" Margin="0,0,0,10">
+                    <Grid ColumnDefinitions="Auto Auto *" Margin="0,0,0,15" ColumnSpacing="20">
                         <Button 
+                            Grid.Column="0"
                             Classes="Outline"
                             Content="Export to PDF"
                             HorizontalAlignment="Left"
                             IsVisible="{CompiledBinding IsInViewMode}">
                         </Button>
                         <Button 
+                            Grid.Column="1"
                             Classes="Primary"
                             Content="Send to Inventory"
                             HorizontalAlignment="Left"
-                            IsVisible="{CompiledBinding IsInViewMode}">
+                            IsVisible="{CompiledBinding IsDelivered}">
                         </Button>
-                    </StackPanel>
+                        <Button 
+                            Grid.Column="2"
+                            Classes="Primary"
+                            Content="Save Details"
+                            HorizontalAlignment="Right">
+                        </Button>
+                    </Grid>
                     
                     <!-- Main Grid -->
                     <Grid ColumnDefinitions="2* *" ColumnSpacing="25">
@@ -88,6 +96,19 @@
                                                             Text="{CompiledBinding ItemName, Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
                                                             Width="195" />
+                                                        <NumericUpDown
+                                                            shadui:ControlAssist.Label="Price"
+                                                            Value="{CompiledBinding Price, Mode=TwoWay}"
+                                                            IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
+                                                            Classes="Clearable"
+                                                            Width="195"
+                                                            FormatString="N2"
+                                                            ShowButtonSpinner="False"
+                                                            Watermark="0.00">
+                                                            <NumericUpDown.InnerLeftContent>
+                                                                <TextBlock Margin="8,0,-8,0" Text="₱" />
+                                                            </NumericUpDown.InnerLeftContent>
+                                                        </NumericUpDown>
                                                         <ComboBox
                                                             shadui:ControlAssist.Label="Unit"
                                                             ItemsSource="{CompiledBinding UnitList}"
@@ -108,19 +129,6 @@
                                                             Watermark="0">
                                                             <NumericUpDown.InnerLeftContent>
                                                                 <TextBlock Margin="8,0,-8,0" Text="×" />
-                                                            </NumericUpDown.InnerLeftContent>
-                                                        </NumericUpDown>
-                                                        <NumericUpDown
-                                                            shadui:ControlAssist.Label="Price"
-                                                            Value="{CompiledBinding Price, Mode=TwoWay}"
-                                                            IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
-                                                            Classes="Clearable"
-                                                            Width="195"
-                                                            FormatString="N2"
-                                                            ShowButtonSpinner="False"
-                                                            Watermark="0.00">
-                                                            <NumericUpDown.InnerLeftContent>
-                                                                <TextBlock Margin="8,0,-8,0" Text="₱" />
                                                             </NumericUpDown.InnerLeftContent>
                                                         </NumericUpDown>
                                                         <Button
@@ -174,6 +182,7 @@
                                                 shadui:ControlAssist.Label="Delivery Date"
                                                 shadui:ControlAssist.ReadOnly="True"
                                                 SelectedDate="{CompiledBinding DeliveryDate}"
+                                                IsEnabled="{CompiledBinding IsInEditMode}"
                                                 Margin="0,-5,0,0"
                                                 MinWidth="195" />
                                             <ComboBox
@@ -184,6 +193,7 @@
                                                 ItemsSource="{CompiledBinding ShippingStatusOptions}"
                                                 SelectedItem="{CompiledBinding ShippingStatus}"
                                                 IsVisible="{CompiledBinding IsInViewMode}"
+                                                IsEnabled="{CompiledBinding IsShippingStatusEnabled}"
                                                 MinWidth="195"
                                                 Margin="0,-4,0,0" />
                                             <ComboBox
@@ -191,11 +201,18 @@
                                                 Grid.Column="1"
                                                 HorizontalAlignment="Right"
                                                 shadui:ControlAssist.Label="Payment Status"
-                                                ItemsSource="{CompiledBinding PaymentStatusOptions}"
+                                                ItemsSource="{CompiledBinding AvailablePaymentStatusOptions}"
                                                 SelectedItem="{CompiledBinding PaymentStatus}"
+                                                IsEnabled="{CompiledBinding IsPaymentStatusEnabled}"
                                                 IsVisible="{CompiledBinding IsInViewMode}"
                                                 MinWidth="195"
-                                                Margin="0,-4,0,0" />
+                                                Margin="0,-4,0,0">
+                                                <ComboBox.Styles>
+                                                    <Style Selector="ComboBox:disabled /template/ ContentPresenter#ContentPresenter">
+                                                        <Setter Property="Foreground" Value="{DynamicResource MutedColor}" />
+                                                    </Style>
+                                                </ComboBox.Styles>
+                                            </ComboBox>
                                         </Grid>
                                         <TextBox
                                             Classes="Clearable"
