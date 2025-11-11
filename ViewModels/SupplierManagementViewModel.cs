@@ -29,6 +29,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private string _selectedStatusFilterItem = "All";
+    
+    [ObservableProperty]
+    private string[] _deliveryFilterItems = ["All", "Pending", "Delivered", "Cancelled"];
+
+    [ObservableProperty]
+    private string _selectedDeliveryFilterItem = "All";
 
     [ObservableProperty]
     private ObservableCollection<Supplier> _supplierItems = [];
@@ -38,6 +44,15 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private List<Supplier> _currentFilteredSupplierData = [];
+    
+    [ObservableProperty]
+    private ObservableCollection<PurchaseOrder> _purchaseOrderItems = [];
+
+    [ObservableProperty]
+    private List<PurchaseOrder> _originalPurchaseOrderData = [];
+
+    [ObservableProperty]
+    private List<PurchaseOrder> _currentFilteredPurchaseOrderData = [];
 
     [ObservableProperty]
     private bool _isInitialized;
@@ -47,6 +62,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private bool _isSearchingSupplier;
+    
+    [ObservableProperty]
+    private string _searchStringOrderResult = string.Empty;
+
+    [ObservableProperty]
+    private bool _isSearchingOrders;
 
     [ObservableProperty]
     private bool _selectAll;
@@ -64,6 +85,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private Supplier? _selectedSupplier;
+    
+    [ObservableProperty]
+    private PurchaseOrder? _selectedPO;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -84,8 +108,10 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _settingsService = settingsService;
 
         SelectedStatusFilterItem = "All";
+        SelectedDeliveryFilterItem = "All";
 
         _ = LoadSupplierDataFromDatabaseAsync();
+        LoadPurchaseOrderData(); // Default Value
         UpdateSupplierCounts();
     }
 
@@ -99,8 +125,10 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _supplierService = null!; // This should be injected in real scenario
 
         SelectedStatusFilterItem = "All";
+        SelectedDeliveryFilterItem = "All";
 
         _ = LoadSupplierDataFromDatabaseAsync();
+        LoadPurchaseOrderData(); // Default Value
         UpdateSupplierCounts();
     }
 
@@ -109,6 +137,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         if (IsInitialized) return;
         SelectedStatusFilterItem = "All";
+        SelectedDeliveryFilterItem = "All";
 
         await LoadSettingsAsync();
 
@@ -119,6 +148,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         else
         {
             LoadSupplierData();
+            LoadPurchaseOrderData();
         }
         UpdateSupplierCounts();
         IsInitialized = true;
@@ -204,6 +234,22 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             SelectedSupplier = SupplierItems[0];
         }
     }
+    
+    private void LoadPurchaseOrderData()
+    {
+        var samplePurchaseOrders = GetSamplePurchaseOrderData();
+        OriginalPurchaseOrderData = samplePurchaseOrders;
+
+        // Apply filter to populate PurchaseOrderItems
+        ApplyPurchaseOrderFilter();
+
+        UpdatePurchaseOrderCounts();
+
+        if (PurchaseOrderItems.Count > 0)
+        {
+            SelectedPO = PurchaseOrderItems[0];
+        }
+    }
 
     private List<Supplier> GetSampleSupplierData()
     {
@@ -258,6 +304,37 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 PhoneNumber = "09223849981",
                 Products = "Accessories",
                 Status = "Active"
+            }
+        ];
+    }
+    
+    private List<PurchaseOrder> GetSamplePurchaseOrderData()
+    {
+        return
+        [
+            new PurchaseOrder
+            {
+                PONumber = "PO-AHON-2025-839872",
+                Name = "San Miguel",
+                Item = "Soft Drinks (Coca-Cola, Sprite)",
+                Amount = 15000.00m,
+                DeliveryStatus = "Delivered"
+            },
+            new PurchaseOrder
+            {
+                PONumber = "PO-AHON-2025-232984",
+                Name = "Optimum",
+                Item = "Whey Protein (Gold Standard)",
+                Amount = 25000.00m,
+                DeliveryStatus = "Pending"
+            },
+            new PurchaseOrder
+            {
+                PONumber = "PO-AHON-2025-279373",
+                Name = "Jump Manila",
+                Item = "Gym Accessories (Gloves, Belts)",
+                Amount = 8500.00m,
+                DeliveryStatus = "Cancelled"
             }
         ];
     }
@@ -363,14 +440,29 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private void ShowSingleItemDeletionDialog(Supplier? supplier)
+    private void ShowSingleSupplierDeletionDialog(Supplier? supplier)
     {
         if (supplier == null) return;
 
         _dialogManager.CreateDialog(
             "Are you absolutely sure?",
             $"This action cannot be undone. This will permanently delete {supplier.Name} and remove the data from your database.")
-            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteSingleItem(supplier), DialogButtonStyle.Destructive)
+            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteSingleSupplier(supplier), DialogButtonStyle.Destructive)
+            .WithCancelButton("Cancel")
+            .WithMaxWidth(512)
+            .Dismissible()
+            .Show();
+    }
+    
+    [RelayCommand]
+    private void ShowSingleOrderDeletionDialog(PurchaseOrder? order)
+    {
+        if (order == null) return;
+
+        _dialogManager.CreateDialog(
+                "Are you absolutely sure?",
+                $"This action cannot be undone. This will permanently delete {order.Name} and remove the data from your database.")
+            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteSingleOrder(order), DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
@@ -378,7 +470,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private void ShowMultipleItemDeletionDialog()
+    private void ShowMultipleSupplierDeletionDialog()
     {
         var selectedSuppliers = SupplierItems.Where(s => s.IsSelected).ToList();
 
@@ -394,7 +486,31 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _dialogManager.CreateDialog(
             "Are you absolutely sure?",
             $"This action cannot be undone. This will permanently delete {selectedSuppliers.Count} supplier(s) and remove their data from your database.")
-            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteMultipleItems(), DialogButtonStyle.Destructive)
+            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteMultipleSuppliers(), DialogButtonStyle.Destructive)
+            .WithCancelButton("Cancel")
+            .WithMaxWidth(512)
+            .Dismissible()
+            .Show();
+    }
+    
+    [RelayCommand]
+    private void ShowMultipleOrderDeletionDialog()
+    {
+        var selectedOrders = PurchaseOrderItems.Where(s => s.IsSelected).ToList();
+
+        if (selectedOrders.Count == 0)
+        {
+            _toastManager.CreateToast("No Selection")
+                .WithContent("Please select at least one order to delete.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
+        _dialogManager.CreateDialog(
+                "Are you absolutely sure?",
+                $"This action cannot be undone. This will permanently delete {selectedOrders.Count} order(s) and remove their data from your database.")
+            .WithPrimaryButton("Continue", async () => await OnSubmitDeleteMultipleOrders(), DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
             .Dismissible()
@@ -458,6 +574,60 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         finally
         {
             IsSearchingSupplier = false;
+        }
+    }
+    
+    [RelayCommand]
+    private async Task SearchPurchaseOrder()
+    {
+        if (string.IsNullOrWhiteSpace(SearchStringOrderResult))
+        {
+            // Unsubscribe before clearing
+            foreach (var po in PurchaseOrderItems)
+            {
+                po.PropertyChanged -= OnPurchaseOrderPropertyChanged;
+            }
+    
+            PurchaseOrderItems.Clear();
+            foreach (var po in CurrentFilteredPurchaseOrderData)
+            {
+                po.PropertyChanged += OnPurchaseOrderPropertyChanged;
+                PurchaseOrderItems.Add(po);
+            }
+            UpdatePurchaseOrderCounts();
+            return;
+        }
+    
+        IsSearchingOrders = true;
+    
+        try
+        {
+            await Task.Delay(500);
+    
+            var filteredOrders = CurrentFilteredPurchaseOrderData.Where(po =>
+                    po is { PONumber: not null, Name: not null, Item: not null } && 
+                    (po.PONumber.Contains(SearchStringOrderResult, StringComparison.OrdinalIgnoreCase) ||
+                     po.Name.Contains(SearchStringOrderResult, StringComparison.OrdinalIgnoreCase) ||
+                     po.Item.Contains(SearchStringOrderResult, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+    
+            // Unsubscribe before clearing
+            foreach (var po in PurchaseOrderItems)
+            {
+                po.PropertyChanged -= OnPurchaseOrderPropertyChanged;
+            }
+    
+            PurchaseOrderItems.Clear();
+            foreach (var po in filteredOrders)
+            {
+                po.PropertyChanged += OnPurchaseOrderPropertyChanged;
+                PurchaseOrderItems.Add(po);
+            }
+            UpdatePurchaseOrderCounts();
+        }
+        finally
+        {
+            IsSearchingOrders = false;
         }
     }
 
@@ -605,9 +775,41 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         UpdateSupplierCounts();
     }
+    
+    private void ApplyPurchaseOrderFilter()
+    {
+        if (OriginalPurchaseOrderData.Count == 0) return;
+        List<PurchaseOrder> filteredList = OriginalPurchaseOrderData.ToList();
+
+        // Apply Delivery Status filter
+        if (SelectedDeliveryFilterItem != "All")
+        {
+            filteredList = filteredList
+                .Where(po => po.DeliveryStatus != null &&
+                             po.DeliveryStatus.Equals(SelectedDeliveryFilterItem, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        CurrentFilteredPurchaseOrderData = filteredList;
+
+        // Unsubscribe from old items
+        foreach (var item in PurchaseOrderItems)
+        {
+            item.PropertyChanged -= OnPurchaseOrderPropertyChanged;
+        }
+
+        PurchaseOrderItems.Clear();
+        foreach (var po in filteredList)
+        {
+            po.PropertyChanged += OnPurchaseOrderPropertyChanged;
+            PurchaseOrderItems.Add(po);
+        }
+
+        UpdatePurchaseOrderCounts();
+    }
 
     [RelayCommand]
-    private void ToggleSelection(bool? isChecked)
+    private void ToggleSupplierSelection(bool? isChecked)
     {
         var shouldSelect = isChecked ?? false;
 
@@ -617,8 +819,20 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         }
         UpdateSupplierCounts();
     }
+    
+    [RelayCommand]
+    private void TogglePurchaseOrderSelection(bool? isChecked)
+    {
+        var shouldSelect = isChecked ?? false;
 
-    private async Task OnSubmitDeleteSingleItem(Supplier supplier)
+        foreach (var purchaseItem in PurchaseOrderItems)
+        {
+            purchaseItem.IsSelected = shouldSelect;
+        }
+        UpdatePurchaseOrderCounts();
+    }
+
+    private async Task OnSubmitDeleteSingleSupplier(Supplier supplier)
     {
         if (supplier.ID == null) return;
 
@@ -641,8 +855,32 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 .ShowSuccess();
         }
     }
+    
+    private async Task OnSubmitDeleteSingleOrder(PurchaseOrder order)
+    {
+        if (order.ID == null) return;
 
-    private async Task OnSubmitDeleteMultipleItems()
+        // Call service to delete from database
+        var result = await _supplierService.DeleteSupplierAsync(order.ID.Value);
+
+        if (result.Success)
+        {
+            // Remove from UI
+            order.PropertyChanged -= OnSupplierPropertyChanged;
+            PurchaseOrderItems.Remove(order);
+            OriginalPurchaseOrderData.Remove(order);
+            CurrentFilteredPurchaseOrderData.Remove(order);
+            UpdateSupplierCounts();
+
+            _toastManager.CreateToast("Purchase Order Deleted")
+                .WithContent($"{order.Name} has been deleted successfully!")
+                .DismissOnClick()
+                .WithDelay(6)
+                .ShowSuccess();
+        }
+    }
+
+    private async Task OnSubmitDeleteMultipleSuppliers()
     {
         var selectedSuppliers = SupplierItems.Where(item => item.IsSelected).ToList();
         if (selectedSuppliers.Count == 0) return;
@@ -670,6 +908,40 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
             _toastManager.CreateToast("Suppliers Deleted")
                 .WithContent($"{result.DeletedCount} supplier(s) deleted successfully!")
+                .DismissOnClick()
+                .WithDelay(6)
+                .ShowSuccess();
+        }
+    }
+    
+    private async Task OnSubmitDeleteMultipleOrders()
+    {
+        var selectedOrders = PurchaseOrderItems.Where(item => item.IsSelected).ToList();
+        if (selectedOrders.Count == 0) return;
+
+        // Prepare list of IDs
+        var orderIds = selectedOrders 
+            .Where(s => s.ID.HasValue)
+            .Select(s => s.ID!.Value)
+            .ToList();
+
+        // Call service to delete multiple from database
+        var result = await _supplierService.DeleteMultipleSuppliersAsync(orderIds);
+
+        if (result.Success)
+        {
+            // Remove from UI
+            foreach (var order in selectedOrders)
+            {
+                order.PropertyChanged -= OnPurchaseOrderPropertyChanged;
+                PurchaseOrderItems.Remove(order);
+                OriginalPurchaseOrderData.Remove(order);
+                CurrentFilteredPurchaseOrderData.Remove(order);
+            }
+            UpdateSupplierCounts();
+
+            _toastManager.CreateToast("Purchase Order Deleted")
+                .WithContent($"{result.DeletedCount} purchase order(s) deleted successfully!")
                 .DismissOnClick()
                 .WithDelay(6)
                 .ShowSuccess();
@@ -742,29 +1014,61 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         SearchSupplierCommand.Execute(null);
     }
+    
+    partial void OnSearchStringOrderResultChanged(string value)
+    {
+        SearchPurchaseOrderCommand.Execute(null);
+    }
 
     partial void OnSelectedStatusFilterItemChanged(string value)
     {
         ApplySupplierFilter();
+    }
+    
+    partial void OnSelectedDeliveryFilterItemChanged(string value)
+    {
+        ApplyPurchaseOrderFilter();
     }
 
     partial void OnSelectedSupplierChanged(Supplier? value)
     {
         OnPropertyChanged(nameof(CanDeleteSelectedSuppliers));
     }
+    
+    private void UpdatePurchaseOrderCounts()
+    {
+        // Update counts similar to supplier counts
+        var selectedCount = PurchaseOrderItems.Count(x => x.IsSelected);
+        SelectAll = PurchaseOrderItems.Count > 0 && PurchaseOrderItems.All(x => x.IsSelected);
+    }
+
+    private void OnPurchaseOrderPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PurchaseOrder.IsSelected))
+        {
+            UpdatePurchaseOrderCounts();
+        }
+    }
 
     protected override void DisposeManagedResources()
     {
-        // Unsubscribe from property changed events
         foreach (var supplier in SupplierItems)
         {
             supplier.PropertyChanged -= OnSupplierPropertyChanged;
+        }
+    
+        foreach (var po in PurchaseOrderItems)
+        {
+            po.PropertyChanged -= OnPurchaseOrderPropertyChanged;
         }
 
         // Clear collections
         SupplierItems.Clear();
         OriginalSupplierData.Clear();
         CurrentFilteredSupplierData.Clear();
+        PurchaseOrderItems.Clear();
+        OriginalPurchaseOrderData.Clear();
+        CurrentFilteredPurchaseOrderData.Clear();
     }
 }
 
@@ -831,5 +1135,64 @@ public partial class Supplier : ObservableObject
         OnPropertyChanged(nameof(StatusForeground));
         OnPropertyChanged(nameof(StatusBackground));
         OnPropertyChanged(nameof(StatusDisplayText));
+    }
+}
+
+// Add PurchaseOrder class at the bottom of the file (after Supplier class)
+
+public partial class PurchaseOrder : ObservableObject
+{
+    [ObservableProperty]
+    private int? _iD;
+    
+    [ObservableProperty]
+    private string? _pONumber;
+
+    [ObservableProperty]
+    private string? _name;
+
+    [ObservableProperty]
+    private string? _item;
+
+    [ObservableProperty]
+    private decimal? _amount;
+
+    [ObservableProperty]
+    private string? _deliveryStatus;
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public string FormattedAmount => $"₱{Amount:N2}";
+    
+    public IBrush DeliveryForeground => DeliveryStatus?.ToLowerInvariant() switch
+    {
+        "pending" => new SolidColorBrush(Color.FromRgb(234, 179, 8)),    // Yellow-500
+        "delivered" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),  // Green-500
+        "cancelled" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),  // Red-500
+        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
+    };
+
+    public IBrush DeliveryBackground => DeliveryStatus?.ToLowerInvariant() switch
+    {
+        "pending" => new SolidColorBrush(Color.FromArgb(25, 234, 179, 8)),   // Yellow-500 with alpha
+        "delivered" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)), // Green-500 with alpha
+        "cancelled" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
+        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))          // Default Gray-500 with alpha
+    };
+
+    public string? DeliveryDisplayText => DeliveryStatus?.ToLowerInvariant() switch
+    {
+        "pending" => "● Pending",
+        "delivered" => "● Delivered",
+        "cancelled" => "● Cancelled",
+        _ => DeliveryStatus
+    };
+
+    partial void OnDeliveryStatusChanged(string value)
+    {
+        OnPropertyChanged(nameof(DeliveryForeground));
+        OnPropertyChanged(nameof(DeliveryBackground));
+        OnPropertyChanged(nameof(DeliveryDisplayText));
     }
 }

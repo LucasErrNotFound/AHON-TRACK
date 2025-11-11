@@ -148,7 +148,7 @@
                                                         <DataGridCheckBoxColumn.Header>
                                                             <CheckBox
                                                                 x:Name="SelectToggler"
-                                                                Command="{CompiledBinding ToggleSelectionCommand}"
+                                                                Command="{CompiledBinding ToggleSupplierSelectionCommand}"
                                                                 CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
                                                                 IsChecked="{CompiledBinding SelectAll}"
                                                                 Margin="8,0" />
@@ -276,10 +276,6 @@
                                                                             Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowProductOrderViewCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}" />
                                                                         <MenuItem
-                                                                            Header="View Purchase Order"
-                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewProductOrderViewCommand, FallbackValue={x:Null}}"
-                                                                            CommandParameter="{CompiledBinding}" />
-                                                                        <MenuItem
                                                                             Header="Edit Supplier"
                                                                             Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowEditSupplierDialogCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}" />
@@ -287,7 +283,7 @@
                                                                         <MenuItem
                                                                             Header="Delete"
                                                                             Foreground="{DynamicResource DestructiveColor}"
-                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowSingleSupplierDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}"
                                                                             IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
                                                                             <MenuItem.IsEnabled>
@@ -305,7 +301,7 @@
                                                                         <MenuItem
                                                                             Header="Delete Selected"
                                                                             Foreground="{DynamicResource DestructiveColor}"
-                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowMultipleSupplierDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}"
                                                                             IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
                                                                             <MenuItem.IsEnabled>
@@ -427,7 +423,7 @@
                                                         <DataGridCheckBoxColumn.Header>
                                                             <CheckBox
                                                                 x:Name="SelectToggler2"
-                                                                Command="{CompiledBinding ToggleSelectionCommand}"
+                                                                Command="{CompiledBinding ToggleSupplierSelectionCommand}"
                                                                 CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
                                                                 IsChecked="{CompiledBinding SelectAll}"
                                                                 Margin="8,0" />
@@ -556,10 +552,6 @@
                                                                             Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowProductOrderViewCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}" />
                                                                         <MenuItem
-                                                                            Header="View Purchase Order"
-                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewProductOrderViewCommand, FallbackValue={x:Null}}"
-                                                                            CommandParameter="{CompiledBinding}" />
-                                                                        <MenuItem
                                                                             Header="Edit Supplier"
                                                                             Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowEditSupplierDialogCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}" />
@@ -567,7 +559,7 @@
                                                                         <MenuItem
                                                                             Header="Delete"
                                                                             Foreground="{DynamicResource DestructiveColor}"
-                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowSingleSupplierDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}"
                                                                             IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
                                                                             <MenuItem.IsEnabled>
@@ -585,7 +577,7 @@
                                                                         <MenuItem
                                                                             Header="Delete Selected"
                                                                             Foreground="{DynamicResource DestructiveColor}"
-                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowMultipleItemDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowMultipleSupplierDeletionDialogCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}"
                                                                             IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
                                                                             <MenuItem.IsEnabled>
@@ -613,6 +605,402 @@
                             </shadui:Card>
                         </TabItem>
                         <TabItem Header="View Purchase Orders">
+                            <shadui:Card MinWidth="300" MaxWidth="1500">
+                                <shadui:BreakpointViewPort>
+                                    <shadui:BreakpointView Breakpoint="XlAndUp">
+                                        <StackPanel>
+                                            <Grid ColumnDefinitions="Auto Auto">
+                                                <TextBox
+                                                    Grid.Column="0"
+                                                    HorizontalAlignment="Left"
+                                                    Watermark="Search Purchase Orders..."
+                                                    shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingOrders}"
+                                                    Text="{CompiledBinding SearchStringOrderResult, Mode=TwoWay}"
+                                                    shadui:ControlAssist.Height="40"
+                                                    Classes="Clearable"
+                                                    Width="400">
+                                                    <TextBox.InnerRightContent>
+                                                        <Svg
+                                                            Width="20"
+                                                            Opacity="0.75"
+                                                            Path="avares://AHON_TRACK/Assets/SupplierManagementView/search-icon.svg" />
+                                                    </TextBox.InnerRightContent>
+                                                </TextBox>
+                                                <ComboBox
+                                                    Grid.Column="1"
+                                                    Width="150"
+                                                    Margin="20,0,0,0"
+                                                    PlaceholderText="Status"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    ItemsSource="{CompiledBinding DeliveryFilterItems}"
+                                                    SelectedItem="{CompiledBinding SelectedDeliveryFilterItem}">
+                                                </ComboBox>
+                                            </Grid>
+                                            <DataGrid
+                                                Height="650"
+                                                Margin="0,20,0,0"
+                                                CanUserReorderColumns="False"
+                                                CanUserSortColumns="False"
+                                                GridLinesVisibility="All"
+                                                SelectionMode="Single"
+                                                HeadersVisibility="Column"
+                                                ItemsSource="{CompiledBinding PurchaseOrderItems}"
+                                                SelectedItem="{CompiledBinding SelectedPO}">
+
+                                                <DataGrid.Styles>
+                                                    <Style Selector="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+                                                    </Style>
+                                                </DataGrid.Styles>
+
+                                                <DataGrid.Columns>
+                                                    <DataGridCheckBoxColumn 
+                                                        Binding="{CompiledBinding IsSelected}"
+                                                        CanUserSort="False" Width="60">
+                                                        <!--CheckBox Header Column-->
+                                                        <DataGridCheckBoxColumn.Header>
+                                                            <CheckBox
+                                                                x:Name="SelectToggler3"
+                                                                Command="{CompiledBinding TogglePurchaseOrderSelectionCommand}"
+                                                                CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
+                                                                IsChecked="{CompiledBinding SelectAll}"
+                                                                Margin="8,0" />
+                                                        </DataGridCheckBoxColumn.Header>
+                                                    </DataGridCheckBoxColumn>
+
+                                                    <!-- Supplier PO Number -->
+                                                    <DataGridTextColumn
+                                                        IsReadOnly="True"
+                                                        Width="Auto"
+                                                        MinWidth="150"
+                                                        Header="PO Number"
+                                                        Binding="{CompiledBinding PONumber}" />
+
+                                                    <!-- Supplier Name -->
+                                                    <DataGridTextColumn
+                                                        IsReadOnly="True"
+                                                        Width="*"
+                                                        MaxWidth="150"
+                                                        Header="Supplier Name"
+                                                        Binding="{CompiledBinding Name}" />
+
+                                                    <!-- Item -->
+                                                    <DataGridTextColumn
+                                                        IsReadOnly="True"
+                                                        Width="*"
+                                                        MinWidth="170"
+                                                        Header="Item"
+                                                        Binding="{CompiledBinding Item}" />
+
+                                                    <!-- Amount -->
+                                                    <DataGridTextColumn
+                                                        IsReadOnly="True"
+                                                        Width="Auto"
+                                                        MinWidth="200"
+                                                        Header="Amount"
+                                                        Binding="{CompiledBinding FormattedAmount}" />
+
+                                                    <!-- Status -->
+                                                    <DataGridTemplateColumn
+                                                        IsReadOnly="True"
+                                                        CanUserSort="False"
+                                                        Header="Delivery Status"
+                                                        Width="200">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate DataType="viewModels:PurchaseOrder">
+                                                                <Border
+                                                                    Background="{CompiledBinding DeliveryBackground}"
+                                                                    CornerRadius="7"
+                                                                    Padding="8,4"
+                                                                    Margin="5,0,0,0"
+                                                                    HorizontalAlignment="Left">
+                                                                    <TextBlock
+                                                                        Text="{CompiledBinding DeliveryDisplayText}"
+                                                                        Foreground="{CompiledBinding DeliveryForeground}"
+                                                                        FontSize="13"
+                                                                        FontWeight="Medium"
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center" />
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <!-- Action -->
+                                                    <DataGridTemplateColumn 
+                                                        CanUserResize="False" 
+                                                        CanUserSort="False"
+                                                        Width="60">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate DataType="viewModels:PurchaseOrder">
+                                                                <Menu>
+                                                                    <MenuItem
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"
+                                                                        Classes="Icon Grid"
+                                                                        shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+                                                                        <MenuItem.Header>
+                                                                            <Svg
+                                                                                Width="24"
+                                                                                Height="24"
+                                                                                Path="/Assets/SupplierManagementView/three-dots-icon.svg" />
+                                                                        </MenuItem.Header>
+                                                                        <shadui:MenuItemAssist.Label>
+                                                                            <TextBlock
+                                                                                Text="Actions"
+                                                                                FontSize="15"
+                                                                                FontWeight="Regular"
+                                                                                Foreground="{DynamicResource MutedColor}" />
+                                                                        </shadui:MenuItemAssist.Label>
+                                                                        <MenuItem
+                                                                            Header="View Purchase Order"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewProductOrderViewCommand, FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}" />
+                                                                        <Separator />
+                                                                        <MenuItem
+                                                                            Header="Delete"
+                                                                            Foreground="{DynamicResource DestructiveColor}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowSingleOrderDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}"
+                                                                            IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+                                                                            <MenuItem.IsEnabled>
+                                                                                <MultiBinding
+                                                                                    Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+                                                                                    <!-- 1) status of the row where the menu is opened -->
+                                                                                    <Binding Path="DeliveryStatus" />
+                                                                                    <!-- 2) currently selected supplier's status from the viewmodel (maybe null) -->
+                                                                                    <Binding
+                                                                                        Path="$parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedSupplier.Status"
+                                                                                        FallbackValue="{x:Null}" />
+                                                                                </MultiBinding>
+                                                                            </MenuItem.IsEnabled>
+                                                                        </MenuItem>
+                                                                        <MenuItem
+                                                                            Header="Delete Selected"
+                                                                            Foreground="{DynamicResource DestructiveColor}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowMultipleOrderDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}"
+                                                                            IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+                                                                            <MenuItem.IsEnabled>
+                                                                                <MultiBinding
+                                                                                    Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+                                                                                    <!-- current row's Status -->
+                                                                                    <Binding Path="DeliveryStatus" />
+                                                                                    <!-- view-model global flag -->
+                                                                                    <Binding
+                                                                                        Path="$parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).CanDeleteSelectedSuppliers"
+                                                                                        FallbackValue="{x:Null}" />
+                                                                                </MultiBinding>
+                                                                            </MenuItem.IsEnabled>
+                                                                        </MenuItem>
+                                                                    </MenuItem>
+                                                                </Menu>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+                                    </shadui:BreakpointView>
+                                    <shadui:BreakpointView Breakpoint="XlAndDown">
+                                        <StackPanel>
+                                            <Grid ColumnDefinitions="Auto Auto">
+                                                <TextBox
+                                                    Grid.Column="0"
+                                                    HorizontalAlignment="Left"
+                                                    Watermark="Search Purchase Orders..."
+                                                    shadui:ControlAssist.ShowProgress="{CompiledBinding IsSearchingOrders}"
+                                                    Text="{CompiledBinding SearchStringOrderResult, Mode=TwoWay}"
+                                                    shadui:ControlAssist.Height="40"
+                                                    Classes="Clearable"
+                                                    Width="400">
+                                                    <TextBox.InnerRightContent>
+                                                        <Svg
+                                                            Width="20"
+                                                            Opacity="0.75"
+                                                            Path="avares://AHON_TRACK/Assets/SupplierManagementView/search-icon.svg" />
+                                                    </TextBox.InnerRightContent>
+                                                </TextBox>
+                                                <ComboBox
+                                                    Grid.Column="1"
+                                                    Width="150"
+                                                    Margin="20,0,0,0"
+                                                    PlaceholderText="Status"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    ItemsSource="{CompiledBinding DeliveryFilterItems}"
+                                                    SelectedItem="{CompiledBinding SelectedDeliveryFilterItem}">
+                                                </ComboBox>
+                                            </Grid>
+                                            <DataGrid
+                                                Height="650"
+                                                Margin="0,20,0,0"
+                                                CanUserReorderColumns="False"
+                                                CanUserSortColumns="False"
+                                                GridLinesVisibility="All"
+                                                SelectionMode="Single"
+                                                HeadersVisibility="Column"
+                                                ItemsSource="{CompiledBinding PurchaseOrderItems}"
+                                                SelectedItem="{CompiledBinding SelectedPO}">
+
+                                                <DataGrid.Styles>
+                                                    <Style Selector="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+                                                    </Style>
+                                                </DataGrid.Styles>
+
+                                                <DataGrid.Columns>
+                                                    <DataGridCheckBoxColumn 
+                                                        Binding="{CompiledBinding IsSelected}"
+                                                        CanUserSort="False" Width="60">
+                                                        <!--CheckBox Header Column-->
+                                                        <DataGridCheckBoxColumn.Header>
+                                                            <CheckBox
+                                                                x:Name="SelectToggler4"
+                                                                Command="{CompiledBinding TogglePurchaseOrderSelectionCommand}"
+                                                                CommandParameter="{CompiledBinding #SelectToggler.IsChecked}"
+                                                                IsChecked="{CompiledBinding SelectAll}"
+                                                                Margin="8,0" />
+                                                        </DataGridCheckBoxColumn.Header>
+                                                    </DataGridCheckBoxColumn>
+
+                                                    <!-- Supplier PO Number -->
+                                                    <DataGridTextColumn
+                                                        IsReadOnly="True"
+                                                        Width="Auto"
+                                                        MinWidth="150"
+                                                        Header="PO Number"
+                                                        Binding="{CompiledBinding PONumber}" />
+
+                                                    <!-- Supplier Name -->
+                                                    <DataGridTextColumn
+                                                        IsReadOnly="True"
+                                                        Width="Auto"
+                                                        MaxWidth="170"
+                                                        Header="Supplier Name"
+                                                        Binding="{CompiledBinding Name}" />
+
+                                                    <!-- Item -->
+                                                    <DataGridTextColumn
+                                                        IsReadOnly="True"
+                                                        Width="*"
+                                                        MinWidth="200"
+                                                        Header="Item"
+                                                        Binding="{CompiledBinding Item}" />
+
+                                                    <!-- Amount -->
+                                                    <DataGridTextColumn
+                                                        IsReadOnly="True"
+                                                        Width="Auto"
+                                                        MinWidth="200"
+                                                        Header="Amount"
+                                                        Binding="{CompiledBinding FormattedAmount}" />
+
+                                                    <!-- Status -->
+                                                    <DataGridTemplateColumn
+                                                        IsReadOnly="True"
+                                                        CanUserSort="False"
+                                                        Header="Delivery Status"
+                                                        Width="200">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate DataType="viewModels:PurchaseOrder">
+                                                                <Border
+                                                                    Background="{CompiledBinding DeliveryBackground}"
+                                                                    CornerRadius="7"
+                                                                    Padding="8,4"
+                                                                    Margin="5,0,0,0"
+                                                                    HorizontalAlignment="Left">
+                                                                    <TextBlock
+                                                                        Text="{CompiledBinding DeliveryDisplayText}"
+                                                                        Foreground="{CompiledBinding DeliveryForeground}"
+                                                                        FontSize="13"
+                                                                        FontWeight="Medium"
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center" />
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <!-- Action -->
+                                                    <DataGridTemplateColumn 
+                                                        CanUserResize="False" 
+                                                        CanUserSort="False"
+                                                        Width="60">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate DataType="viewModels:PurchaseOrder">
+                                                                <Menu>
+                                                                    <MenuItem
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"
+                                                                        Classes="Icon Grid"
+                                                                        shadui:MenuItemAssist.PopupPlacement="BottomEdgeAlignedRight">
+                                                                        <MenuItem.Header>
+                                                                            <Svg
+                                                                                Width="24"
+                                                                                Height="24"
+                                                                                Path="/Assets/SupplierManagementView/three-dots-icon.svg" />
+                                                                        </MenuItem.Header>
+                                                                        <shadui:MenuItemAssist.Label>
+                                                                            <TextBlock
+                                                                                Text="Actions"
+                                                                                FontSize="15"
+                                                                                FontWeight="Regular"
+                                                                                Foreground="{DynamicResource MutedColor}" />
+                                                                        </shadui:MenuItemAssist.Label>
+                                                                        <MenuItem
+                                                                            Header="View Purchase Order"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewProductOrderViewCommand, FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}" />
+                                                                        <Separator />
+                                                                        <MenuItem
+                                                                            Header="Delete"
+                                                                            Foreground="{DynamicResource DestructiveColor}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowSingleOrderDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}"
+                                                                            IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedCount, Converter={StaticResource IntToInverseBoolConverter}, FallbackValue={x:Null}}">
+                                                                            <MenuItem.IsEnabled>
+                                                                                <MultiBinding
+                                                                                    Converter="{StaticResource StatusAndSelectedToDeleteEnabledConverter}">
+                                                                                    <!-- 1) status of the row where the menu is opened -->
+                                                                                    <Binding Path="DeliveryStatus" />
+                                                                                    <!-- 2) currently selected supplier's status from the viewmodel (maybe null) -->
+                                                                                    <Binding
+                                                                                        Path="$parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedSupplier.Status"
+                                                                                        FallbackValue="{x:Null}" />
+                                                                                </MultiBinding>
+                                                                            </MenuItem.IsEnabled>
+                                                                        </MenuItem>
+                                                                        <MenuItem
+                                                                            Header="Delete Selected"
+                                                                            Foreground="{DynamicResource DestructiveColor}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ShowMultipleOrderDeletionDialogCommand, FallbackValue={x:Null}}"
+                                                                            CommandParameter="{CompiledBinding}"
+                                                                            IsVisible="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).SelectedCount, Converter={StaticResource IntToBoolConverter}, FallbackValue={x:Null}}">
+                                                                            <MenuItem.IsEnabled>
+                                                                                <MultiBinding
+                                                                                    Converter="{StaticResource StatusAndCanDeleteSelectedConverter}">
+                                                                                    <!-- current row's Status -->
+                                                                                    <Binding Path="DeliveryStatus" />
+                                                                                    <!-- view-model global flag -->
+                                                                                    <Binding
+                                                                                        Path="$parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).CanDeleteSelectedSuppliers"
+                                                                                        FallbackValue="{x:Null}" />
+                                                                                </MultiBinding>
+                                                                            </MenuItem.IsEnabled>
+                                                                        </MenuItem>
+                                                                    </MenuItem>
+                                                                </Menu>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+                                    </shadui:BreakpointView>
+                                </shadui:BreakpointViewPort>
+                            </shadui:Card>
                         </TabItem>
                     </TabControl.Items>
                 </TabControl>
