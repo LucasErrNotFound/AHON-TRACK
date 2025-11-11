@@ -245,10 +245,13 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             if (value.HasValue)
             {
                 MemberAge = CalculateAge(value.Value);
+            
+                ConsentFilePath = null;
             }
             else
             {
                 MemberAge = null;
+                ConsentFilePath = null;
             }
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
