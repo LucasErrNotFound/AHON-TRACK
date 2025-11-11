@@ -284,6 +284,7 @@ namespace AHON_TRACK.Services
                     Status = @Status,
                     PaymentMethod = @PaymentMethod,
                     ReferenceNumber = @ReferenceNumber,
+                    ConsentLetter = @ConsentLetter,
                     RegisteredByEmployeeID = @RegisteredByEmployeeID
                 WHERE MemberID = @MemberID";
 
@@ -309,11 +310,11 @@ namespace AHON_TRACK.Services
             const string query = @"
                 INSERT INTO Members 
                 (Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
-                 ValidUntil, PackageID, Status, PaymentMethod, ReferenceNumber, RegisteredByEmployeeID, IsDeleted)
+                 ValidUntil, PackageID, Status, PaymentMethod, ReferenceNumber, ConsentLetter, RegisteredByEmployeeID, IsDeleted)
                 OUTPUT INSERTED.MemberID
                 VALUES 
                 (@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
-                 @ValidUntil, @PackageID, @Status, @PaymentMethod, @ReferenceNumber, @RegisteredByEmployeeID, 0)";
+                 @ValidUntil, @PackageID, @Status, @PaymentMethod, @ReferenceNumber, @ConsentLetter, @RegisteredByEmployeeID, 0)";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             AddMemberParameters(cmd, member);
@@ -481,6 +482,9 @@ namespace AHON_TRACK.Services
             string processedRefNumber = ProcessReferenceNumber(member);
             cmd.Parameters.AddWithValue("@ReferenceNumber",
                 string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
+            
+            cmd.Parameters.AddWithValue("@ConsentLetter",
+                string.IsNullOrWhiteSpace(member.ConsentLetter) ? (object)DBNull.Value : member.ConsentLetter);
 
             cmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
         }
@@ -529,7 +533,7 @@ namespace AHON_TRACK.Services
             ELSE m.Status
         END AS Status,
         
-        m.PaymentMethod, m.ProfilePicture, m.DateJoined,
+        m.PaymentMethod, m.ProfilePicture, m.ConsentLetter, m.DateJoined,
         
         (SELECT TOP 1 CheckIn FROM MemberCheckIns 
          WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
@@ -629,7 +633,7 @@ namespace AHON_TRACK.Services
             ELSE m.Status
         END AS Status,
         
-        m.PaymentMethod, m.RegisteredByEmployeeID, m.DateJoined,
+        m.PaymentMethod, m.ConsentLetter, m.RegisteredByEmployeeID, m.DateJoined,
         
         (SELECT TOP 1 CheckIn FROM MemberCheckIns 
          WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
@@ -747,7 +751,7 @@ namespace AHON_TRACK.Services
                 return packages;
             }
         }
-
+        
         private ManageMemberModel MapMemberFromReader(SqlDataReader reader, bool includeRegisteredBy = false)
         {
             int baseIndex = includeRegisteredBy ? 0 : 1;
@@ -772,7 +776,19 @@ namespace AHON_TRACK.Services
             {
                 combinedPackages = "None";
             }
-
+            
+            int genderIdx = includeRegisteredBy ? 4 : 5;
+            int profilePicIdx = includeRegisteredBy ? 5 : 15;
+            int contactIdx = includeRegisteredBy ? 6 : 6;
+            int ageIdx = includeRegisteredBy ? 7 : 7;
+            int dobIdx = includeRegisteredBy ? 8 : 8;
+            int validUntilIdx = includeRegisteredBy ? 9 : 9;
+            int packageIdIdx = includeRegisteredBy ? 10 : 10;
+            int statusIdx = includeRegisteredBy ? 13 : 13;
+            int paymentMethodIdx = includeRegisteredBy ? 14 : 14;
+            int consentLetterIdx = includeRegisteredBy ? 15 : 16;
+            int dateJoinedIdx = includeRegisteredBy ? 17 : 17;
+    
             var member = new ManageMemberModel
             {
                 MemberID = reader.GetInt32(0),
@@ -780,30 +796,31 @@ namespace AHON_TRACK.Services
                 MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
                 LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
                 Name = includeRegisteredBy ? null : (reader.IsDBNull(4) ? string.Empty : reader.GetString(4)),
-                Gender = reader.IsDBNull(includeRegisteredBy ? 4 : 5) ? string.Empty : reader.GetString(includeRegisteredBy ? 4 : 5),
-                ContactNumber = reader.IsDBNull(includeRegisteredBy ? 6 : 6) ? string.Empty : reader.GetString(includeRegisteredBy ? 6 : 6),
-                Age = reader.IsDBNull(includeRegisteredBy ? 7 : 7) ? null : reader.GetInt32(includeRegisteredBy ? 7 : 7),
-                DateOfBirth = reader.IsDBNull(includeRegisteredBy ? 8 : 8) ? null : reader.GetDateTime(includeRegisteredBy ? 8 : 8),
-                ValidUntil = reader.IsDBNull(includeRegisteredBy ? 9 : 9) ? null : reader.GetDateTime(includeRegisteredBy ? 9 : 9).ToString("MMM dd, yyyy"),
-                PackageID = reader.IsDBNull(includeRegisteredBy ? 10 : 10) ? null : reader.GetInt32(includeRegisteredBy ? 10 : 10),
+                Gender = reader.IsDBNull(genderIdx) ? string.Empty : reader.GetString(genderIdx),
+                ContactNumber = reader.IsDBNull(contactIdx) ? string.Empty : reader.GetString(contactIdx),
+                Age = reader.IsDBNull(ageIdx) ? null : reader.GetInt32(ageIdx),
+                DateOfBirth = reader.IsDBNull(dobIdx) ? null : reader.GetDateTime(dobIdx),
+                ValidUntil = reader.IsDBNull(validUntilIdx) ? null : reader.GetDateTime(validUntilIdx).ToString("MMM dd, yyyy"),
+                PackageID = reader.IsDBNull(packageIdIdx) ? null : reader.GetInt32(packageIdIdx),
                 MembershipType = combinedPackages,
-                Status = reader.IsDBNull(includeRegisteredBy ? 13 : 13) ? "Active" : reader.GetString(includeRegisteredBy ? 13 : 13),
-                PaymentMethod = reader.IsDBNull(includeRegisteredBy ? 14 : 14) ? string.Empty : reader.GetString(includeRegisteredBy ? 14 : 14),
-                AvatarBytes = reader.IsDBNull(includeRegisteredBy ? 5 : 15) ? null : (byte[])reader[includeRegisteredBy ? 5 : 15],
-                AvatarSource = reader.IsDBNull(includeRegisteredBy ? 5 : 15)
+                Status = reader.IsDBNull(statusIdx) ? "Active" : reader.GetString(statusIdx),
+                PaymentMethod = reader.IsDBNull(paymentMethodIdx) ? string.Empty : reader.GetString(paymentMethodIdx),
+                ConsentLetter = reader.IsDBNull(consentLetterIdx) ? null : reader.GetString(consentLetterIdx),
+                AvatarBytes = reader.IsDBNull(profilePicIdx) ? null : (byte[])reader[profilePicIdx],
+                AvatarSource = reader.IsDBNull(profilePicIdx)
                     ? ImageHelper.GetDefaultAvatar()
-                    : ImageHelper.BytesToBitmap((byte[])reader[includeRegisteredBy ? 5 : 15]),
-                DateJoined = reader.IsDBNull(includeRegisteredBy ? 16 : 16) ? null : reader.GetDateTime(includeRegisteredBy ? 16 : 16),
-                LastCheckIn = reader.IsDBNull(17) ? null : reader.GetDateTime(17),
-                LastCheckOut = reader.IsDBNull(18) ? null : reader.GetDateTime(18),
-                RecentPurchaseItem = reader.IsDBNull(19) ? null : reader.GetString(19),
-                RecentPurchaseDate = reader.IsDBNull(20) ? null : reader.GetDateTime(20),
-                RecentPurchaseQuantity = reader.IsDBNull(21) ? null : reader.GetInt32(21)
+                    : ImageHelper.BytesToBitmap((byte[])reader[profilePicIdx]),
+                DateJoined = reader.IsDBNull(dateJoinedIdx) ? null : reader.GetDateTime(dateJoinedIdx),
+                LastCheckIn = reader.IsDBNull(18) ? null : reader.GetDateTime(18),
+                LastCheckOut = reader.IsDBNull(19) ? null : reader.GetDateTime(19),
+                RecentPurchaseItem = reader.IsDBNull(20) ? null : reader.GetString(20),
+                RecentPurchaseDate = reader.IsDBNull(21) ? null : reader.GetDateTime(21),
+                RecentPurchaseQuantity = reader.IsDBNull(22) ? null : reader.GetInt32(22)
             };
 
             if (includeRegisteredBy)
             {
-                member.RegisteredByEmployeeID = reader.IsDBNull(15) ? 0 : reader.GetInt32(15);
+                member.RegisteredByEmployeeID = reader.IsDBNull(16) ? 0 : reader.GetInt32(16);
             }
 
             return member;
@@ -855,6 +872,7 @@ namespace AHON_TRACK.Services
                     Status = @Status,
                     PaymentMethod = @PaymentMethod,
                     ReferenceNumber = @ReferenceNumber,
+                    ConsentLetter = @ConsentLetter,
                     ProfilePicture = @ProfilePicture
                 WHERE MemberID = @MemberID";
 

@@ -22,6 +22,7 @@ namespace AHON_TRACK.Models
         public byte[]? ProfilePicture { get; set; }
         public Bitmap? ProfileImageSource { get; set; }
         public static Bitmap DefaultAvatarSource => ImageHelper.GetDefaultAvatar();
+        public string? ConsentLetter { get; set; }
         public string? ContactNumber { get; set; }
         public int? PackageID { get; set; }
         public string? MembershipType { get; set; }

@@ -15,6 +15,8 @@ public partial class AddNewMemberView : UserControl
             {
                 vm.MemberProfileImageControl = this.FindControl<Image>("MemberProfileImage");
                 vm.MemberProfileImageControl2 = this.FindControl<Image>("MemberProfileImage2");
+                vm.LetterConsentTextBoxControl1 = this.FindControl<TextBox>("LetterConsentTextBoxControl1");
+                vm.LetterConsentTextBoxControl2 = this.FindControl<TextBox>("LetterConsentTextBoxControl2");
             }
         };
     }

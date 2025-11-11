@@ -148,7 +148,11 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     public int? MemberAge
     {
         get => _memberAge;
-        set => SetProperty(ref _memberAge, value, true);
+        set
+        {
+            SetProperty(ref _memberAge, value, true);
+            OnPropertyChanged(nameof(ShouldShowConsentButton));
+        } 
     }
 
     [Required(ErrorMessage = "Birth date is required")]
@@ -194,6 +198,22 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         {
             SetProperty(ref _profileImage, value);
             Debug.WriteLine($"ProfileImage updated: {(value != null ? $"{value.Length} bytes" : "null")}");
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShouldShowConsentButton))]
+    private string? _letterConsentPath;
+    
+    public bool ShouldShowConsentButton
+    {
+        get
+        {
+            // Check if member is a minor (3-14 years old) and has a consent letter
+            bool isMinor = MemberAge.HasValue && MemberAge.Value >= 3 && MemberAge.Value <= 14;
+            bool hasConsentLetter = !string.IsNullOrWhiteSpace(LetterConsentPath);
+        
+            return isMinor && hasConsentLetter;
         }
     }
 
@@ -277,6 +297,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             MemberAge = memberData.Age;
             MemberBirthDate = memberData.DateOfBirth;
             MemberStatus = memberData.Status ?? "Active";
+
+            LetterConsentPath = memberData.ConsentLetter;
 
             // Parse ValidUntil date
             if (!string.IsNullOrEmpty(memberData.ValidUntil))
@@ -456,6 +478,40 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             Debug.WriteLine($"[SaveDetails] Error: {ex.Message}");
             _toastManager?.CreateToast("Update Failed")
                 .WithContent($"Failed to update member: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+    
+    [RelayCommand]
+    private async Task ViewConsentFile()
+    {
+        if (string.IsNullOrWhiteSpace(LetterConsentPath) || !File.Exists(LetterConsentPath))
+        {
+            _toastManager?.CreateToast("File Not Found")
+                .WithContent("The consent letter file could not be found")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
+        try
+        {
+            // Open the file with the default image viewer
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo(LetterConsentPath)
+                {
+                    UseShellExecute = true
+                }
+            };
+            process.Start();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error opening consent file: {ex.Message}");
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to open file: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
         }

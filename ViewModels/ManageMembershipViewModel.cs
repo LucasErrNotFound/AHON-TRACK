@@ -1270,6 +1270,9 @@ public partial class ManageMembersItem : ObservableObject
     [ObservableProperty]
     private string _status = string.Empty;
 
+    [ObservableProperty] 
+    private string? _consentLetter;
+
     [ObservableProperty]
     private DateTime _validity;
 

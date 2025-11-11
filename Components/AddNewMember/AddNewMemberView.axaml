@@ -86,7 +86,7 @@
 			<Interaction.Behaviors>
 				<scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150" />
 			</Interaction.Behaviors>
-			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,50,48,24" Spacing="16">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,50,48,0" Spacing="16">
 				<shadui:BreakpointViewPort>
 					<shadui:BreakpointView Breakpoint="XlAndUp">
 						<Grid ColumnDefinitions="Auto 2*" ColumnSpacing="30">
@@ -250,6 +250,52 @@
 												-->
 										</StackPanel>
 									</Grid>
+									
+									<StackPanel Orientation="Vertical" HorizontalAlignment="Left" Spacing="10" Margin="0,30,0,0">
+										<Border
+											IsVisible="{CompiledBinding IsMinor}"
+											Background="{DynamicResource WarningColor10}"
+											BorderThickness="1"
+											BorderBrush="{DynamicResource WarningColor60}"
+											CornerRadius="5"
+											Padding="15,10"
+											Margin="0,0,0,10">
+											<StackPanel Orientation="Horizontal" Spacing="10">
+												<TextBlock
+													Text="Consent letter required for members aged 3-14 years"
+													FontSize="14"
+													FontWeight="Medium"
+													Foreground="{DynamicResource WarningColor}"
+													VerticalAlignment="Center"
+													TextWrapping="Wrap" />
+											</StackPanel>
+										</Border>
+										<StackPanel Orientation="Horizontal" Spacing="10">
+											<TextBox
+												Name="LetterConsentTextBoxControl1"
+												Classes="Clearable"
+												Width="200"
+												IsReadOnly="True"
+												shadui:ControlAssist.Label="Attach consent form copy"/>
+											<Button 
+												Classes="Primary"
+												Content="Choose File"
+												Command="{CompiledBinding SelectContentFileCommand}"
+												VerticalAlignment="Bottom"/>
+											<Button 
+												Classes="Secondary"
+												Content="View Uploaded Image"
+												Command="{CompiledBinding ViewConsentFileCommand}"
+												IsVisible="{CompiledBinding IsConsentFileSelected}"
+												VerticalAlignment="Bottom"/>
+											<Button 
+												Classes="Destructive"
+												Content="Delete File"
+												Command="{CompiledBinding DeleteConsentFileCommand}"
+												IsVisible="{CompiledBinding IsConsentFileSelected}"
+												VerticalAlignment="Bottom"/>
+										</StackPanel>
+									</StackPanel>
 
 									<TextBlock Text="Membership Plan" Classes="h4" Margin="0,25,0,0" />
 									<Grid
@@ -913,6 +959,32 @@
 											</StackPanel>
 										</StackPanel>
 									</Grid>
+									
+									<StackPanel Orientation="Horizontal" Spacing="10" Margin="0,30,0,0">
+										<TextBox
+											Name="LetterConsentTextBoxControl2"
+											Classes="Clearable"
+											Width="200"
+											IsReadOnly="True"
+											shadui:ControlAssist.Label="Attach consent form copy"/>
+										<Button 
+											Classes="Primary"
+											Content="Choose File"
+											Command="{CompiledBinding SelectContentFileCommand}"
+											VerticalAlignment="Bottom"/>
+										<Button 
+											Classes="Secondary"
+											Content="View Uploaded Image"
+											IsVisible="{CompiledBinding IsConsentFileSelected}"
+											Command="{CompiledBinding ViewConsentFileCommand}"
+											VerticalAlignment="Bottom"/>
+										<Button 
+											Classes="Destructive"
+											Content="Delete File"
+											Command="{CompiledBinding DeleteConsentFileCommand}"
+											IsVisible="{CompiledBinding IsConsentFileSelected}"
+											VerticalAlignment="Bottom"/>
+									</StackPanel>
 
 									<TextBlock Text="Membership Plan" Classes="h4" Margin="0,25,0,0" />
 									<Grid

@@ -59,6 +59,15 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
     [ObservableProperty]
     private Image? _memberProfileImageControl2;
+    
+    [ObservableProperty]
+    private TextBox? _letterConsentTextBoxControl1;
+    
+    [ObservableProperty]
+    private TextBox? _letterConsentTextBoxControl2;
+    
+    [ObservableProperty]
+    private string? _consentFilePath;
 
     // Personal Details Section
     private string _memberFirstName = string.Empty;
@@ -93,6 +102,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
     public bool IsReferenceNumberVisibleInReceipt =>
         (IsGCashSelected || IsMayaSelected) && !string.IsNullOrWhiteSpace(ReferenceNumber);
+    
+    public bool IsMinor => MemberAge.HasValue && MemberAge >= 3 && MemberAge <= 14;
+    public bool IsConsentLetterRequired => IsMinor && string.IsNullOrWhiteSpace(ConsentFilePath);
+    public bool IsConsentFileSelected => !string.IsNullOrWhiteSpace(ConsentFilePath);
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -216,6 +229,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         {
             SetProperty(ref _memberAge, value, true);
             OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsMinor));
+            OnPropertyChanged(nameof(IsConsentLetterRequired));
         }
     }
 
@@ -636,6 +651,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         MemberLastName = nameResult.LastName;
         MemberStatus = member.Status;
         MemberGender = member.Gender;
+        ConsentFilePath = member.ConsentLetter;
 
         if (member.BirthDate != DateTime.MinValue)
         {
@@ -934,8 +950,9 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 PackageID = SelectedMonthlyPackage.SellingID,
                 Status = GetSelectedStatus() ?? "Active",
                 PaymentMethod = GetSelectedPaymentMethod(),
-                ReferenceNumber = ReferenceNumber, // ✅ Pass reference number from UI
-                ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar())
+                ReferenceNumber = ReferenceNumber,
+                ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar()),
+                ConsentLetter = ConsentFilePath
             };
 
             // ✅ VALIDATE PAYMENT & REFERENCE NUMBER BEFORE SAVING
@@ -1055,6 +1072,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             bool hasValidQuantity = (MembershipDuration.HasValue && MembershipDuration > 0);
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
             bool hasPackage = SelectedMonthlyPackage != null;
+            bool hasConsentLetterIfRequired = !IsConsentLetterRequired;
 
             // ✅ VALIDATE REFERENCE NUMBER FOR GCASH/MAYA
             bool hasValidReferenceNumber = true;
@@ -1070,7 +1088,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             }
 
             return hasValidInputs && hasValidQuantity && hasPaymentMethod
-                   && hasPackage && hasValidReferenceNumber;
+                   && hasPackage && hasValidReferenceNumber && hasConsentLetterIfRequired;
         }
     }
 
@@ -1081,6 +1099,97 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
         if (birthDate.Date > today.AddYears(-age)) age--;
         return age;
+    }
+
+    [RelayCommand]
+    private async Task SelectContentFile()
+    {
+        var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+        if (toplevel == null) return;
+        
+        var files = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select a backup file to restore",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Image Files")
+                {
+                    Patterns = ["*.png", "*.jpg", "*.jpeg" ]
+                }
+            ]
+        });
+        
+        if (files.Count > 0)
+        {
+            var selectedFile = files[0];
+            ConsentFilePath = selectedFile.Path.LocalPath;
+
+            _toastManager.CreateToast("Consent letter selected")
+                .WithContent($"{selectedFile.Name}")
+                .DismissOnClick()
+                .ShowInfo();
+        }
+    }
+    
+    [RelayCommand]
+    private async Task ViewConsentFile()
+    {
+        if (string.IsNullOrWhiteSpace(ConsentFilePath) || !File.Exists(ConsentFilePath))
+        {
+            _toastManager?.CreateToast("File Not Found")
+                .WithContent("The consent letter file could not be found")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
+        try
+        {
+            // Open the file with the default image viewer
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo(ConsentFilePath)
+                {
+                    UseShellExecute = true
+                }
+            };
+            process.Start();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error opening consent file: {ex.Message}");
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to open file: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+    
+    [RelayCommand]
+    private void DeleteConsentFile()
+    {
+        ConsentFilePath = string.Empty;
+    
+        _toastManager.CreateToast("Consent letter removed")
+            .WithContent("The consent letter has been removed")
+            .DismissOnClick()
+            .ShowWarning();
+    }
+    
+    partial void OnConsentFilePathChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsConsentFileSelected));
+        OnPropertyChanged(nameof(IsConsentLetterRequired));
+        OnPropertyChanged(nameof(IsPaymentPossible));
+    
+        if (LetterConsentTextBoxControl1 != null)
+            LetterConsentTextBoxControl1.Text = value;
+    
+        if (LetterConsentTextBoxControl2 != null)
+            LetterConsentTextBoxControl2.Text = value;
     }
 
     private void ClearAllFields()
@@ -1096,6 +1205,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         MembershipDuration = null;
         SelectedMonthlyPackage = null;
         ReferenceNumber = string.Empty; // ✅ Clear reference number
+        ReferenceNumber = string.Empty;
+        ConsentFilePath = string.Empty;
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
