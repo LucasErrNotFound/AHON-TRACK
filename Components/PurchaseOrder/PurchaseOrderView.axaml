@@ -68,7 +68,9 @@
                             Grid.Column="2"
                             Classes="Primary"
                             Content="Save Details"
-                            HorizontalAlignment="Right">
+                            HorizontalAlignment="Right"
+                            IsVisible="{CompiledBinding IsInViewMode}"
+                            Command="{CompiledBinding SaveDetailsCommand}">
                         </Button>
                     </Grid>
                     

@@ -231,6 +231,39 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     }
     
     [RelayCommand]
+    private void SaveDetails()
+    {
+        if (!ValidateOrder())
+        {
+            return;
+        }
+        
+        // Set default values for shipping and payment status
+        ShippingStatus = "Pending";
+        
+        // Payment status defaults to Unpaid (no invoice yet)
+        PaymentStatus = "Unpaid";
+        
+        // Clear invoice number on save if it was accidentally set
+        // (Since we're creating a PO, we shouldn't have an invoice yet)
+        if (!string.IsNullOrWhiteSpace(InvoiceNumber))
+        {
+            _toastManager.CreateToast("Invoice Number Cleared")
+                .WithContent("Invoice number removed. It should only be set after receiving supplier's invoice.")
+                .DismissOnClick()
+                .ShowWarning();
+            InvoiceNumber = null;
+        }
+        
+        IsSaved = true;
+        
+        _toastManager.CreateToast("Purchase Order Saved")
+            .WithContent($"Purchase Order {PoNumber} has been saved successfully!")
+            .DismissOnClick()
+            .ShowSuccess();
+    }
+    
+    [RelayCommand]
     private void CancelOrder()
     {
         _dialogManager.CreateDialog(
