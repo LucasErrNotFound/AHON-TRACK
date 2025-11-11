@@ -174,6 +174,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     ContactPerson = s.ContactPerson,
                     Email = s.Email,
                     PhoneNumber = s.PhoneNumber,
+                    Address = s.Address,
                     Products = s.Products,
                     Status = s.Status,
                     DeliverySchedule = s.DeliverySchedule,
@@ -352,6 +353,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     ContactPerson = _supplierDialogCardViewModel.ContactPerson,
                     Email = _supplierDialogCardViewModel.Email,
                     PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
+                    Address = _supplierDialogCardViewModel.Address,
                     Status = _supplierDialogCardViewModel.Status ?? "Active",
                 };
 
@@ -395,6 +397,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     ContactPerson = _supplierDialogCardViewModel.ContactPerson,
                     Email = _supplierDialogCardViewModel.Email,
                     PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
+                    Address = _supplierDialogCardViewModel.Address,
                     Status = currentStatus,
                 };
 
@@ -690,6 +693,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     ContactPerson = supplier.ContactPerson,
                     Email = supplier.Email,
                     PhoneNumber = supplier.PhoneNumber,
+                    Address = supplier.Address,
                     Products = supplier.Products,
                     Status = supplier.Status,
                     DeliverySchedule = supplier.DeliverySchedule,
@@ -1088,6 +1092,9 @@ public partial class Supplier : ObservableObject
 
     [ObservableProperty]
     private string? _phoneNumber;
+
+    [ObservableProperty]
+    private string? _address;
 
     [ObservableProperty]
     private string? _products;
