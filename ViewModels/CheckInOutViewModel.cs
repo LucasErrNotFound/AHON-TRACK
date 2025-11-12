@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AHON_TRACK.Components.ViewModels;
@@ -606,6 +607,48 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
                 .ShowError();
         }
     }
+    
+    [RelayCommand]
+    private async Task ViewConsentFile(WalkInPerson? walkIn)
+    {
+        if (walkIn == null)
+        {
+            _toastManager.CreateToast("Error")
+                .WithContent("No walk-in customer selected")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(walkIn.LetterConsentPath) || !File.Exists(walkIn.LetterConsentPath))
+        {
+            _toastManager.CreateToast("File Not Found")
+                .WithContent("The consent letter file could not be found")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo(walkIn.LetterConsentPath)
+                {
+                    UseShellExecute = true
+                }
+            };
+            process.Start();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error opening consent file: {ex.Message}");
+            _toastManager.CreateToast("Error")
+                .WithContent($"Failed to open file: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
 
     [RelayCommand]
     private async Task OpenLogWalkInPurchase()
@@ -782,7 +825,7 @@ public partial class CheckInOutViewModel : ViewModelBase, INotifyPropertyChanged
 
 #region Person Models
 
-public partial class WalkInPerson : ObservableObject
+public partial class WalkInPerson : ObservableObject, INotifyPropertyChanged
 {
     [ObservableProperty]
     private bool _isSelected;
@@ -790,7 +833,20 @@ public partial class WalkInPerson : ObservableObject
     public int ID { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
-    public int Age { get; set; }
+    
+    private int _age;
+    public int Age 
+    { 
+        get => _age;
+        set
+        {
+            if (SetProperty(ref _age, value))
+            {
+                OnPropertyChanged(nameof(ShouldShowConsentMenuItem));
+            }
+        }
+    }
+    
     public string ContactNumber { get; set; } = string.Empty;
     public string PackageType { get; set; } = string.Empty;
 
@@ -805,6 +861,30 @@ public partial class WalkInPerson : ObservableObject
     }
 
     public string DateFormatted => DateAttendance?.ToString("MMMM dd, yyyy") ?? string.Empty;
+    
+    private string? _letterConsentPath;
+    public string? LetterConsentPath 
+    { 
+        get => _letterConsentPath;
+        set
+        {
+            if (SetProperty(ref _letterConsentPath, value))
+            {
+                OnPropertyChanged(nameof(ShouldShowConsentMenuItem));
+            }
+        }
+    }
+    
+    public bool ShouldShowConsentMenuItem
+    {
+        get
+        {
+            bool isMinor = Age >= 3 && Age <= 14;
+            bool hasConsentLetter = !string.IsNullOrWhiteSpace(LetterConsentPath);
+            
+            return isMinor && hasConsentLetter;
+        }
+    }
 }
 
 public partial class MemberPerson : ViewModelBase

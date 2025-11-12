@@ -187,6 +187,11 @@
                                                                             Header="Stamp Check-out"
                                                                             Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).StampWalkInCheckOutCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}" />
+                                                                        <MenuItem
+                                                                            Header="View Consent Letter"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).ViewConsentFileCommand, FallbackValue={x:Null}}"
+                                                                            IsVisible="{CompiledBinding ShouldShowConsentMenuItem}"
+                                                                            CommandParameter="{CompiledBinding}" />
                                                                     </MenuItem>
                                                                 </Menu>
                                                             </StackPanel>
@@ -536,6 +541,11 @@
                                                                     <MenuItem
                                                                         Header="Stamp Check-out"
                                                                         Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).StampWalkInCheckOutCommand, FallbackValue={x:Null}}"
+                                                                        CommandParameter="{CompiledBinding}" />
+                                                                    <MenuItem
+                                                                        Header="View Consent Letter"
+                                                                        Command="{CompiledBinding $parent[DataGrid].((viewModels:CheckInOutViewModel)DataContext).ViewConsentFileCommand, FallbackValue={x:Null}}"
+                                                                        IsVisible="{CompiledBinding ShouldShowConsentMenuItem}"
                                                                         CommandParameter="{CompiledBinding}" />
                                                                 </MenuItem>
                                                             </Menu>

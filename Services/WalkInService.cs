@@ -370,10 +370,10 @@ namespace AHON_TRACK.Services
 
             using var cmd = new SqlCommand(
                 @"INSERT INTO WalkInCustomers (FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, 
-          WalkInType, WalkInPackage, PaymentMethod, ReferenceNumber, Quantity, RegisteredByEmployeeID, IsDeleted) 
+          WalkInType, WalkInPackage, PaymentMethod, ReferenceNumber, ConsentLetter, Quantity, RegisteredByEmployeeID, IsDeleted) 
           OUTPUT INSERTED.CustomerID
           VALUES (@firstName, @middleInitial, @lastName, @contactNumber, @age, @gender, 
-          @walkInType, @walkInPackage, @paymentMethod, @referenceNumber, @quantity, @employeeID, 0)", conn, transaction);
+          @walkInType, @walkInPackage, @paymentMethod, @referenceNumber, @consentLetter, @quantity, @employeeID, 0)", conn, transaction);
 
             cmd.Parameters.AddWithValue("@firstName", walkIn.FirstName ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@middleInitial", walkIn.MiddleInitial ?? (object)DBNull.Value);
@@ -385,6 +385,8 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@walkInPackage", walkIn.WalkInPackage ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@paymentMethod", walkIn.PaymentMethod ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@referenceNumber", string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
+            cmd.Parameters.AddWithValue("@consentLetter", 
+                string.IsNullOrWhiteSpace(walkIn.ConsentLetter) ? (object)DBNull.Value : walkIn.ConsentLetter);
             cmd.Parameters.AddWithValue("@quantity", walkIn.Quantity ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
 
@@ -403,7 +405,7 @@ namespace AHON_TRACK.Services
             using var cmd = new SqlCommand(
                 @"UPDATE WalkInCustomers 
           SET WalkinType = @walkInType, WalkinPackage = @walkInPackage, 
-              PaymentMethod = @paymentMethod, ReferenceNumber = @referenceNumber,
+              PaymentMethod = @paymentMethod, ReferenceNumber = @referenceNumber, ConsentLetter = @consentLetter,
               Quantity = @quantity, Age = @age, Gender = @gender, MiddleInitial = @middleInitial
           WHERE CustomerID = @customerId", conn, transaction);
 
@@ -413,6 +415,8 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@paymentMethod", walkIn.PaymentMethod ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@referenceNumber",
                 string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
+            cmd.Parameters.AddWithValue("@consentLetter",
+                string.IsNullOrWhiteSpace(walkIn.ConsentLetter) ? (object)DBNull.Value : walkIn.ConsentLetter);
             cmd.Parameters.AddWithValue("@quantity", walkIn.Quantity ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@age", walkIn.Age);
             cmd.Parameters.AddWithValue("@gender", walkIn.Gender ?? (object)DBNull.Value);
@@ -549,7 +553,7 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, 
-              WalkinType, WalkinPackage, PaymentMethod, ReferenceNumber, RegisteredByEmployeeID 
+              WalkinType, WalkinPackage, PaymentMethod, ReferenceNumber, ConsentLetter, RegisteredByEmployeeID 
               FROM WalkInCustomers 
               WHERE IsDeleted = 0 OR IsDeleted IS NULL
               ORDER BY CustomerID DESC", conn);
@@ -583,9 +587,9 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, 
-                      WalkinType, WalkinPackage, PaymentMethod, RegisteredByEmployeeID 
-                      FROM WalkInCustomers 
-                      WHERE CustomerID = @customerId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
+              WalkinType, WalkinPackage, PaymentMethod, ReferenceNumber, ConsentLetter, RegisteredByEmployeeID 
+              FROM WalkInCustomers 
+              WHERE CustomerID = @customerId AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn);
 
                 cmd.Parameters.AddWithValue("@customerId", customerId);
 
@@ -618,10 +622,10 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, 
-                      WalkinType, WalkinPackage, PaymentMethod, RegisteredByEmployeeID 
-                      FROM WalkInCustomers 
-                      WHERE WalkinType = @walkInType AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                      ORDER BY CustomerID DESC", conn);
+              WalkinType, WalkinPackage, PaymentMethod, ReferenceNumber, ConsentLetter, RegisteredByEmployeeID 
+              FROM WalkInCustomers 
+              WHERE WalkinType = @walkInType AND (IsDeleted = 0 OR IsDeleted IS NULL)
+              ORDER BY CustomerID DESC", conn);
 
                 cmd.Parameters.AddWithValue("@walkInType", walkInType ?? (object)DBNull.Value);
                 var walkIns = await ReadWalkInCustomersAsync(cmd);
@@ -647,10 +651,10 @@ namespace AHON_TRACK.Services
 
                 using var cmd = new SqlCommand(
                     @"SELECT CustomerID, FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, 
-                      WalkinType, WalkinPackage, PaymentMethod, RegisteredByEmployeeID 
-                      FROM WalkInCustomers 
-                      WHERE WalkinPackage = @package AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                      ORDER BY CustomerID DESC", conn);
+              WalkinType, WalkinPackage, PaymentMethod, ReferenceNumber, ConsentLetter, RegisteredByEmployeeID 
+              FROM WalkInCustomers 
+              WHERE WalkinPackage = @package AND (IsDeleted = 0 OR IsDeleted IS NULL)
+              ORDER BY CustomerID DESC", conn);
 
                 cmd.Parameters.AddWithValue("@package", package ?? (object)DBNull.Value);
                 var walkIns = await ReadWalkInCustomersAsync(cmd);
@@ -778,7 +782,7 @@ namespace AHON_TRACK.Services
               SET FirstName = @firstName, MiddleInitial = @middleInitial, LastName = @lastName,
                   ContactNumber = @contactNumber, Age = @age, Gender = @gender,
                   WalkinType = @walkInType, WalkinPackage = @walkInPackage, 
-                  PaymentMethod = @paymentMethod, ReferenceNumber = @referenceNumber
+                  PaymentMethod = @paymentMethod, ReferenceNumber = @referenceNumber, ConsentLetter = @consentLetter
               WHERE CustomerID = @customerId", conn);
 
                 cmd.Parameters.AddWithValue("@customerId", walkIn.WalkInID);
@@ -793,6 +797,8 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@paymentMethod", walkIn.PaymentMethod ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@referenceNumber",
                     string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
+                cmd.Parameters.AddWithValue("@consentLetter",
+                    string.IsNullOrWhiteSpace(walkIn.ConsentLetter) ? (object)DBNull.Value : walkIn.ConsentLetter);
 
                 await cmd.ExecuteNonQueryAsync();
                 await LogActionAsync(conn, "UPDATE", $"Updated walk-in customer: {walkIn.FirstName} {walkIn.LastName}", true);
@@ -1236,8 +1242,9 @@ namespace AHON_TRACK.Services
                 WalkInType = reader.IsDBNull(7) ? null : reader.GetString(7),
                 WalkInPackage = reader.IsDBNull(8) ? null : reader.GetString(8),
                 PaymentMethod = reader.IsDBNull(9) ? null : reader.GetString(9),
-                ReferenceNumber = reader.IsDBNull(10) ? null : reader.GetString(10), // ✅ Add ReferenceNumber
-                RegisteredByEmployeeID = reader.IsDBNull(11) ? null : reader.GetInt32(11) // ✅ Update index
+                ReferenceNumber = reader.IsDBNull(10) ? null : reader.GetString(10),
+                ConsentLetter = reader.IsDBNull(11) ? null : reader.GetString(11),
+                RegisteredByEmployeeID = reader.IsDBNull(11) ? null : reader.GetInt32(12)
             };
         }
 

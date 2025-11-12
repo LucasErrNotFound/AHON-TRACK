@@ -10,9 +10,13 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -53,6 +57,15 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private List<SellingModel> _availablePackages = new();
+    
+    [ObservableProperty]
+    private TextBox? _letterConsentTextBoxControl1;
+
+    [ObservableProperty]
+    private TextBox? _letterConsentTextBoxControl2;
+
+    [ObservableProperty]
+    private string? _consentFilePath;
 
     public int? LastRegisteredCustomerID { get; private set; }
 
@@ -72,6 +85,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     
     public bool IsReferenceNumberVisibleInReceipt => 
         (IsGCashSelected || IsMayaSelected) && !string.IsNullOrWhiteSpace(ReferenceNumber);
+    
+    public bool IsMinor => WalkInAge.HasValue && WalkInAge >= 3 && WalkInAge <= 14;
+    public bool IsConsentLetterRequired => IsMinor && string.IsNullOrWhiteSpace(ConsentFilePath);
+    public bool IsConsentFileSelected => !string.IsNullOrWhiteSpace(ConsentFilePath);
 
     private bool _isCashSelected;
     private bool _isGCashSelected;
@@ -223,6 +240,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         {
             SetProperty(ref _walkInAge, value, true);
             OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsMinor));
+            OnPropertyChanged(nameof(IsConsentLetterRequired));
         }
     }
 
@@ -539,11 +558,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 && SelectedSpecializedPackageItem != "None";
 
             bool hasValidQuantity = SpecializedPackageQuantity.HasValue && SpecializedPackageQuantity > 0;
-
             bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
-
-            // ✅ Add date validation
             bool isValidDate = SelectedDate.Date == DateTime.Today;
+            bool hasConsentLetterIfRequired = !IsConsentLetterRequired;
 
             // ✅ VALIDATE REFERENCE NUMBER FOR GCASH/MAYA
             bool hasValidReferenceNumber = true;
@@ -558,7 +575,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                                           && MayaReferenceRegex().IsMatch(ReferenceNumber);
             }
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod && isValidDate && hasValidReferenceNumber;
+            return hasValidInputs && hasValidQuantity && hasPaymentMethod 
+                   && isValidDate && hasValidReferenceNumber && hasConsentLetterIfRequired;
         }
     }
 
@@ -803,6 +821,83 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 .ShowWarning();
         }
     }
+    
+    [RelayCommand]
+    private async Task SelectContentFile()
+    {
+        var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+        if (toplevel == null) return;
+    
+        var files = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select consent letter file",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Image Files")
+                {
+                    Patterns = ["*.png", "*.jpg", "*.jpeg"]
+                }
+            ]
+        });
+    
+        if (files.Count > 0)
+        {
+            var selectedFile = files[0];
+            ConsentFilePath = selectedFile.Path.LocalPath;
+
+            _toastManager?.CreateToast("Consent letter selected")
+                .WithContent($"{selectedFile.Name}")
+                .DismissOnClick()
+                .ShowInfo();
+        }
+    }
+
+    [RelayCommand]
+    private async Task ViewConsentFile()
+    {
+        if (string.IsNullOrWhiteSpace(ConsentFilePath) || !File.Exists(ConsentFilePath))
+        {
+            _toastManager?.CreateToast("File Not Found")
+                .WithContent("The consent letter file could not be found")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo(ConsentFilePath)
+                {
+                    UseShellExecute = true
+                }
+            };
+            process.Start();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error opening consent file: {ex.Message}");
+            _toastManager?.CreateToast("Error")
+                .WithContent($"Failed to open file: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+
+    [RelayCommand]
+    private void DeleteConsentFile()
+    {
+        ConsentFilePath = string.Empty;
+
+        _toastManager?.CreateToast("Consent letter removed")
+            .WithContent("The consent letter has been removed")
+            .DismissOnClick()
+            .ShowWarning();
+    }
 
     [RelayCommand]
     private async Task PaymentAsync()
@@ -849,6 +944,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 WalkInPackage = SelectedSpecializedPackageItem,
                 PaymentMethod = paymentMethod,
                 ReferenceNumber = ReferenceNumber, // ✅ Pass reference number from UI
+                ConsentLetter = ConsentFilePath,
                 Quantity = SelectedSpecializedPackageItem != "None" ? SpecializedPackageQuantity : null
             };
 
@@ -915,6 +1011,18 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         }
     }
 
+    partial void OnConsentFilePathChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsConsentFileSelected));
+        OnPropertyChanged(nameof(IsConsentLetterRequired));
+        OnPropertyChanged(nameof(IsPaymentPossible));
+
+        if (LetterConsentTextBoxControl1 != null)
+            LetterConsentTextBoxControl1.Text = value;
+
+        if (LetterConsentTextBoxControl2 != null)
+            LetterConsentTextBoxControl2.Text = value;
+    }
 
     private void ClearForm()
     {
@@ -928,6 +1036,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         SelectedSpecializedPackageItem = "None";
         SpecializedPackageQuantity = 1;
         ReferenceNumber = string.Empty; // ✅ Clear reference number
+        ConsentFilePath = string.Empty;
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
@@ -967,6 +1076,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         HasFreeTrialWarning = false;
         FreeTrialWarningMessage = string.Empty;
         QuantityHelperMessage = string.Empty;
+        
+        ConsentFilePath = string.Empty;
+        LetterConsentTextBoxControl1 = null;
+        LetterConsentTextBoxControl2 = null;
 
         // Clear all input fields aggressively
         WalkInFirstName = string.Empty;
