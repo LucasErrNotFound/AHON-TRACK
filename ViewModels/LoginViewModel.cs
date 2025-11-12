@@ -10,6 +10,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using AHON_TRACK.Components.ViewModels;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -19,6 +20,7 @@ public partial class LoginViewModel : ViewModelBase
     public DialogManager DialogManager { get; }
     public PageManager PageManager { get; }
 
+    private readonly ForgotPasswordDialogCardViewModel _forgotPasswordDialogCardViewModel;
     private readonly IEmployeeService _employeeService;
     private bool _shouldShowSuccessLogInToast = false;
     private CancellationTokenSource? _loginCts;
@@ -27,11 +29,13 @@ public partial class LoginViewModel : ViewModelBase
     private const string MasterUnlockUsername = "masterkey";
     private const string MasterUnlockPassword = "AHONTRACK";
 
-    public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IEmployeeService employeeService)
+    public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+        ForgotPasswordDialogCardViewModel forgotPasswordDialogCardViewModel, IEmployeeService employeeService)
     {
         ToastManager = toastManager;
         DialogManager = dialogManager;
         PageManager = pageManager;
+        _forgotPasswordDialogCardViewModel = forgotPasswordDialogCardViewModel;
         _employeeService = employeeService;
     }
 
@@ -40,6 +44,7 @@ public partial class LoginViewModel : ViewModelBase
         ToastManager = new ToastManager();
         DialogManager = new DialogManager();
         PageManager = new PageManager(new ServiceProvider());
+        _forgotPasswordDialogCardViewModel = new ForgotPasswordDialogCardViewModel();
         _employeeService = null!;
     }
 
@@ -196,6 +201,37 @@ public partial class LoginViewModel : ViewModelBase
                 .WithDelay(5)
                 .DismissOnClick()
                 .ShowError();
+        }
+    }
+    
+    [RelayCommand]
+    private async Task ForgotPassword()
+    {
+        try
+        {
+            _forgotPasswordDialogCardViewModel.Initialize();
+            DialogManager.CreateDialog(_forgotPasswordDialogCardViewModel)
+                .WithSuccessCallback(_ =>
+                    ToastManager.CreateToast("Password Reset Sent!")
+                        .WithContent("Your password has been successfully changed")
+                        .DismissOnClick()
+                        .ShowSuccess())
+                .WithCancelCallback(() =>
+                    ToastManager.CreateToast("Password Change Canceled")
+                        .WithContent("Your password remains unchanged")
+                        .DismissOnClick()
+                        .ShowWarning())
+                .WithMaxWidth(670)
+                .Dismissible()
+                .Show();
+        }
+        catch (Exception ex)
+        {
+            ToastManager.CreateToast("Error")
+                .WithContent($"Message: {ex}")
+                .WithDelay(5)
+                .DismissOnClick()
+                .ShowWarning();
         }
     }
 

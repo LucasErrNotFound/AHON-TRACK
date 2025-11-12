@@ -32,7 +32,7 @@ public class App : Application
         }
         DisableAvaloniaDataAnnotationValidation();
 
-        var provider = new ServiceProvider();
+        var provider = new ServiceProvider().RegisterDialogs();
 
         // Initialize the backup scheduler but DON'T await it here
         _backupScheduler = provider.GetService<BackupSchedulerService>();

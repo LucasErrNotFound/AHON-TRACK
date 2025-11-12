@@ -5,6 +5,7 @@ using AHON_TRACK.Components.AddTrainingScheduleDialog;
 using AHON_TRACK.Components.ChangeScheduleDialog;
 using AHON_TRACK.Components.EditPackageDialog;
 using AHON_TRACK.Components.EquipmentDialog;
+using AHON_TRACK.Components.ForgotPasswordDialog;
 using AHON_TRACK.Components.LogGymMemberDialog;
 using AHON_TRACK.Components.MemberDialog;
 using AHON_TRACK.Components.SettingsDialog;
@@ -28,6 +29,7 @@ public static class Extensions
         dialogService.Register<MemberDialogCard, MemberDialogCardViewModel>();
         dialogService.Register<ChangeScheduleDialogCard, ChangeScheduleDialogCardViewModel>();
         dialogService.Register<SettingsDialogCard, SettingsDialogCardViewModel>();
+        dialogService.Register<ForgotPasswordDialogCard, ForgotPasswordDialogCardViewModel>();
 
         return service;
     }

@@ -128,7 +128,7 @@
 							FontSize="17"
 							Text="{CompiledBinding Username, Mode=TwoWay}"/>
 					</StackPanel>
-					<StackPanel Margin="0,120">
+					<StackPanel Margin="0,110,0,0">
 						<TextBox
 							Classes="PasswordReveal"
 							shadui:ControlAssist.Label="Password"
@@ -138,6 +138,18 @@
 							Watermark="Enter your password"
 							FontSize="17"
 							Text="{CompiledBinding Password, Mode=TwoWay}"/>
+						<TextBlock
+							Foreground="{DynamicResource InfoColor}"
+							FontSize="13"
+							HorizontalAlignment="Center"
+							Margin="0,20,0,0">
+							<InlineUIContainer>
+								<HyperlinkButton 
+									Content="Forgot Password?" 
+									Command="{CompiledBinding ForgotPasswordCommand}"
+									Foreground="{DynamicResource InfoColor}"/>
+							</InlineUIContainer>
+						</TextBlock>
 					</StackPanel>
 				</Panel>
 				<shadui:Card.Footer>
@@ -146,7 +158,7 @@
 						FontSize="19"
 						FontFamily="Inter"
 						Padding="0,0,0,5"
-						Margin="0,30"
+						Margin="0,30,0,0"
 						Height="38"
 						Width="140"
 						HorizontalAlignment="Right"

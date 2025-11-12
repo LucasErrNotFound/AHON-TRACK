@@ -268,7 +268,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         var currentWindow = desktop.MainWindow;
         _shouldShowSuccessLogOutToast = true;
 
-        var provider = new ServiceProvider();
+        var provider = new ServiceProvider().RegisterDialogs();
         var viewModel = provider.GetService<LoginViewModel>();
         viewModel.Initialize();
 
