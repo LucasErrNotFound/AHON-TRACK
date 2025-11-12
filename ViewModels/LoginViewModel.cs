@@ -29,7 +29,7 @@ public partial class LoginViewModel : ViewModelBase
     private const string MasterUnlockUsername = "masterkey";
     private const string MasterUnlockPassword = "AHONTRACK";
 
-    public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, 
+    public LoginViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
         ForgotPasswordDialogCardViewModel forgotPasswordDialogCardViewModel, IEmployeeService employeeService)
     {
         ToastManager = toastManager;
@@ -59,6 +59,7 @@ public partial class LoginViewModel : ViewModelBase
             SetProperty(ref _username, value, false);
             ValidateProperty(value, nameof(Username));
             SignInCommand.NotifyCanExecuteChanged();
+            ForgotPasswordCommand.NotifyCanExecuteChanged(); // Notify forgot password command
         }
     }
 
@@ -103,6 +104,9 @@ public partial class LoginViewModel : ViewModelBase
     }
 
     private bool CanSignIn() => !HasErrors;
+
+    // Only allow forgot password if username is entered
+    private bool CanForgotPassword() => !string.IsNullOrWhiteSpace(Username);
 
     public void Initialize()
     {
@@ -203,17 +207,32 @@ public partial class LoginViewModel : ViewModelBase
                 .ShowError();
         }
     }
-    
-    [RelayCommand]
+
+    [RelayCommand(CanExecute = nameof(CanForgotPassword))]
     private async Task ForgotPassword()
     {
         try
         {
-            _forgotPasswordDialogCardViewModel.Initialize();
+            // Verify username exists first
+            var (exists, role, employeeName) = await _employeeService.VerifyUsernameExistsAsync(Username);
+
+            if (!exists)
+            {
+                ToastManager.CreateToast("Username Not Found")
+                    .WithContent($"No account found with username '{Username}'")
+                    .WithDelay(5)
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            // Initialize dialog with username and role
+            _forgotPasswordDialogCardViewModel.Initialize(Username, role!, employeeName!);
+
             DialogManager.CreateDialog(_forgotPasswordDialogCardViewModel)
                 .WithSuccessCallback(_ =>
-                    ToastManager.CreateToast("Password Reset Sent!")
-                        .WithContent("Your password has been successfully changed")
+                    ToastManager.CreateToast("Password Changed Successfully!")
+                        .WithContent("You can now log in with your new password")
                         .DismissOnClick()
                         .ShowSuccess())
                 .WithCancelCallback(() =>
@@ -279,10 +298,6 @@ public partial class LoginViewModel : ViewModelBase
     {
         try
         {
-            // Don't record here - it's already done in AuthenticateUserAsync
-            // await _employeeService.RecordFailedLoginAttemptAsync(Username); ← REMOVE THIS LINE
-
-            // Get updated lockout status
             var (isLocked, attemptsLeft, lockoutInfo) = await _employeeService.CheckLockoutStatusAsync(Username);
 
             RemainingAttempts = attemptsLeft;
@@ -350,7 +365,6 @@ public partial class LoginViewModel : ViewModelBase
         desktop.MainWindow = mainWindow;
         mainWindow.Show();
 
-        // Dispose old view model and close window
         if (currentWindow?.DataContext is IDisposable disposableVm)
         {
             disposableVm.Dispose();

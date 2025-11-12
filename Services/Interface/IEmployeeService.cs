@@ -32,6 +32,10 @@ namespace AHON_TRACK.Services.Interface
         // Hashed Password
         Task<(bool Success, string Message, int? EmployeeId, string? Role)> AuthenticateUserAsync(string username, string password);
 
+        // FORGOT
+        Task<(bool Exists, string? Role, string? EmployeeName)> VerifyUsernameExistsAsync(string username);
+        Task<(bool Success, string Message)> ChangePasswordAsync(string username, string newPassword);
+
         #region lockout
         Task<(bool IsLocked, int AttemptsLeft, string Message)> CheckLockoutStatusAsync(string username);
         Task RecordFailedLoginAttemptAsync(string username);

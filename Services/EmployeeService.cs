@@ -732,6 +732,186 @@ AND e.IsDeleted = 0";
 
         #endregion
 
+        #region FORGOT PASSWORD
+
+        public async Task<(bool Exists, string? Role, string? EmployeeName)> VerifyUsernameExistsAsync(string username)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // Check in Admins
+                const string adminQuery = @"
+SELECT e.FirstName, e.LastName, 'Admin' as Role
+FROM Admins a
+INNER JOIN Employees e ON a.AdminID = e.EmployeeID
+WHERE a.Username = @Username 
+AND a.IsDeleted = 0 
+AND e.IsDeleted = 0";
+
+                using (var adminCmd = new SqlCommand(adminQuery, conn))
+                {
+                    adminCmd.Parameters.AddWithValue("@Username", username);
+                    using var reader = await adminCmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        string employeeName = $"{reader.GetString(0)} {reader.GetString(1)}";
+                        return (true, "Admin", employeeName);
+                    }
+                }
+
+                // Check in Coach
+                const string coachQuery = @"
+SELECT e.FirstName, e.LastName, 'Coach' as Role
+FROM Coach c
+INNER JOIN Employees e ON c.CoachID = e.EmployeeID
+WHERE c.Username = @Username 
+AND c.IsDeleted = 0 
+AND e.IsDeleted = 0";
+
+                using (var coachCmd = new SqlCommand(coachQuery, conn))
+                {
+                    coachCmd.Parameters.AddWithValue("@Username", username);
+                    using var reader = await coachCmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        string employeeName = $"{reader.GetString(0)} {reader.GetString(1)}";
+                        return (true, "Coach", employeeName);
+                    }
+                }
+
+                // Check in Staffs
+                const string staffQuery = @"
+SELECT e.FirstName, e.LastName, 'Staff' as Role
+FROM Staffs s
+INNER JOIN Employees e ON s.StaffID = e.EmployeeID
+WHERE s.Username = @Username 
+AND s.IsDeleted = 0 
+AND e.IsDeleted = 0";
+
+                using (var staffCmd = new SqlCommand(staffQuery, conn))
+                {
+                    staffCmd.Parameters.AddWithValue("@Username", username);
+                    using var reader = await staffCmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        string employeeName = $"{reader.GetString(0)} {reader.GetString(1)}";
+                        return (true, "Staff", employeeName);
+                    }
+                }
+
+                return (false, null, null);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"VerifyUsernameExistsAsync Error: {ex}");
+                return (false, null, null);
+            }
+        }
+
+        public async Task<(bool Success, string Message)> ChangePasswordAsync(string username, string newPassword)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                string hashedPassword = PasswordHelper.HashPassword(newPassword);
+
+                // Try to update in Admins
+                const string updateAdminQuery = @"
+UPDATE Admins 
+SET Password = @Password, UpdatedAt = GETDATE()
+WHERE Username = @Username AND IsDeleted = 0";
+
+                using (var updateAdminCmd = new SqlCommand(updateAdminQuery, conn))
+                {
+                    updateAdminCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                    updateAdminCmd.Parameters.AddWithValue("@Username", username);
+                    int rowsAffected = await updateAdminCmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        await LogPasswordChangeAsync(conn, username, "Admin");
+                        return (true, "Password changed successfully.");
+                    }
+                }
+
+                // Try to update in Coach
+                const string updateCoachQuery = @"
+UPDATE Coach 
+SET Password = @Password, UpdatedAt = GETDATE()
+WHERE Username = @Username AND IsDeleted = 0";
+
+                using (var updateCoachCmd = new SqlCommand(updateCoachQuery, conn))
+                {
+                    updateCoachCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                    updateCoachCmd.Parameters.AddWithValue("@Username", username);
+                    int rowsAffected = await updateCoachCmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        await LogPasswordChangeAsync(conn, username, "Coach");
+                        return (true, "Password changed successfully.");
+                    }
+                }
+
+                // Try to update in Staffs
+                const string updateStaffQuery = @"
+UPDATE Staffs 
+SET Password = @Password, UpdatedAt = GETDATE()
+WHERE Username = @Username AND IsDeleted = 0";
+
+                using (var updateStaffCmd = new SqlCommand(updateStaffQuery, conn))
+                {
+                    updateStaffCmd.Parameters.AddWithValue("@Password", hashedPassword);
+                    updateStaffCmd.Parameters.AddWithValue("@Username", username);
+                    int rowsAffected = await updateStaffCmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        await LogPasswordChangeAsync(conn, username, "Staff");
+                        return (true, "Password changed successfully.");
+                    }
+                }
+
+                return (false, "Failed to change password. Username not found.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ChangePasswordAsync Error: {ex}");
+                return (false, $"Error changing password: {ex.Message}");
+            }
+        }
+
+        private async Task LogPasswordChangeAsync(SqlConnection conn, string username, string role)
+        {
+            try
+            {
+                using var logCmd = new SqlCommand(
+                    @"INSERT INTO SystemLogs (Username, Role, ActionType, ActionDescription, IsSuccessful, LogDateTime, PerformedByEmployeeID) 
+              VALUES (@username, @role, @actionType, @description, @success, GETDATE(), NULL)",
+                    conn);
+
+                logCmd.Parameters.AddWithValue("@username", username);
+                logCmd.Parameters.AddWithValue("@role", role);
+                logCmd.Parameters.AddWithValue("@actionType", "Password Reset");
+                logCmd.Parameters.AddWithValue("@description", $"Password changed via Forgot Password for user '{username}'");
+                logCmd.Parameters.AddWithValue("@success", true);
+
+                await logCmd.ExecuteNonQueryAsync();
+
+                DashboardEventService.Instance.NotifyRecentLogsUpdated();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LogPasswordChangeAsync] Error: {ex.Message}");
+            }
+        }
+
+        #endregion
+
         #region UTILITY METHODS
 
         private async Task LogActionAsync(SqlConnection conn, string actionType, string description, bool success, SqlTransaction transaction = null)
