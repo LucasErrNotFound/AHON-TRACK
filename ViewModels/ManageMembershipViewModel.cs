@@ -253,7 +253,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     LastCheckOut = m.LastCheckOut,
                     RecentPurchaseItem = m.RecentPurchaseItem,
                     RecentPurchaseDate = m.RecentPurchaseDate,
-                    RecentPurchaseQuantity = m.RecentPurchaseQuantity
+                    RecentPurchaseQuantity = m.RecentPurchaseQuantity,
+                    ConsentLetter = m.ConsentLetter
                 }).ToList();
 
                 OriginalMemberData = memberItems;
@@ -583,7 +584,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     .DismissOnClick()
                     .WithDelay(5)
                     .ShowInfo();
-                
+
                 // Suggest GC for image cleanup
                 // GC.Collect(0, GCCollectionMode.Optimized);
                 // ForceGarbageCollection();
@@ -599,7 +600,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             .WithMaxWidth(950)
             .Dismissible()
             .Show();
-            
+
     }
 
     [RelayCommand]
@@ -1056,7 +1057,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     LastCheckOut = result.Member.LastCheckOut,
                     RecentPurchaseItem = result.Member.RecentPurchaseItem,
                     RecentPurchaseDate = result.Member.RecentPurchaseDate,
-                    RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity
+                    RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity,
+                    ConsentLetter = result.Member.ConsentLetter
                 };
 
                 _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
@@ -1116,7 +1118,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     LastCheckOut = result.Member.LastCheckOut,
                     RecentPurchaseItem = result.Member.RecentPurchaseItem,
                     RecentPurchaseDate = result.Member.RecentPurchaseDate,
-                    RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity
+                    RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity,
+                    ConsentLetter = result.Member.ConsentLetter
 
                 };
 
@@ -1303,7 +1306,7 @@ public partial class ManageMembersItem : ObservableObject
     [ObservableProperty]
     private string _status = string.Empty;
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private string? _consentLetter;
 
     [ObservableProperty]
@@ -1330,6 +1333,9 @@ public partial class ManageMembersItem : ObservableObject
 
     [ObservableProperty]
     private int? _recentPurchaseQuantity;
+
+    [ObservableProperty]
+    private string _remarks = string.Empty;
 
     public string MembershipStartDisplay => DateJoined?.ToString("MMMM d, yyyy") ?? "Not Set";
     public string LastCheckInDisplay => LastCheckIn?.ToString("MMMM d, yyyy") ?? "No check-in";

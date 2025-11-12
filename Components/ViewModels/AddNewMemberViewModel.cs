@@ -245,13 +245,22 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             if (value.HasValue)
             {
                 MemberAge = CalculateAge(value.Value);
-            
-                ConsentFilePath = null;
+
+                // ✅ DON'T CLEAR CONSENT FILE PATH WHEN UPGRADING/RENEWING
+                if (ViewContext == MemberViewContext.AddNew)
+                {
+                    ConsentFilePath = null;
+                }
             }
             else
             {
                 MemberAge = null;
-                ConsentFilePath = null;
+
+                // ✅ DON'T CLEAR CONSENT FILE PATH WHEN UPGRADING/RENEWING
+                if (ViewContext == MemberViewContext.AddNew)
+                {
+                    ConsentFilePath = null;
+                }
             }
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
