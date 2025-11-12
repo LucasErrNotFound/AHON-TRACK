@@ -8,6 +8,7 @@ using AHON_TRACK.Components.EquipmentDialog;
 using AHON_TRACK.Components.ForgotPasswordDialog;
 using AHON_TRACK.Components.LogGymMemberDialog;
 using AHON_TRACK.Components.MemberDialog;
+using AHON_TRACK.Components.NotifyDialog;
 using AHON_TRACK.Components.SettingsDialog;
 using AHON_TRACK.Components.SupplierDialog;
 using ShadUI;
@@ -30,6 +31,7 @@ public static class Extensions
         dialogService.Register<ChangeScheduleDialogCard, ChangeScheduleDialogCardViewModel>();
         dialogService.Register<SettingsDialogCard, SettingsDialogCardViewModel>();
         dialogService.Register<ForgotPasswordDialogCard, ForgotPasswordDialogCardViewModel>();
+        dialogService.Register<NotifyDialogCard, NotifyDialogCardViewmodel>();
 
         return service;
     }

@@ -136,19 +136,21 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     private readonly PageManager _pageManager;
     private readonly MemberDialogCardViewModel _memberDialogCardViewModel;
     private readonly AddNewMemberViewModel _addNewMemberViewModel;
+    private readonly NotifyDialogCardViewmodel _notifyDialogCardViewmodel;
     private readonly IMemberService? _memberService;
 
     private const string DefaultAvatarSource = "avares://AHON_TRACK/Assets/MainWindowView/user.png";
 
     public ManageMembershipViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
         MemberDialogCardViewModel memberDialogCardViewModel, AddNewMemberViewModel addNewMemberViewModel,
-        IMemberService memberService)
+        NotifyDialogCardViewmodel notifyDialogCardViewmodel, IMemberService memberService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _memberDialogCardViewModel = memberDialogCardViewModel;
         _addNewMemberViewModel = addNewMemberViewModel;
+        _notifyDialogCardViewmodel = notifyDialogCardViewmodel;
         _memberService = memberService;
 
         _ = LoadMemberDataAsync();
@@ -165,11 +167,11 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         _pageManager = new PageManager(new ServiceProvider());
         _memberDialogCardViewModel = new MemberDialogCardViewModel();
         _addNewMemberViewModel = new AddNewMemberViewModel();
+        _notifyDialogCardViewmodel = new NotifyDialogCardViewmodel();
 
         _ = LoadMemberDataAsync();
         SubscribeToEvents();
         UpdateCounts();
-
     }
 
     [AvaloniaHotReload]
@@ -567,6 +569,37 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             MemberItems.Add(item);
         }
         UpdateCounts();
+    }
+
+    [RelayCommand]
+    private void ShowNotifyDialog()
+    {
+        _notifyDialogCardViewmodel.Initialize();
+        _dialogManager.CreateDialog(_notifyDialogCardViewmodel)
+            .WithSuccessCallback(_ =>
+            {
+                _toastManager.CreateToast("Member Notification")
+                    .WithContent("Successfully notified this particular member")
+                    .DismissOnClick()
+                    .WithDelay(5)
+                    .ShowInfo();
+                
+                // Suggest GC for image cleanup
+                // GC.Collect(0, GCCollectionMode.Optimized);
+                // ForceGarbageCollection();
+            })
+            .WithCancelCallback(() =>
+            {
+                _toastManager.CreateToast("Cancel Notification")
+                    .WithContent("Cancellation of notification for this particular member")
+                    .DismissOnClick()
+                    .WithDelay(5)
+                    .ShowWarning();
+            })
+            .WithMaxWidth(950)
+            .Dismissible()
+            .Show();
+            
     }
 
     [RelayCommand]

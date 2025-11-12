@@ -316,6 +316,11 @@
 																	CommandParameter="{CompiledBinding}" />
 																<Separator />
 																<MenuItem
+																	Header="Inform"
+																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowNotifyDialogCommand, FallbackValue={x:Null}}"
+																	CommandParameter="{CompiledBinding}" />
+																<Separator />
+																<MenuItem
 																	Header="Delete"
 																	Foreground="{DynamicResource DestructiveColor}"
 																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowSingleItemDeletionDialogCommand, FallbackValue={x:Null}}"
@@ -875,6 +880,11 @@
 																<MenuItem
 																	Header="Modify Member Details"
 																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowModifyMemberDialogCommand, FallbackValue={x:Null}}"
+																	CommandParameter="{CompiledBinding}" />
+																<Separator />
+																<MenuItem
+																	Header="Inform"
+																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowNotifyDialogCommand, FallbackValue={x:Null}}"
 																	CommandParameter="{CompiledBinding}" />
 																<Separator />
 																<MenuItem

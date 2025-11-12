@@ -5,14 +5,13 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:AHON_TRACK.Components.ViewModels"
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    x:DataType="vm:NotifyDialogCardViewmodel"
     mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-    x:DataType="vm:ForgotPasswordDialogCardViewModel"
-    x:Class="AHON_TRACK.Components.ForgotPasswordDialog.ForgotPasswordDialogCard"
-    Width="490"
-    Height="300">
+    Width="400"
+    x:Class="AHON_TRACK.Components.NotifyDialog.NotifyDialogCard">
     
     <Design.DataContext>
-        <vm:ForgotPasswordDialogCardViewModel />
+        <vm:NotifyDialogCardViewmodel />
     </Design.DataContext>
     
     <UserControl.Resources>
@@ -33,28 +32,16 @@
             BorderBrush="{DynamicResource BorderColor}"
             Padding="30">
             <StackPanel>
-                <shadui:CardTitle Content="Change Account Password" />
-                <shadui:CardDescription Content="Enter and confirm a new password to update your account credentials" />
-                <Grid ColumnDefinitions="* *" ColumnSpacing="20" Margin="0,30,0,0">
-                    <StackPanel Grid.Column="0">
-                        <TextBox
-                            shadui:ControlAssist.Label="New password"
-                            HorizontalAlignment="Left"
-                            Classes="PasswordReveal"
-                            PasswordChar="•"
-                            Text="{CompiledBinding NewPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            Width="200"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1">
-                        <TextBox
-                            shadui:ControlAssist.Label="Confirm new password"
-                            HorizontalAlignment="Right"
-                            Classes="PasswordReveal"
-                            PasswordChar="•"
-                            Text="{CompiledBinding ConfirmNewPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            Width="200"/>
-                    </StackPanel>
-                </Grid>
+                <shadui:CardTitle Content="Notify Member" />
+                <shadui:CardDescription Content="Indicate that members have been notified" />
+                <StackPanel Margin="0,20,0,0">
+                    <TextBox
+                        shadui:ControlAssist.Height="300"
+                        shadui:ControlAssist.Label="Description"
+                        AcceptsReturn="True"
+                        Text="{CompiledBinding TextDescription}"
+                        Watermark="Enter a long description here..." />
+                </StackPanel>
             </StackPanel>
         </Border>
         <StackPanel
@@ -79,7 +66,8 @@
             </Button>
             <Button
                 Classes="Primary"
-                Command="{CompiledBinding SaveCommand}">
+                IsEnabled="{CompiledBinding }"
+                Command="{CompiledBinding NotifyCommand}">
                 <StackPanel Orientation="Horizontal">
                     <Svg
                         Width="20"
@@ -87,7 +75,7 @@
                         Path="avares://AHON_TRACK/Assets/TrainingSchedulesView/save-icon.svg"
                         Margin="0,0,7,0"
                         VerticalAlignment="Center" />
-                    <TextBlock Text="Inform" VerticalAlignment="Center" />
+                    <TextBlock Text="Save" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
         </StackPanel>
