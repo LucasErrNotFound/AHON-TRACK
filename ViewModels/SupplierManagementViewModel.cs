@@ -1,23 +1,23 @@
 using AHON_TRACK.Components.ViewModels;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services;
+using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using QuestPDF.Fluent;
 using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Net.Sockets;
+using System.Runtime.InteropServices.Marshalling;
 using System.Threading.Tasks;
-using AHON_TRACK.Services;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Platform.Storage;
-using QuestPDF.Companion;
-using QuestPDF.Fluent;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -29,9 +29,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private string _selectedStatusFilterItem = "All";
-    
+
     [ObservableProperty]
-    private string[] _deliveryFilterItems = ["All", "Pending", "Delivered", "Cancelled"];
+    private string[] _deliveryFilterItems = ["All", "Pending", "Processing", "Shipped/In-Transit", "Delivered", "Cancelled"];
 
     [ObservableProperty]
     private string _selectedDeliveryFilterItem = "All";
@@ -44,7 +44,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private List<Supplier> _currentFilteredSupplierData = [];
-    
+
     [ObservableProperty]
     private ObservableCollection<PurchaseOrder> _purchaseOrderItems = [];
 
@@ -62,7 +62,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private bool _isSearchingSupplier;
-    
+
     [ObservableProperty]
     private string _searchStringOrderResult = string.Empty;
 
@@ -85,33 +85,39 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private Supplier? _selectedSupplier;
-    
+
     [ObservableProperty]
     private PurchaseOrder? _selectedPO;
+
+    private EventHandler? _supplierPurchaseOrderEventHandler;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly SupplierDialogCardViewModel _supplierDialogCardViewModel;
     private readonly ISupplierService _supplierService;
+    private readonly IPurchaseOrderService? _purchaseOrderService;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
     public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
-        SupplierDialogCardViewModel supplierDialogCardViewModel, SettingsService settingsService, ISupplierService supplierService)
+        SupplierDialogCardViewModel supplierDialogCardViewModel, SettingsService settingsService,
+        ISupplierService supplierService, IPurchaseOrderService? purchaseOrderService = null)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _supplierDialogCardViewModel = supplierDialogCardViewModel;
         _supplierService = supplierService;
+        _purchaseOrderService = purchaseOrderService;
         _settingsService = settingsService;
 
         SelectedStatusFilterItem = "All";
         SelectedDeliveryFilterItem = "All";
 
+        SubsribeToEvents();
         _ = LoadSupplierDataFromDatabaseAsync();
-        LoadPurchaseOrderData(); // Default Value
+        _ = LoadPurchaseOrderDataFromDatabaseAsync();
         UpdateSupplierCounts();
     }
 
@@ -122,13 +128,14 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _pageManager = new PageManager(new ServiceProvider());
         _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
         _settingsService = new SettingsService();
-        _supplierService = null!; // This should be injected in real scenario
+        _supplierService = null!;
+        _purchaseOrderService = null;
 
         SelectedStatusFilterItem = "All";
         SelectedDeliveryFilterItem = "All";
 
         _ = LoadSupplierDataFromDatabaseAsync();
-        LoadPurchaseOrderData(); // Default Value
+        LoadPurchaseOrderData(); // Fallback to sample data
         UpdateSupplierCounts();
     }
 
@@ -148,15 +155,53 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         else
         {
             LoadSupplierData();
+        }
+
+        if (_purchaseOrderService != null)
+        {
+            await LoadPurchaseOrderDataFromDatabaseAsync();
+        }
+        else
+        {
             LoadPurchaseOrderData();
         }
+
         UpdateSupplierCounts();
         IsInitialized = true;
     }
 
+    private void SubsribeToEvents()
+    {
+        var eventService = DashboardEventService.Instance;
+
+        _supplierPurchaseOrderEventHandler = OnSupplierPurchasedOrder;
+
+
+        eventService.PurchaseOrderAdded += OnSupplierPurchasedOrder;
+        eventService.PurchaseOrderUpdated += OnSupplierPurchasedOrder;
+        eventService.PurchaseOrderDeleted += OnSupplierPurchasedOrder;
+
+    }
+
+    private async void OnSupplierPurchasedOrder(object? sender, EventArgs e)
+    {
+        try
+        {
+            await LoadPurchaseOrderDataFromDatabaseAsync();
+        }
+        catch
+        {
+            // Ignore errors during property change handling
+        }
+        finally
+        {
+
+        }
+    }
+
     private async Task LoadSupplierDataFromDatabaseAsync()
     {
-        if (_isLoadingData) return; // ✅ Prevent duplicate loads
+        if (_isLoadingData) return;
 
         _isLoadingData = true;
         IsLoading = true;
@@ -186,10 +231,10 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
                 await CheckAndUpdateSupplierStatusesAsync();
 
-                // Let ApplySupplierFilter populate SupplierItems according to the current SelectedStatusFilterItem
-                ApplySupplierFilter();
+                // ⭐ NEW: Load and merge products from delivered/paid purchase orders
+                await LoadAndMergeDeliveredPurchaseOrderProductsAsync();
 
-                // Ensure selection / counts are correct after filtering
+                ApplySupplierFilter();
                 UpdateSupplierCounts();
 
                 if (SupplierItems.Count > 0)
@@ -215,19 +260,119 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         finally
         {
             IsLoading = false;
-            _isLoadingData = false; // ✅ Reset flag
+            _isLoadingData = false;
         }
     }
 
+    private async Task LoadAndMergeDeliveredPurchaseOrderProductsAsync()
+    {
+        if (_purchaseOrderService == null) return;
+
+        try
+        {
+            // Get all purchase orders
+            var poResult = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
+            if (!poResult.Success || poResult.PurchaseOrders == null) return;
+
+            // Filter for delivered AND paid orders only
+            var deliveredPaidOrders = poResult.PurchaseOrders
+                .Where(po => po.ShippingStatus?.Equals("Delivered", StringComparison.OrdinalIgnoreCase) == true &&
+                            po.PaymentStatus?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true &&
+                            po.SupplierID.HasValue &&
+                            po.Items != null && po.Items.Count > 0)
+                .ToList();
+
+            // Group items by supplier
+            var supplierProducts = deliveredPaidOrders
+                .GroupBy(po => po.SupplierID!.Value)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.SelectMany(po => po.Items)
+                          .Select(item => item.ItemName)
+                          .Distinct()
+                          .ToList()
+                );
+
+            // Merge products into suppliers
+            foreach (var supplier in OriginalSupplierData)
+            {
+                if (supplier.ID.HasValue && supplierProducts.ContainsKey(supplier.ID.Value))
+                {
+                    var poProducts = supplierProducts[supplier.ID.Value];
+
+                    // Parse existing products
+                    var existingProducts = string.IsNullOrWhiteSpace(supplier.Products)
+                        ? new List<string>()
+                        : supplier.Products.Split(',').Select(p => p.Trim()).ToList();
+
+                    // Merge and remove duplicates
+                    var mergedProducts = existingProducts.Union(poProducts).Distinct().ToList();
+
+                    // Update supplier's products
+                    supplier.Products = string.Join(", ", mergedProducts);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoadAndMergeDeliveredPurchaseOrderProductsAsync] Error: {ex.Message}");
+            // Don't show error to user - this is a background enhancement
+        }
+    }
+
+    private async Task LoadPurchaseOrderDataFromDatabaseAsync()
+    {
+        if (_purchaseOrderService == null) return;
+
+        try
+        {
+            IsLoading = true;
+            var result = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
+
+            if (result.Success && result.PurchaseOrders != null)
+            {
+                var purchaseOrders = result.PurchaseOrders.Select(po => new PurchaseOrder
+                {
+                    ID = po.PurchaseOrderID,
+                    PONumber = po.PONumber,
+                    Name = po.SupplierName ?? "Unknown Supplier",
+                    Item = string.Join(", ", po.Items?.Select(i => $"{i.ItemName} ({i.Quantity} {i.Unit})") ?? new List<string>()),
+                    Amount = po.Total,
+                    DeliveryStatus = po.ShippingStatus,
+                    PaymentStatus = po.PaymentStatus,
+                    OrderDate = po.OrderDate,
+                    ExpectedDeliveryDate = po.ExpectedDeliveryDate,
+                    IsSelected = false
+                }).ToList();
+
+                OriginalPurchaseOrderData = purchaseOrders;
+                ApplyPurchaseOrderFilter();
+                UpdatePurchaseOrderCounts();
+
+                if (PurchaseOrderItems.Count > 0)
+                {
+                    SelectedPO = PurchaseOrderItems[0];
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Error Loading Purchase Orders")
+                .WithContent($"Failed to load purchase orders: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 
     private void LoadSupplierData()
     {
         var sampleSupplier = GetSampleSupplierData();
         OriginalSupplierData = sampleSupplier;
-
-        // ✅ ApplySupplierFilter already handles unsubscribe correctly
         ApplySupplierFilter();
-
         UpdateSupplierCounts();
 
         if (SupplierItems.Count > 0)
@@ -235,15 +380,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             SelectedSupplier = SupplierItems[0];
         }
     }
-    
+
     private void LoadPurchaseOrderData()
     {
         var samplePurchaseOrders = GetSamplePurchaseOrderData();
         OriginalPurchaseOrderData = samplePurchaseOrders;
-
-        // Apply filter to populate PurchaseOrderItems
         ApplyPurchaseOrderFilter();
-
         UpdatePurchaseOrderCounts();
 
         if (PurchaseOrderItems.Count > 0)
@@ -308,7 +450,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             }
         ];
     }
-    
+
     private List<PurchaseOrder> GetSamplePurchaseOrderData()
     {
         return
@@ -319,7 +461,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 Name = "San Miguel",
                 Item = "Soft Drinks (Coca-Cola, Sprite)",
                 Amount = 15000.00m,
-                DeliveryStatus = "Delivered"
+                DeliveryStatus = "Delivered",
+                PaymentStatus = "Paid"
             },
             new PurchaseOrder
             {
@@ -327,7 +470,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 Name = "Optimum",
                 Item = "Whey Protein (Gold Standard)",
                 Amount = 25000.00m,
-                DeliveryStatus = "Pending"
+                DeliveryStatus = "Pending",
+                PaymentStatus = "Unpaid"
             },
             new PurchaseOrder
             {
@@ -335,7 +479,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 Name = "Jump Manila",
                 Item = "Gym Accessories (Gloves, Belts)",
                 Amount = 8500.00m,
-                DeliveryStatus = "Cancelled"
+                DeliveryStatus = "Cancelled",
+                PaymentStatus = "Cancelled"
             }
         ];
     }
@@ -426,19 +571,38 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     [RelayCommand]
     private void ShowProductOrderView()
     {
+        if (SelectedSupplier == null)
+        {
+            _toastManager.CreateToast("No Supplier Selected")
+                .WithContent("Please select a supplier from the table first.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
         _pageManager.Navigate<PurchaseOrderViewModel>(new Dictionary<string, object>
         {
-            ["Context"] = PurchaseOrderContext.AddPurchaseOrder
+            ["Context"] = PurchaseOrderContext.AddPurchaseOrder,
+            ["SelectedSupplier"] = SelectedSupplier
         });
     }
-    
+
     [RelayCommand]
-    private void ViewProductOrderView()
+    private void ViewProductOrderView(PurchaseOrder? purchaseOrder)
     {
+        if (purchaseOrder == null || !purchaseOrder.ID.HasValue)
+        {
+            _toastManager.CreateToast("Invalid Selection")
+                .WithContent("Please select a valid purchase order.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
         _pageManager.Navigate<PurchaseOrderViewModel>(new Dictionary<string, object>
         {
             ["Context"] = PurchaseOrderContext.ViewPurchaseOrder,
-            ["SelectedSupplier"] = SelectedSupplier
+            ["PurchaseOrderId"] = purchaseOrder.ID.Value
         });
     }
 
@@ -456,7 +620,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             .Dismissible()
             .Show();
     }
-    
+
     [RelayCommand]
     private void ShowSingleOrderDeletionDialog(PurchaseOrder? order)
     {
@@ -464,7 +628,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         _dialogManager.CreateDialog(
                 "Are you absolutely sure?",
-                $"This action cannot be undone. This will permanently delete {order.Name} and remove the data from your database.")
+                $"This action cannot be undone. This will permanently delete {order.PONumber} and remove the data from your database.")
             .WithPrimaryButton("Continue", async () => await OnSubmitDeleteSingleOrder(order), DialogButtonStyle.Destructive)
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
@@ -495,7 +659,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             .Dismissible()
             .Show();
     }
-    
+
     [RelayCommand]
     private void ShowMultipleOrderDeletionDialog()
     {
@@ -525,7 +689,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         if (string.IsNullOrWhiteSpace(SearchStringResult))
         {
-            // ✅ Unsubscribe before clearing
             foreach (var supplier in SupplierItems)
             {
                 supplier.PropertyChanged -= OnSupplierPropertyChanged;
@@ -560,7 +723,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                           supplier.Status.Contains(SearchStringResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
-            // ✅ Unsubscribe before clearing
             foreach (var supplier in SupplierItems)
             {
                 supplier.PropertyChanged -= OnSupplierPropertyChanged;
@@ -579,18 +741,17 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             IsSearchingSupplier = false;
         }
     }
-    
+
     [RelayCommand]
     private async Task SearchPurchaseOrder()
     {
         if (string.IsNullOrWhiteSpace(SearchStringOrderResult))
         {
-            // Unsubscribe before clearing
             foreach (var po in PurchaseOrderItems)
             {
                 po.PropertyChanged -= OnPurchaseOrderPropertyChanged;
             }
-    
+
             PurchaseOrderItems.Clear();
             foreach (var po in CurrentFilteredPurchaseOrderData)
             {
@@ -600,26 +761,25 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             UpdatePurchaseOrderCounts();
             return;
         }
-    
+
         IsSearchingOrders = true;
-    
+
         try
         {
             await Task.Delay(500);
-    
+
             var filteredOrders = CurrentFilteredPurchaseOrderData.Where(po =>
-                    po is { PONumber: not null, Name: not null, Item: not null } && 
+                    po is { PONumber: not null, Name: not null, Item: not null } &&
                     (po.PONumber.Contains(SearchStringOrderResult, StringComparison.OrdinalIgnoreCase) ||
                      po.Name.Contains(SearchStringOrderResult, StringComparison.OrdinalIgnoreCase) ||
                      po.Item.Contains(SearchStringOrderResult, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
-    
-            // Unsubscribe before clearing
+
             foreach (var po in PurchaseOrderItems)
             {
                 po.PropertyChanged -= OnPurchaseOrderPropertyChanged;
             }
-    
+
             PurchaseOrderItems.Clear();
             foreach (var po in filteredOrders)
             {
@@ -639,7 +799,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         try
         {
-            // Check if there are any supplier list to export
             if (SupplierItems.Count == 0)
             {
                 _toastManager.CreateToast("No supplier list to export")
@@ -704,10 +863,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             var document = new SupplierDocument(supplierModel);
 
             await using var stream = await pdfFile.OpenWriteAsync();
-
-            // Both cannot be enabled at the same time. Disable one of them 
-            document.GeneratePdf(stream); // Generate the PDF
-            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging
+            document.GeneratePdf(stream);
 
             _toastManager.CreateToast("Supplier list exported successfully")
                 .WithContent($"Supplier list has been saved to {pdfFile.Name}")
@@ -727,19 +883,15 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         get
         {
-            // If there is no checked items, can't delete
             var selectedSuppliers = SupplierItems.Where(item => item.IsSelected).ToList();
             if (selectedSuppliers.Count == 0) return false;
 
-            // If the currently selected row is present and its status is not expired,
-            // then "Delete Selected" should be disabled when opening the menu for that row.
             if (SelectedSupplier?.Status != null &&
                 !SelectedSupplier.Status.Equals("Suspended", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
-            // Only allow deletion if ALL selected members are Expired
             return selectedSuppliers.All(supplier
                 => supplier.Status != null &&
                    supplier.Status.Equals("Suspended", StringComparison.OrdinalIgnoreCase));
@@ -753,7 +905,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         if (OriginalSupplierData.Count == 0) return;
         List<Supplier> filteredList = OriginalSupplierData.ToList();
 
-        // Apply Status filter
         if (SelectedStatusFilterItem != "All")
         {
             filteredList = filteredList
@@ -764,7 +915,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         CurrentFilteredSupplierData = filteredList;
 
-        // Unsubscribe from old items
         foreach (var item in SupplierItems)
         {
             item.PropertyChanged -= OnSupplierPropertyChanged;
@@ -779,13 +929,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         UpdateSupplierCounts();
     }
-    
+
     private void ApplyPurchaseOrderFilter()
     {
         if (OriginalPurchaseOrderData.Count == 0) return;
         List<PurchaseOrder> filteredList = OriginalPurchaseOrderData.ToList();
 
-        // Apply Delivery Status filter
         if (SelectedDeliveryFilterItem != "All")
         {
             filteredList = filteredList
@@ -796,7 +945,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         CurrentFilteredPurchaseOrderData = filteredList;
 
-        // Unsubscribe from old items
         foreach (var item in PurchaseOrderItems)
         {
             item.PropertyChanged -= OnPurchaseOrderPropertyChanged;
@@ -823,7 +971,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         }
         UpdateSupplierCounts();
     }
-    
+
     [RelayCommand]
     private void TogglePurchaseOrderSelection(bool? isChecked)
     {
@@ -840,12 +988,10 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         if (supplier.ID == null) return;
 
-        // Call service to delete from database
         var result = await _supplierService.DeleteSupplierAsync(supplier.ID.Value);
 
         if (result.Success)
         {
-            // Remove from UI
             supplier.PropertyChanged -= OnSupplierPropertyChanged;
             SupplierItems.Remove(supplier);
             OriginalSupplierData.Remove(supplier);
@@ -859,25 +1005,23 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 .ShowSuccess();
         }
     }
-    
+
     private async Task OnSubmitDeleteSingleOrder(PurchaseOrder order)
     {
-        if (order.ID == null) return;
+        if (order.ID == null || _purchaseOrderService == null) return;
 
-        // Call service to delete from database
-        var result = await _supplierService.DeleteSupplierAsync(order.ID.Value);
+        var result = await _purchaseOrderService.DeletePurchaseOrderAsync(order.ID.Value);
 
         if (result.Success)
         {
-            // Remove from UI
-            order.PropertyChanged -= OnSupplierPropertyChanged;
+            order.PropertyChanged -= OnPurchaseOrderPropertyChanged;
             PurchaseOrderItems.Remove(order);
             OriginalPurchaseOrderData.Remove(order);
             CurrentFilteredPurchaseOrderData.Remove(order);
-            UpdateSupplierCounts();
+            UpdatePurchaseOrderCounts();
 
             _toastManager.CreateToast("Purchase Order Deleted")
-                .WithContent($"{order.Name} has been deleted successfully!")
+                .WithContent($"{order.PONumber} has been deleted successfully!")
                 .DismissOnClick()
                 .WithDelay(6)
                 .ShowSuccess();
@@ -889,18 +1033,15 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         var selectedSuppliers = SupplierItems.Where(item => item.IsSelected).ToList();
         if (selectedSuppliers.Count == 0) return;
 
-        // Prepare list of IDs
         var supplierIds = selectedSuppliers
             .Where(s => s.ID.HasValue)
             .Select(s => s.ID!.Value)
             .ToList();
 
-        // Call service to delete multiple from database
         var result = await _supplierService.DeleteMultipleSuppliersAsync(supplierIds);
 
         if (result.Success)
         {
-            // Remove from UI
             foreach (var supplier in selectedSuppliers)
             {
                 supplier.PropertyChanged -= OnSupplierPropertyChanged;
@@ -917,24 +1058,32 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 .ShowSuccess();
         }
     }
-    
+
     private async Task OnSubmitDeleteMultipleOrders()
     {
+        if (_purchaseOrderService == null) return;
+
         var selectedOrders = PurchaseOrderItems.Where(item => item.IsSelected).ToList();
         if (selectedOrders.Count == 0) return;
 
-        // Prepare list of IDs
-        var orderIds = selectedOrders 
+        var orderIds = selectedOrders
             .Where(s => s.ID.HasValue)
             .Select(s => s.ID!.Value)
             .ToList();
 
-        // Call service to delete multiple from database
-        var result = await _supplierService.DeleteMultipleSuppliersAsync(orderIds);
-
-        if (result.Success)
+        // Delete each order individually since we don't have bulk delete
+        int deletedCount = 0;
+        foreach (var orderId in orderIds)
         {
-            // Remove from UI
+            var result = await _purchaseOrderService.DeletePurchaseOrderAsync(orderId);
+            if (result.Success)
+            {
+                deletedCount++;
+            }
+        }
+
+        if (deletedCount > 0)
+        {
             foreach (var order in selectedOrders)
             {
                 order.PropertyChanged -= OnPurchaseOrderPropertyChanged;
@@ -942,10 +1091,10 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 OriginalPurchaseOrderData.Remove(order);
                 CurrentFilteredPurchaseOrderData.Remove(order);
             }
-            UpdateSupplierCounts();
+            UpdatePurchaseOrderCounts();
 
-            _toastManager.CreateToast("Purchase Order Deleted")
-                .WithContent($"{result.DeletedCount} purchase order(s) deleted successfully!")
+            _toastManager.CreateToast("Purchase Orders Deleted")
+                .WithContent($"{deletedCount} purchase order(s) deleted successfully!")
                 .DismissOnClick()
                 .WithDelay(6)
                 .ShowSuccess();
@@ -987,6 +1136,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     ContactPerson = supplier.ContactPerson,
                     Email = supplier.Email,
                     PhoneNumber = supplier.PhoneNumber,
+                    Address = supplier.Address,
                     Products = supplier.Products,
                     Status = newStatus,
                     DeliverySchedule = supplier.DeliverySchedule,
@@ -1018,7 +1168,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         SearchSupplierCommand.Execute(null);
     }
-    
+
     partial void OnSearchStringOrderResultChanged(string value)
     {
         SearchPurchaseOrderCommand.Execute(null);
@@ -1028,7 +1178,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         ApplySupplierFilter();
     }
-    
+
     partial void OnSelectedDeliveryFilterItemChanged(string value)
     {
         ApplyPurchaseOrderFilter();
@@ -1038,10 +1188,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     {
         OnPropertyChanged(nameof(CanDeleteSelectedSuppliers));
     }
-    
+
     private void UpdatePurchaseOrderCounts()
     {
-        // Update counts similar to supplier counts
         var selectedCount = PurchaseOrderItems.Count(x => x.IsSelected);
         SelectAll = PurchaseOrderItems.Count > 0 && PurchaseOrderItems.All(x => x.IsSelected);
     }
@@ -1056,17 +1205,31 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
     protected override void DisposeManagedResources()
     {
+        var eventService = DashboardEventService.Instance;
+
+        if (_supplierPurchaseOrderEventHandler != null)
+        {
+            eventService.PurchaseOrderAdded -= _supplierPurchaseOrderEventHandler;
+        }
+        if (_supplierPurchaseOrderEventHandler != null)
+        {
+            eventService.PurchaseOrderUpdated -= _supplierPurchaseOrderEventHandler;
+        }
+        if (_supplierPurchaseOrderEventHandler != null)
+        {
+            eventService.PurchaseOrderDeleted -= _supplierPurchaseOrderEventHandler;
+        }
+
         foreach (var supplier in SupplierItems)
         {
             supplier.PropertyChanged -= OnSupplierPropertyChanged;
         }
-    
+
         foreach (var po in PurchaseOrderItems)
         {
             po.PropertyChanged -= OnPurchaseOrderPropertyChanged;
         }
 
-        // Clear collections
         SupplierItems.Clear();
         OriginalSupplierData.Clear();
         CurrentFilteredSupplierData.Clear();
@@ -1115,18 +1278,18 @@ public partial class Supplier : ObservableObject
 
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch
     {
-        "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),     // Green-500
-        "inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)), // Gray-500
-        "suspended" => new SolidColorBrush(Color.FromRgb(239, 68, 68)), // Red-500
-        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
+        "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
+        "inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+        "suspended" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
     };
 
     public IBrush StatusBackground => Status?.ToLowerInvariant() switch
     {
-        "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),     // Green-500 with alpha
-        "inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)), // Gray-500 with alpha
-        "suspended" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
-        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))           // Default Gray-500 with alpha
+        "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
+        "inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)),
+        "suspended" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
     };
 
     public string? StatusDisplayText => Status?.ToLowerInvariant() switch
@@ -1145,13 +1308,11 @@ public partial class Supplier : ObservableObject
     }
 }
 
-// Add PurchaseOrder class at the bottom of the file (after Supplier class)
-
 public partial class PurchaseOrder : ObservableObject
 {
     [ObservableProperty]
     private int? _iD;
-    
+
     [ObservableProperty]
     private string? _pONumber;
 
@@ -1165,41 +1326,97 @@ public partial class PurchaseOrder : ObservableObject
     private decimal? _amount;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DeliveryForeground))]
+    [NotifyPropertyChangedFor(nameof(DeliveryBackground))]
+    [NotifyPropertyChangedFor(nameof(DeliveryDisplayText))]
     private string? _deliveryStatus;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PaymentForeground))]
+    [NotifyPropertyChangedFor(nameof(PaymentBackground))]
+    [NotifyPropertyChangedFor(nameof(PaymentDisplayText))]
+    private string? _paymentStatus;
+
+    [ObservableProperty]
+    private DateTime? _orderDate;
+
+    [ObservableProperty]
+    private DateTime? _expectedDeliveryDate;
 
     [ObservableProperty]
     private bool _isSelected;
 
     public string FormattedAmount => $"₱{Amount:N2}";
-    
+
+    public string FormattedOrderDate => OrderDate.HasValue ? $"{OrderDate.Value:MM/dd/yyyy}" : string.Empty;
+
+    public string FormattedExpectedDelivery => ExpectedDeliveryDate.HasValue ? $"{ExpectedDeliveryDate.Value:MM/dd/yyyy}" : string.Empty;
+
     public IBrush DeliveryForeground => DeliveryStatus?.ToLowerInvariant() switch
     {
-        "pending" => new SolidColorBrush(Color.FromRgb(234, 179, 8)),    // Yellow-500
-        "delivered" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),  // Green-500
-        "cancelled" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),  // Red-500
-        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))           // Default Gray-500
+        "pending" => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
+        "processing" => new SolidColorBrush(Color.FromRgb(59, 130, 246)),
+        "shipped/in-transit" => new SolidColorBrush(Color.FromRgb(168, 85, 247)),
+        "delivered" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
+        "cancelled" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
     };
 
     public IBrush DeliveryBackground => DeliveryStatus?.ToLowerInvariant() switch
     {
-        "pending" => new SolidColorBrush(Color.FromArgb(25, 234, 179, 8)),   // Yellow-500 with alpha
-        "delivered" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)), // Green-500 with alpha
-        "cancelled" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)), // Red-500 with alpha
-        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))          // Default Gray-500 with alpha
+        "pending" => new SolidColorBrush(Color.FromArgb(25, 234, 179, 8)),
+        "processing" => new SolidColorBrush(Color.FromArgb(25, 59, 130, 246)),
+        "shipped/in-transit" => new SolidColorBrush(Color.FromArgb(25, 168, 85, 247)),
+        "delivered" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
+        "cancelled" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
     };
 
     public string? DeliveryDisplayText => DeliveryStatus?.ToLowerInvariant() switch
     {
         "pending" => "● Pending",
+        "processing" => "● Processing",
+        "shipped/in-transit" => "● Shipped",
         "delivered" => "● Delivered",
         "cancelled" => "● Cancelled",
         _ => DeliveryStatus
     };
 
-    partial void OnDeliveryStatusChanged(string value)
+    public IBrush PaymentForeground => PaymentStatus?.ToLowerInvariant() switch
+    {
+        "unpaid" => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
+        "paid" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
+        "cancelled" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
+    };
+
+    public IBrush PaymentBackground => PaymentStatus?.ToLowerInvariant() switch
+    {
+        "unpaid" => new SolidColorBrush(Color.FromArgb(25, 234, 179, 8)),
+        "paid" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
+        "cancelled" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
+        _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
+    };
+
+    public string? PaymentDisplayText => PaymentStatus?.ToLowerInvariant() switch
+    {
+        "unpaid" => "● Unpaid",
+        "paid" => "● Paid",
+        "cancelled" => "● Cancelled",
+        _ => PaymentStatus
+    };
+
+    partial void OnDeliveryStatusChanged(string? value)
     {
         OnPropertyChanged(nameof(DeliveryForeground));
         OnPropertyChanged(nameof(DeliveryBackground));
         OnPropertyChanged(nameof(DeliveryDisplayText));
+    }
+
+    partial void OnPaymentStatusChanged(string? value)
+    {
+        OnPropertyChanged(nameof(PaymentForeground));
+        OnPropertyChanged(nameof(PaymentBackground));
+        OnPropertyChanged(nameof(PaymentDisplayText));
     }
 }

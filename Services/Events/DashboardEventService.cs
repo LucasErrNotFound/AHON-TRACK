@@ -61,6 +61,10 @@ namespace AHON_TRACK.Services.Events
         //
         public event EventHandler? SessionAdded;
 
+        public event EventHandler? PurchaseOrderAdded;
+        public event EventHandler? PurchaseOrderDeleted;
+        public event EventHandler? PurchaseOrderUpdated;
+
         private DashboardEventService() { }
 
         // --- Dashboard events ---
@@ -129,5 +133,10 @@ namespace AHON_TRACK.Services.Events
 
         // -- SESSION ADDED --
         public void NotifySessionAdded() => SessionAdded?.Invoke(this, EventArgs.Empty);
+
+        // --- Purchase Order events ---
+        public void NotifyPurchaseOrderAdded() => PurchaseOrderAdded?.Invoke(this, EventArgs.Empty);
+        public void NotifyPurchaseOrderDeleted() => PurchaseOrderDeleted?.Invoke(this, EventArgs.Empty);
+        public void NotifyPurchaseOrderUpdated() => PurchaseOrderUpdated?.Invoke(this, EventArgs.Empty);
     }
 }

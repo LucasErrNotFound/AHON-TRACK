@@ -12,7 +12,6 @@ using HotAvalonia;
 using ShadUI;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
@@ -29,21 +28,30 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     [ObservableProperty]
     private string[] _productStatusItems = ["In Stock", "Out of Stock"];
-    private string? _selectedProductStatusItem = "In Stock";
 
     [ObservableProperty]
     private string[] _productCategoryItems = ["Drinks", "Supplements", "Apparel", "Products", "Merchandise"];
+
+    [ObservableProperty]
     private string? _selectedProductCategoryItem = "Drinks";
 
     [ObservableProperty]
-    private string[] _productSupplierItems;
-    private string? _selectedSupplierCategoryItem;
-    
+    private string[] _productSupplierItems = [];
+
     [ObservableProperty]
-    private string[] _productItems;
+    private string? _selectedProductSupplier;
+
+    [ObservableProperty]
+    private string[] _productItems = [];
+
+    [ObservableProperty]
     private string? _selectedProductItem;
 
     private Dictionary<string, int> _supplierNameToIdMap = new();
+    private Dictionary<int, List<string>> _supplierProductsMap = new();
+    // ⭐ Store product prices and quantities from purchase orders
+    private Dictionary<string, decimal> _productPricesMap = new(); // Key: "SupplierID_ProductName"
+    private Dictionary<string, (decimal Quantity, string Unit)> _productQuantitiesMap = new(); // Key: "SupplierID_ProductName"
 
     [ObservableProperty]
     private byte[]? _productImageBytes;
@@ -56,14 +64,14 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     [ObservableProperty]
     private Image? _productImageControl;
-    
+
     [ObservableProperty]
     private DateTime _minimumExpiryDate = DateTime.Today.AddDays(1);
 
     public bool CanEditExpiry => !ProductExpiry.HasValue || ProductExpiry.Value.Date > DateTime.Today;
     public DateTime TodayDate => DateTime.Today;
     private const string DEFAULT_IMAGE_PATH = "avares://AHON_TRACK/Assets/ProductStockView/DefaultProductImage.png";
-    
+
     private bool _suppliersLoaded = false;
     private int? _productID;
     private string? _productName = string.Empty;
@@ -71,17 +79,11 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private string? _productDescription = string.Empty;
     private DateTime? _productExpiry;
     private Image? _productImage;
-
     private string? _productImageFilePath;
-
     private decimal? _price;
     private decimal? _purchasedPrice;
     private decimal? _markupPrice;
     private decimal? _discountedPrice;
-
-    private string? _productStatus;
-    private string? _productCategory;
-    private string? _productSupplier;
     private int? _currentStock;
 
     private readonly DialogManager _dialogManager;
@@ -89,15 +91,19 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
     private readonly PageManager _pageManager;
     private readonly IProductService _productService;
     private readonly ISupplierService _supplierService;
+    private readonly IPurchaseOrderService? _purchaseOrderService;
     private bool _disposed = false;
 
-    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager, IProductService productService, ISupplierService supplierService)
+    public AddEditProductViewModel(DialogManager dialogManager, ToastManager toastManager,
+        PageManager pageManager, IProductService productService, ISupplierService supplierService,
+        IPurchaseOrderService? purchaseOrderService = null)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _productService = productService;
         _supplierService = supplierService;
+        _purchaseOrderService = purchaseOrderService;
         _productImageFilePath = DEFAULT_IMAGE_PATH;
 
         _ = LoadSuppliersAsync();
@@ -110,6 +116,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         _pageManager = new PageManager(new ServiceProvider());
         _productService = null!;
         _supplierService = null!;
+        _purchaseOrderService = null;
     }
 
     [AvaloniaHotReload]
@@ -120,7 +127,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             await LoadSuppliersAsync();
         }
 
-        // ✅ Wait for control and set default image for new products
         if (ViewContext == ProductViewContext.AddProduct)
         {
             int maxAttempts = 20;
@@ -173,6 +179,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 {
                     SelectedProductSupplier = "None";
                 }
+
+                await LoadProductsFromPurchaseOrdersAsync();
             }
             else
             {
@@ -205,13 +213,199 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         }
     }
 
+    private async Task LoadProductsFromPurchaseOrdersAsync()
+    {
+        if (_purchaseOrderService == null)
+        {
+            ProductItems = ["No products available"];
+            return;
+        }
+
+        try
+        {
+            var poResult = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
+            if (!poResult.Success || poResult.PurchaseOrders == null)
+            {
+                ProductItems = ["No products available"];
+                return;
+            }
+
+            var deliveredPaidOrders = poResult.PurchaseOrders
+                .Where(po => po.ShippingStatus?.Equals("Delivered", StringComparison.OrdinalIgnoreCase) == true &&
+                            po.PaymentStatus?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true &&
+                            po.SupplierID.HasValue &&
+                            po.Items != null && po.Items.Count > 0)
+                .ToList();
+
+            _supplierProductsMap.Clear();
+            _productPricesMap.Clear();
+            _productQuantitiesMap.Clear(); // ⭐ Clear quantities map
+
+            foreach (var po in deliveredPaidOrders)
+            {
+                if (!po.SupplierID.HasValue) continue;
+
+                if (!_supplierProductsMap.ContainsKey(po.SupplierID.Value))
+                {
+                    _supplierProductsMap[po.SupplierID.Value] = new List<string>();
+                }
+
+                foreach (var item in po.Items.Where(i => !string.IsNullOrWhiteSpace(i.ItemName)))
+                {
+                    var productName = item.ItemName;
+
+                    // Add to products list if not already there
+                    if (!_supplierProductsMap[po.SupplierID.Value].Contains(productName))
+                    {
+                        _supplierProductsMap[po.SupplierID.Value].Add(productName);
+                    }
+
+                    var priceKey = $"{po.SupplierID.Value}_{productName}";
+
+                    // ⭐ Store the price (use latest price from most recent order)
+                    _productPricesMap[priceKey] = item.Price;
+
+                    // ⭐ Store the quantity and unit
+                    _productQuantitiesMap[priceKey] = (item.Quantity, item.Unit ?? "pcs");
+                }
+            }
+
+            ProductItems = ["Select supplier first"];
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading products: {ex.Message}");
+            ProductItems = ["No products available"];
+        }
+    }
+
+    partial void OnSelectedProductSupplierChanged(string? value)
+    {
+        UpdateProductItems(value);
+    }
+
+    private void UpdateProductItems(string? selectedSupplier)
+    {
+        if (string.IsNullOrEmpty(selectedSupplier) || selectedSupplier == "None")
+        {
+            ProductItems = ["Select supplier first"];
+            SelectedProductItem = null;
+            return;
+        }
+
+        if (!_supplierNameToIdMap.TryGetValue(selectedSupplier, out int supplierId))
+        {
+            ProductItems = ["No products available"];
+            SelectedProductItem = null;
+            return;
+        }
+
+        if (_supplierProductsMap.TryGetValue(supplierId, out var products) && products.Count > 0)
+        {
+            var sortedProducts = products.OrderBy(p => p).ToList();
+            ProductItems = sortedProducts.ToArray();
+            SelectedProductItem = ProductItems.FirstOrDefault();
+
+            Console.WriteLine($"✅ Loaded {products.Count} products for {selectedSupplier}");
+        }
+        else
+        {
+            ProductItems = ["No delivered products"];
+            SelectedProductItem = null;
+        }
+    }
+
+    partial void OnSelectedProductItemChanged(string? value)
+    {
+        if (!string.IsNullOrEmpty(value) &&
+            value != "Select supplier first" &&
+            value != "No products available" &&
+            value != "No delivered products")
+        {
+            if (ViewContext == ProductViewContext.AddProduct)
+            {
+                ProductName = value;
+
+                // ⭐ Auto-fill purchased price, selling price, and stock from PO
+                if (!string.IsNullOrEmpty(SelectedProductSupplier) &&
+                    SelectedProductSupplier != "None" &&
+                    _supplierNameToIdMap.TryGetValue(SelectedProductSupplier, out int supplierId))
+                {
+                    var priceKey = $"{supplierId}_{value}";
+
+                    // Auto-fill prices
+                    if (_productPricesMap.TryGetValue(priceKey, out decimal purchasedPrice))
+                    {
+                        ProductPurchasedPrice = purchasedPrice;
+                        ProductPrice = purchasedPrice;
+                        Console.WriteLine($"✅ Auto-filled purchased price: ₱{purchasedPrice:N2}");
+                        Console.WriteLine($"✅ Auto-filled selling price: ₱{purchasedPrice:N2}");
+                    }
+
+                    // ⭐ Auto-fill stock based on quantity and unit
+                    if (_productQuantitiesMap.TryGetValue(priceKey, out var quantityInfo))
+                    {
+                        int stockToSet = CalculateStockFromQuantity(quantityInfo.Quantity, quantityInfo.Unit);
+                        CurrentStock = stockToSet;
+                        Console.WriteLine($"✅ Auto-filled stock: {stockToSet} (from {quantityInfo.Quantity} {quantityInfo.Unit})");
+                    }
+                }
+            }
+        }
+    }
+
+    // ⭐ NEW: Calculate stock based on unit type
+    private int CalculateStockFromQuantity(decimal quantity, string unit)
+    {
+        // Convert to integer stock count based on unit
+        string unitLower = unit.ToLowerInvariant();
+
+        switch (unitLower)
+        {
+            case "pcs":
+            case "unit":
+            case "piece":
+            case "pieces":
+                // Direct conversion for countable items
+                return (int)Math.Floor(quantity);
+
+            case "box":
+            case "pack":
+            case "case":
+                // Assume 12 items per box/pack (adjust as needed)
+                return (int)Math.Floor(quantity * 12);
+
+            case "kg":
+            case "kilogram":
+            case "kilograms":
+                // For weight-based: treat as number of units (e.g., 5kg = 5 units)
+                return (int)Math.Floor(quantity);
+
+            case "lbs":
+            case "pound":
+            case "pounds":
+                // For pounds: treat as number of units
+                return (int)Math.Floor(quantity);
+
+            case "liter":
+            case "liters":
+            case "l":
+                // For liquids: treat as number of bottles/containers
+                return (int)Math.Floor(quantity);
+
+            default:
+                // For unknown units, use the quantity as-is
+                return (int)Math.Floor(quantity);
+        }
+    }
+
     [RelayCommand]
     private async Task RefreshSuppliers()
     {
         await LoadSuppliersAsync();
 
         _toastManager?.CreateToast("Suppliers Refreshed")
-            .WithContent("Supplier list has been updated")
+            .WithContent("Supplier list and products have been updated")
             .DismissOnClick()
             .ShowSuccess();
     }
@@ -243,7 +437,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         }
 
         await PopulateFormWithProductDataAsync(product);
-
         OnPropertyChanged(nameof(CurrentStock));
     }
 
@@ -299,7 +492,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
             if (imageBytesToSave == null && string.IsNullOrEmpty(imagePathToSave))
             {
-                imagePathToSave = DEFAULT_IMAGE_PATH; // Save the default path
+                imagePathToSave = DEFAULT_IMAGE_PATH;
             }
 
             var productModel = new ProductModel
@@ -310,6 +503,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 SupplierID = supplierIdToSave,
                 Description = ProductDescription,
                 Price = ProductPrice ?? 0,
+                PurchasedPrice = ProductPurchasedPrice,
+                MarkupPrice = ProductMarkupPrice,
                 DiscountedPrice = ProductDiscountedPrice,
                 ProductImageFilePath = imagePathToSave,
                 ProductImageBytes = imageBytesToSave,
@@ -470,6 +665,8 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductName = product.Name;
         ProductDescription = product.Description;
         ProductPrice = product.Price;
+        ProductPurchasedPrice = product.PurchasedPrice;
+        ProductMarkupPrice = product.MarkupPrice;
         ProductExpiry = product.Expiry;
         ProductDiscountedPrice = product.DiscountedPrice;
         BatchCode = product.BatchCode;
@@ -487,8 +684,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         SelectedProductCategory = product.Category;
 
-        // Wait for ProductImageControl to be initialized
-        int maxAttempts = 20; // 1 second max wait
+        int maxAttempts = 20;
         int attempts = 0;
         while (ProductImageControl == null && attempts < maxAttempts)
         {
@@ -512,7 +708,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             Console.WriteLine("ℹ️ Using default product image");
         }
     }
-    
+
     private async Task<bool> TryLoadProductImageAsync(string? posterData)
     {
         if (string.IsNullOrEmpty(posterData))
@@ -522,7 +718,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         try
         {
-            // Case 1: Base64 encoded image
             if (posterData.StartsWith("data:image/"))
             {
                 string base64Data = posterData;
@@ -537,15 +732,14 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 {
                     await using var memoryStream = new System.IO.MemoryStream(ProductImageBytes);
                     var bitmap = new Bitmap(memoryStream);
-                
+
                     ProductImageControl!.Source = bitmap;
                     ProductImageControl.IsVisible = true;
-                
+
                     Console.WriteLine($"✅ Base64 image loaded: {ProductImageBytes.Length} bytes");
                     return true;
                 }
             }
-            // Case 2: File path
             else if (!posterData.StartsWith("avares://") && System.IO.File.Exists(posterData))
             {
                 ProductImageFilePath = posterData;
@@ -554,10 +748,10 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
                 await using var memoryStream = new System.IO.MemoryStream(fileBytes);
                 var bitmap = new Bitmap(memoryStream);
-            
+
                 ProductImageControl!.Source = bitmap;
                 ProductImageControl.IsVisible = true;
-            
+
                 Console.WriteLine($"✅ File image loaded: {fileBytes.Length} bytes");
                 return true;
             }
@@ -592,7 +786,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         OnPropertyChanged(nameof(ViewTitle));
         OnPropertyChanged(nameof(ViewDescription));
     }
-    
+
     private static Bitmap? _defaultProductBitmap;
     public static Bitmap DefaultProductBitmap
     {
@@ -649,18 +843,34 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         get => _price;
         set => SetProperty(ref _price, value, true);
     }
-    
+
     public decimal? ProductPurchasedPrice
     {
         get => _purchasedPrice;
         set => SetProperty(ref _purchasedPrice, value, true);
     }
-    
-    [Range(0, 10000, ErrorMessage = "Markup must be between 5 and 10,000")]
+
+    [Range(0, 10000, ErrorMessage = "Markup must be between 0 and 10,000")]
     public decimal? ProductMarkupPrice
     {
         get => _markupPrice;
-        set => SetProperty(ref _markupPrice, value, true);
+        set
+        {
+            SetProperty(ref _markupPrice, value, true);
+
+            // ⭐ Auto-calculate selling price when markup change
+            UpdateSellingPriceFromMarkup();
+        }
+    }
+
+    // ⭐ NEW: Update selling price based on purchased price + markup
+    private void UpdateSellingPriceFromMarkup()
+    {
+        if (ProductPurchasedPrice.HasValue && ProductMarkupPrice.HasValue)
+        {
+            ProductPrice = ProductPurchasedPrice.Value + ProductMarkupPrice.Value;
+            Console.WriteLine($"💰 Calculated selling price: ₱{ProductPrice:N2} (Purchased: ₱{ProductPurchasedPrice:N2} + Markup: ₱{ProductMarkupPrice:N2})");
+        }
     }
 
     [Range(0, 100, ErrorMessage = "Percentage must be between 0 and 100")]
@@ -697,20 +907,6 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         set => SetProperty(ref _selectedProductCategoryItem, value, true);
     }
 
-    [Required(ErrorMessage = "Select a supplier")]
-    public string? SelectedProductSupplier
-    {
-        get => _selectedSupplierCategoryItem;
-        set => SetProperty(ref _selectedSupplierCategoryItem, value, true);
-    }
-    
-    [Required(ErrorMessage = "Select a product")]
-    public string? SelectedProductItem 
-    {
-        get => _selectedProductItem;
-        set => SetProperty(ref _selectedProductItem, value, true);
-    }
-
     public Image? ProductImage
     {
         get => _productImage;
@@ -725,17 +921,18 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
     protected override void DisposeManagedResources()
     {
-        // Clear large blobs / image buffers
         ProductImage = null;
         ProductImageBytes = null;
         ProductImageFilePath = null;
         ProductImageControl = null;
 
-        // Clear supplier maps/lists
         _supplierNameToIdMap?.Clear();
+        _supplierProductsMap?.Clear();
+        _productPricesMap?.Clear();
+        _productQuantitiesMap?.Clear(); // ⭐ Clear quantities map
         ProductSupplierItems = [];
+        ProductItems = [];
 
-        // Mark disposed
         _disposed = true;
 
         base.DisposeManagedResources();

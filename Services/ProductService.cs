@@ -134,26 +134,28 @@ namespace AHON_TRACK.Services
         }
 
         private async Task<(bool Success, string Message, int? ProductId)> RestoreProductAsync(
-            SqlConnection conn, ProductModel product, int productId)
+    SqlConnection conn, ProductModel product, int productId)
         {
             var imageBytes = await ReadImageBytesAsync(product.ProductImageFilePath);
 
             const string restoreQuery = @"
-                UPDATE Products SET
-                    ProductName = @productName,
-                    BatchCode = @batchCode,
-                    SupplierID = @supplierID,
-                    Description = @description,
-                    Price = @price,
-                    DiscountedPrice = @discountedPrice,
-                    ProductImagePath = @imagePath,
-                    ExpiryDate = @expiryDate,
-                    Status = @status,
-                    Category = @category,
-                    CurrentStock = @currentStock,
-                    AddedByEmployeeID = @employeeID,
-                    IsDeleted = 0
-                WHERE ProductID = @productId";
+        UPDATE Products SET
+            ProductName = @productName,
+            BatchCode = @batchCode,
+            SupplierID = @supplierID,
+            Description = @description,
+            Price = @price,
+            PurchasedPrice = @purchasedPrice,
+            MarkupPrice = @markupPrice,
+            DiscountedPrice = @discountedPrice,
+            ProductImagePath = @imagePath,
+            ExpiryDate = @expiryDate,
+            Status = @status,
+            Category = @category,
+            CurrentStock = @currentStock,
+            AddedByEmployeeID = @employeeID,
+            IsDeleted = 0
+        WHERE ProductID = @productId";
 
             using var cmd = new SqlCommand(restoreQuery, conn);
             AddProductParameters(cmd, product);
@@ -174,18 +176,18 @@ namespace AHON_TRACK.Services
         }
 
         private async Task<(bool Success, string Message, int? ProductId)> InsertNewProductAsync(
-            SqlConnection conn, ProductModel product)
+    SqlConnection conn, ProductModel product)
         {
             var imageBytes = await ReadImageBytesAsync(product.ProductImageFilePath);
 
             using var cmd = new SqlCommand(
                 @"INSERT INTO Products (ProductName, BatchCode, SupplierID, Description, 
-                 Price, DiscountedPrice, ProductImagePath,
-                 ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID, IsDeleted)
-                  OUTPUT INSERTED.ProductID
-                  VALUES (@productName, @batchCode, @supplierID, @description,
-                          @price, @discountedPrice, @imagePath,
-                          @expiryDate, @status, @category, @currentStock, @employeeID, 0)", conn);
+         Price, PurchasedPrice, MarkupPrice, DiscountedPrice, ProductImagePath,
+         ExpiryDate, Status, Category, CurrentStock, AddedByEmployeeID, IsDeleted)
+          OUTPUT INSERTED.ProductID
+          VALUES (@productName, @batchCode, @supplierID, @description,
+                  @price, @purchasedPrice, @markupPrice, @discountedPrice, @imagePath,
+                  @expiryDate, @status, @category, @currentStock, @employeeID, 0)", conn);
 
             AddProductParameters(cmd, product);
             AddImageParameter(cmd, imageBytes);
@@ -216,7 +218,11 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                using var cmd = new SqlCommand(GetProductSelectQuery() + " WHERE p.IsDeleted = 0 ORDER BY p.ProductName", conn);
+                string query = GetProductSelectQuery() + " WHERE p.IsDeleted = 0 ORDER BY p.ProductName";
+
+                Console.WriteLine($"🔍 Executing Query: {query}"); // ⭐ Debug logging
+
+                using var cmd = new SqlCommand(query, conn);
 
                 var products = new List<ProductModel>();
                 using var reader = await cmd.ExecuteReaderAsync();
@@ -225,15 +231,19 @@ namespace AHON_TRACK.Services
                     products.Add(MapProductFromReader(reader));
                 }
 
+                Console.WriteLine($"✅ Retrieved {products.Count} products"); // ⭐ Debug logging
                 return (true, "Products retrieved successfully.", products);
             }
             catch (SqlException ex)
             {
+                Console.WriteLine($"❌ SQL Error: {ex.Message}");
+                Console.WriteLine($"❌ Error Number: {ex.Number}");
                 ShowToast("Database Error", $"Failed to retrieve products: {ex.Message}", ToastType.Error);
                 return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"❌ General Error: {ex.Message}");
                 ShowToast("Error", $"An unexpected error occurred: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}", null);
             }
@@ -369,6 +379,8 @@ namespace AHON_TRACK.Services
                           SupplierID = @supplierID,
                           Description = @description,
                           Price = @price,
+                          PurchasedPrice = @PurchasedPrice,        -- ⭐ ADD THIS
+                          MarkupPrice = @MarkupPrice,
                           DiscountedPrice = @discountedPrice,
                           ProductImagePath = @imagePath,
                           ExpiryDate = @expiryDate,
@@ -704,6 +716,8 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@supplierID", product.SupplierID ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@description", product.Description ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@price", product.Price);
+            cmd.Parameters.AddWithValue("@purchasedPrice", product.PurchasedPrice ?? (object)DBNull.Value);  // ⭐ ADD THIS
+            cmd.Parameters.AddWithValue("@markupPrice", product.MarkupPrice ?? (object)DBNull.Value);        // ⭐ ADD THIS
             cmd.Parameters.AddWithValue("@discountedPrice", product.DiscountedPrice ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@expiryDate", product.ExpiryDate ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@status", product.Status);
@@ -711,6 +725,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@currentStock", product.CurrentStock);
             cmd.Parameters.AddWithValue("@employeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
         }
+
 
         private void AddImageParameter(SqlCommand cmd, byte[]? imageBytes)
         {
@@ -737,11 +752,11 @@ namespace AHON_TRACK.Services
         }
 
         private string GetProductSelectQuery() =>
-            @"SELECT p.ProductID, p.ProductName, p.BatchCode, p.SupplierID, s.SupplierName, p.Description,
-                     p.Price, p.DiscountedPrice, p.ProductImagePath,
-                     p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
-              FROM Products p
-              LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID";
+    @"SELECT p.ProductID, p.ProductName, p.BatchCode, p.SupplierID, s.SupplierName, p.Description,
+             p.Price, p.PurchasedPrice, p.MarkupPrice, p.DiscountedPrice, p.ProductImagePath,
+             p.ExpiryDate, p.Status, p.Category, p.CurrentStock, p.AddedByEmployeeID
+      FROM Products p
+      LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID";
 
         private async Task<(bool Success, string Message, ProductModel? Product)> GetSingleProductAsync(
             string whereClause, object paramValue)
@@ -845,43 +860,57 @@ namespace AHON_TRACK.Services
 
         private ProductModel MapProductFromReader(SqlDataReader reader)
         {
-            string? imageBase64 = null;
-            byte[]? imageBytes = null;
-
-            if (!reader.IsDBNull(reader.GetOrdinal("ProductImagePath")))
+            try
             {
-                imageBytes = (byte[])reader["ProductImagePath"];
-                imageBase64 = Convert.ToBase64String(imageBytes);
+                string? imageBase64 = null;
+                byte[]? imageBytes = null;
+
+                if (!reader.IsDBNull(reader.GetOrdinal("ProductImagePath")))
+                {
+                    imageBytes = (byte[])reader["ProductImagePath"];
+                    imageBase64 = Convert.ToBase64String(imageBytes);
+                }
+
+                return new ProductModel
+                {
+                    ProductID = reader.GetInt32(reader.GetOrdinal("ProductID")),
+                    ProductName = reader["ProductName"]?.ToString() ?? "",
+                    BatchCode = reader["BatchCode"]?.ToString() ?? "",
+                    SupplierID = reader["SupplierID"] != DBNull.Value
+                        ? reader.GetInt32(reader.GetOrdinal("SupplierID"))
+                        : null,
+                    SupplierName = reader["SupplierName"]?.ToString(),
+                    Description = reader["Description"]?.ToString() ?? "",
+                    Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+                    PurchasedPrice = reader["PurchasedPrice"] != DBNull.Value
+                        ? reader.GetDecimal(reader.GetOrdinal("PurchasedPrice"))
+                        : null,
+                    MarkupPrice = reader["MarkupPrice"] != DBNull.Value
+                        ? reader.GetDecimal(reader.GetOrdinal("MarkupPrice"))
+                        : null,
+                    DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value
+                        ? reader.GetDecimal(reader.GetOrdinal("DiscountedPrice"))
+                        : null,
+                    ProductImageBase64 = imageBase64,
+                    ProductImageBytes = imageBytes,
+                    ExpiryDate = reader["ExpiryDate"] != DBNull.Value
+                        ? reader.GetDateTime(reader.GetOrdinal("ExpiryDate"))
+                        : null,
+                    Status = reader["Status"]?.ToString() ?? "",
+                    Category = reader["Category"]?.ToString() ?? "",
+                    CurrentStock = reader["CurrentStock"] != DBNull.Value
+                        ? reader.GetInt32(reader.GetOrdinal("CurrentStock"))
+                        : 0,
+                    AddedByEmployeeID = reader["AddedByEmployeeID"] != DBNull.Value
+                        ? reader.GetInt32(reader.GetOrdinal("AddedByEmployeeID"))
+                        : 0
+                };
             }
-
-            return new ProductModel
+            catch (Exception ex)
             {
-                ProductID = reader.GetInt32(reader.GetOrdinal("ProductID")),
-                ProductName = reader["ProductName"]?.ToString() ?? "",
-                BatchCode = reader["BatchCode"]?.ToString() ?? "",
-                SupplierID = reader["SupplierID"] != DBNull.Value
-                    ? reader.GetInt32(reader.GetOrdinal("SupplierID"))
-                    : null,
-                SupplierName = reader["SupplierName"]?.ToString(),
-                Description = reader["Description"]?.ToString() ?? "",
-                Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value
-                    ? reader.GetDecimal(reader.GetOrdinal("DiscountedPrice"))
-                    : null,
-                ProductImageBase64 = imageBase64,
-                ProductImageBytes = imageBytes,
-                ExpiryDate = reader["ExpiryDate"] != DBNull.Value
-                    ? reader.GetDateTime(reader.GetOrdinal("ExpiryDate"))
-                    : null,
-                Status = reader["Status"]?.ToString() ?? "",
-                Category = reader["Category"]?.ToString() ?? "",
-                CurrentStock = reader["CurrentStock"] != DBNull.Value
-                    ? reader.GetInt32(reader.GetOrdinal("CurrentStock"))
-                    : 0,
-                AddedByEmployeeID = reader["AddedByEmployeeID"] != DBNull.Value
-                    ? reader.GetInt32(reader.GetOrdinal("AddedByEmployeeID"))
-                    : 0
-            };
+                Console.WriteLine($"❌ Error mapping product from reader: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<(bool Success, int TotalProducts, int InStock, int OutOfStock, int Expired)> GetProductStatisticsAsync()
@@ -1087,7 +1116,7 @@ namespace AHON_TRACK.Services
             }
             return items;
         }
-        
+
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
@@ -1096,7 +1125,7 @@ namespace AHON_TRACK.Services
             {
                 // Clear callback reference
                 _notificationCallback = null;
-            
+
                 // Dispose ToastManager if it's disposable
                 _toastManager.DismissAll();
             }

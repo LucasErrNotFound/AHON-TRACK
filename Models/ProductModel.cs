@@ -19,6 +19,8 @@ namespace AHON_TRACK.Models
 
         public string? Description { get; set; }
         public decimal Price { get; set; }
+        public decimal? PurchasedPrice { get; set; }  // ⭐ ADD THIS
+        public decimal? MarkupPrice { get; set; }     // ⭐ ADD THIS
         public decimal? DiscountedPrice { get; set; }
         public string? ProductImageFilePath { get; set; }
         public string? ProductImageBase64 { get; set; }
