@@ -106,6 +106,7 @@ public partial class ServiceProvider
         var connectionString = ConnectionStringFactory();
         var toastManager = GetService<ToastManager>();
         var productService = GetService<IProductService>();
+        var supplierService = GetService<ISupplierService>();
 
         return new PurchaseOrderService(connectionString, toastManager, productService);
     }

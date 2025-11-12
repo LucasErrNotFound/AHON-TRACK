@@ -687,7 +687,9 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             Category = model.Category ?? "",
             CurrentStock = model.CurrentStock,
             Price = model.Price,
-            Supplier = model.SupplierName ?? "None", // ✅ Use SupplierName from join
+            PurchasedPrice = model.PurchasedPrice,    // ⭐ ADD THIS
+            MarkupPrice = model.MarkupPrice,          // ⭐ ADD THIS
+            Supplier = model.SupplierName ?? "None",
             Expiry = model.ExpiryDate,
             Status = model.Status ?? "",
             Description = model.Description ?? "",
@@ -723,6 +725,8 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
 }
 
 // ProductStock class remains the same as in your document
+// ⭐ FIX: In ProductStockViewModel.cs - Update the ProductStock class properties
+
 public partial class ProductStock : ObservableObject
 {
     [ObservableProperty]
@@ -745,6 +749,12 @@ public partial class ProductStock : ObservableObject
 
     [ObservableProperty]
     private decimal _price;
+
+    [ObservableProperty]
+    private decimal? _purchasedPrice;  // ⭐ ADD ? to make it nullable
+
+    [ObservableProperty]
+    private decimal? _markupPrice;     // ⭐ ADD ? to make it nullable
 
     [ObservableProperty]
     private decimal? _discountedPrice;
