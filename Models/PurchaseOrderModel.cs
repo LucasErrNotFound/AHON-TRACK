@@ -29,6 +29,10 @@ namespace AHON_TRACK.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime? UpdatedAt { get; set; }
 
+        public bool SentToInventory { get; set; }
+        public DateTime? SentToInventoryDate { get; set; }
+        public int? SentToInventoryBy { get; set; }
+
         // Navigation property
         public List<PurchaseOrderItemModel> Items { get; set; } = new();
 
