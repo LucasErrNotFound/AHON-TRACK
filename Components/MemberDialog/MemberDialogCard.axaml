@@ -217,17 +217,9 @@
 						FontSize="16"
 						Height="40"
 						Classes="Secondary"
+						Content="View Consent Letter"
 						IsVisible="{CompiledBinding ShouldShowConsentButton}" 
 						Command="{CompiledBinding ViewConsentFileCommand}">
-						<StackPanel Orientation="Horizontal">
-							<Svg
-								Width="20"
-								Height="20"
-								VerticalAlignment="Center"
-								Margin="0,0,7,0"
-								Path="avares://AHON_TRACK/Assets/ManageEmployeesView/cancel-icon.svg"/>
-							<TextBlock Text="View Consent Letter" VerticalAlignment="Center"/>
-						</StackPanel>
 					</Button>
 					<Button
 						FontSize="16"
