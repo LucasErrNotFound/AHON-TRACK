@@ -323,6 +323,7 @@ namespace AHON_TRACK.Services
                         c.Age,
                         c.ContactNumber,
                         c.WalkinPackage AS Package,
+                        c.ConsentLetter,
                         r.CheckIn,
                         r.CheckOut
                     FROM WalkInRecords r
@@ -413,7 +414,7 @@ namespace AHON_TRACK.Services
 
             while (await reader.ReadAsync())
             {
-                var checkIn = reader.IsDBNull(7) ? (DateTime?)null : reader.GetDateTime(7);
+                var checkIn = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8);
 
                 walkIns.Add(new WalkInPerson
                 {
@@ -423,9 +424,10 @@ namespace AHON_TRACK.Services
                     Age = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
                     ContactNumber = reader.IsDBNull(5) ? "" : reader.GetString(5),
                     PackageType = reader.IsDBNull(6) ? "" : reader.GetString(6),
+                    LetterConsentPath = reader.IsDBNull(7) ? null : reader.GetString(7),
                     DateAttendance = checkIn?.Date,
                     CheckInTime = checkIn,
-                    CheckOutTime = reader.IsDBNull(8) ? null : reader.GetDateTime(8)
+                    CheckOutTime = reader.IsDBNull(9) ? null : reader.GetDateTime(9)
                 });
             }
 
