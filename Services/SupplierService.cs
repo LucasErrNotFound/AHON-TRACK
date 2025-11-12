@@ -159,7 +159,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@contactPerson", supplier.ContactPerson ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@email", supplier.Email ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@phoneNumber", supplier.PhoneNumber ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@address", supplier.Address ?? (object)DBNull.Value);  // Add this
+            cmd.Parameters.AddWithValue("@address", supplier.Address ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@products", supplier.Products ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@deliverySchedule", supplier.DeliverySchedule ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@deliveryPattern", supplier.DeliveryPattern ?? (object)DBNull.Value);
@@ -258,8 +258,8 @@ namespace AHON_TRACK.Services
                 await conn.OpenAsync();
 
                 using var cmd = new SqlCommand(
-                    @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Products, Status,
-                     DeliverySchedule, DeliveryPattern, ContractTerms, ContractPattern
+                    @"SELECT SupplierID, SupplierName, ContactPerson, Email, PhoneNumber, Address,
+                     Products, Status, DeliverySchedule, DeliveryPattern, ContractTerms
               FROM Suppliers 
               WHERE Products = @productType AND IsDeleted = 0
               ORDER BY SupplierName", conn);
@@ -286,17 +286,17 @@ namespace AHON_TRACK.Services
         {
             return new SupplierManagementModel
             {
-                SupplierID = reader.GetInt32(0),           // Column 0
-                SupplierName = reader.GetString(1),        // Column 1
-                ContactPerson = reader.GetString(2),       // Column 2
-                Email = reader.GetString(3),               // Column 3
-                PhoneNumber = reader.GetString(4),         // Column 4
-                Address = reader.IsDBNull(5) ? null : reader.GetString(5),  // Column 5
-                Products = reader.IsDBNull(6) ? null : reader.GetString(6),  // Column 6
-                Status = reader.GetString(7),              // Column 7
-                DeliverySchedule = reader.IsDBNull(8) ? null : reader.GetString(8),  // Column 8
-                DeliveryPattern = reader.IsDBNull(9) ? null : reader.GetString(9),   // Column 9
-                ContractTerms = reader.IsDBNull(10) ? null : reader.GetDateTime(10), // Column 10
+                SupplierID = reader.GetInt32(0),           // Column 0: SupplierID
+                SupplierName = reader.GetString(1),        // Column 1: SupplierName
+                ContactPerson = reader.GetString(2),       // Column 2: ContactPerson
+                Email = reader.GetString(3),               // Column 3: Email
+                PhoneNumber = reader.GetString(4),         // Column 4: PhoneNumber
+                Address = reader.IsDBNull(5) ? null : reader.GetString(5),      // Column 5: Address
+                Products = reader.IsDBNull(6) ? null : reader.GetString(6),     // Column 6: Products
+                Status = reader.GetString(7),              // Column 7: Status
+                DeliverySchedule = reader.IsDBNull(8) ? null : reader.GetString(8),  // Column 8: DeliverySchedule
+                DeliveryPattern = reader.IsDBNull(9) ? null : reader.GetString(9),   // Column 9: DeliveryPattern
+                ContractTerms = reader.IsDBNull(10) ? null : reader.GetDateTime(10), // Column 10: ContractTerms
                 IsSelected = false
             };
         }

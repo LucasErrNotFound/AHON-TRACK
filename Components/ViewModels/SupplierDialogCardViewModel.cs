@@ -76,6 +76,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable
         ContactPerson = supplier?.ContactPerson;
         Email = supplier?.Email;
         PhoneNumber = supplier?.PhoneNumber;
+        Address = supplier?.Address;
         // Place address here backend + database developer :)
         
         StatusFilterItems = ["Active", "Suspended"];
