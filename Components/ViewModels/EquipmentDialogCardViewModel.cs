@@ -24,7 +24,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private string[] _conditionFilterItems = ["Excellent", "Repairing", "Broken"];
 
     [ObservableProperty]
-    private string[] _statusFilterItems = ["Active", "Inactive", "Under Maintenance", "Retired", "On Loan"];
+    private string[] _statusFilterItems = ["Available", "Not Available"];
     
     [ObservableProperty]
     private string[] _filteredStatusItems = [];
@@ -55,7 +55,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private string? _brandName = string.Empty;
     private string? _category = string.Empty;
     private string? _condition = string.Empty;
-    private string? _status = "Active";
+    private string? _status = "Available";
     private string? _supplier = string.Empty;  // This binds to XAML
     private int? _quantity;
     private decimal? _purchasePrice;
@@ -101,7 +101,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
             if (oldValue != value)
             {
                 UpdateFilteredStatusItems();
-                ValidateStatusSelection();
+                AutoSelectStatus();
             }
         }
     }
@@ -281,7 +281,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         BrandName = equipment?.BrandName;
         Category = equipment?.Category;
         Condition = equipment?.Condition;
-        Status = equipment?.Status ?? "Active";
+        Status = equipment?.Status ?? "Available";
         Quantity = equipment?.Quantity;
         PurchasePrice = equipment?.PurchasedPrice;
         PurchasedDate = equipment?.PurchasedDate;
@@ -295,7 +295,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         // Set condition first (this will trigger status filtering)
         Condition = equipment?.Condition;
         // Then set status
-        Status = equipment?.Status ?? "Active";
+        Status = equipment?.Status ?? "Available";
 
         // Set the supplier NAME (not ID) to match the XAML binding
         if (equipment?.SupplierID.HasValue == true)
@@ -389,24 +389,37 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
             return;
         }
 
-        var allowedStatuses = Condition switch
+        FilteredStatusItems = Condition switch
         {
-            "Excellent" => new[] { "Active", "Inactive", "On Loan" },
-            "Repairing" => new[] { "Under Maintenance", "Inactive" },
-            "Broken" => new[] { "Retired", "Inactive", "Under Maintenance" },
+            "Excellent" => new[] { "Available" },
+            "Repairing" or "Broken" => new[] { "Not Available" },
             _ => StatusFilterItems
         };
-
-        FilteredStatusItems = allowedStatuses;
     }
 
     private void ValidateStatusSelection()
     {
         if (!string.IsNullOrEmpty(Status) && !FilteredStatusItems.Contains(Status))
         {
-            // Reset to first valid option or default to Inactive
-            Status = FilteredStatusItems.FirstOrDefault() ?? "Inactive";
+            // Reset to first valid option or default to Not Available 
+            Status = FilteredStatusItems.FirstOrDefault() ?? "Not Available";
         }
+    }
+    
+    private void AutoSelectStatus()
+    {
+        if (string.IsNullOrEmpty(Condition))
+        {
+            Status = "Available"; // Default
+            return;
+        }
+
+        Status = Condition switch
+        {
+            "Excellent" => "Available",
+            "Repairing" or "Broken" => "Not Available",
+            _ => "Available"
+        };
     }
 
     [RelayCommand]
@@ -437,7 +450,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         BrandName = string.Empty;
         Category = string.Empty;
         Condition = string.Empty;
-        Status = "Active";
+        Status = "Available";
         Supplier = string.Empty;
         Quantity = null;
         PurchasePrice = null;

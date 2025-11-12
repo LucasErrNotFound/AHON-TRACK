@@ -21,7 +21,7 @@ public class StatusAndSelectedToDeleteEnabledConverter : IMultiValueConverter
 
         if (!rowStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase) && 
             !rowStatus.Equals("Suspended", StringComparison.OrdinalIgnoreCase) &&
-            !rowStatus.Equals("Retired", StringComparison.OrdinalIgnoreCase) &&
+            !rowStatus.Equals("Not Available", StringComparison.OrdinalIgnoreCase) &&
             !rowStatus.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase))
             return false;
 
@@ -32,7 +32,7 @@ public class StatusAndSelectedToDeleteEnabledConverter : IMultiValueConverter
         // Only allow if the currently selected member/supplier/product has matching status
         return selectedStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase) ||
                selectedStatus.Equals("Suspended", StringComparison.OrdinalIgnoreCase) ||
-               selectedStatus.Equals("Retired", StringComparison.OrdinalIgnoreCase) ||
+               selectedStatus.Equals("Not Available", StringComparison.OrdinalIgnoreCase) ||
                selectedStatus.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase);
     }
 

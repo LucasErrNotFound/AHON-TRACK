@@ -32,10 +32,10 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     private string[] _conditionFilterItems = ["All", "Excellent", "Repairing", "Broken"];
 
     [ObservableProperty]
-    private string[] _statusFilterItems = ["All", "Active", "Inactive", "Under Maintenance", "Retired", "On Loan"];
+    private string[] _statusFilterItems = ["All", "Available", "Not Available"];
 
     [ObservableProperty]
-    private string[] _filteredStatusFilterItems = ["All", "Active", "Inactive", "Under Maintenance", "Retired", "On Loan"];
+    private string[] _filteredStatusFilterItems = ["All", "Available", "Not Available"];
     
     [ObservableProperty]
     private string _selectedConditionFilterItem = "All";
@@ -762,9 +762,9 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         {
             var allowedStatuses = SelectedConditionFilterItem switch
             {
-                "Excellent" => new[] { "All", "Active", "Inactive", "On Loan" },
-                "Repairing" => new[] { "All", "Under Maintenance", "Inactive" },
-                "Broken" => new[] { "All", "Retired", "Inactive", "Under Maintenance" },
+                "Excellent" => new[] { "All", "Available" },
+                "Repairing" => new[] { "All", "Not Available" },
+                "Broken" => new[] { "All", "Not Available" },
                 _ => StatusFilterItems
             };
 
@@ -786,14 +786,14 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             if (selectedEquipments.Count == 0) return false;
 
             if (SelectedEquipment?.Status != null &&
-                !SelectedEquipment.Status.Equals("Retired", StringComparison.OrdinalIgnoreCase))
+                !SelectedEquipment.Status.Equals("Not Available", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
             return selectedEquipments.All(equipment 
                 => equipment.Status != null && 
-                   equipment.Status.Equals("Retired", StringComparison.OrdinalIgnoreCase));
+                   equipment.Status.Equals("Not Available", StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -966,31 +966,22 @@ public partial class Equipment : ObservableObject
     // Status styling
     public IBrush StatusForeground => Status?.ToLowerInvariant() switch
     {
-        "active" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
-        "inactive" => new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-        "under maintenance" => new SolidColorBrush(Color.FromRgb(251, 146, 60)),
-        "retired" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
-        "on loan" => new SolidColorBrush(Color.FromRgb(59, 130, 246)),
+        "available" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
+        "not available" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
         _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
     };
 
     public IBrush StatusBackground => Status?.ToLowerInvariant() switch
     {
-        "active" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
-        "inactive" => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139)),
-        "under maintenance" => new SolidColorBrush(Color.FromArgb(25, 251, 146, 60)),
-        "retired" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
-        "on loan" => new SolidColorBrush(Color.FromArgb(25, 59, 130, 246)),
+        "available" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
+        "not available" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
     };
 
     public string? StatusDisplayText => Status?.ToLowerInvariant() switch
     {
-        "active" => "● Active",
-        "inactive" => "● Inactive",
-        "under maintenance" => "● Under Maintenance",
-        "retired" => "● Retired",
-        "on loan" => "● On Loan",
+        "available" => "● Available",
+        "not available" => "● Not Available",
         _ => Status
     };
 
