@@ -703,35 +703,53 @@ namespace AHON_TRACK.Services
                     int updatedCount = 0;
                     int notFoundCount = 0;
                     var updateDetails = new StringBuilder();
+                    var notFoundProducts = new List<string>();
 
-                    // Update product stock for each item
+                    // ⭐ NEW: Process each item - update existing or track missing
                     foreach (var item in po.Items)
                     {
                         Console.WriteLine($"[SendToInventoryAsync] Processing item: {item.ItemName}, Qty: {item.Quantity}");
 
                         var (updated, oldStock, newStock) = await UpdateProductStockFromPOAsync(conn, transaction, item);
+
                         if (updated)
                         {
                             updatedCount++;
-                            updateDetails.AppendLine($"  ✓ {item.ItemName}: {oldStock} → {newStock} (+{item.Quantity})");
+                            updateDetails.AppendLine($"  ✓ {item.ItemName}: {oldStock} → {newStock} (+{item.Quantity} {item.Unit})");
                             Console.WriteLine($"  ✓ Updated successfully: {oldStock} → {newStock}");
                         }
                         else
                         {
                             notFoundCount++;
+                            notFoundProducts.Add(item.ItemName);
                             updateDetails.AppendLine($"  ✗ {item.ItemName}: Not found in inventory");
                             Console.WriteLine($"  ✗ Product not found in inventory");
                         }
                     }
 
-                    // ⭐ MARK PO as sent to inventory
+                    // ⭐ CRITICAL: Check if there are products that need to be added first
+                    if (notFoundCount > 0)
+                    {
+                        transaction.Rollback();
+
+                        var notFoundList = string.Join("\n• ", notFoundProducts);
+                        var message = $"Cannot send to inventory. The following products don't exist:\n\n• {notFoundList}\n\nPlease add these products first, then try again.";
+
+                        ShowToast("Products Not Found",
+                            $"{notFoundCount} product(s) not found in inventory. Please add them first.",
+                            ToastType.Warning);
+
+                        Console.WriteLine($"[ABORT] {notFoundCount} products not found");
+                        return (false, message);
+                    }
+
+                    // ⭐ MARK PO as sent to inventory (only if all products exist)
                     const string markSentQuery = @"
-                        UPDATE PurchaseOrders 
-                        SET SentToInventory = 1,
-                            SentToInventoryDate = GETDATE(),
-                            SentToInventoryBy = @employeeId,
-                            UpdatedAt = GETDATE()
-                        WHERE PurchaseOrderID = @poId";
+                UPDATE PurchaseOrders 
+                SET SentToInventory = 1,
+                    SentToInventoryDate = GETDATE(),
+                    SentToInventoryBy = @employeeId
+                WHERE PurchaseOrderID = @poId";
 
                     using (var cmd = new SqlCommand(markSentQuery, conn, transaction))
                     {
@@ -752,16 +770,13 @@ namespace AHON_TRACK.Services
 
                     transaction.Commit();
 
-                    var message = notFoundCount > 0
-                        ? $"{updatedCount} items sent to inventory. {notFoundCount} items not found in products."
-                        : $"All {updatedCount} items successfully sent to inventory.";
-
-                    ShowToast("Sent to Inventory", message, ToastType.Success);
-                    Console.WriteLine($"[SUCCESS] {message}");
+                    var successMessage = $"All {updatedCount} items successfully sent to inventory and stock updated.";
+                    ShowToast("Sent to Inventory", successMessage, ToastType.Success);
+                    Console.WriteLine($"[SUCCESS] {successMessage}");
 
                     DashboardEventService.Instance.NotifyProductUpdated();
 
-                    return (true, message);
+                    return (true, successMessage);
                 }
                 catch
                 {
@@ -785,9 +800,9 @@ namespace AHON_TRACK.Services
             {
                 // Get current supplier data
                 const string getSupplierQuery = @"
-                    SELECT Products, DeliverySchedule 
-                    FROM Suppliers 
-                    WHERE SupplierID = @supplierId";
+            SELECT Products, DeliverySchedule 
+            FROM Suppliers 
+            WHERE SupplierID = @supplierId";
 
                 string currentProducts = null;
                 string currentDeliverySchedule = null;
@@ -825,11 +840,10 @@ namespace AHON_TRACK.Services
 
                 // Update supplier
                 const string updateQuery = @"
-                    UPDATE Suppliers 
-                    SET Products = @products,
-                        DeliverySchedule = @deliverySchedule,
-                        UpdatedAt = GETDATE()
-                    WHERE SupplierID = @supplierId";
+            UPDATE Suppliers 
+            SET Products = @products,
+                DeliverySchedule = @deliverySchedule
+            WHERE SupplierID = @supplierId";
 
                 using var updateCmd = new SqlCommand(updateQuery, conn, transaction);
                 updateCmd.Parameters.AddWithValue("@supplierId", supplierId);
@@ -851,7 +865,10 @@ namespace AHON_TRACK.Services
         private async Task<(bool Success, int OldStock, int NewStock)> UpdateProductStockFromPOAsync(
             SqlConnection conn, SqlTransaction transaction, PurchaseOrderItemModel item)
         {
-            const string findQuery = "SELECT ProductID, CurrentStock FROM Products WHERE ProductName = @itemName AND IsDeleted = 0";
+            const string findQuery = @"
+        SELECT ProductID, CurrentStock 
+        FROM Products 
+        WHERE ProductName = @itemName AND IsDeleted = 0";
 
             using var findCmd = new SqlCommand(findQuery, conn, transaction);
             findCmd.Parameters.AddWithValue("@itemName", item.ItemName);
@@ -876,11 +893,10 @@ namespace AHON_TRACK.Services
 
                 // Update existing product stock
                 const string updateQuery = @"
-                    UPDATE Products 
-                    SET CurrentStock = @newStock,
-                        Status = CASE WHEN @newStock > 0 THEN 'In Stock' ELSE 'Out Of Stock' END,
-                        UpdatedAt = GETDATE()
-                    WHERE ProductID = @productId";
+            UPDATE Products 
+            SET CurrentStock = @newStock,
+                Status = CASE WHEN @newStock > 0 THEN 'In Stock' ELSE 'Out Of Stock' END
+            WHERE ProductID = @productId";
 
                 using var updateCmd = new SqlCommand(updateQuery, conn, transaction);
                 updateCmd.Parameters.AddWithValue("@productId", productId);

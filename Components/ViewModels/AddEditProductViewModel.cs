@@ -223,7 +223,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         try
         {
-            // ⭐ Get all existing products to filter them out
+            // ⭐ STEP 1: Get all existing products to filter them out
             var existingProductsResult = await _productService.GetAllProductsAsync();
             var existingProductNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -239,6 +239,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 Console.WriteLine($"📋 Found {existingProductNames.Count} existing products to filter out");
             }
 
+            // ⭐ STEP 2: Get all purchase orders
             var poResult = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
             if (!poResult.Success || poResult.PurchaseOrders == null)
             {
@@ -246,18 +247,23 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 return;
             }
 
-            var deliveredPaidOrders = poResult.PurchaseOrders
+            // ⭐ STEP 3: Filter to only get Delivered + Paid orders that HAVEN'T been sent to inventory yet
+            var deliveredPaidNotSentOrders = poResult.PurchaseOrders
                 .Where(po => po.ShippingStatus?.Equals("Delivered", StringComparison.OrdinalIgnoreCase) == true &&
                             po.PaymentStatus?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true &&
+                            !po.SentToInventory && // ⭐ KEY: Only orders NOT yet sent to inventory
                             po.SupplierID.HasValue &&
                             po.Items != null && po.Items.Count > 0)
                 .ToList();
+
+            Console.WriteLine($"🔍 Found {deliveredPaidNotSentOrders.Count} delivered+paid orders that haven't been sent to inventory");
 
             _supplierProductsMap.Clear();
             _productPricesMap.Clear();
             _productQuantitiesMap.Clear();
 
-            foreach (var po in deliveredPaidOrders)
+            // ⭐ STEP 4: Process each order and filter out existing products
+            foreach (var po in deliveredPaidNotSentOrders)
             {
                 if (!po.SupplierID.HasValue) continue;
 
@@ -294,11 +300,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             }
 
             ProductItems = ["Select supplier first"];
-            Console.WriteLine($"✅ Loaded products from POs, filtered {existingProductNames.Count} existing items");
+
+            var totalNewProducts = _supplierProductsMap.Values.Sum(list => list.Count);
+            Console.WriteLine($"✅ Loaded {totalNewProducts} NEW products from unsent POs (filtered {existingProductNames.Count} existing products)");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading products: {ex.Message}");
+            Console.WriteLine($"❌ Error loading products: {ex.Message}");
             ProductItems = ["No products available"];
         }
     }
@@ -330,15 +338,16 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             ProductItems = sortedProducts.ToArray();
             SelectedProductItem = ProductItems.FirstOrDefault();
 
-            Console.WriteLine($"✅ Loaded {products.Count} available products for {selectedSupplier}");
+            Console.WriteLine($"✅ Loaded {products.Count} NEW products for {selectedSupplier}");
         }
         else
         {
-            ProductItems = ["No new products available"];
+            ProductItems = ["No new products - all items already in inventory"];
             SelectedProductItem = null;
-            Console.WriteLine($"ℹ️ All products from {selectedSupplier} are already in inventory");
+            Console.WriteLine($"ℹ️ No new products for {selectedSupplier} - all have been added or sent to inventory");
         }
     }
+
 
     partial void OnSelectedProductItemChanged(string? value)
     {

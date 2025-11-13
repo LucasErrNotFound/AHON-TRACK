@@ -528,7 +528,7 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
 
         _dialogManager.CreateDialog(
             "Send to Inventory",
-            "This will add all items from this purchase order to your product inventory. Continue?")
+            "This will add quantities from this purchase order to your existing products.\n\nNote: Products that don't exist in inventory will need to be added first.")
             .WithPrimaryButton("Yes, Send to Inventory", async () => await OnConfirmSendToInventory())
             .WithCancelButton("Cancel")
             .WithMaxWidth(512)
@@ -548,11 +548,11 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
 
             if (result.Success)
             {
-                // ? NEW: Update the sent status
+                // ? SUCCESS: Update the sent status
                 SentToInventory = true;
                 SentToInventoryDate = DateTime.Now;
 
-                _toastManager.CreateToast("Sent to Inventory")
+                _toastManager.CreateToast("? Sent to Inventory")
                     .WithContent(result.Message)
                     .DismissOnClick()
                     .ShowSuccess();
@@ -562,7 +562,8 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
             }
             else
             {
-                _toastManager.CreateToast("Failed to Send")
+                // ?? FAILURE: Show detailed message
+                _toastManager.CreateToast("Cannot Send to Inventory")
                     .WithContent(result.Message)
                     .DismissOnClick()
                     .ShowError();
@@ -580,6 +581,7 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
             IsLoading = false;
         }
     }
+
 
     [RelayCommand]
     private void CancelOrder()
