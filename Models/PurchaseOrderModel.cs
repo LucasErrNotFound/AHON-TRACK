@@ -11,51 +11,49 @@ namespace AHON_TRACK.Models
     /// </summary>
     public class PurchaseOrderModel
     {
+        // ... existing properties ...
+
         public int PurchaseOrderID { get; set; }
-        public string PONumber { get; set; } = string.Empty;
+        public string PONumber { get; set; }
         public int? SupplierID { get; set; }
         public string? SupplierName { get; set; }
-        public DateTime OrderDate { get; set; } = DateTime.Today;
+        public DateTime OrderDate { get; set; }
         public DateTime ExpectedDeliveryDate { get; set; }
-        public string ShippingStatus { get; set; } = "Pending";
-        public string PaymentStatus { get; set; } = "Unpaid";
+        public string ShippingStatus { get; set; }
+        public string PaymentStatus { get; set; }
         public string? InvoiceNumber { get; set; }
         public decimal Subtotal { get; set; }
-        public decimal TaxRate { get; set; } = 0.12m; // 12% VAT
+        public decimal TaxRate { get; set; }
         public decimal TaxAmount { get; set; }
         public decimal Total { get; set; }
-        public bool IsDeleted { get; set; }
         public int? CreatedByEmployeeID { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public bool IsDeleted { get; set; }
 
+        // ⭐ NEW: Sent to inventory tracking fields
         public bool SentToInventory { get; set; }
         public DateTime? SentToInventoryDate { get; set; }
         public int? SentToInventoryBy { get; set; }
 
-        // Navigation property
         public List<PurchaseOrderItemModel> Items { get; set; } = new();
 
-        // Business logic properties
+        // ⭐ UPDATED: Include SentToInventory check
         public bool CanSendToInventory =>
-            ShippingStatus == "Delivered" && PaymentStatus == "Paid";
-
-        public bool IsCompleted => ShippingStatus == "Delivered" && PaymentStatus == "Paid";
-
-        public bool IsCancelled => ShippingStatus == "Cancelled" || PaymentStatus == "Cancelled";
+            !SentToInventory && // ⭐ Prevent duplicate sends
+            ShippingStatus?.Equals("Delivered", StringComparison.OrdinalIgnoreCase) == true &&
+            PaymentStatus?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true;
     }
 
-    /// <summary>
-    /// Represents an item in a Purchase Order
-    /// </summary>
     public class PurchaseOrderItemModel
     {
         public int POItemID { get; set; }
         public int PurchaseOrderID { get; set; }
-        public string ItemName { get; set; } = string.Empty;
-        public string Unit { get; set; } = "pcs";
+        public string ItemName { get; set; }
+        public string Unit { get; set; }
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
+
         public decimal LineTotal => Quantity * Price;
     }
 }

@@ -669,17 +669,13 @@ namespace AHON_TRACK.Services
                 Console.WriteLine($"  - Already Sent: {po.SentToInventory}");
                 Console.WriteLine($"  - Items: {po.Items?.Count ?? 0}");
 
-                // ⭐ CRITICAL CHECK: Prevent duplicate sends
+                // ⭐ CHECK: Prevent duplicate sends
                 if (po.SentToInventory)
                 {
                     var sentDate = po.SentToInventoryDate?.ToString("yyyy-MM-dd HH:mm") ?? "Unknown";
-                    var sentBy = po.SentToInventoryBy?.ToString() ?? "Unknown";
-
                     ShowToast("Already Sent",
                         $"This purchase order was already sent to inventory on {sentDate}.",
                         ToastType.Warning);
-
-                    Console.WriteLine($"[BLOCKED] PO already sent on {sentDate} by user {sentBy}");
                     return (false, $"Purchase order already sent to inventory on {sentDate}");
                 }
 
@@ -707,30 +703,28 @@ namespace AHON_TRACK.Services
                     int updatedCount = 0;
                     int notFoundCount = 0;
                     var updateDetails = new StringBuilder();
-                    updateDetails.AppendLine($"Purchase Order: {po.PONumber}");
 
-                    // ⭐ Process each item and update stock
+                    // Update product stock for each item
                     foreach (var item in po.Items)
                     {
-                        Console.WriteLine($"[Processing] {item.ItemName} - Qty: {item.Quantity} {item.Unit}");
+                        Console.WriteLine($"[SendToInventoryAsync] Processing item: {item.ItemName}, Qty: {item.Quantity}");
 
                         var (updated, oldStock, newStock) = await UpdateProductStockFromPOAsync(conn, transaction, item);
-
                         if (updated)
                         {
                             updatedCount++;
-                            updateDetails.AppendLine($"  ✓ {item.ItemName}: {oldStock} → {newStock} (+{item.Quantity} {item.Unit})");
-                            Console.WriteLine($"  ✓ Stock updated: {oldStock} → {newStock}");
+                            updateDetails.AppendLine($"  ✓ {item.ItemName}: {oldStock} → {newStock} (+{item.Quantity})");
+                            Console.WriteLine($"  ✓ Updated successfully: {oldStock} → {newStock}");
                         }
                         else
                         {
                             notFoundCount++;
                             updateDetails.AppendLine($"  ✗ {item.ItemName}: Not found in inventory");
-                            Console.WriteLine($"  ✗ Product not found");
+                            Console.WriteLine($"  ✗ Product not found in inventory");
                         }
                     }
 
-                    // ⭐ CRITICAL: Mark PO as sent to inventory (prevents re-sending)
+                    // ⭐ MARK PO as sent to inventory
                     const string markSentQuery = @"
                         UPDATE PurchaseOrders 
                         SET SentToInventory = 1,
@@ -743,24 +737,21 @@ namespace AHON_TRACK.Services
                     {
                         cmd.Parameters.AddWithValue("@poId", poId);
                         cmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-                        int rowsAffected = await cmd.ExecuteNonQueryAsync();
-                        Console.WriteLine($"[Database] Marked PO as sent: {rowsAffected} rows affected");
+                        await cmd.ExecuteNonQueryAsync();
                     }
 
-                    // Update supplier's products list
+                    // Update supplier's products
                     if (po.SupplierID.HasValue)
                     {
                         await UpdateSupplierProductsAsync(conn, transaction, po.SupplierID.Value, po.Items);
                     }
 
-                    // Log action with full details
+                    // Log action with details
                     await LogActionAsync(conn, transaction, "INVENTORY",
                         $"Sent PO {po.PONumber} to inventory\n{updateDetails}", true);
 
                     transaction.Commit();
 
-                    // Prepare success message
                     var message = notFoundCount > 0
                         ? $"{updatedCount} items sent to inventory. {notFoundCount} items not found in products."
                         : $"All {updatedCount} items successfully sent to inventory.";
@@ -768,80 +759,22 @@ namespace AHON_TRACK.Services
                     ShowToast("Sent to Inventory", message, ToastType.Success);
                     Console.WriteLine($"[SUCCESS] {message}");
 
-                    // Notify UI to refresh
                     DashboardEventService.Instance.NotifyProductUpdated();
 
                     return (true, message);
                 }
-                catch (Exception ex)
+                catch
                 {
                     transaction.Rollback();
-                    Console.WriteLine($"[ERROR] Transaction rolled back: {ex.Message}");
+                    Console.WriteLine("[ERROR] Transaction rolled back");
                     throw;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] Exception: {ex.Message}\n{ex.StackTrace}");
+                Console.WriteLine($"[ERROR] Exception in SendToInventoryAsync: {ex.Message}");
                 ShowToast("Error", $"Failed to send to inventory: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}");
-            }
-        }
-
-        private async Task<(bool Success, int OldStock, int NewStock)> UpdateProductStockFromPOAsync(
-            SqlConnection conn, SqlTransaction transaction, PurchaseOrderItemModel item)
-        {
-            // Try to find existing product by name
-            const string findQuery = @"
-                SELECT ProductID, CurrentStock, ProductName 
-                FROM Products 
-                WHERE ProductName = @itemName AND IsDeleted = 0";
-
-            using var findCmd = new SqlCommand(findQuery, conn, transaction);
-            findCmd.Parameters.AddWithValue("@itemName", item.ItemName);
-
-            using var reader = await findCmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                var productId = reader.GetInt32(0);
-                var currentStock = reader.GetInt32(1);
-                var productName = reader.GetString(2);
-                reader.Close();
-
-                // ⭐ CONVERT: Handle unit conversions properly
-                int quantityToAdd = ConvertPOQuantityToStock(item.Quantity, item.Unit);
-
-                // ⭐ ACCUMULATE: Add to existing stock (this allows multiple POs with same item)
-                var newStock = currentStock + quantityToAdd;
-
-                Console.WriteLine($"📦 Stock Update: {productName}");
-                Console.WriteLine($"   - Current Stock: {currentStock}");
-                Console.WriteLine($"   - Adding: {quantityToAdd} (from {item.Quantity} {item.Unit})");
-                Console.WriteLine($"   - New Total: {newStock}");
-
-                // Update product stock
-                const string updateQuery = @"
-                    UPDATE Products 
-                    SET CurrentStock = @newStock,
-                        Status = CASE 
-                            WHEN @newStock > 0 THEN 'In Stock' 
-                            ELSE 'Out Of Stock' 
-                        END,
-                        UpdatedAt = GETDATE()
-                    WHERE ProductID = @productId";
-
-                using var updateCmd = new SqlCommand(updateQuery, conn, transaction);
-                updateCmd.Parameters.AddWithValue("@productId", productId);
-                updateCmd.Parameters.AddWithValue("@newStock", newStock);
-
-                await updateCmd.ExecuteNonQueryAsync();
-                return (true, currentStock, newStock);
-            }
-            else
-            {
-                reader.Close();
-                Console.WriteLine($"⚠️ Warning: Product '{item.ItemName}' not found in inventory");
-                return (false, 0, 0);
             }
         }
 
@@ -856,8 +789,8 @@ namespace AHON_TRACK.Services
                     FROM Suppliers 
                     WHERE SupplierID = @supplierId";
 
-                string? currentProducts = null;
-                string? currentDeliverySchedule = null;
+                string currentProducts = null;
+                string currentDeliverySchedule = null;
 
                 using (var cmd = new SqlCommand(getSupplierQuery, conn, transaction))
                 {
@@ -876,11 +809,19 @@ namespace AHON_TRACK.Services
                     ? new List<string>()
                     : currentProducts.Split(',').Select(p => p.Trim()).ToList();
 
-                var newProducts = items.Select(i => i.ItemName).Where(name => !string.IsNullOrEmpty(name)).ToList();
+                var newProducts = items.Select(i => i.ItemName).ToList();
 
                 // Merge products (avoid duplicates)
-                var allProducts = existingProducts.Union(newProducts).Distinct().OrderBy(p => p).ToList();
+                var allProducts = existingProducts.Union(newProducts).Distinct().ToList();
                 var updatedProducts = string.Join(", ", allProducts);
+
+                // Determine delivery schedule
+                string updatedDeliverySchedule = currentDeliverySchedule;
+
+                if (string.IsNullOrWhiteSpace(updatedDeliverySchedule))
+                {
+                    updatedDeliverySchedule = "every 7 days";
+                }
 
                 // Update supplier
                 const string updateQuery = @"
@@ -893,17 +834,66 @@ namespace AHON_TRACK.Services
                 using var updateCmd = new SqlCommand(updateQuery, conn, transaction);
                 updateCmd.Parameters.AddWithValue("@supplierId", supplierId);
                 updateCmd.Parameters.AddWithValue("@products", updatedProducts);
-                updateCmd.Parameters.AddWithValue("@deliverySchedule", currentDeliverySchedule ?? "Every 7 days");
+                updateCmd.Parameters.AddWithValue("@deliverySchedule", updatedDeliverySchedule);
 
                 await updateCmd.ExecuteNonQueryAsync();
 
-                Console.WriteLine($"[UpdateSupplierProducts] Updated supplier {supplierId}");
+                Console.WriteLine($"[UpdateSupplierProductsAsync] Updated supplier {supplierId}");
                 Console.WriteLine($"  - Products: {updatedProducts}");
+                Console.WriteLine($"  - Delivery Schedule: {updatedDeliverySchedule}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[UpdateSupplierProducts] Error: {ex.Message}");
-                // Don't throw - we don't want to rollback the entire transaction if supplier update fails
+                Console.WriteLine($"[UpdateSupplierProductsAsync] Error: {ex.Message}");
+            }
+        }
+
+        private async Task<(bool Success, int OldStock, int NewStock)> UpdateProductStockFromPOAsync(
+            SqlConnection conn, SqlTransaction transaction, PurchaseOrderItemModel item)
+        {
+            const string findQuery = "SELECT ProductID, CurrentStock FROM Products WHERE ProductName = @itemName AND IsDeleted = 0";
+
+            using var findCmd = new SqlCommand(findQuery, conn, transaction);
+            findCmd.Parameters.AddWithValue("@itemName", item.ItemName);
+
+            using var reader = await findCmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                var productId = reader.GetInt32(0);
+                var currentStock = reader.GetInt32(1);
+                reader.Close();
+
+                // ⭐ CONVERT: Handle unit conversions properly
+                int quantityToAdd = ConvertPOQuantityToStock(item.Quantity, item.Unit);
+
+                // Calculate new stock
+                var newStock = currentStock + quantityToAdd;
+
+                Console.WriteLine($"📦 Stock Update: {item.ItemName}");
+                Console.WriteLine($"   - Current: {currentStock}");
+                Console.WriteLine($"   - Adding: {quantityToAdd} (from {item.Quantity} {item.Unit})");
+                Console.WriteLine($"   - New Total: {newStock}");
+
+                // Update existing product stock
+                const string updateQuery = @"
+                    UPDATE Products 
+                    SET CurrentStock = @newStock,
+                        Status = CASE WHEN @newStock > 0 THEN 'In Stock' ELSE 'Out Of Stock' END,
+                        UpdatedAt = GETDATE()
+                    WHERE ProductID = @productId";
+
+                using var updateCmd = new SqlCommand(updateQuery, conn, transaction);
+                updateCmd.Parameters.AddWithValue("@productId", productId);
+                updateCmd.Parameters.AddWithValue("@newStock", newStock);
+
+                await updateCmd.ExecuteNonQueryAsync();
+                return (true, currentStock, newStock);
+            }
+            else
+            {
+                reader.Close();
+                Console.WriteLine($"⚠️ Warning: Product '{item.ItemName}' not found in inventory");
+                return (false, 0, 0);
             }
         }
 
@@ -935,7 +925,6 @@ namespace AHON_TRACK.Services
             }
             catch
             {
-                // Fallback to random number if database query fails
                 var random = new Random();
                 var randomNumber = random.Next(100000, 999999);
                 return $"PO-{DateTime.Now.Year}-{randomNumber}";
@@ -994,12 +983,10 @@ namespace AHON_TRACK.Services
                 PurchaseOrderID = reader.GetInt32(reader.GetOrdinal("PurchaseOrderID")),
                 PONumber = reader.GetString(reader.GetOrdinal("PONumber")),
 
-                // ⭐ FIX: Proper null handling for SupplierID
                 SupplierID = reader.IsDBNull(reader.GetOrdinal("SupplierID"))
                     ? null
                     : reader.GetInt32(reader.GetOrdinal("SupplierID")),
 
-                // ⭐ FIX: Proper null handling for SupplierName
                 SupplierName = reader.IsDBNull(reader.GetOrdinal("SupplierName"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("SupplierName")),
@@ -1009,7 +996,6 @@ namespace AHON_TRACK.Services
                 ShippingStatus = reader.GetString(reader.GetOrdinal("ShippingStatus")),
                 PaymentStatus = reader.GetString(reader.GetOrdinal("PaymentStatus")),
 
-                // ⭐ FIX: Proper null handling for InvoiceNumber
                 InvoiceNumber = reader.IsDBNull(reader.GetOrdinal("InvoiceNumber"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("InvoiceNumber")),
@@ -1019,19 +1005,17 @@ namespace AHON_TRACK.Services
                 TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
                 Total = reader.GetDecimal(reader.GetOrdinal("Total")),
 
-                // ⭐ FIX: Proper null handling for CreatedByEmployeeID
                 CreatedByEmployeeID = reader.IsDBNull(reader.GetOrdinal("CreatedByEmployeeID"))
                     ? null
                     : reader.GetInt32(reader.GetOrdinal("CreatedByEmployeeID")),
 
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
 
-                // ⭐ FIX: Proper null handling for UpdatedAt
                 UpdatedAt = reader.IsDBNull(reader.GetOrdinal("UpdatedAt"))
                     ? null
                     : reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
 
-                // ⭐ CRITICAL: Handle SentToInventory tracking fields
+                // ⭐ NEW: Map sent to inventory fields
                 SentToInventory = reader.IsDBNull(reader.GetOrdinal("SentToInventory"))
                     ? false
                     : reader.GetBoolean(reader.GetOrdinal("SentToInventory")),
@@ -1087,7 +1071,7 @@ namespace AHON_TRACK.Services
             return unitLower switch
             {
                 "pcs" or "unit" or "piece" or "pieces" => (int)Math.Floor(quantity),
-                "box" or "pack" or "case" => (int)Math.Floor(quantity * 12), // Assume 12 per box
+                "box" or "pack" or "case" => (int)Math.Floor(quantity * 12),
                 "kg" or "kilogram" or "kilograms" => (int)Math.Floor(quantity),
                 "lbs" or "pound" or "pounds" => (int)Math.Floor(quantity),
                 "liter" or "liters" or "l" => (int)Math.Floor(quantity),

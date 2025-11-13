@@ -20,18 +20,6 @@ namespace AHON_TRACK.Components.ViewModels;
 public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParameters
 {
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSendToInventory))]
-    [NotifyPropertyChangedFor(nameof(SendToInventoryButtonText))]
-    [NotifyPropertyChangedFor(nameof(ShowInventorySentBadge))]
-    private bool _sentToInventory;
-
-    [ObservableProperty]
-    private DateTime? _sentToInventoryDate;
-
-    [ObservableProperty]
-    private int? _sentToInventoryBy;
-
-    [ObservableProperty]
     private ObservableCollection<Item> _items = [];
 
     [ObservableProperty]
@@ -56,12 +44,10 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     public bool IsInEditMode => !IsSaved && ViewContext == PurchaseOrderContext.AddPurchaseOrder;
     public bool IsInViewMode => IsSaved || ViewContext == PurchaseOrderContext.ViewPurchaseOrder;
 
-    // Only show supplier validation when creating NEW orders (not editing existing)
     public bool ShowSupplierValidation => ViewContext == PurchaseOrderContext.AddPurchaseOrder
                                           && !PurchaseOrderId.HasValue
                                           && SelectedSupplier == null;
 
-    // Always allow editing these fields when viewing an existing PO
     public bool CanEditFields => true;
 
     [ObservableProperty]
@@ -96,7 +82,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     [NotifyPropertyChangedFor(nameof(HasInvoice))]
     private string? _invoiceNumber;
 
-    // ? NEW: Supplier Selection
     [ObservableProperty]
     [Required(ErrorMessage = "Supplier is required")]
     [NotifyPropertyChangedFor(nameof(SupplierDisplayName))]
@@ -113,13 +98,31 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     [ObservableProperty]
     private bool _isLoading;
 
-    // Property to check if invoice exists
+    // ? NEW: Sent to inventory tracking
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSendToInventory))]
+    [NotifyPropertyChangedFor(nameof(SendToInventoryButtonText))]
+    [NotifyPropertyChangedFor(nameof(ShowInventorySentBadge))]
+    private bool _sentToInventory;
+
+    [ObservableProperty]
+    private DateTime? _sentToInventoryDate;
+
+    [ObservableProperty]
+    private int? _sentToInventoryBy;
+
     public bool HasInvoice => !string.IsNullOrWhiteSpace(InvoiceNumber);
 
-    // Property to enable/disable payment status control
     public bool IsPaymentStatusEnabled => HasInvoice;
 
-    // Add these UI helper properties:
+    // ? UPDATED: Include sentToInventory check
+    public bool CanSendToInventory =>
+        IsSaved &&
+        !SentToInventory && // ? NEW: Prevent sending if already sent
+        ShippingStatus?.Equals("Delivered", StringComparison.OrdinalIgnoreCase) == true &&
+        PaymentStatus?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true;
+
+    // ? NEW: UI helper properties
     public string SendToInventoryButtonText => SentToInventory
         ? "Already Sent to Inventory"
         : "Send to Inventory";
@@ -130,13 +133,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         ? $"Sent to inventory on {SentToInventoryDate.Value:MMM dd, yyyy 'at' h:mm tt}"
         : "Sent to inventory";
 
-    // ? NEW: Check if can send to inventory
-    public bool CanSendToInventory =>
-    IsSaved &&
-    !SentToInventory && // ? NEW: Prevent sending if already sent
-    ShippingStatus?.Equals("Delivered", StringComparison.OrdinalIgnoreCase) == true &&
-    PaymentStatus?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true;
-
     public string[] ShippingStatusOptions { get; } =
     [
         "Pending",
@@ -146,7 +142,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         "Cancelled"
     ];
 
-    // Full payment status options (when invoice exists)
     private readonly string[] _fullPaymentStatusOptions =
     [
         "Unpaid",
@@ -154,14 +149,12 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         "Cancelled"
     ];
 
-    // Limited payment status options (when no invoice)
     private readonly string[] _limitedPaymentStatusOptions =
     [
         "Unpaid",
         "Cancelled"
     ];
 
-    // Dynamic property that returns appropriate options based on invoice presence
     public string[] AvailablePaymentStatusOptions => HasInvoice
         ? _fullPaymentStatusOptions
         : _limitedPaymentStatusOptions;
@@ -414,11 +407,8 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         {
             IsLoading = true;
 
-            // For UPDATES: Use existing SupplierID if SelectedSupplier is null
-            // (This happens when viewing existing PO where supplier is shown as text)
             int? supplierIdToUse = SelectedSupplier?.ID;
 
-            // If updating existing PO and no supplier object, get SupplierID from loaded PO
             if (PurchaseOrderId.HasValue && supplierIdToUse == null && _purchaseOrderService != null)
             {
                 var existingPO = await _purchaseOrderService.GetPurchaseOrderByIdAsync(PurchaseOrderId.Value);
@@ -428,11 +418,10 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 }
             }
 
-            // Create PurchaseOrderModel
             var purchaseOrder = new PurchaseOrderModel
             {
                 PONumber = PoNumber,
-                SupplierID = supplierIdToUse, // Use the resolved SupplierID
+                SupplierID = supplierIdToUse,
                 OrderDate = DateTime.Now,
                 ExpectedDeliveryDate = DeliveryDate ?? DateTime.Now.AddDays(7),
                 ShippingStatus = string.IsNullOrWhiteSpace(ShippingStatus) ? "Pending" : ShippingStatus,
@@ -450,7 +439,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
 
             if (PurchaseOrderId.HasValue)
             {
-                // Update existing
                 purchaseOrder.PurchaseOrderID = PurchaseOrderId.Value;
                 var result = await _purchaseOrderService.UpdatePurchaseOrderAsync(purchaseOrder);
 
@@ -472,7 +460,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
             }
             else
             {
-                // Create new - validate supplier is required
                 if (supplierIdToUse == null)
                 {
                     _toastManager.CreateToast("Validation Error")
@@ -561,10 +548,17 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
 
             if (result.Success)
             {
+                // ? NEW: Update the sent status
+                SentToInventory = true;
+                SentToInventoryDate = DateTime.Now;
+
                 _toastManager.CreateToast("Sent to Inventory")
                     .WithContent(result.Message)
                     .DismissOnClick()
                     .ShowSuccess();
+
+                // Reload to get updated data
+                await LoadPurchaseOrderAsync(PurchaseOrderId.Value);
             }
             else
             {
@@ -601,18 +595,13 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     }
 
     [RelayCommand]
-    private void EditOrder()
+    private async Task EditOrder()
     {
-        // Don't set IsSaved to false immediately - this causes validation issues
-        // Instead, just allow editing of specific fields
-
+        IsSaved = false;
         _toastManager.CreateToast("Edit Mode")
             .WithContent("You can now edit the purchase order details")
             .DismissOnClick()
             .ShowInfo();
-
-        // Note: We keep IsSaved = true so supplier validation doesn't trigger
-        // Only allow editing invoice, shipping status, payment status, and delivery date
     }
 
     [RelayCommand]
@@ -634,10 +623,8 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         _pageManager.Navigate<SupplierManagementViewModel>();
     }
 
-    // New method to validate payment status changes
     partial void OnPaymentStatusChanging(string? value)
     {
-        // Prevent setting to "Paid" if no invoice exists
         if (value == "Paid" && !HasInvoice)
         {
             _toastManager.CreateToast("Payment Status Error")
@@ -645,7 +632,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 .DismissOnClick()
                 .ShowError();
 
-            // Keep current value or default to Unpaid
             PaymentStatus = string.IsNullOrWhiteSpace(PaymentStatus) ? "Unpaid" : PaymentStatus;
         }
     }
@@ -671,7 +657,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
 
     private bool ValidateOrder()
     {
-        // Only validate supplier when creating a brand new PO (not when editing existing)
         if (ViewContext == PurchaseOrderContext.AddPurchaseOrder && !PurchaseOrderId.HasValue && SelectedSupplier == null)
         {
             _toastManager.CreateToast("Validation Error")
@@ -723,7 +708,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
             return false;
         }
 
-        // Validate payment status against invoice
         if (PaymentStatus == "Paid" && !HasInvoice)
         {
             _toastManager.CreateToast("Validation Error")
@@ -790,21 +774,18 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         {
             bool statusesChanged = false;
 
-            // Reset payment status if it was "Paid"
             if (PaymentStatus == "Paid")
             {
                 PaymentStatus = "Unpaid";
                 statusesChanged = true;
             }
 
-            // Reset shipping status if it was changed from "Pending"
             if (!string.IsNullOrWhiteSpace(ShippingStatus) && ShippingStatus != "Pending")
             {
                 ShippingStatus = "Pending";
                 statusesChanged = true;
             }
 
-            // Show single notification for all changes
             if (statusesChanged)
             {
                 _toastManager.CreateToast("Statuses Reset")
@@ -817,7 +798,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
 
     partial void OnShippingStatusChanging(string? value)
     {
-        // Prevent changing from Pending if no invoice exists
         if (value != "Pending" && !HasInvoice && !string.IsNullOrWhiteSpace(value))
         {
             _toastManager.CreateToast("Shipping Status Error")

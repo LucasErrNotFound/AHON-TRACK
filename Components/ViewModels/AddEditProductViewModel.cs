@@ -223,6 +223,22 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
         try
         {
+            // ⭐ Get all existing products to filter them out
+            var existingProductsResult = await _productService.GetAllProductsAsync();
+            var existingProductNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (existingProductsResult.Success && existingProductsResult.Products != null)
+            {
+                foreach (var product in existingProductsResult.Products)
+                {
+                    if (!string.IsNullOrWhiteSpace(product.ProductName))
+                    {
+                        existingProductNames.Add(product.ProductName);
+                    }
+                }
+                Console.WriteLine($"📋 Found {existingProductNames.Count} existing products to filter out");
+            }
+
             var poResult = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
             if (!poResult.Success || poResult.PurchaseOrders == null)
             {
@@ -239,7 +255,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
             _supplierProductsMap.Clear();
             _productPricesMap.Clear();
-            _productQuantitiesMap.Clear(); // ⭐ Clear quantities map
+            _productQuantitiesMap.Clear();
 
             foreach (var po in deliveredPaidOrders)
             {
@@ -254,6 +270,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 {
                     var productName = item.ItemName;
 
+                    // ⭐ FILTER: Skip products that already exist in inventory
+                    if (existingProductNames.Contains(productName))
+                    {
+                        Console.WriteLine($"⏭️ Skipping '{productName}' - already exists in inventory");
+                        continue;
+                    }
+
                     // Add to products list if not already there
                     if (!_supplierProductsMap[po.SupplierID.Value].Contains(productName))
                     {
@@ -262,15 +285,16 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
 
                     var priceKey = $"{po.SupplierID.Value}_{productName}";
 
-                    // ⭐ Store the price (use latest price from most recent order)
+                    // Store the price (use latest price from most recent order)
                     _productPricesMap[priceKey] = item.Price;
 
-                    // ⭐ Store the quantity and unit
+                    // Store the quantity and unit
                     _productQuantitiesMap[priceKey] = (item.Quantity, item.Unit ?? "pcs");
                 }
             }
 
             ProductItems = ["Select supplier first"];
+            Console.WriteLine($"✅ Loaded products from POs, filtered {existingProductNames.Count} existing items");
         }
         catch (Exception ex)
         {
@@ -306,12 +330,13 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
             ProductItems = sortedProducts.ToArray();
             SelectedProductItem = ProductItems.FirstOrDefault();
 
-            Console.WriteLine($"✅ Loaded {products.Count} products for {selectedSupplier}");
+            Console.WriteLine($"✅ Loaded {products.Count} available products for {selectedSupplier}");
         }
         else
         {
-            ProductItems = ["No delivered products"];
+            ProductItems = ["No new products available"];
             SelectedProductItem = null;
+            Console.WriteLine($"ℹ️ All products from {selectedSupplier} are already in inventory");
         }
     }
 
