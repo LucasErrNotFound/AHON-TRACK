@@ -27,6 +27,7 @@
         <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.2" />
         <PackageReference Include="ShadUI" Version="0.1.5" />
         <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
+        <PackageReference Include="Sharprinter" Version="0.1.6" />
         <PackageReference Include="Svg.Controls.Skia.Avalonia" Version="11.3.0.4" />
         <PackageReference Include="HotAvalonia" Version="3.0.0" PrivateAssets="All" />
         <PackageReference Include="Jab" Version="0.11.0" PrivateAssets="All" />
@@ -35,6 +36,16 @@
         <PackageReference Include="Egolds.Xaml.Behaviors.Interactions.Animated" Version="11.3.3" />
         <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
         <PackageReference Include="QuestPDF" Version="2025.7.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="printer.sdk.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes\win-x64\native\">
+            <Link>printer.sdk.dll</Link>
+        </None>
+
+        <None Include="printer.sdk.dll" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="runtimes\win-x86\native\">
+            <Link>printer.sdk.dll</Link>
+        </None>
     </ItemGroup>
 
     <ItemGroup>

@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using Sharprinter;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -969,7 +970,6 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             Debug.WriteLine($"[PaymentAsync] Reference Number: {walkIn.ReferenceNumber ?? "N/A"}");
             Debug.WriteLine($"[PaymentAsync] =======================================");
 
-            // ✅ Pass SelectedDate to the service
             var (success, message, customerId) = await _walkInService.AddWalkInCustomerAsync(walkIn, SelectedDate);
 
             if (success)
@@ -977,16 +977,16 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 string paymentInfo = paymentMethod == "Cash"
                     ? "Cash payment"
                     : $"{paymentMethod} - Ref: {ReferenceNumber}";
+                
+                _ = GenerateReceipt();
 
                 _toastManager.CreateToast("Payment Successful!")
                     .WithContent($"Walk-in customer registered with ID: {customerId}\n{paymentInfo}")
                     .DismissOnClick()
                     .ShowSuccess();
 
-                // Clear form
                 ClearForm();
 
-                // Go back to previous page
                 _pageManager.Navigate<CheckInOutViewModel>();
             }
             else
@@ -1008,6 +1008,65 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         finally
         {
             IsProcessing = false;
+        }
+    }
+    
+    private async Task GenerateReceipt()
+    {
+        try
+        {
+            var options = new PrinterOptions
+            {
+                PortName = "COM6",
+                BaudRate = 9600,
+                MaxLineCharacter = 32,
+                CutPaper = true
+            };
+
+            var receiptContext = new PrinterContext(options);
+
+            receiptContext
+                .AddText("AHON TRACK GYM", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(1)
+                .AddText("PURCHASE RECEIPT", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(1)
+                .AddText($"Transaction ID: {TransactionID}")
+                .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
+                .AddText($"Customer: {CustomerFullName}")
+                .FeedLine(1)
+                .AddText("--------------------------------")
+                .FeedLine(1);
+
+            receiptContext
+                .FeedLine(1)
+                .AddText("--------------------------------")
+                .AddText($"TOTAL: P{TotalAmount:N2}", x => x.Alignment(HorizontalAlignment.Right))
+                .FeedLine(1)
+                .AddText($"Payment: {SelectedPaymentMethod}");
+
+            if (IsGCashSelected || IsMayaSelected)
+            {
+                receiptContext.AddText($"Reference No: {ReferenceNumber}");
+            }
+
+            await receiptContext
+                .FeedLine(2)
+                .AddText("Thank you for your visit!", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(3)
+                .ExecuteAsync();
+
+            _toastManager.CreateToast("Receipt Printed")
+                .WithContent("Receipt has been printed successfully")
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Print Error")
+                .WithContent($"Failed to print receipt: {ex.Message}")
+                .ShowError();
+        
+            Debug.WriteLine($"Printer error: {ex}");
         }
     }
 

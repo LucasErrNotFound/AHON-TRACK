@@ -20,6 +20,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AHON_TRACK.Services.Events;
 using AHON_TRACK.Validators;
+using Sharprinter;
 
 namespace AHON_TRACK.Components.ViewModels;
 
@@ -1000,6 +1001,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 isSuccess = result.Success;
                 successMessage = $"{member.FirstName} {member.LastName} registered successfully!";
 
+                _ = GenerateReceipt();
+
                 if (!result.Success)
                 {
                     _toastManager?.CreateToast("Registration Failed")
@@ -1033,6 +1036,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 successMessage = ViewContext == MemberViewContext.Upgrade
                     ? $"{member.FirstName} {member.LastName} upgraded successfully! Extended by {MembershipDuration} months."
                     : $"{member.FirstName} {member.LastName} renewed successfully! Extended by {MembershipDuration} months.";
+                
+                _ = GenerateReceipt();
 
                 if (!result.Success)
                 {
@@ -1067,6 +1072,65 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 .WithContent($"Failed to save member: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
+        }
+    }
+    
+    private async Task GenerateReceipt()
+    {
+        try
+        {
+            var options = new PrinterOptions
+            {
+                PortName = "COM6",
+                BaudRate = 9600,
+                MaxLineCharacter = 32,
+                CutPaper = true
+            };
+
+            var receiptContext = new PrinterContext(options);
+
+            receiptContext
+                .AddText("AHON TRACK GYM", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(1)
+                .AddText("PURCHASE RECEIPT", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(1)
+                .AddText($"Transaction ID: {TransactionID}")
+                .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
+                .AddText($"Customer: {MemberFullName}")
+                .FeedLine(1)
+                .AddText("--------------------------------")
+                .FeedLine(1);
+
+            receiptContext
+                .FeedLine(1)
+                .AddText("--------------------------------")
+                .AddText($"TOTAL: P{SubtotalDisplay:N2}", x => x.Alignment(HorizontalAlignment.Right))
+                .FeedLine(1)
+                .AddText($"Payment: {(IsCashSelected ? "Cash" : IsGCashSelected ? "GCash" : "Maya")}");
+
+            if (IsGCashSelected || IsMayaSelected)
+            {
+                receiptContext.AddText($"Reference No: {ReferenceNumber}");
+            }
+
+            await receiptContext
+                .FeedLine(2)
+                .AddText("Thank you for your purchase!", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(3)
+                .ExecuteAsync();
+
+            _toastManager.CreateToast("Receipt Printed")
+                .WithContent("Receipt has been printed successfully")
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Print Error")
+                .WithContent($"Failed to print receipt: {ex.Message}")
+                .ShowError();
+        
+            Debug.WriteLine($"Printer error: {ex}");
         }
     }
 

@@ -14,11 +14,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Sharprinter;
 
 namespace AHON_TRACK.ViewModels;
 
@@ -892,6 +893,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
             if (success)
             {
+                _ = GenerateReceipt();
+                
                 ClearCart();
                 CurrentTransactionId = GenerateNewTransactionId();
 
@@ -907,7 +910,71 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
     }
 
-    //
+    private async Task GenerateReceipt()
+    {
+        try
+        {
+            var options = new PrinterOptions
+            {
+                PortName = "COM6",
+                BaudRate = 9600,
+                MaxLineCharacter = 32,
+                CutPaper = true
+            };
+
+            var receiptContext = new PrinterContext(options);
+
+            receiptContext
+                .AddText("AHON TRACK GYM", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(1)
+                .AddText("PURCHASE RECEIPT", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(1)
+                .AddText($"Transaction ID: {CurrentTransactionId}")
+                .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
+                .AddText($"Customer: {CustomerFullName}")
+                .FeedLine(1)
+                .AddText("--------------------------------")
+                .FeedLine(1);
+
+            foreach (var item in CartItems)
+            {
+                receiptContext
+                    .AddText($"{item.Title}")
+                    .AddText($"  {item.Quantity} x P{item.Price:N2} = P{item.TotalPrice:N2}");
+            }
+
+            receiptContext
+                .FeedLine(1)
+                .AddText("--------------------------------")
+                .AddText($"TOTAL: P{TotalPrice:N2}", x => x.Alignment(HorizontalAlignment.Right))
+                .FeedLine(1)
+                .AddText($"Payment: {(IsCashSelected ? "Cash" : IsGCashSelected ? "GCash" : "Maya")}");
+
+            if (IsGCashSelected || IsMayaSelected)
+            {
+                receiptContext.AddText($"Reference No: {ReferenceNumber}");
+            }
+
+            await receiptContext
+                .FeedLine(2)
+                .AddText("Thank you for your purchase!", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(3)
+                .ExecuteAsync();
+
+            _toastManager.CreateToast("Receipt Printed")
+                .WithContent("Receipt has been printed successfully")
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Print Error")
+                .WithContent($"Failed to print receipt: {ex.Message}")
+                .ShowError();
+        
+            Debug.WriteLine($"Printer error: {ex}");
+        }
+    }
 
     private void ClearCart()
     {
