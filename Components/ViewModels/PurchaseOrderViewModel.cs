@@ -7,11 +7,16 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using AHON_TRACK.Models;
+using AHON_TRACK.Services;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HotAvalonia;
+using QuestPDF.Companion;
+using QuestPDF.Fluent;
 using ShadUI;
 
 namespace AHON_TRACK.Components.ViewModels;
@@ -164,9 +169,11 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     private readonly PageManager _pageManager;
     private readonly ISupplierService? _supplierService;
     private readonly IPurchaseOrderService? _purchaseOrderService;
+    private readonly SettingsService? _settingsService;
+    private AppSettings? _currentSettings;
 
     public PurchaseOrderViewModel(DialogManager dialogManager, ToastManager toastManager,
-        PageManager pageManager, ISupplierService? supplierService = null,
+        PageManager pageManager, SettingsService? settingsService = null, ISupplierService? supplierService = null,
         IPurchaseOrderService? purchaseOrderService = null)
     {
         _dialogManager = dialogManager;
@@ -174,6 +181,7 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         _pageManager = pageManager;
         _supplierService = supplierService;
         _purchaseOrderService = purchaseOrderService;
+        _settingsService = settingsService;
 
         Items.CollectionChanged += Items_CollectionChanged;
         AddInitialItem();
@@ -185,6 +193,7 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+        _settingsService = new SettingsService();
 
         Items.CollectionChanged += Items_CollectionChanged;
         AddInitialItem();
@@ -638,6 +647,141 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         }
     }
 
+    [RelayCommand]
+    private async Task ExportPurchaseOrder()
+    {
+        try
+        {
+            // Check if there are any items to export
+            if (Items.Count == 0)
+            {
+                _toastManager.CreateToast("No purchase order to export")
+                    .WithContent("There are no items in this purchase order.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            // Check if supplier is selected
+            if (SelectedSupplier == null)
+            {
+                _toastManager.CreateToast("No supplier selected")
+                    .WithContent("Please select a supplier before exporting.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            // If we have a PurchaseOrderId, reload the full supplier data
+            if (PurchaseOrderId.HasValue && _purchaseOrderService != null && SelectedSupplier.ID.HasValue)
+            {
+                var poResult = await _purchaseOrderService.GetPurchaseOrderByIdAsync(PurchaseOrderId.Value);
+                if (poResult.Success && poResult.PurchaseOrder?.SupplierID.HasValue == true && _supplierService != null)
+                {
+                    var supplierResult = await _supplierService.GetSupplierByIdAsync(poResult.PurchaseOrder.SupplierID.Value);
+                    if (supplierResult.Success && supplierResult.Supplier != null)
+                    {
+                        // Update SelectedSupplier with full data
+                        SelectedSupplier.Address = supplierResult.Supplier.Address;
+                        SelectedSupplier.ContactPerson = supplierResult.Supplier.ContactPerson;
+                        SelectedSupplier.Email = supplierResult.Supplier.Email;
+                        SelectedSupplier.PhoneNumber = supplierResult.Supplier.PhoneNumber;
+                    }
+                }
+            }
+
+            var toplevel = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow
+                : null;
+            if (toplevel == null) return;
+
+            IStorageFolder? startLocation = null;
+            if (!string.IsNullOrWhiteSpace(_currentSettings?.DownloadPath))
+            {
+                try
+                {
+                    startLocation = await toplevel.StorageProvider.TryGetFolderFromPathAsync(_currentSettings.DownloadPath);
+                }
+                catch
+                {
+                    // If path is invalid, startLocation will remain null
+                }
+            }
+
+            var fileName = $"Purchase_Order_{PoNumber}_{DateTime.Today:yyyy-MM-dd}.pdf";
+            var pdfFile = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Download Purchase Order",
+                SuggestedStartLocation = startLocation,
+                FileTypeChoices = [FilePickerFileTypes.Pdf],
+                SuggestedFileName = fileName,
+                ShowOverwritePrompt = true
+            });
+
+            if (pdfFile == null) return;
+
+            var purchaseOrderModel = new PurchaseOrderDocumentModel
+            {
+                GeneratedDate = DateTime.Today,
+                Recipient = "Dr. Joel B. Abalos",
+                GymName = "AHON Victory Fitness Gym",
+                GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
+                GymPhone = "+63 123 456 7890",
+                GymEmail = "info@ahonfitness.com",
+            
+                // Supplier Information - with better null handling
+                SupplierName = !string.IsNullOrWhiteSpace(SelectedSupplier.Name) 
+                    ? SelectedSupplier.Name 
+                    : "N/A",
+                SupplierAddress = !string.IsNullOrWhiteSpace(SelectedSupplier.Address) 
+                    ? SelectedSupplier.Address 
+                    : "N/A",
+                SupplierPhone = !string.IsNullOrWhiteSpace(SelectedSupplier.PhoneNumber) 
+                    ? SelectedSupplier.PhoneNumber 
+                    : "N/A",
+                SupplierEmail = !string.IsNullOrWhiteSpace(SelectedSupplier.Email) 
+                    ? SelectedSupplier.Email 
+                    : "N/A",
+                SupplierContactPerson = !string.IsNullOrWhiteSpace(SelectedSupplier.ContactPerson) 
+                    ? SelectedSupplier.ContactPerson 
+                    : "N/A",
+            
+                // Purchase Order Details
+                PONumber = PoNumber,
+                OrderDate = DateTime.Now,
+                ExpectedDeliveryDate = DeliveryDate,
+                PaymentStatus = PaymentStatus ?? "Unpaid",
+                ShippingStatus = ShippingStatus ?? "Pending",
+            
+                Items = Items.Select(item => new PurchaseOrderItem
+                {
+                    ItemName = item.ItemName,
+                    Price = item.Price,
+                    Unit = item.SelectedUnit,
+                    Quantity = item.Quantity
+                }).ToList()
+            };
+
+            var document = new PurchaseOrderDocument(purchaseOrderModel);
+
+            await using var stream = await pdfFile.OpenWriteAsync();
+            document.GeneratePdf(stream); // Generate the PDF
+            // await document.ShowInCompanionAsync(); // For Hot-Reload Debugging (disable above line when using this)
+
+            _toastManager.CreateToast("Purchase Order exported successfully")
+                .WithContent($"Purchase Order has been saved to {pdfFile.Name}")
+                .DismissOnClick()
+                .ShowSuccess();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Export failed")
+                .WithContent($"Failed to export Purchase Order: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+
     private void AddInitialItem()
     {
         Items.Add(new Item());
@@ -880,4 +1024,40 @@ public enum PurchaseOrderContext
 {
     AddPurchaseOrder,
     ViewPurchaseOrder
+}
+
+public class PurchaseOrderDocumentModel
+{
+    public DateTime GeneratedDate { get; set; }
+    public string Recipient { get; set; } = "Dr. Joel B. Abalos";
+    public string GymName { get; set; } = "AHON Fitness Gym";
+    public string GymAddress { get; set; } = string.Empty;
+    public string GymPhone { get; set; } = string.Empty;
+    public string GymEmail { get; set; } = string.Empty;
+    
+    public string SupplierName { get; set; } = string.Empty;
+    public string SupplierAddress { get; set; } = string.Empty;
+    public string SupplierPhone { get; set; } = string.Empty;
+    public string SupplierEmail { get; set; } = string.Empty;
+    public string SupplierContactPerson { get; set; } = string.Empty;
+    
+    public string PONumber { get; set; } = string.Empty;
+    public DateTime? OrderDate { get; set; }
+    public DateTime? ExpectedDeliveryDate { get; set; }
+    public string PaymentStatus { get; set; } = string.Empty;
+    public string ShippingStatus { get; set; } = string.Empty;
+    
+    public List<PurchaseOrderItem> Items { get; set; } = [];
+    public decimal Subtotal => Items.Sum(x => x.Price * x.Quantity);
+    public decimal Vat => Subtotal * 0.12m;
+    public decimal Total => Subtotal + Vat;
+}
+
+public class PurchaseOrderItem
+{
+    public string? ItemName { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public string? Unit { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public string FormattedQuantity => Quantity.ToString("0");
 }

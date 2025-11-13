@@ -55,6 +55,7 @@
                             Classes="Outline"
                             Content="Export to PDF"
                             HorizontalAlignment="Left"
+                            Command="{CompiledBinding ExportPurchaseOrderCommand}"
                             IsVisible="{CompiledBinding IsInViewMode}">
 						</Button>
 						<Button
