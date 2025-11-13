@@ -176,7 +176,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
         _supplierPurchaseOrderEventHandler = OnSupplierPurchasedOrder;
 
-
+        eventService.SupplierUpdated += OnSupplierPurchasedOrder;
         eventService.PurchaseOrderAdded += OnSupplierPurchasedOrder;
         eventService.PurchaseOrderUpdated += OnSupplierPurchasedOrder;
         eventService.PurchaseOrderDeleted += OnSupplierPurchasedOrder;
@@ -192,10 +192,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         catch
         {
             // Ignore errors during property change handling
-        }
-        finally
-        {
-
         }
     }
 

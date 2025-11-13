@@ -452,6 +452,8 @@ namespace AHON_TRACK.Services
 
                     transaction.Commit();
 
+                    DashboardEventService.Instance.NotifySupplierUpdated();
+
                     ShowToast("Purchase Order Updated",
                         $"PO Number: {purchaseOrder.PONumber} updated successfully",
                         ToastType.Success);
@@ -590,36 +592,63 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Get PO number for logging
-                var poResult = await GetPurchaseOrderByIdAsync(poId);
-                if (!poResult.Success || poResult.PurchaseOrder == null)
+                using var transaction = conn.BeginTransaction();
+                try
                 {
-                    return (false, "Purchase order not found.");
+                    // Get PO details before deletion
+                    var poResult = await GetPurchaseOrderByIdAsync(poId);
+                    if (!poResult.Success || poResult.PurchaseOrder == null)
+                    {
+                        transaction.Rollback();
+                        return (false, "Purchase order not found.");
+                    }
+
+                    var po = poResult.PurchaseOrder;
+
+                    // ⭐ Remove items from supplier's products if this PO was delivered+paid
+                    if (po.SupplierID.HasValue &&
+                        po.ShippingStatus?.Equals("Delivered", StringComparison.OrdinalIgnoreCase) == true &&
+                        po.PaymentStatus?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true &&
+                        po.Items != null && po.Items.Count > 0)
+                    {
+                        await RemoveItemsFromSupplierProductsAsync(conn, transaction, po.SupplierID.Value, po.Items);
+                    }
+
+                    // Soft delete the PO
+                    const string query = @"
+                UPDATE PurchaseOrders 
+                SET IsDeleted = 1, UpdatedAt = GETDATE() 
+                WHERE PurchaseOrderID = @poId";
+
+                    using var cmd = new SqlCommand(query, conn, transaction);
+                    cmd.Parameters.AddWithValue("@poId", poId);
+
+                    var rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        await LogActionAsync(conn, transaction, "DELETE",
+                            $"Deleted Purchase Order: {po.PONumber}", true);
+
+                        transaction.Commit();
+
+                        DashboardEventService.Instance.NotifySupplierUpdated();
+
+                        ShowToast("Purchase Order Deleted",
+                            $"PO {po.PONumber} has been deleted",
+                            ToastType.Success);
+
+                        return (true, "Purchase order deleted successfully.");
+                    }
+
+                    transaction.Rollback();
+                    return (false, "Failed to delete purchase order.");
                 }
-
-                const string query = @"
-                    UPDATE PurchaseOrders 
-                    SET IsDeleted = 1, UpdatedAt = GETDATE() 
-                    WHERE PurchaseOrderID = @poId";
-
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@poId", poId);
-
-                var rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected > 0)
+                catch
                 {
-                    await LogActionAsync(conn, null, "DELETE",
-                        $"Deleted Purchase Order: {poResult.PurchaseOrder.PONumber}", true);
-
-                    ShowToast("Purchase Order Deleted",
-                        $"PO {poResult.PurchaseOrder.PONumber} has been deleted",
-                        ToastType.Success);
-
-                    return (true, "Purchase order deleted successfully.");
+                    transaction.Rollback();
+                    throw;
                 }
-
-                return (false, "Failed to delete purchase order.");
             }
             catch (Exception ex)
             {
@@ -917,6 +946,81 @@ namespace AHON_TRACK.Services
 
         #region UTILITY METHODS
 
+        /// <summary>
+        /// Removes items from supplier's Products field when a PO is deleted
+        /// </summary>
+        private async Task RemoveItemsFromSupplierProductsAsync(
+            SqlConnection conn, SqlTransaction transaction,
+            int supplierId, List<PurchaseOrderItemModel> itemsToRemove)
+        {
+            try
+            {
+                Console.WriteLine($"[RemoveItemsFromSupplierProductsAsync] Supplier {supplierId} - Removing {itemsToRemove.Count} items");
+
+                // Get current supplier products
+                const string getQuery = "SELECT Products FROM Suppliers WHERE SupplierID = @supplierId";
+
+                string? currentProducts;
+                using (var cmd = new SqlCommand(getQuery, conn, transaction))
+                {
+                    cmd.Parameters.AddWithValue("@supplierId", supplierId);
+                    var result = await cmd.ExecuteScalarAsync();
+                    currentProducts = result as string;
+                }
+
+                if (string.IsNullOrWhiteSpace(currentProducts))
+                {
+                    Console.WriteLine("  - Supplier has no products, nothing to remove");
+                    return;
+                }
+
+                // Parse existing products
+                var existingProducts = currentProducts
+                    .Split(',')
+                    .Select(p => p.Trim())
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .ToList();
+
+                Console.WriteLine($"  - Current products: {string.Join(", ", existingProducts)}");
+
+                // Create set of items to remove (case-insensitive)
+                var itemsToRemoveSet = itemsToRemove
+                    .Select(i => i.ItemName.Trim())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                // Keep only products that are NOT in the items to remove
+                var remainingProducts = existingProducts
+                    .Where(p => !itemsToRemoveSet.Contains(p))
+                    .Distinct()
+                    .ToList();
+
+                Console.WriteLine($"  - Remaining products: {string.Join(", ", remainingProducts)}");
+
+                // Update supplier with remaining products (or NULL if none left)
+                var updatedProducts = remainingProducts.Any()
+                    ? string.Join(", ", remainingProducts)
+                    : null;
+
+                const string updateQuery = @"
+            UPDATE Suppliers 
+            SET Products = @products
+            WHERE SupplierID = @supplierId";
+
+                using var updateCmd = new SqlCommand(updateQuery, conn, transaction);
+                updateCmd.Parameters.AddWithValue("@supplierId", supplierId);
+                updateCmd.Parameters.AddWithValue("@products", updatedProducts ?? (object)DBNull.Value);
+
+                await updateCmd.ExecuteNonQueryAsync();
+
+                Console.WriteLine($"  ✓ Updated supplier products: {updatedProducts ?? "(empty)"}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RemoveItemsFromSupplierProductsAsync] Error: {ex.Message}");
+                throw; // Re-throw to rollback transaction
+            }
+        }
+
         public async Task<string> GeneratePONumberAsync()
         {
             try
@@ -1087,7 +1191,7 @@ namespace AHON_TRACK.Services
             return unitLower switch
             {
                 "pcs" or "unit" or "piece" or "pieces" => (int)Math.Floor(quantity),
-                "box" or "pack" or "case" => (int)Math.Floor(quantity * 12),
+                "box" or "pack" or "case" => (int)Math.Floor(quantity * 8),
                 "kg" or "kilogram" or "kilograms" => (int)Math.Floor(quantity),
                 "lbs" or "pound" or "pounds" => (int)Math.Floor(quantity),
                 "liter" or "liters" or "l" => (int)Math.Floor(quantity),

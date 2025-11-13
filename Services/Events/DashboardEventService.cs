@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Identity.Client;
+using System;
 
 namespace AHON_TRACK.Services.Events
 {
@@ -64,6 +65,8 @@ namespace AHON_TRACK.Services.Events
         public event EventHandler? PurchaseOrderAdded;
         public event EventHandler? PurchaseOrderDeleted;
         public event EventHandler? PurchaseOrderUpdated;
+
+        public event EventHandler? SupplierUpdated;
 
         private DashboardEventService() { }
 
@@ -138,5 +141,8 @@ namespace AHON_TRACK.Services.Events
         public void NotifyPurchaseOrderAdded() => PurchaseOrderAdded?.Invoke(this, EventArgs.Empty);
         public void NotifyPurchaseOrderDeleted() => PurchaseOrderDeleted?.Invoke(this, EventArgs.Empty);
         public void NotifyPurchaseOrderUpdated() => PurchaseOrderUpdated?.Invoke(this, EventArgs.Empty);
+
+        // --- Supplier events ---
+        public void NotifySupplierUpdated() => SupplierUpdated?.Invoke(this, EventArgs.Empty);
     }
 }
