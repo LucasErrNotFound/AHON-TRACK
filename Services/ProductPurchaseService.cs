@@ -1,15 +1,20 @@
-﻿using AHON_TRACK.Converters;
+﻿using AHON_TRACK.Components.ViewModels;
+using AHON_TRACK.Converters;
 using AHON_TRACK.Models;
 using AHON_TRACK.Services.Events;
 using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
+using LiveChartsCore.Themes;
 using Microsoft.Data.SqlClient;
 using ShadUI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static QuestPDF.Helpers.Colors;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AHON_TRACK.Services
 {
@@ -837,84 +842,7 @@ namespace AHON_TRACK.Services
             return customers;
         }
 
-        public async Task<List<RecentPurchaseModel>> GetRecentPurchasesAsync(int limit = 50)
-        {
-            var recentPurchases = new List<RecentPurchaseModel>();
-
-            if (!CanView())
-            {
-                ShowError("Access Denied", "You do not have permission to view purchase data.");
-                return recentPurchases;
-            }
-
-            try
-            {
-                using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                string query = @"
-                    SELECT TOP (@Limit)
-                        s.SaleID,
-                        s.SaleDate,
-                        s.Amount,
-                        s.Quantity,
-                        CASE 
-                            WHEN s.ProductID IS NOT NULL THEN p.ProductName
-WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
-                            ELSE 'Unknown Item'
-                        END AS ItemName,
-                        CASE 
-                            WHEN s.ProductID IS NOT NULL THEN 'Product'
-                            WHEN s.PackageID IS NOT NULL THEN 'Gym Package'
-                            ELSE 'Unknown'
-                        END AS ItemType,
-                        CASE 
-                            WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
-                            WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
-                            ELSE 'Unknown Customer'
-                        END AS CustomerName,
-                        CASE 
-                            WHEN s.MemberID IS NOT NULL THEN 'Gym Member'
-                            WHEN s.CustomerID IS NOT NULL THEN 'Walk-in'
-                            ELSE 'Unknown'
-                        END AS CustomerType,
-                        ProfilePicture AS AvatarSource
-                    FROM Sales s
-                    LEFT JOIN Products p ON s.ProductID = p.ProductID
-                    LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
-                    LEFT JOIN Members m ON s.MemberID = m.MemberID
-                    LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
-                    ORDER BY s.SaleDate DESC;";
-
-                using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Limit", limit);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    recentPurchases.Add(new RecentPurchaseModel
-                    {
-                        SaleID = reader.GetInt32(reader.GetOrdinal("SaleID")),
-                        PurchaseDate = reader.GetDateTime(reader.GetOrdinal("SaleDate")),
-                        Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
-                        Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
-                        ItemName = reader["ItemName"]?.ToString() ?? "Unknown Item",
-                        ItemType = reader["ItemType"]?.ToString() ?? "Unknown",
-                        CustomerName = reader["CustomerName"]?.ToString() ?? "Unknown Customer",
-                        CustomerType = reader["CustomerType"]?.ToString() ?? "Unknown",
-                        AvatarSource = reader["AvatarSource"] != DBNull.Value ? (byte[])reader["AvatarSource"] : null
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowError("Database Error", $"Error loading recent purchases: {ex.Message}");
-            }
-
-            return recentPurchases;
-        }
-
+        // ✅ UPDATED: GetInvoicesByDateAsync - Groups purchases by customer AND payment method/reference
         public async Task<List<InvoiceModel>> GetInvoicesByDateAsync(DateTime date)
         {
             var invoices = new List<InvoiceModel>();
@@ -929,12 +857,12 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // ✅ GROUP BY customer, item, payment method, and reference number
+                // ✅ GROUP BY customer, payment method, AND reference number (separate transactions)
                 string query = @"
             SELECT 
-                MIN(s.SaleID) AS SaleID,  -- Take first SaleID for grouping
+                MIN(s.SaleID) AS SaleID,
                 
-                -- ✅ PRIORITIZE Sales.PaymentMethod
+                -- ✅ Payment method for this transaction
                 COALESCE(
                     s.PaymentMethod,
                     CASE 
@@ -945,7 +873,7 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                     'Unknown'
                 ) AS PaymentMethod,
                 
-                -- ✅ PRIORITIZE Sales.ReferenceNumber
+                -- ✅ Reference number for this transaction
                 COALESCE(
                     s.ReferenceNumber,
                     CASE 
@@ -963,16 +891,19 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                     ELSE 'Unknown Customer'
                 END AS CustomerName,
                 
-                -- Purchased item
-                CASE 
-                    WHEN s.ProductID IS NOT NULL THEN p.ProductName
-                    WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
-                    ELSE 'Unknown Item'
-                END AS PurchasedItem,
+                -- ✅ Concatenate all item names with their quantities for THIS transaction
+                STRING_AGG(
+                    CASE 
+                        WHEN s.ProductID IS NOT NULL THEN CONCAT(p.ProductName, ' (', s.Quantity, ')')
+                        WHEN s.PackageID IS NOT NULL THEN CONCAT(pkg.PackageName, ' (', s.Quantity, ')')
+                        ELSE 'Unknown Item'
+                    END, 
+                    ', '
+                ) AS PurchasedItem,
                 
-                SUM(s.Quantity) AS Quantity,      -- ✅ Sum quantities
-                SUM(s.Amount) AS Amount,          -- ✅ Sum amounts
-                MIN(s.SaleDate) AS SaleDate       -- Take earliest sale date
+                SUM(s.Quantity) AS Quantity,      -- ✅ Total quantity for this transaction
+                SUM(s.Amount) AS Amount,          -- ✅ Total amount for this transaction
+                MIN(s.SaleDate) AS SaleDate
                 
             FROM Sales s
             LEFT JOIN Products p ON s.ProductID = p.ProductID
@@ -982,17 +913,14 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
             WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
             
-            -- ✅ GROUP BY customer, item, payment details
+            -- ✅ GROUP BY customer, payment method, AND reference number
             GROUP BY 
+                COALESCE(s.MemberID, 0),
+                COALESCE(s.CustomerID, 0),
                 CASE 
                     WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
                     WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
                     ELSE 'Unknown Customer'
-                END,
-                CASE 
-                    WHEN s.ProductID IS NOT NULL THEN p.ProductName
-                    WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
-                    ELSE 'Unknown Item'
                 END,
                 COALESCE(
                     s.PaymentMethod,
@@ -1025,16 +953,15 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                     string paymentMethod = reader["PaymentMethod"]?.ToString() ?? "Unknown";
                     string referenceNumber = reader["ReferenceNumber"]?.ToString() ?? string.Empty;
 
-                    // ✅ DISPLAY "PAID" FOR CASH PAYMENTS WITH "PAID" REFERENCE
+                    // ✅ DISPLAY "PAID" FOR CASH PAYMENTS
                     if (paymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase) &&
                         referenceNumber.Equals("PAID", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Keep as-is: Cash with PAID reference
+                        // Keep as-is
                     }
                     else if (paymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase) &&
                              string.IsNullOrWhiteSpace(referenceNumber))
                     {
-                        // For old cash records without reference, assume PAID
                         referenceNumber = "PAID";
                     }
 
@@ -1044,16 +971,16 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
                         ReferenceNumber = referenceNumber,
                         CustomerName = reader["CustomerName"]?.ToString() ?? "Unknown",
                         PurchasedItem = reader["PurchasedItem"]?.ToString() ?? "Unknown",
-                        Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),      // ✅ Grouped quantity
-                        Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),        // ✅ Grouped amount
+                        Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                        Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
                         PaymentMethod = paymentMethod,
                         DatePurchased = reader.GetDateTime(reader.GetOrdinal("SaleDate"))
                     });
 
-                    Debug.WriteLine($"[Invoice] SaleID: {reader.GetInt32(0)}, Payment: {paymentMethod}, Ref: {referenceNumber}, Qty: {reader.GetInt32(reader.GetOrdinal("Quantity"))}, Amount: ₱{reader.GetDecimal(reader.GetOrdinal("Amount")):N2}");
+                    Debug.WriteLine($"[Invoice] Customer: {reader["CustomerName"]}, Items: {reader["PurchasedItem"]}, Total Qty: {reader.GetInt32(reader.GetOrdinal("Quantity"))}, Total Amount: ₱{reader.GetDecimal(reader.GetOrdinal("Amount")):N2}");
                 }
 
-                Debug.WriteLine($"✅ Total invoices found: {invoices.Count} (after grouping)");
+                Debug.WriteLine($"✅ Total invoices found: {invoices.Count} (grouped by customer)");
             }
             catch (Exception ex)
             {
@@ -1062,6 +989,126 @@ WHEN s.PackageID IS NOT NULL THEN pkg.PackageName
             }
 
             return invoices;
+        }
+
+        // ✅ UPDATED: GetRecentPurchasesAsync - Groups purchases by customer showing "Multiple Items"
+        public async Task<List<RecentPurchaseModel>> GetRecentPurchasesAsync(int limit = 50)
+        {
+            var recentPurchases = new List<RecentPurchaseModel>();
+
+            if (!CanView())
+            {
+                ShowError("Access Denied", "You do not have permission to view purchase data.");
+                return recentPurchases;
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                // ✅ GROUP BY customer - all items bought by same person = 1 row
+                string query = @"
+            WITH RankedSales AS (
+                SELECT 
+                    s.SaleID,
+                    s.SaleDate,
+                    s.Amount,
+                    s.Quantity,
+                    s.MemberID,
+                    s.CustomerID,
+                    s.ProductID,
+                    s.PackageID,
+                    ROW_NUMBER() OVER (PARTITION BY COALESCE(s.MemberID, 0), COALESCE(s.CustomerID, 0) ORDER BY s.SaleDate DESC) AS RowNum
+                FROM Sales s
+                WHERE s.IsDeleted = 0 OR s.IsDeleted IS NULL
+            )
+            SELECT TOP (@Limit)
+                MIN(rs.SaleID) AS SaleID,
+                MIN(rs.SaleDate) AS SaleDate,
+                SUM(rs.Amount) AS Amount,
+                SUM(rs.Quantity) AS Quantity,
+                
+                -- ✅ Show Multiple Items if customer bought more than one distinct item
+                        CASE
+                    WHEN COUNT(DISTINCT COALESCE(rs.ProductID, rs.PackageID)) > 1 THEN 'Multiple Items'
+                            ELSE MAX(CASE
+                        WHEN rs.ProductID IS NOT NULL THEN p.ProductName
+                        WHEN rs.PackageID IS NOT NULL THEN pkg.PackageName
+                        ELSE 'Unknown Item'
+                            END)
+                END AS ItemName,
+                
+                CASE
+                    WHEN COUNT(DISTINCT COALESCE(rs.ProductID, rs.PackageID)) > 1 THEN 'Mixed'
+                            ELSE MAX(CASE
+                        WHEN rs.ProductID IS NOT NULL THEN 'Product'
+                                WHEN rs.PackageID IS NOT NULL THEN 'Gym Package'
+                                ELSE 'Unknown'
+                            END)
+                END AS ItemType,
+                
+                CASE
+                    WHEN rs.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
+                    WHEN rs.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
+                    ELSE 'Unknown Customer'
+                        END AS CustomerName,
+                
+                CASE
+                    WHEN rs.MemberID IS NOT NULL THEN 'Gym Member'
+                            WHEN rs.CustomerID IS NOT NULL THEN 'Walk-in'
+                            ELSE 'Unknown'
+                        END AS CustomerType
+            FROM RankedSales rs
+            LEFT JOIN Products p ON rs.ProductID = p.ProductID
+                    LEFT JOIN Packages pkg ON rs.PackageID = pkg.PackageID
+                    LEFT JOIN Members m ON rs.MemberID = m.MemberID
+                    LEFT JOIN WalkInCustomers wc ON rs.CustomerID = wc.CustomerID
+                    WHERE rs.RowNum = 1-- Only get the most recent purchase per customer
+        
+
+            GROUP BY
+                        COALESCE(rs.MemberID, 0),
+                COALESCE(rs.CustomerID, 0),
+                CASE
+                    WHEN rs.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
+                    WHEN rs.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
+                    ELSE 'Unknown Customer'
+                        END,
+                CASE
+                    WHEN rs.MemberID IS NOT NULL THEN 'Gym Member'
+                            WHEN rs.CustomerID IS NOT NULL THEN 'Walk-in'
+                            ELSE 'Unknown'
+                        END
+
+            ORDER BY MIN(rs.SaleDate) DESC; ";
+        
+        using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Limit", limit);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    recentPurchases.Add(new RecentPurchaseModel
+                    {
+                        SaleID = reader.GetInt32(reader.GetOrdinal("SaleID")),
+                        PurchaseDate = reader.GetDateTime(reader.GetOrdinal("SaleDate")),
+                        Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
+                        Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                        ItemName = reader["ItemName"]?.ToString() ?? "Unknown Item",
+                        ItemType = reader["ItemType"]?.ToString() ?? "Unknown",
+                        CustomerName = reader["CustomerName"]?.ToString() ?? "Unknown Customer",
+                        CustomerType = reader["CustomerType"]?.ToString() ?? "Unknown",
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError("Database Error", $"Error loading recent purchases: {ex.Message}");
+            }
+
+            return recentPurchases;
         }
 
         #endregion
