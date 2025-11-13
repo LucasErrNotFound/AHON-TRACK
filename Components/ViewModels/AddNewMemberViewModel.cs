@@ -1083,19 +1083,22 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 PortName = "COM6",
                 BaudRate = 9600,
-                MaxLineCharacter = 32,
+                MaxLineCharacter = 40,
                 CutPaper = true
             };
 
             var receiptContext = new PrinterContext(options);
 
             receiptContext
-                .AddText("AHON TRACK GYM", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("AHON VICTORY GYM", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("2nd Flr. Event Hub", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("Victory Central Mall", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("Brgy. Balibago, Sta. Rosa, Laguna", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
-                .AddText("PURCHASE RECEIPT", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("PURCHASE INVOICE", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
-                .AddText($"Transaction ID: {TransactionID}")
+                .AddText($"Invoice No.: {TransactionID}")
                 .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
                 .AddText($"Customer: {MemberFullName}")
                 .FeedLine(1)
@@ -1120,14 +1123,14 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 .FeedLine(3)
                 .ExecuteAsync();
 
-            _toastManager.CreateToast("Receipt Printed")
-                .WithContent("Receipt has been printed successfully")
+            _toastManager.CreateToast("Invoice Printed")
+                .WithContent("Invoice has been printed successfully")
                 .ShowSuccess();
         }
         catch (Exception ex)
         {
             _toastManager.CreateToast("Print Error")
-                .WithContent($"Failed to print receipt: {ex.Message}")
+                .WithContent($"Failed to print invoice: {ex.Message}")
                 .ShowError();
         
             Debug.WriteLine($"Printer error: {ex}");
