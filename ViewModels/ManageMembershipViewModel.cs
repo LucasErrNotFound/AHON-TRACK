@@ -247,8 +247,8 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                 {
                     ID = m.MemberID.ToString(),
                     AvatarSource = m.AvatarBytes != null
-                        ? ImageHelper.BytesToBitmap(m.AvatarBytes)
-                        : ManageMemberModel.DefaultAvatarSource,
+        ? ImageHelper.BytesToBitmap(m.AvatarBytes)
+        : ManageMemberModel.DefaultAvatarSource,
                     Name = m.Name ?? string.Empty,
                     ContactNumber = m.ContactNumber ?? string.Empty,
                     AvailedPackages = m.MembershipType ?? string.Empty,
@@ -260,7 +260,12 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     RecentPurchaseItem = m.RecentPurchaseItem,
                     RecentPurchaseDate = m.RecentPurchaseDate,
                     RecentPurchaseQuantity = m.RecentPurchaseQuantity,
-                    ConsentLetter = m.ConsentLetter
+                    ConsentLetter = m.ConsentLetter,
+
+                    // ✅ ADD THESE THREE LINES
+                    LastNotificationDate = m.LastNotificationDate,
+                    NotificationCount = m.NotificationCount,
+                    IsNotified = m.IsNotified
                 }).ToList();
 
                 OriginalMemberData = memberItems;
@@ -1092,7 +1097,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     Status = result.Member.Status ?? "Active",
                     Validity = DateTime.TryParse(result.Member.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue,
 
-                    // ✅ Include all the missing fields
                     Gender = result.Member.Gender ?? string.Empty,
                     BirthDate = result.Member.DateOfBirth ?? DateTime.MinValue,
                     Age = result.Member.Age ?? 0,
@@ -1102,7 +1106,12 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     RecentPurchaseItem = result.Member.RecentPurchaseItem,
                     RecentPurchaseDate = result.Member.RecentPurchaseDate,
                     RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity,
-                    ConsentLetter = result.Member.ConsentLetter
+                    ConsentLetter = result.Member.ConsentLetter,
+
+                    // ✅ ADD THESE THREE LINES
+                    LastNotificationDate = result.Member.LastNotificationDate,
+                    NotificationCount = result.Member.NotificationCount,
+                    IsNotified = result.Member.IsNotified
                 };
 
                 _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
@@ -1153,7 +1162,6 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     Status = result.Member.Status ?? "Active",
                     Validity = DateTime.TryParse(result.Member.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue,
 
-                    // ✅ Include all the missing fields
                     Gender = result.Member.Gender ?? string.Empty,
                     BirthDate = result.Member.DateOfBirth ?? DateTime.MinValue,
                     Age = result.Member.Age ?? 0,
@@ -1163,8 +1171,12 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     RecentPurchaseItem = result.Member.RecentPurchaseItem,
                     RecentPurchaseDate = result.Member.RecentPurchaseDate,
                     RecentPurchaseQuantity = result.Member.RecentPurchaseQuantity,
-                    ConsentLetter = result.Member.ConsentLetter
+                    ConsentLetter = result.Member.ConsentLetter,
 
+                    // ✅ ADD THESE THREE LINES
+                    LastNotificationDate = result.Member.LastNotificationDate,
+                    NotificationCount = result.Member.NotificationCount,
+                    IsNotified = result.Member.IsNotified
                 };
 
                 _pageManager.Navigate<AddNewMemberViewModel>(new Dictionary<string, object>
