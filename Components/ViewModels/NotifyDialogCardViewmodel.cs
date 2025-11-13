@@ -14,11 +14,20 @@ public partial class NotifyDialogCardViewmodel : ViewModelBase, INotifyPropertyC
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
 
-    [ObservableProperty] 
+    [ObservableProperty]
+    private string? _memberName;
+
+    [ObservableProperty]
+    private string? _memberStatus;
+
+    [ObservableProperty]
+    private string? _memberValidity;
+
+    [ObservableProperty]
     [Required(ErrorMessage = "Description is required")]
     [NotifyCanExecuteChangedFor(nameof(NotifyCommand))]
     private string? _textDescription;
-    
+
     private bool CanNotify() => !string.IsNullOrWhiteSpace(TextDescription);
 
     public NotifyDialogCardViewmodel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
@@ -39,12 +48,19 @@ public partial class NotifyDialogCardViewmodel : ViewModelBase, INotifyPropertyC
     public void Initialize()
     {
     }
-    
+
+    public void SetMemberInfo(ManageMembersItem member)
+    {
+        MemberName = member.Name;
+        MemberStatus = member.Status;
+        MemberValidity = member.Validity.ToString("MMMM dd, yyyy");
+    }
+
     [RelayCommand(CanExecute = nameof(CanNotify))]
     private void Notify()
     {
         ValidateAllProperties();
-        
+
         if (HasErrors)
         {
             _toastManager.CreateToast("Validation Error")
@@ -53,10 +69,10 @@ public partial class NotifyDialogCardViewmodel : ViewModelBase, INotifyPropertyC
                 .ShowError();
             return;
         }
-        
+
         _dialogManager.Close(this, new CloseDialogOptions { Success = true });
     }
-    
+
     [RelayCommand]
     private void Cancel()
     {

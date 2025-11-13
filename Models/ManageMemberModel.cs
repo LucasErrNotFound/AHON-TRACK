@@ -35,6 +35,10 @@ namespace AHON_TRACK.Models
         public string? ReferenceNumber { get; set; }
         public int RegisteredByEmployeeID { get; set; }
 
+        public DateTime? LastNotificationDate { get; set; }
+        public int NotificationCount { get; set; }
+        public bool IsNotified { get; set; }
+
         public DateTime? LastCheckIn { get; set; }
         public DateTime? LastCheckOut { get; set; }
         public string? RecentPurchaseItem { get; set; }

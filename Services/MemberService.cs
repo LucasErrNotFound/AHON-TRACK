@@ -482,12 +482,147 @@ namespace AHON_TRACK.Services
             string processedRefNumber = ProcessReferenceNumber(member);
             cmd.Parameters.AddWithValue("@ReferenceNumber",
                 string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
-            
+
             cmd.Parameters.AddWithValue("@ConsentLetter",
                 string.IsNullOrWhiteSpace(member.ConsentLetter) ? (object)DBNull.Value : member.ConsentLetter);
 
             cmd.Parameters.AddWithValue("@RegisteredByEmployeeID", CurrentUserModel.UserId ?? (object)DBNull.Value);
         }
+
+        #region MEMBER NOTIFICATION WITH DASHBOARD DISPLAY
+
+        /// <summary>
+        /// Records member notification and creates a dashboard notification
+        /// This displays "You have notified [Member Name]" in the dashboard
+        /// </summary>
+        public async Task<(bool Success, string Message)> RecordMemberNotificationAsync(
+            int memberId, string notificationMessage)
+        {
+            if (!CanUpdate())
+            {
+                ShowAccessDeniedToast("record notifications");
+                return (false, "Insufficient permissions to record notifications.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                using var transaction = conn.BeginTransaction();
+
+                try
+                {
+                    // Update member notification tracking
+                    const string updateQuery = @"
+                UPDATE Members 
+                SET LastNotificationDate = GETDATE(),
+                    NotificationCount = ISNULL(NotificationCount, 0) + 1,
+                    IsNotified = 1
+                WHERE MemberID = @MemberId";
+
+                    using var cmd = new SqlCommand(updateQuery, conn, transaction);
+                    cmd.Parameters.AddWithValue("@MemberId", memberId);
+
+                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                    if (rowsAffected > 0)
+                    {
+                        // Get member details for notification
+                        const string nameQuery = @"
+                    SELECT Firstname, Lastname, Status, ValidUntil
+                    FROM Members 
+                    WHERE MemberID = @MemberId";
+
+                        using var nameCmd = new SqlCommand(nameQuery, conn, transaction);
+                        nameCmd.Parameters.AddWithValue("@MemberId", memberId);
+
+                        using var reader = await nameCmd.ExecuteReaderAsync();
+
+                        string memberName = "";
+                        string status = "";
+                        DateTime? validUntil = null;
+
+                        if (await reader.ReadAsync())
+                        {
+                            memberName = $"{reader.GetString(0)} {reader.GetString(1)}";
+                            status = reader.IsDBNull(2) ? "Unknown" : reader.GetString(2);
+                            validUntil = reader.IsDBNull(3) ? null : reader.GetDateTime(3);
+                        }
+                        reader.Close();
+
+                        // Log the action
+                        await LogActionAsync(conn, transaction, "MEMBER_NOTIFIED",
+                            $"Notified {memberName} - {notificationMessage}", true);
+
+                        transaction.Commit();
+
+                        // ✅ CREATE DASHBOARD NOTIFICATION
+                        CreateDashboardNotification(memberName, status, validUntil, notificationMessage);
+
+                        DashboardEventService.Instance.NotifyMemberUpdated();
+
+                        return (true, "Notification recorded successfully.");
+                    }
+
+                    return (false, "Failed to record notification.");
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowDatabaseErrorToast("record notification", ex.Message);
+                Debug.WriteLine($"RecordMemberNotificationAsync Error: {ex}");
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Creates a notification that displays in the dashboard
+        /// </summary>
+        private void CreateDashboardNotification(
+            string memberName,
+            string status,
+            DateTime? validUntil,
+            string notificationMessage)
+        {
+            try
+            {
+                // Determine notification type based on status
+                NotificationType notifType = status.ToLower() switch
+                {
+                    "expired" => NotificationType.Alert,
+                    "near expiry" => NotificationType.Warning,
+                    _ => NotificationType.Alert
+                };
+
+                // Create detailed message for dashboard
+                string dashboardMessage = validUntil.HasValue
+                    ? $"Successfully notified {memberName} about their membership status. " +
+                      $"Status: {status}, Valid Until: {validUntil.Value:MMM dd, yyyy}"
+                    : $"Successfully notified {memberName} about their membership status. Status: {status}";
+
+                // Trigger the notification callback to display in dashboard
+                _notificationCallback?.Invoke(new Notification
+                {
+                    Type = notifType,
+                    Title = "Member Notification Sent",
+                    Message = dashboardMessage,
+                    DateAndTime = DateTime.Now
+                });
+
+                Debug.WriteLine($"[CreateDashboardNotification] Dashboard notification created for {memberName}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CreateDashboardNotification] Error: {ex.Message}");
+            }
+        }
+
+        #endregion
 
         #endregion
 
@@ -510,7 +645,9 @@ namespace AHON_TRACK.Services
     SELECT 
         m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname,
         LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
-        m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil,
+        m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.LastNotificationDate,
+m.NotificationCount,
+m.IsNotified,
         m.PackageID, 
         
         -- Get gym membership package name
@@ -611,7 +748,9 @@ namespace AHON_TRACK.Services
                 const string query = @"
     SELECT 
         m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
-        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, 
+        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, m.LastNotificationDate,
+m.NotificationCount,
+m.IsNotified,
         
         -- Get gym membership package name
         p.PackageName AS GymPackageName,
@@ -751,13 +890,57 @@ namespace AHON_TRACK.Services
                 return packages;
             }
         }
-        
+
         private ManageMemberModel MapMemberFromReader(SqlDataReader reader, bool includeRegisteredBy = false)
         {
-            int baseIndex = includeRegisteredBy ? 0 : 1;
+            // Column indices for GetMembersAsync (includeRegisteredBy = false)
+            // 0: MemberID, 1: Firstname, 2: MiddleInitial, 3: Lastname, 4: Name,
+            // 5: Gender, 6: ContactNumber, 7: Age, 8: DateOfBirth, 9: ValidUntil,
+            // 10: LastNotificationDate, 11: NotificationCount, 12: IsNotified,
+            // 13: PackageID, 14: GymPackageName, 15: SessionPackages, 16: Status,
+            // 17: PaymentMethod, 18: ProfilePicture, 19: ConsentLetter, 20: DateJoined,
+            // 21: LastCheckIn, 22: LastCheckOut, 23: RecentPurchaseItem,
+            // 24: RecentPurchaseDate, 25: RecentPurchaseQuantity
 
-            string gymPackageName = reader.IsDBNull(11) ? null : reader.GetString(11);
-            string sessionPackages = reader.IsDBNull(12) ? null : reader.GetString(12);
+            // Column indices for GetMemberByIdAsync (includeRegisteredBy = true)
+            // 0: MemberID, 1: Firstname, 2: MiddleInitial, 3: Lastname, 4: Gender, 5: ProfilePicture,
+            // 6: ContactNumber, 7: Age, 8: DateOfBirth, 9: ValidUntil,
+            // 10: LastNotificationDate, 11: NotificationCount, 12: IsNotified,
+            // 13: PackageID, 14: GymPackageName, 15: SessionPackages, 16: Status,
+            // 17: PaymentMethod, 18: ConsentLetter, 19: RegisteredByEmployeeID, 20: DateJoined,
+            // 21: LastCheckIn, 22: LastCheckOut, 23: RecentPurchaseItem,
+            // 24: RecentPurchaseDate, 25: RecentPurchaseQuantity
+
+            int memberIdIdx = 0;
+            int firstNameIdx = 1;
+            int middleInitialIdx = 2;
+            int lastNameIdx = 3;
+            int nameIdx = includeRegisteredBy ? -1 : 4;
+            int genderIdx = includeRegisteredBy ? 4 : 5;
+            int profilePicIdx = includeRegisteredBy ? 5 : 18;
+            int contactIdx = includeRegisteredBy ? 6 : 6;
+            int ageIdx = includeRegisteredBy ? 7 : 7;
+            int dobIdx = includeRegisteredBy ? 8 : 8;
+            int validUntilIdx = includeRegisteredBy ? 9 : 9;
+            int lastNotificationDateIdx = includeRegisteredBy ? 10 : 10;
+            int notificationCountIdx = includeRegisteredBy ? 11 : 11;
+            int isNotifiedIdx = includeRegisteredBy ? 12 : 12;
+            int packageIdIdx = includeRegisteredBy ? 13 : 13;
+            int gymPackageNameIdx = includeRegisteredBy ? 14 : 14;
+            int sessionPackagesIdx = includeRegisteredBy ? 15 : 15;
+            int statusIdx = includeRegisteredBy ? 16 : 16;
+            int paymentMethodIdx = includeRegisteredBy ? 17 : 17;
+            int consentLetterIdx = includeRegisteredBy ? 18 : 19;
+            int registeredByEmployeeIdIdx = includeRegisteredBy ? 19 : -1;
+            int dateJoinedIdx = includeRegisteredBy ? 20 : 20;
+            int lastCheckInIdx = includeRegisteredBy ? 21 : 21;
+            int lastCheckOutIdx = includeRegisteredBy ? 22 : 22;
+            int recentPurchaseItemIdx = includeRegisteredBy ? 23 : 23;
+            int recentPurchaseDateIdx = includeRegisteredBy ? 24 : 24;
+            int recentPurchaseQuantityIdx = includeRegisteredBy ? 25 : 25;
+
+            string gymPackageName = reader.IsDBNull(gymPackageNameIdx) ? null : reader.GetString(gymPackageNameIdx);
+            string sessionPackages = reader.IsDBNull(sessionPackagesIdx) ? null : reader.GetString(sessionPackagesIdx);
 
             string combinedPackages;
             if (!string.IsNullOrEmpty(gymPackageName) && !string.IsNullOrEmpty(sessionPackages))
@@ -776,31 +959,22 @@ namespace AHON_TRACK.Services
             {
                 combinedPackages = "None";
             }
-            
-            int genderIdx = includeRegisteredBy ? 4 : 5;
-            int profilePicIdx = includeRegisteredBy ? 5 : 15;
-            int contactIdx = includeRegisteredBy ? 6 : 6;
-            int ageIdx = includeRegisteredBy ? 7 : 7;
-            int dobIdx = includeRegisteredBy ? 8 : 8;
-            int validUntilIdx = includeRegisteredBy ? 9 : 9;
-            int packageIdIdx = includeRegisteredBy ? 10 : 10;
-            int statusIdx = includeRegisteredBy ? 13 : 13;
-            int paymentMethodIdx = includeRegisteredBy ? 14 : 14;
-            int consentLetterIdx = includeRegisteredBy ? 15 : 16;
-            int dateJoinedIdx = includeRegisteredBy ? 17 : 17;
-    
+
             var member = new ManageMemberModel
             {
-                MemberID = reader.GetInt32(0),
-                FirstName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                MiddleInitial = reader.IsDBNull(2) ? null : reader.GetString(2),
-                LastName = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
-                Name = includeRegisteredBy ? null : (reader.IsDBNull(4) ? string.Empty : reader.GetString(4)),
+                MemberID = reader.GetInt32(memberIdIdx),
+                FirstName = reader.IsDBNull(firstNameIdx) ? string.Empty : reader.GetString(firstNameIdx),
+                MiddleInitial = reader.IsDBNull(middleInitialIdx) ? null : reader.GetString(middleInitialIdx),
+                LastName = reader.IsDBNull(lastNameIdx) ? string.Empty : reader.GetString(lastNameIdx),
+                Name = includeRegisteredBy ? null : (reader.IsDBNull(nameIdx) ? string.Empty : reader.GetString(nameIdx)),
                 Gender = reader.IsDBNull(genderIdx) ? string.Empty : reader.GetString(genderIdx),
                 ContactNumber = reader.IsDBNull(contactIdx) ? string.Empty : reader.GetString(contactIdx),
                 Age = reader.IsDBNull(ageIdx) ? null : reader.GetInt32(ageIdx),
                 DateOfBirth = reader.IsDBNull(dobIdx) ? null : reader.GetDateTime(dobIdx),
                 ValidUntil = reader.IsDBNull(validUntilIdx) ? null : reader.GetDateTime(validUntilIdx).ToString("MMM dd, yyyy"),
+                LastNotificationDate = reader.IsDBNull(lastNotificationDateIdx) ? null : reader.GetDateTime(lastNotificationDateIdx),
+                NotificationCount = reader.IsDBNull(notificationCountIdx) ? 0 : reader.GetInt32(notificationCountIdx),
+                IsNotified = reader.IsDBNull(isNotifiedIdx) ? false : reader.GetBoolean(isNotifiedIdx),
                 PackageID = reader.IsDBNull(packageIdIdx) ? null : reader.GetInt32(packageIdIdx),
                 MembershipType = combinedPackages,
                 Status = reader.IsDBNull(statusIdx) ? "Active" : reader.GetString(statusIdx),
@@ -811,16 +985,16 @@ namespace AHON_TRACK.Services
                     ? ImageHelper.GetDefaultAvatar()
                     : ImageHelper.BytesToBitmap((byte[])reader[profilePicIdx]),
                 DateJoined = reader.IsDBNull(dateJoinedIdx) ? null : reader.GetDateTime(dateJoinedIdx),
-                LastCheckIn = reader.IsDBNull(18) ? null : reader.GetDateTime(18),
-                LastCheckOut = reader.IsDBNull(19) ? null : reader.GetDateTime(19),
-                RecentPurchaseItem = reader.IsDBNull(20) ? null : reader.GetString(20),
-                RecentPurchaseDate = reader.IsDBNull(21) ? null : reader.GetDateTime(21),
-                RecentPurchaseQuantity = reader.IsDBNull(22) ? null : reader.GetInt32(22)
+                LastCheckIn = reader.IsDBNull(lastCheckInIdx) ? null : reader.GetDateTime(lastCheckInIdx),
+                LastCheckOut = reader.IsDBNull(lastCheckOutIdx) ? null : reader.GetDateTime(lastCheckOutIdx),
+                RecentPurchaseItem = reader.IsDBNull(recentPurchaseItemIdx) ? null : reader.GetString(recentPurchaseItemIdx),
+                RecentPurchaseDate = reader.IsDBNull(recentPurchaseDateIdx) ? null : reader.GetDateTime(recentPurchaseDateIdx),
+                RecentPurchaseQuantity = reader.IsDBNull(recentPurchaseQuantityIdx) ? null : reader.GetInt32(recentPurchaseQuantityIdx)
             };
 
-            if (includeRegisteredBy)
+            if (includeRegisteredBy && registeredByEmployeeIdIdx >= 0)
             {
-                member.RegisteredByEmployeeID = reader.IsDBNull(16) ? 0 : reader.GetInt32(16);
+                member.RegisteredByEmployeeID = reader.IsDBNull(registeredByEmployeeIdIdx) ? 0 : reader.GetInt32(registeredByEmployeeIdIdx);
             }
 
             return member;
@@ -873,7 +1047,9 @@ namespace AHON_TRACK.Services
                     PaymentMethod = @PaymentMethod,
                     ReferenceNumber = @ReferenceNumber,
                     ConsentLetter = @ConsentLetter,
-                    ProfilePicture = @ProfilePicture
+                    ProfilePicture = @ProfilePicture,
+                    IsNotified = 0,              -- ✅ CLEAR notification flag
+                    LastNotificationDate = NULL  -- ✅ CLEAR notification date
                 WHERE MemberID = @MemberID";
 
                     using var cmd = new SqlCommand(query, conn, transaction);
@@ -1431,6 +1607,110 @@ namespace AHON_TRACK.Services
         }
 
         #endregion
+
+        #region PERSISTENT MEMBER NOTIFICATIONS
+
+        /// <summary>
+        /// Gets all members who have been notified (IsNotified = 1)
+        /// These will be displayed in dashboard on startup
+        /// </summary>
+        public async Task<List<NotifiedMemberInfo>> GetNotifiedMembersAsync()
+        {
+            var notifiedMembers = new List<NotifiedMemberInfo>();
+
+            if (!CanView())
+            {
+                return notifiedMembers;
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string query = @"
+            SELECT 
+                MemberID,
+                LTRIM(RTRIM(Firstname + ISNULL(' ' + MiddleInitial + '.', '') + ' ' + Lastname)) AS Name,
+                Status,
+                ValidUntil,
+                LastNotificationDate,
+                NotificationCount
+            FROM Members
+            WHERE (IsDeleted = 0 OR IsDeleted IS NULL)
+                AND IsNotified = 1
+                AND LastNotificationDate IS NOT NULL
+            ORDER BY LastNotificationDate DESC";
+
+                using var cmd = new SqlCommand(query, conn);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    notifiedMembers.Add(new NotifiedMemberInfo
+                    {
+                        MemberID = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                        Status = reader.IsDBNull(2) ? "Unknown" : reader.GetString(2),
+                        ValidUntil = reader.IsDBNull(3) ? "N/A" : reader.GetDateTime(3).ToString("MMM dd, yyyy"),
+                        LastNotificationDate = reader.IsDBNull(4) ? null : reader.GetDateTime(4),
+                        NotificationCount = reader.IsDBNull(5) ? 0 : reader.GetInt32(5)
+                    });
+                }
+
+                Debug.WriteLine($"[GetNotifiedMembersAsync] Found {notifiedMembers.Count} notified members");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[GetNotifiedMembersAsync] Error: {ex.Message}");
+            }
+
+            return notifiedMembers;
+        }
+
+        /// <summary>
+        /// Clears notification flag when member is renewed/upgraded
+        /// </summary>
+        private async Task ClearMemberNotificationFlagAsync(
+            SqlConnection conn,
+            SqlTransaction transaction,
+            int memberId)
+        {
+            try
+            {
+                const string query = @"
+            UPDATE Members 
+            SET IsNotified = 0,
+                LastNotificationDate = NULL
+            WHERE MemberID = @MemberId";
+
+                using var cmd = new SqlCommand(query, conn, transaction);
+                cmd.Parameters.AddWithValue("@MemberId", memberId);
+
+                await cmd.ExecuteNonQueryAsync();
+
+                Debug.WriteLine($"[ClearMemberNotificationFlagAsync] Cleared notification for member {memberId}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ClearMemberNotificationFlagAsync] Error: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Supporting class for notified member information
+        /// </summary>
+        public class NotifiedMemberInfo
+        {
+            public int MemberID { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string Status { get; set; } = string.Empty;
+            public string ValidUntil { get; set; } = string.Empty;
+            public DateTime? LastNotificationDate { get; set; }
+            public int NotificationCount { get; set; }
+        }
 
         protected virtual void Dispose(bool disposing)
         {

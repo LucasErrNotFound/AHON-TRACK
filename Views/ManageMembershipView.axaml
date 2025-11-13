@@ -318,7 +318,8 @@
 																<MenuItem
 																	Header="Inform"
 																	Command="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).ShowNotifyDialogCommand, FallbackValue={x:Null}}"
-																	CommandParameter="{CompiledBinding}" />
+																	CommandParameter="{CompiledBinding}"
+																	IsEnabled="{CompiledBinding $parent[DataGrid].((viewModels:ManageMembershipViewModel)DataContext).IsInformButtonEnabled, FallbackValue=False}"/>
 																<Separator />
 																<MenuItem
 																	Header="Delete"

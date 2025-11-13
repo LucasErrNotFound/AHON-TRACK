@@ -327,6 +327,7 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
             var sessionsTask = InitializeTrainingSessionsData();
             var logsTask = RefreshRecentLogs();
             var summaryTask = LoadDashboardSummary();
+            var notificationTask = LoadPersistedMemberNotificationsAsync();
 
             // Wait for all tasks to complete
             await Task.WhenAll(
@@ -334,7 +335,8 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
                 salesTask,
                 sessionsTask,
                 logsTask,
-                summaryTask
+                summaryTask,
+                notificationTask
             ).ConfigureAwait(false);
 
             // Event subscriptions (must happen after all data is loaded)
@@ -459,6 +461,40 @@ public sealed partial class DashboardViewModel : ViewModelBase, INotifyPropertyC
     #endregion
 
     #region Data Loading Methods
+
+    private async Task LoadPersistedMemberNotificationsAsync()
+    {
+        try
+        {
+            if (_memberService == null) return;
+
+            // Get all members who have been notified
+            var notifiedMembers = await _memberService.GetNotifiedMembersAsync();
+
+            foreach (var member in notifiedMembers)
+            {
+                AddNotification(new Notification
+                {
+                    Type = member.Status.ToLower() switch
+                    {
+                        "expired" => NotificationType.Warning,
+                        "near expiry" => NotificationType.Warning,
+                        _ => NotificationType.Warning
+                    },
+                    Title = "Member Notification Sent",
+                    Message = $"Successfully notified {member.Name} about their membership status. " +
+                             $"Status: {member.Status}, Valid Until: {member.ValidUntil}",
+                    DateAndTime = member.LastNotificationDate ?? DateTime.Now
+                });
+            }
+
+            Console.WriteLine($"[LoadPersistedMemberNotificationsAsync] Loaded {notifiedMembers.Count} persisted notifications");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoadPersistedMemberNotificationsAsync] Error: {ex.Message}");
+        }
+    }
 
     public async Task LoadSalesFromDatabaseAsync()
     {
