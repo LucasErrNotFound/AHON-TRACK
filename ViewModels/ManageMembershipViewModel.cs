@@ -197,6 +197,11 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         eventService.ProductPurchased += OnMemberChanged;
     }
 
+    public bool IsInformButtonEnabled =>
+    SelectedMember is not null &&
+    (SelectedMember.Status.Equals("Near Expiry", StringComparison.OrdinalIgnoreCase) ||
+     SelectedMember.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase));
+
     partial void OnSelectedMemberChanged(ManageMembersItem? value)
     {
         OnPropertyChanged(nameof(IsActiveVisible));
@@ -207,6 +212,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
         OnPropertyChanged(nameof(IsUpgradeButtonEnabled));
         OnPropertyChanged(nameof(IsRenewButtonEnabled));
         OnPropertyChanged(nameof(CanDeleteSelectedMembers));
+        OnPropertyChanged(nameof(IsInformButtonEnabled));
     }
 
     private async void OnMemberChanged(object? sender, EventArgs e)
@@ -573,34 +579,72 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
     }
 
     [RelayCommand]
-    private void ShowNotifyDialog()
+    private async Task ShowNotifyDialog()
     {
-        _notifyDialogCardViewmodel.Initialize();
-        _dialogManager.CreateDialog(_notifyDialogCardViewmodel)
-            .WithSuccessCallback(_ =>
-            {
-                _toastManager.CreateToast("Member Notification")
-                    .WithContent("Successfully notified this particular member")
-                    .DismissOnClick()
-                    .WithDelay(5)
-                    .ShowInfo();
+        if (SelectedMember == null)
+        {
+            _toastManager.CreateToast("No Member Selected")
+                .WithContent("Please select a member to notify")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
 
-                // Suggest GC for image cleanup
-                // GC.Collect(0, GCCollectionMode.Optimized);
-                // ForceGarbageCollection();
+        // Check if member status is Near Expiry or Expired
+        if (!SelectedMember.Status.Equals("Near Expiry", StringComparison.OrdinalIgnoreCase) &&
+            !SelectedMember.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+        {
+            _toastManager.CreateToast("Invalid Status")
+                .WithContent("You can only notify members with 'Near Expiry' or 'Expired' status.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
+        _notifyDialogCardViewmodel.Initialize();
+        _notifyDialogCardViewmodel.SetMemberInfo(SelectedMember);
+
+        _dialogManager.CreateDialog(_notifyDialogCardViewmodel)
+            .WithSuccessCallback(async _ =>
+            {
+                // ✅ Record the notification in database (this will trigger dashboard notification)
+                if (_memberService != null && int.TryParse(SelectedMember.ID, out int memberId))
+                {
+                    var result = await _memberService.RecordMemberNotificationAsync(
+                        memberId,
+                        _notifyDialogCardViewmodel.TextDescription ?? "Member notified about membership status");
+
+                    if (result.Success)
+                    {
+                        // Show success toast
+                        _toastManager.CreateToast("Member Notified")
+                            .WithContent($"Successfully notified {SelectedMember.Name}")
+                            .DismissOnClick()
+                            .WithDelay(5)
+                            .ShowSuccess();
+
+                        // Reload data to reflect notification status
+                        await LoadMemberDataAsync();
+                    }
+                    else
+                    {
+                        _toastManager.CreateToast("Notification Failed")
+                            .WithContent($"Failed to record notification: {result.Message}")
+                            .DismissOnClick()
+                            .ShowError();
+                    }
+                }
             })
             .WithCancelCallback(() =>
             {
-                _toastManager.CreateToast("Cancel Notification")
-                    .WithContent("Cancellation of notification for this particular member")
+                _toastManager.CreateToast("Notification Cancelled")
+                    .WithContent("Member notification was cancelled")
                     .DismissOnClick()
-                    .WithDelay(5)
                     .ShowWarning();
             })
             .WithMaxWidth(950)
             .Dismissible()
             .Show();
-
     }
 
     [RelayCommand]
@@ -1335,7 +1379,16 @@ public partial class ManageMembersItem : ObservableObject
     private int? _recentPurchaseQuantity;
 
     [ObservableProperty]
-    private string _remarks = string.Empty;
+    private string? _remarks = string.Empty;
+
+    [ObservableProperty]
+    private DateTime? _lastNotificationDate;
+
+    [ObservableProperty]
+    private int _notificationCount;
+
+    [ObservableProperty]
+    private bool _isNotified;
 
     public string MembershipStartDisplay => DateJoined?.ToString("MMMM d, yyyy") ?? "Not Set";
     public string LastCheckInDisplay => LastCheckIn?.ToString("MMMM d, yyyy") ?? "No check-in";

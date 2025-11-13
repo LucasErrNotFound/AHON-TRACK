@@ -25,5 +25,8 @@ namespace AHON_TRACK.Services.Interface
         Task<MemberExpirationSummary> GetMemberExpirationSummaryAsync();
 
         (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(ManageMemberModel member);
+
+        Task<(bool Success, string Message)> RecordMemberNotificationAsync(int memberId, string notificationMessage);
+        Task<List<NotifiedMemberInfo>> GetNotifiedMembersAsync();
     }
 }

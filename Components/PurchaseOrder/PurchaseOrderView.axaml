@@ -9,96 +9,97 @@
     mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
     x:DataType="viewModel:PurchaseOrderViewModel"
     x:Class="AHON_TRACK.Components.PurchaseOrder.PurchaseOrderView">
-    
-    <Design.DataContext>
-        <viewModel:PurchaseOrderViewModel />
-    </Design.DataContext>
-    
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
-        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
-        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
 
-        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
-        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
-        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
-        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+	<Design.DataContext>
+		<viewModel:PurchaseOrderViewModel />
+	</Design.DataContext>
 
-        <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter" />
-    </UserControl.Resources>
-    
-    <DockPanel LastChildFill="True">
-        <StackPanel
+	<UserControl.Resources>
+		<SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+		<SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+		<SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+		<SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+		<SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+		<SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+		<SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+		<converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter" />
+	</UserControl.Resources>
+
+	<DockPanel LastChildFill="True">
+		<StackPanel
             MaxWidth="{StaticResource PageMaxWidth}"
             Margin="{StaticResource PageMargin}"
             DockPanel.Dock="Top">
-            <TextBlock
+			<TextBlock
                 FontSize="30"
                 FontWeight="SemiBold"
                 Text="{CompiledBinding ViewTitle}"
                 Foreground="{StaticResource FontForeground}"
                 Margin="90,30,0,0" />
-            <TextBlock
+			<TextBlock
                 Classes="Caption Muted"
                 FontSize="14"
                 HorizontalAlignment="Left"
                 Text="{CompiledBinding ViewDescription}"
                 TextWrapping="Wrap"
                 Margin="90,0" />
-        </StackPanel>
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,30,90,0" Spacing="16">
-                <StackPanel>
-                    <Grid ColumnDefinitions="Auto Auto *" Margin="0,0,0,15" ColumnSpacing="20">
-                        <Button 
+		</StackPanel>
+		<ScrollViewer VerticalScrollBarVisibility="Auto">
+			<StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,30,90,0" Spacing="16">
+				<StackPanel>
+					<Grid ColumnDefinitions="Auto Auto *" Margin="0,0,0,15" ColumnSpacing="20">
+						<Button
                             Grid.Column="0"
                             Classes="Outline"
                             Content="Export to PDF"
                             HorizontalAlignment="Left"
                             IsVisible="{CompiledBinding IsInViewMode}">
-                        </Button>
-                        <Button 
+						</Button>
+						<Button
                             Grid.Column="1"
                             Classes="Primary"
                             Content="Send to Inventory"
                             HorizontalAlignment="Left"
-                            IsVisible="{CompiledBinding IsDelivered}">
-                        </Button>
-                        <Button 
+                            IsVisible="{CompiledBinding IsDelivered}"
+							Command="{CompiledBinding SendToInventoryCommand}">
+						</Button>
+						<Button
                             Grid.Column="2"
                             Classes="Primary"
                             Content="Save Details"
                             HorizontalAlignment="Right"
                             IsVisible="{CompiledBinding IsInViewMode}"
                             Command="{CompiledBinding SaveDetailsCommand}">
-                        </Button>
-                    </Grid>
-                    
-                    <!-- Main Grid -->
-                    <Grid ColumnDefinitions="2* *" ColumnSpacing="25">
-                        
-                        <!-- Column 1 -->
-                        <!-- Item Card Details -->
-                        <Grid Grid.Column="0" VerticalAlignment="Top">
-                            <shadui:Card MaxHeight="830">
-                                <StackPanel>
-                                    <StackPanel>
-                                        <ItemsControl ItemsSource="{CompiledBinding Items}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <UniformGrid Columns="1" RowSpacing="20" />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <StackPanel Orientation="Horizontal" Spacing="20">
-                                                        <TextBox
+						</Button>
+					</Grid>
+
+					<!-- Main Grid -->
+					<Grid ColumnDefinitions="2* *" ColumnSpacing="25">
+
+						<!-- Column 1 -->
+						<!-- Item Card Details -->
+						<Grid Grid.Column="0" VerticalAlignment="Top">
+							<shadui:Card MaxHeight="830">
+								<StackPanel>
+									<StackPanel>
+										<ItemsControl ItemsSource="{CompiledBinding Items}">
+											<ItemsControl.ItemsPanel>
+												<ItemsPanelTemplate>
+													<UniformGrid Columns="1" RowSpacing="20" />
+												</ItemsPanelTemplate>
+											</ItemsControl.ItemsPanel>
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<StackPanel Orientation="Horizontal" Spacing="20">
+														<TextBox
                                                             Classes="Clearable"
                                                             shadui:ControlAssist.Label="Item Name"
                                                             Text="{CompiledBinding ItemName, Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
                                                             Width="195" />
-                                                        <NumericUpDown
+														<NumericUpDown
                                                             shadui:ControlAssist.Label="Price"
                                                             Value="{CompiledBinding Price, Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
@@ -107,18 +108,18 @@
                                                             FormatString="N2"
                                                             ShowButtonSpinner="False"
                                                             Watermark="0.00">
-                                                            <NumericUpDown.InnerLeftContent>
-                                                                <TextBlock Margin="8,0,-8,0" Text="₱" />
-                                                            </NumericUpDown.InnerLeftContent>
-                                                        </NumericUpDown>
-                                                        <ComboBox
+															<NumericUpDown.InnerLeftContent>
+																<TextBlock Margin="8,0,-8,0" Text="₱" />
+															</NumericUpDown.InnerLeftContent>
+														</NumericUpDown>
+														<ComboBox
                                                             shadui:ControlAssist.Label="Unit"
                                                             ItemsSource="{CompiledBinding UnitList}"
                                                             SelectedItem="{CompiledBinding SelectedUnit,Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
                                                             Width="195"
                                                             Margin="0,-4,0,0" />
-                                                        <NumericUpDown
+														<NumericUpDown
                                                             Classes="Clearable"
                                                             shadui:ControlAssist.Label="Quantity"
                                                             Value="{CompiledBinding Quantity, Mode=TwoWay}"
@@ -129,46 +130,46 @@
                                                             FormatString="N0"
                                                             ShowButtonSpinner="False"
                                                             Watermark="0">
-                                                            <NumericUpDown.InnerLeftContent>
-                                                                <TextBlock Margin="8,0,-8,0" Text="×" />
-                                                            </NumericUpDown.InnerLeftContent>
-                                                        </NumericUpDown>
-                                                        <Button
+															<NumericUpDown.InnerLeftContent>
+																<TextBlock Margin="8,0,-8,0" Text="×" />
+															</NumericUpDown.InnerLeftContent>
+														</NumericUpDown>
+														<Button
                                                             Classes="Destructive"
                                                             VerticalAlignment="Bottom"
                                                             IsVisible="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
                                                             Command="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).RemoveItemCommand, FallbackValue={x:Null}}"
                                                             CommandParameter="{CompiledBinding}">
-                                                            <Svg
+															<Svg
                                                                 Width="20"
                                                                 Height="20"
                                                                 Path="avares://AHON_TRACK/Assets/SupplierManagementView/cancel-icon2.svg" />
-                                                        </Button>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </StackPanel>
-                                <shadui:Card.Footer>
-                                    <Button
+														</Button>
+													</StackPanel>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</StackPanel>
+								</StackPanel>
+								<shadui:Card.Footer>
+									<Button
                                         Classes="Primary"
                                         Content="Add Item"
                                         HorizontalAlignment="Left"
                                         IsVisible="{CompiledBinding IsInEditMode}"
                                         Command="{CompiledBinding AddItemCommand}" />
-                                </shadui:Card.Footer>
-                            </shadui:Card>
-                        </Grid>
-                        
-                        <!-- Column 1 -->
-                        <!-- Item Card Details -->
-                        <Grid Grid.Column="1">
-                            <Grid RowDefinitions="Auto Auto Auto" RowSpacing="20" VerticalAlignment="Top">
-                                <shadui:Card Grid.Row="0">
-                                    <StackPanel>
-                                        <Grid RowDefinitions="* *" ColumnDefinitions="* Auto" RowSpacing="50">
-                                            <TextBox
+								</shadui:Card.Footer>
+							</shadui:Card>
+						</Grid>
+
+						<!-- Column 1 -->
+						<!-- Item Card Details -->
+						<Grid Grid.Column="1">
+							<Grid RowDefinitions="Auto Auto Auto" RowSpacing="20" VerticalAlignment="Top">
+								<shadui:Card Grid.Row="0">
+									<StackPanel>
+										<Grid RowDefinitions="* *" ColumnDefinitions="* Auto" RowSpacing="50">
+											<TextBox
                                                 Grid.Row="0"
                                                 Grid.Column="0"
                                                 Classes="Clearable"
@@ -177,7 +178,7 @@
                                                 IsEnabled="False"
                                                 Text="{CompiledBinding PoNumber, Mode=TwoWay}"
                                                 MinWidth="195" />
-                                            <CalendarDatePicker
+											<CalendarDatePicker
                                                 Grid.Row="0"
                                                 Grid.Column="1"
                                                 HorizontalAlignment="Right"
@@ -187,7 +188,7 @@
                                                 IsEnabled="{CompiledBinding IsInEditMode}"
                                                 Margin="0,-5,0,0"
                                                 MinWidth="195" />
-                                            <ComboBox
+											<ComboBox
                                                 Grid.Row="1"
                                                 Grid.Column="0"
                                                 HorizontalAlignment="Left"
@@ -198,7 +199,7 @@
                                                 IsEnabled="{CompiledBinding IsShippingStatusEnabled}"
                                                 MinWidth="195"
                                                 Margin="0,-4,0,0" />
-                                            <ComboBox
+											<ComboBox
                                                 Grid.Row="1"
                                                 Grid.Column="1"
                                                 HorizontalAlignment="Right"
@@ -209,108 +210,108 @@
                                                 IsVisible="{CompiledBinding IsInViewMode}"
                                                 MinWidth="195"
                                                 Margin="0,-4,0,0">
-                                                <ComboBox.Styles>
-                                                    <Style Selector="ComboBox:disabled /template/ ContentPresenter#ContentPresenter">
-                                                        <Setter Property="Foreground" Value="{DynamicResource MutedColor}" />
-                                                    </Style>
-                                                </ComboBox.Styles>
-                                            </ComboBox>
-                                        </Grid>
-                                        <TextBox
+												<ComboBox.Styles>
+													<Style Selector="ComboBox:disabled /template/ ContentPresenter#ContentPresenter">
+														<Setter Property="Foreground" Value="{DynamicResource MutedColor}" />
+													</Style>
+												</ComboBox.Styles>
+											</ComboBox>
+										</Grid>
+										<TextBox
                                             Classes="Clearable"
                                             Margin="0,20,0,0"
                                             shadui:ControlAssist.Label="Invoice Number"
                                             Text="{CompiledBinding InvoiceNumber}"
                                             IsVisible="{CompiledBinding IsInViewMode}"/>
-                                    </StackPanel>
-                                </shadui:Card>
-                                <shadui:Card Grid.Row="1">
-                                    <StackPanel>
-                                        <Grid RowDefinitions="* * *" ColumnDefinitions="* *" RowSpacing="30">
-                                            <TextBlock 
-                                                Grid.Row="0" 
+									</StackPanel>
+								</shadui:Card>
+								<shadui:Card Grid.Row="1">
+									<StackPanel>
+										<Grid RowDefinitions="* * *" ColumnDefinitions="* *" RowSpacing="30">
+											<TextBlock
+                                                Grid.Row="0"
                                                 Grid.Column="0"
                                                 Text="Subtotal"
                                                 FontSize="20"
                                                 FontWeight="Regular" />
-                                            <TextBlock 
-                                                Grid.Row="0" 
+											<TextBlock
+                                                Grid.Row="0"
                                                 Grid.Column="1"
                                                 Text="{CompiledBinding Subtotal, StringFormat='₱{0:N2}'}"
                                                 TextAlignment="Right"
                                                 FontSize="18"
                                                 FontWeight="Regular"/>
-                                            <TextBlock 
-                                                Grid.Row="1" 
+											<TextBlock
+                                                Grid.Row="1"
                                                 Grid.Column="0"
                                                 Text="VAT (12%)"
                                                 FontSize="20"
                                                 FontWeight="Regular"/>
-                                            <TextBlock 
-                                                Grid.Row="1" 
+											<TextBlock
+                                                Grid.Row="1"
                                                 Grid.Column="1"
                                                 Text="{CompiledBinding Vat, StringFormat='₱{0:N2}'}"
                                                 TextAlignment="Right"
                                                 FontSize="18"
                                                 FontWeight="Regular"/>
-                                            <TextBlock 
-                                                Grid.Row="2" 
+											<TextBlock
+                                                Grid.Row="2"
                                                 Grid.Column="0"
                                                 Text="Total"
                                                 FontSize="20"
                                                 FontWeight="Regular"/>
-                                            <TextBlock 
-                                                Grid.Row="2" 
+											<TextBlock
+                                                Grid.Row="2"
                                                 Grid.Column="1"
                                                 Text="{CompiledBinding Total, StringFormat='₱{0:N2}'}"
                                                 Foreground="{DynamicResource SuccessColor}"
                                                 TextAlignment="Right"
                                                 FontSize="18"
                                                 FontWeight="Bold"/>
-                                        </Grid>
-                                    </StackPanel>
-                                </shadui:Card>
-                                <StackPanel 
-                                    Grid.Row="2" 
-                                    Orientation="Horizontal" 
+										</Grid>
+									</StackPanel>
+								</shadui:Card>
+								<StackPanel
+                                    Grid.Row="2"
+                                    Orientation="Horizontal"
                                     HorizontalAlignment="Right"
                                     Spacing="15">
-                                    <!-- Edit Mode Buttons -->
-                                    <Button
+									<!-- Edit Mode Buttons -->
+									<Button
                                         Classes="Destructive"
                                         Content="Cancel"
                                         Command="{CompiledBinding CancelOrderCommand}"
                                         IsVisible="{CompiledBinding IsInEditMode}"/>
-                                    <Button
+									<Button
                                         Classes="Primary"
                                         Content="Save Order"
                                         Command="{CompiledBinding SaveOrderCommand}"
                                         IsVisible="{CompiledBinding IsInEditMode}"/>
-    
-                                    <!-- View Mode Buttons -->
-                                    <Button
+
+									<!-- View Mode Buttons -->
+									<Button
                                         Classes="Outline"
                                         Content="Back"
                                         Command="{CompiledBinding NavigateBackCommand}"
                                         IsVisible="{CompiledBinding IsInViewMode}"/>
-                                    <Button
+									<Button
                                         Classes="Primary"
                                         Content="Edit"
                                         Command="{CompiledBinding EditOrderCommand}"
                                         IsVisible="{CompiledBinding IsInViewMode}"/>
-                                    <Button
+									<Button
                                         Classes="Destructive"
                                         Content="Delete"
                                         Command="{CompiledBinding DeleteOrderCommand}"
                                         IsVisible="{CompiledBinding IsInViewMode}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Grid>
-                        
-                    </Grid>
-                    
-                </StackPanel>
-            </StackPanel>
-        </ScrollViewer>
-    </DockPanel>
+								</StackPanel>
+							</Grid>
+						</Grid>
+
+					</Grid>
+
+				</StackPanel>
+			</StackPanel>
+		</ScrollViewer>
+	</DockPanel>
 </UserControl>
