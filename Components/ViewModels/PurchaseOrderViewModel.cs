@@ -454,6 +454,9 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 if (result.Success)
                 {
                     IsSaved = true;
+                    // NEW: Switch to view context after successful save
+                    ViewContext = PurchaseOrderContext.ViewPurchaseOrder;
+                
                     _toastManager.CreateToast("Purchase Order Updated")
                         .WithContent($"Purchase Order {PoNumber} has been updated successfully!")
                         .DismissOnClick()
@@ -484,6 +487,8 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 {
                     PurchaseOrderId = result.POId.Value;
                     IsSaved = true;
+                    // NEW: Switch to view context after successful creation
+                    ViewContext = PurchaseOrderContext.ViewPurchaseOrder;
 
                     _toastManager.CreateToast("Purchase Order Created")
                         .WithContent($"Purchase Order {PoNumber} has been created successfully!")
@@ -608,7 +613,9 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     [RelayCommand]
     private async Task EditOrder()
     {
+        ViewContext = PurchaseOrderContext.AddPurchaseOrder;
         IsSaved = false;
+    
         _toastManager.CreateToast("Edit Mode")
             .WithContent("You can now edit the purchase order details")
             .DismissOnClick()

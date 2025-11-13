@@ -203,21 +203,13 @@
                                                         Header="Products"
                                                         Binding="{CompiledBinding Products}" />
 
-                                                    <!-- Delivery Schedule -->
+                                                    <!-- Address -->
                                                     <DataGridTextColumn
                                                         IsReadOnly="True"
                                                         Width="Auto"
                                                         MaxWidth="140"
-                                                        Header="Delivery Schedule"
-                                                        Binding="{CompiledBinding DeliverySchedule}" />
-
-                                                    <!-- Contract Terms -->
-                                                    <DataGridTextColumn
-                                                        IsReadOnly="True"
-                                                        Width="Auto"
-                                                        MinWidth="130"
-                                                        Header="Contract Terms"
-                                                        Binding="{CompiledBinding FormattedContractTerms}" />
+                                                        Header="Address"
+                                                        Binding="{CompiledBinding Address}" />
 
                                                     <!-- Status -->
                                                     <DataGridTemplateColumn
@@ -478,21 +470,13 @@
                                                         Header="Products"
                                                         Binding="{CompiledBinding Products}" />
 
-                                                    <!-- Delivery Schedule -->
+                                                    <!-- Address -->
                                                     <DataGridTextColumn
                                                         IsReadOnly="True"
                                                         Width="Auto"
                                                         MaxWidth="130"
-                                                        Header="Delivery Schedule"
-                                                        Binding="{CompiledBinding DeliverySchedule}" />
-
-                                                    <!-- Contract Terms -->
-                                                    <DataGridTextColumn
-                                                        IsReadOnly="True"
-                                                        Width="Auto"
-                                                        MaxWidth="130"
-                                                        Header="Contract Terms"
-                                                        Binding="{CompiledBinding FormattedContractTerms}" />
+                                                        Header="Address"
+                                                        Binding="{CompiledBinding Address}" />
 
                                                     <!-- Status -->
                                                     <DataGridTemplateColumn
