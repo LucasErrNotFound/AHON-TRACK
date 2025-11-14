@@ -25,19 +25,20 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
 
     [ObservableProperty]
     private string[] _statusFilterItems = ["Available", "Not Available"];
-    
+
     [ObservableProperty]
     private string[] _filteredStatusItems = [];
 
-    // Supplier dropdown items - now contains supplier names as strings
     [ObservableProperty]
     private string[] _supplierFilterItems = [];
-    
+
     [ObservableProperty]
     private string[] _brandNameItems = [];
 
-    // This maintains the internal list of supplier objects
     private List<SupplierDropdownModel> _supplierModels = [];
+
+    // ⭐ Store equipment data from purchase orders (SupplierID -> EquipmentName -> Data)
+    private Dictionary<int, Dictionary<string, (decimal Price, decimal Quantity, string Unit, DateTime OrderDate)>> _supplierEquipmentData = new();
 
     [ObservableProperty]
     private string _dialogTitle = "Add New Equipment";
@@ -56,7 +57,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private string? _category = string.Empty;
     private string? _condition = string.Empty;
     private string? _status = "Available";
-    private string? _supplier = string.Empty;  // This binds to XAML
+    private string? _supplier = string.Empty;
     private int? _quantity;
     private decimal? _purchasePrice;
     private DateTime? _purchaseDate;
@@ -68,6 +69,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
     private readonly IInventoryService _inventoryService;
+    private readonly IPurchaseOrderService? _purchaseOrderService;
 
     public int EquipmentID
     {
@@ -79,7 +81,20 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     public string? BrandName
     {
         get => _brandName;
-        set => SetProperty(ref _brandName, value, true);
+        set
+        {
+            var oldValue = _brandName;
+            SetProperty(ref _brandName, value, true);
+
+            // ⭐ Auto-populate fields when brand name changes (only in Add mode)
+            if (!IsEditMode && oldValue != value && !string.IsNullOrWhiteSpace(value) &&
+                value != "Select supplier first" &&
+                value != "No equipment available" &&
+                value != "No new equipment - all items already in inventory")
+            {
+                AutoPopulateEquipmentFields(value);
+            }
+        }
     }
 
     [Required(ErrorMessage = "Select a category")]
@@ -97,7 +112,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         {
             var oldValue = _condition;
             SetProperty(ref _condition, value, true);
-        
+
             if (oldValue != value)
             {
                 UpdateFilteredStatusItems();
@@ -113,15 +128,23 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         set => SetProperty(ref _status, value, true);
     }
 
-    // This property binds to XAML - it's the supplier NAME (string)
     [Required(ErrorMessage = "Select a supplier")]
     public string? Supplier
     {
         get => _supplier;
-        set => SetProperty(ref _supplier, value, true);
+        set
+        {
+            var oldValue = _supplier;
+            SetProperty(ref _supplier, value, true);
+
+            // ⭐ Update brand name items when supplier changes
+            if (oldValue != value && !IsEditMode)
+            {
+                UpdateBrandNameItems(value);
+            }
+        }
     }
 
-    // Helper property to get the SupplierID based on selected supplier name
     public int? SupplierID
     {
         get
@@ -134,7 +157,6 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         }
     }
 
-    // Helper property to get the selected supplier model (for compatibility)
     public SupplierDropdownModel? SelectedSupplierModel
     {
         get
@@ -148,7 +170,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
 
     [Required(ErrorMessage = "Quantity is required")]
     [Range(1, 100, ErrorMessage = "Quantity must be between 1 and 100")]
-    public int? Quantity 
+    public int? Quantity
     {
         get => _quantity;
         set => SetProperty(ref _quantity, value, true);
@@ -169,8 +191,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         {
             var oldValue = _purchaseDate;
             SetProperty(ref _purchaseDate, value, true);
-            
-            // Re-validate WarrantyExpiry when PurchasedDate changes
+
             if (oldValue != value)
             {
                 ValidateProperty(WarrantyExpiry, nameof(WarrantyExpiry));
@@ -187,8 +208,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         {
             var oldValue = _warrantyExpiry;
             SetProperty(ref _warrantyExpiry, value, true);
-            
-            // Re-validate PurchasedDate when WarrantyExpiry changes
+
             if (oldValue != value)
             {
                 ValidateProperty(PurchasedDate, nameof(PurchasedDate));
@@ -206,8 +226,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         {
             var oldValue = _lastMaintenance;
             SetProperty(ref _lastMaintenance, value, true);
-            
-            // Re-validate NextMaintenance when LastMaintenance changes
+
             if (oldValue != value)
             {
                 ValidateProperty(NextMaintenance, nameof(NextMaintenance));
@@ -224,8 +243,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         {
             var oldValue = _nextMaintenance;
             SetProperty(ref _nextMaintenance, value, true);
-            
-            // Re-validate LastMaintenance when NextMaintenance changes
+
             if (oldValue != value)
             {
                 ValidateProperty(LastMaintenance, nameof(LastMaintenance));
@@ -237,12 +255,14 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         DialogManager dialogManager,
         ToastManager toastManager,
         PageManager pageManager,
-        IInventoryService inventoryService)
+        IInventoryService inventoryService,
+        IPurchaseOrderService? purchaseOrderService = null)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
         _inventoryService = inventoryService;
+        _purchaseOrderService = purchaseOrderService;
     }
 
     public EquipmentDialogCardViewModel()
@@ -251,6 +271,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
         _inventoryService = null!;
+        _purchaseOrderService = null;
     }
 
     [AvaloniaHotReload]
@@ -261,10 +282,202 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         IsEditMode = false;
         EquipmentID = 0;
         ClearAllFields();
-        
+
         FilteredStatusItems = StatusFilterItems;
-        
+
         await LoadSuppliersAsync();
+        await LoadEquipmentFromPurchaseOrdersAsync();
+    }
+
+    private async Task LoadEquipmentFromPurchaseOrdersAsync()
+    {
+        if (_inventoryService == null || _purchaseOrderService == null)
+        {
+            BrandNameItems = ["No equipment available"];
+            return;
+        }
+
+        try
+        {
+            // Get existing equipment names
+            var existingEquipmentResult = await _inventoryService.GetEquipmentAsync();
+            var existingEquipmentNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (existingEquipmentResult.Success && existingEquipmentResult.Equipment != null)
+            {
+                foreach (var equipment in existingEquipmentResult.Equipment)
+                {
+                    if (!string.IsNullOrWhiteSpace(equipment.EquipmentName))
+                    {
+                        existingEquipmentNames.Add(equipment.EquipmentName);
+                    }
+                }
+                Console.WriteLine($"🏋️ Found {existingEquipmentNames.Count} existing equipment to filter out");
+            }
+
+            var poResult = await _purchaseOrderService.GetAllPurchaseOrdersAsync();
+            if (!poResult.Success || poResult.PurchaseOrders == null)
+            {
+                BrandNameItems = ["No equipment available"];
+                return;
+            }
+
+            // Filter: Only "Equipment" category orders that are delivered+paid and not sent to inventory
+            var deliveredPaidEquipmentOrders = poResult.PurchaseOrders
+                .Where(po => po.ShippingStatus?.Equals("Delivered", StringComparison.OrdinalIgnoreCase) == true &&
+                            po.PaymentStatus?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true &&
+                            !po.SentToInventory &&
+                            po.Category?.Equals("Equipment", StringComparison.OrdinalIgnoreCase) == true &&
+                            po.SupplierID.HasValue &&
+                            po.Items != null && po.Items.Count > 0)
+                .ToList();
+
+            Console.WriteLine($"🔍 Found {deliveredPaidEquipmentOrders.Count} delivered+paid EQUIPMENT orders that haven't been sent to inventory");
+
+            _supplierEquipmentData.Clear();
+
+            foreach (var po in deliveredPaidEquipmentOrders)
+            {
+                if (!po.SupplierID.HasValue) continue;
+
+                // Initialize supplier data dictionary
+                if (!_supplierEquipmentData.ContainsKey(po.SupplierID.Value))
+                {
+                    _supplierEquipmentData[po.SupplierID.Value] = new Dictionary<string, (decimal, decimal, string, DateTime)>();
+                }
+
+                foreach (var item in po.Items.Where(i => !string.IsNullOrWhiteSpace(i.ItemName)))
+                {
+                    var equipmentName = item.ItemName;
+
+                    // Skip if already exists in inventory
+                    if (existingEquipmentNames.Contains(equipmentName))
+                    {
+                        Console.WriteLine($"⏭️ Skipping '{equipmentName}' - already exists in inventory");
+                        continue;
+                    }
+
+                    // Store equipment data: Price, Quantity, Unit, OrderDate
+                    _supplierEquipmentData[po.SupplierID.Value][equipmentName] =
+                        (item.Price, item.Quantity, item.Unit ?? "pcs", po.OrderDate);
+
+                    Console.WriteLine($"💾 Stored data for '{equipmentName}': Price=₱{item.Price:N2}, Qty={item.Quantity} {item.Unit}, Date={po.OrderDate:yyyy-MM-dd}");
+                }
+            }
+
+            // Initially show "Select supplier first"
+            BrandNameItems = ["Select supplier first"];
+            Console.WriteLine($"✅ Loaded equipment data from {deliveredPaidEquipmentOrders.Count} purchase orders");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading equipment: {ex.Message}");
+            BrandNameItems = ["No equipment available"];
+        }
+    }
+
+    // ⭐ NEW: Update brand name items when supplier changes
+    private void UpdateBrandNameItems(string? selectedSupplier)
+    {
+        if (string.IsNullOrEmpty(selectedSupplier) || selectedSupplier == "None")
+        {
+            BrandNameItems = ["Select supplier first"];
+            BrandName = null;
+            return;
+        }
+
+        // Find supplier ID
+        var supplierModel = _supplierModels.FirstOrDefault(s => s.SupplierName == Supplier);
+        if (supplierModel == null || supplierModel.SupplierID == 0)
+        {
+            Console.WriteLine($"⚠️ Supplier '{Supplier}' not found in supplier list");
+            return;
+        }
+
+        int supplierId = supplierModel.SupplierID;
+
+
+        // Get equipment for this supplier
+        if (_supplierEquipmentData.TryGetValue(supplierId, out var equipmentDict) && equipmentDict.Count > 0)
+        {
+            var sortedEquipment = equipmentDict.Keys.OrderBy(k => k).ToArray();
+            BrandNameItems = sortedEquipment;
+            BrandName = sortedEquipment.FirstOrDefault();
+
+            Console.WriteLine($"✅ Loaded {sortedEquipment.Length} equipment items for supplier '{selectedSupplier}'");
+        }
+        else
+        {
+            BrandNameItems = ["No new equipment - all items already in inventory"];
+            BrandName = null;
+            Console.WriteLine($"ℹ️ No new equipment for supplier '{selectedSupplier}'");
+        }
+    }
+
+    // ⭐ NEW: Auto-populate equipment fields when brand name is selected
+    private void AutoPopulateEquipmentFields(string equipmentName)
+    {
+        try
+        {
+            // Get the selected supplier ID
+            if (string.IsNullOrEmpty(Supplier) || Supplier == "None")
+            {
+                Console.WriteLine("⚠️ No supplier selected, cannot auto-populate");
+                return;
+            }
+
+            var supplierModel = _supplierModels.FirstOrDefault(s => s.SupplierName == Supplier);
+            if (supplierModel == null || supplierModel.SupplierID == 0)
+            {
+                Console.WriteLine($"⚠️ Supplier '{Supplier}' not found in supplier list");
+                return;
+            }
+
+            int supplierId = supplierModel.SupplierID;
+
+
+            // Get equipment data
+            if (_supplierEquipmentData.TryGetValue(supplierId, out var equipmentDict) &&
+                equipmentDict.TryGetValue(equipmentName, out var equipmentData))
+            {
+                // ⭐ Auto-fill Purchase Price
+                PurchasePrice = equipmentData.Price;
+                Console.WriteLine($"✅ Auto-filled purchase price: ₱{equipmentData.Price:N2}");
+
+                // ⭐ Auto-fill Quantity (convert from PO unit to stock count)
+                int calculatedQuantity = CalculateQuantityFromPO(equipmentData.Quantity, equipmentData.Unit);
+                Quantity = calculatedQuantity;
+                Console.WriteLine($"✅ Auto-filled quantity: {calculatedQuantity} (from {equipmentData.Quantity} {equipmentData.Unit})");
+
+                // ⭐ Auto-fill Purchase Date
+                PurchasedDate = equipmentData.OrderDate;
+                Console.WriteLine($"✅ Auto-filled purchase date: {equipmentData.OrderDate:yyyy-MM-dd}");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ No data found for supplier {supplierId}, equipment '{equipmentName}'");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error auto-populating equipment fields: {ex.Message}");
+        }
+    }
+
+    // ⭐ NEW: Convert PO quantity to equipment quantity based on unit
+    private int CalculateQuantityFromPO(decimal quantity, string unit)
+    {
+        string unitLower = unit.ToLowerInvariant();
+
+        return unitLower switch
+        {
+            "pcs" or "unit" or "piece" or "pieces" => (int)Math.Floor(quantity),
+            "box" or "pack" or "case" => (int)Math.Floor(quantity),
+            "kg" or "kilogram" or "kilograms" => (int)Math.Floor(quantity),
+            "lbs" or "pound" or "pounds" => (int)Math.Floor(quantity),
+            "set" or "sets" => (int)Math.Floor(quantity),
+            _ => (int)Math.Floor(quantity)
+        };
     }
 
     public async void InitializeForEditMode(Equipment? equipment)
@@ -274,7 +487,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         DialogDescription = "Edit gym equipment with details like brand name, category, quantity, etc.";
 
         ClearAllErrors();
-        
+
         FilteredStatusItems = StatusFilterItems;
 
         EquipmentID = equipment?.ID ?? 0;
@@ -289,15 +502,11 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         LastMaintenance = equipment?.LastMaintenance;
         NextMaintenance = equipment?.NextMaintenance;
 
-        // Load suppliers first
         await LoadSuppliersAsync();
-        
-        // Set condition first (this will trigger status filtering)
+
         Condition = equipment?.Condition;
-        // Then set status
         Status = equipment?.Status ?? "Available";
 
-        // Set the supplier NAME (not ID) to match the XAML binding
         if (equipment?.SupplierID.HasValue == true)
         {
             var supplierModel = _supplierModels.FirstOrDefault(s => s.SupplierID == equipment.SupplierID);
@@ -305,10 +514,8 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         }
         else if (!string.IsNullOrEmpty(equipment?.SupplierName))
         {
-            // Fallback: use the supplier name directly if ID lookup fails
             Supplier = equipment.SupplierName;
         }
-
         else
         {
             Supplier = "None";
@@ -319,14 +526,13 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
     {
         if (_inventoryService == null)
         {
-            // Fallback for design-time
             _supplierModels = new List<SupplierDropdownModel>
-                    {
-                        new() { SupplierID = 1, SupplierName = "San Miguel" },
-                        new() { SupplierID = 2, SupplierName = "FitLab" },
-                        new() { SupplierID = 3, SupplierName = "Optimum" }
-                    };
-            // Add "None" option at the beginning
+            {
+                new() { SupplierID = 1, SupplierName = "San Miguel" },
+                new() { SupplierID = 2, SupplierName = "FitLab" },
+                new() { SupplierID = 3, SupplierName = "Optimum" }
+            };
+
             var supplierNames = new List<string> { "None" };
             supplierNames.AddRange(_supplierModels.Select(s => s.SupplierName));
             SupplierFilterItems = supplierNames.ToArray();
@@ -342,12 +548,10 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
             {
                 _supplierModels = suppliers;
 
-                // Add "None" option at the beginning, followed by supplier names
                 var supplierNames = new List<string> { "None" };
                 supplierNames.AddRange(_supplierModels.Select(s => s.SupplierName));
                 SupplierFilterItems = supplierNames.ToArray();
 
-                // Auto-select first real supplier if adding new equipment (skip "None")
                 if (!IsEditMode && _supplierModels.Any())
                 {
                     Supplier = "None";
@@ -360,7 +564,6 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
                     .DismissOnClick()
                     .ShowWarning();
 
-                // Provide "None" option as fallback
                 _supplierModels = new List<SupplierDropdownModel>();
                 SupplierFilterItems = new[] { "None" };
             }
@@ -380,7 +583,7 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
             IsLoadingSuppliers = false;
         }
     }
-    
+
     private void UpdateFilteredStatusItems()
     {
         if (string.IsNullOrEmpty(Condition))
@@ -397,20 +600,11 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         };
     }
 
-    private void ValidateStatusSelection()
-    {
-        if (!string.IsNullOrEmpty(Status) && !FilteredStatusItems.Contains(Status))
-        {
-            // Reset to first valid option or default to Not Available 
-            Status = FilteredStatusItems.FirstOrDefault() ?? "Not Available";
-        }
-    }
-    
     private void AutoSelectStatus()
     {
         if (string.IsNullOrEmpty(Condition))
         {
-            Status = "Available"; // Default
+            Status = "Available";
             return;
         }
 
@@ -461,21 +655,20 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         FilteredStatusItems = StatusFilterItems;
         ClearAllErrors();
     }
-    
+
     protected override void DisposeManagedResources()
     {
-        // Clear supplier models and UI lists
         _supplierModels?.Clear();
+        _supplierEquipmentData?.Clear();
         SupplierFilterItems = [];
+        BrandNameItems = [];
 
-        // Clear text/fields
         BrandName = string.Empty;
         Category = string.Empty;
         Condition = string.Empty;
         Status = string.Empty;
         Supplier = string.Empty;
 
-        // Null services (we can't reassign readonly injected ones) — clear what we own
         base.DisposeManagedResources();
     }
 }

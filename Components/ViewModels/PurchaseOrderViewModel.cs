@@ -103,6 +103,24 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     [ObservableProperty]
     private bool _isLoading;
 
+    // CAtegory
+    public string[] CategoryOptions { get; } = ["Product", "Equipment"];
+
+    [ObservableProperty]
+    [Required(ErrorMessage = "Category is required")]
+    [NotifyPropertyChangedFor(nameof(CategoryDisplayText))]
+    [NotifyPropertyChangedFor(nameof(CategoryDescription))]
+    private string _selectedCategory = "Product";
+
+    public string CategoryDisplayText => SelectedCategory == "Product"
+        ? "?? Products (Inventory Items)"
+        : "??? Equipment (Gym Machines & Tools)";
+
+    public string CategoryDescription => SelectedCategory == "Product"
+        ? "Items that will be added to the product inventory (supplements, drinks, merchandise)"
+        : "Items that will be added to the equipment inventory (machines, weights, accessories)";
+
+
     // ? NEW: Sent to inventory tracking
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanSendToInventory))]
@@ -293,8 +311,9 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 InvoiceNumber = po.InvoiceNumber;
                 ShippingStatus = po.ShippingStatus;
                 PaymentStatus = po.PaymentStatus;
+                SelectedCategory = po.Category ?? "Product"; // ? NEW: Load category
 
-                // ? NEW: Load sent to inventory status
+                // Load sent to inventory status
                 SentToInventory = po.SentToInventory;
                 SentToInventoryDate = po.SentToInventoryDate;
                 SentToInventoryBy = po.SentToInventoryBy;
@@ -437,12 +456,15 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 PaymentStatus = string.IsNullOrWhiteSpace(PaymentStatus) ? "Unpaid" : PaymentStatus,
                 InvoiceNumber = InvoiceNumber,
                 TaxRate = 0.12m,
+                Category = SelectedCategory, // ? NEW: Include category
                 Items = Items.Select(i => new PurchaseOrderItemModel
                 {
                     ItemName = i.ItemName ?? string.Empty,
                     Unit = i.SelectedUnit ?? "pcs",
                     Quantity = i.Quantity,
-                    Price = i.Price
+                    Price = i.Price,
+                    Category = SelectedCategory
+
                 }).ToList()
             };
 
@@ -454,9 +476,8 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 if (result.Success)
                 {
                     IsSaved = true;
-                    // NEW: Switch to view context after successful save
                     ViewContext = PurchaseOrderContext.ViewPurchaseOrder;
-                
+
                     _toastManager.CreateToast("Purchase Order Updated")
                         .WithContent($"Purchase Order {PoNumber} has been updated successfully!")
                         .DismissOnClick()
@@ -487,7 +508,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 {
                     PurchaseOrderId = result.POId.Value;
                     IsSaved = true;
-                    // NEW: Switch to view context after successful creation
                     ViewContext = PurchaseOrderContext.ViewPurchaseOrder;
 
                     _toastManager.CreateToast("Purchase Order Created")
@@ -517,6 +537,7 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         }
     }
 
+
     [RelayCommand]
     private async Task SaveDetails()
     {
@@ -529,7 +550,7 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
         if (!CanSendToInventory)
         {
             _toastManager.CreateToast("Invalid Status")
-                .WithContent("Purchase order must be Delivered and Paid before sending to inventory")
+                .WithContent("Already sent to the inventory.")
                 .DismissOnClick()
                 .ShowWarning();
             return;
@@ -615,7 +636,7 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
     {
         ViewContext = PurchaseOrderContext.AddPurchaseOrder;
         IsSaved = false;
-    
+
         _toastManager.CreateToast("Edit Mode")
             .WithContent("You can now edit the purchase order details")
             .DismissOnClick()
@@ -735,31 +756,31 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                 GymAddress = "2nd Flr. Event Hub, Victory Central Mall, Brgy. Balibago, Sta. Rosa City, Laguna",
                 GymPhone = "+63 123 456 7890",
                 GymEmail = "info@ahonfitness.com",
-            
+
                 // Supplier Information - with better null handling
-                SupplierName = !string.IsNullOrWhiteSpace(SelectedSupplier.Name) 
-                    ? SelectedSupplier.Name 
+                SupplierName = !string.IsNullOrWhiteSpace(SelectedSupplier.Name)
+                    ? SelectedSupplier.Name
                     : "N/A",
-                SupplierAddress = !string.IsNullOrWhiteSpace(SelectedSupplier.Address) 
-                    ? SelectedSupplier.Address 
+                SupplierAddress = !string.IsNullOrWhiteSpace(SelectedSupplier.Address)
+                    ? SelectedSupplier.Address
                     : "N/A",
-                SupplierPhone = !string.IsNullOrWhiteSpace(SelectedSupplier.PhoneNumber) 
-                    ? SelectedSupplier.PhoneNumber 
+                SupplierPhone = !string.IsNullOrWhiteSpace(SelectedSupplier.PhoneNumber)
+                    ? SelectedSupplier.PhoneNumber
                     : "N/A",
-                SupplierEmail = !string.IsNullOrWhiteSpace(SelectedSupplier.Email) 
-                    ? SelectedSupplier.Email 
+                SupplierEmail = !string.IsNullOrWhiteSpace(SelectedSupplier.Email)
+                    ? SelectedSupplier.Email
                     : "N/A",
-                SupplierContactPerson = !string.IsNullOrWhiteSpace(SelectedSupplier.ContactPerson) 
-                    ? SelectedSupplier.ContactPerson 
+                SupplierContactPerson = !string.IsNullOrWhiteSpace(SelectedSupplier.ContactPerson)
+                    ? SelectedSupplier.ContactPerson
                     : "N/A",
-            
+
                 // Purchase Order Details
                 PONumber = PoNumber,
                 OrderDate = DateTime.Now,
                 ExpectedDeliveryDate = DeliveryDate,
                 PaymentStatus = PaymentStatus ?? "Unpaid",
                 ShippingStatus = ShippingStatus ?? "Pending",
-            
+
                 Items = Items.Select(item => new PurchaseOrderItem
                 {
                     ItemName = item.ItemName,
@@ -1004,7 +1025,7 @@ public partial class Item : ObservableValidator
     [ObservableProperty]
     [Required(ErrorMessage = "Unit is required")]
     private string? _selectedUnit;
-    
+
     [ObservableProperty]
     [Required(ErrorMessage = "Category is required")]
     private string? _selectedCategory;
@@ -1018,6 +1039,7 @@ public partial class Item : ObservableValidator
     [NotifyPropertyChangedFor(nameof(ItemTotal))]
     [Range(0.01, 1000000, ErrorMessage = "Price must be between 0.01 and 1,000,000")]
     private decimal _price;
+
 
     public decimal ItemTotal => Quantity * Price;
 
@@ -1046,19 +1068,19 @@ public class PurchaseOrderDocumentModel
     public string GymAddress { get; set; } = string.Empty;
     public string GymPhone { get; set; } = string.Empty;
     public string GymEmail { get; set; } = string.Empty;
-    
+
     public string SupplierName { get; set; } = string.Empty;
     public string SupplierAddress { get; set; } = string.Empty;
     public string SupplierPhone { get; set; } = string.Empty;
     public string SupplierEmail { get; set; } = string.Empty;
     public string SupplierContactPerson { get; set; } = string.Empty;
-    
+
     public string PONumber { get; set; } = string.Empty;
     public DateTime? OrderDate { get; set; }
     public DateTime? ExpectedDeliveryDate { get; set; }
     public string PaymentStatus { get; set; } = string.Empty;
     public string ShippingStatus { get; set; } = string.Empty;
-    
+
     public List<PurchaseOrderItem> Items { get; set; } = [];
     public decimal Subtotal => Items.Sum(x => x.Price * x.Quantity);
     public decimal Vat => Subtotal * 0.12m;
@@ -1071,5 +1093,7 @@ public class PurchaseOrderItem
     public decimal Price { get; set; }
     public string? Unit { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
+
+    public string? Category { get; set; }
     public string FormattedQuantity => Quantity.ToString("0");
 }

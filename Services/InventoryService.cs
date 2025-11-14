@@ -1052,14 +1052,14 @@ namespace AHON_TRACK.Services
             try
             {
                 var summary = await GetEquipmentAlertSummaryAsync();
-                
+
                 var maintenanceDueCount = await GetMaintenanceDueCountAsync();
                 var warrantyExpiringCount = await GetWarrantyExpiringCountAsync();
                 var conditionAlertCount = await GetConditionAlertCountAsync();
 
                 // Use provided callback OR internal callback
                 var notifyCallback = addNotificationCallback ?? _notificationCallback;
-                
+
 
                 // HIGHEST PRIORITY: Equipment condition issues
                 if (summary.ConditionAlertCount > 0)

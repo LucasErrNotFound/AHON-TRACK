@@ -108,6 +108,7 @@ public partial class ServiceProvider
         var toastManager = GetService<ToastManager>();
         var productService = GetService<IProductService>();
         var supplierService = GetService<ISupplierService>();
+        var inventoryService = GetService<IInventoryService>();
 
         return new PurchaseOrderService(connectionString, toastManager, productService);
     }

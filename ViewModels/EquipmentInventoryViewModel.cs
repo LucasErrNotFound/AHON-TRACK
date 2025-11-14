@@ -27,7 +27,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 {
     [ObservableProperty]
     private string[] _equipmentFilterItems = ["All", "Strength", "Cardio", "Machines", "Accessories"];
-    
+
     [ObservableProperty]
     private string[] _conditionFilterItems = ["All", "Excellent", "Repairing", "Broken"];
 
@@ -36,7 +36,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
     [ObservableProperty]
     private string[] _filteredStatusFilterItems = ["All", "Available", "Not Available"];
-    
+
     [ObservableProperty]
     private string _selectedConditionFilterItem = "All";
 
@@ -98,7 +98,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _equipmentDialogCardViewModel = equipmentDialogCardViewModel;
         _inventoryService = inventoryService;
         _settingsService = settingsService;
-        
+
         SelectedEquipmentFilterItem = "All";
         SelectedConditionFilterItem = "All";
         SelectedStatusFilterItem = "All";
@@ -117,7 +117,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         _equipmentDialogCardViewModel = new EquipmentDialogCardViewModel();
         _settingsService = new SettingsService();
         _inventoryService = null!;
-        
+
         SelectedEquipmentFilterItem = "All";
         SelectedConditionFilterItem = "All";
         SelectedStatusFilterItem = "All";
@@ -134,16 +134,16 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         if (IsInitialized) return;
         SubscribeToEvents();
         await LoadSettingsAsync();
-        
+
         SelectedEquipmentFilterItem = "All";
         SelectedConditionFilterItem = "All";
         SelectedStatusFilterItem = "All";
         FilteredStatusFilterItems = StatusFilterItems;
-        
+
         _ = LoadEquipmentDataAsync();
         IsInitialized = true;
     }
-    
+
     private void SubscribeToEvents()
     {
         var eventService = DashboardEventService.Instance;
@@ -157,23 +157,40 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         eventService.EquipmentAdded += OnEquipmentDataChanged;
         eventService.EquipmentUpdated += OnEquipmentDataChanged;
         eventService.EquipmentDeleted += OnEquipmentDataChanged;
+
+        Console.WriteLine($"[SubscribeToEvents] ✅ Subscribed to equipment events");
     }
 
     private async Task LoadEquipmentDataAsync()
     {
-        if (_inventoryService == null) return;
+        Console.WriteLine($"[LoadEquipmentDataAsync] Starting... Service null? {_inventoryService == null}");
 
-        if (_isLoadingDataFlag) return; // ✅ Prevent duplicate loads
+        if (_inventoryService == null)
+        {
+            Console.WriteLine("[LoadEquipmentDataAsync] ❌ Service is null, exiting");
+            return;
+        }
+
+        // ✅ Prevent duplicate loads
+        if (_isLoadingDataFlag)
+        {
+            Console.WriteLine("[LoadEquipmentDataAsync] Already loading, exiting...");
+            return;
+        }
 
         _isLoadingDataFlag = true;
         IsLoadingData = true;
 
         try
         {
+            Console.WriteLine("[LoadEquipmentDataAsync] Fetching from database...");
+
             var (success, message, equipmentModels) = await _inventoryService.GetEquipmentAsync();
 
             if (!success || equipmentModels == null)
             {
+                Console.WriteLine($"[LoadEquipmentDataAsync] ❌ Failed: {message}");
+
                 _toastManager.CreateToast("Error Loading Equipment")
                     .WithContent(message)
                     .DismissOnClick()
@@ -181,37 +198,53 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 return;
             }
 
+            Console.WriteLine($"[LoadEquipmentDataAsync] ✅ Got {equipmentModels.Count} items from database");
+
             var equipmentList = equipmentModels.Select(MapToEquipment).ToList();
 
+            // ✅ Update data collections
             OriginalEquipmentData = equipmentList;
             CurrentFilteredEquipmentData = [.. equipmentList];
 
-            // ✅ Unsubscribe before clearing
+            // ✅ CRITICAL: Unsubscribe from OLD items before clearing
+            Console.WriteLine($"[LoadEquipmentDataAsync] Cleaning up {EquipmentItems.Count} old items...");
             foreach (var item in EquipmentItems)
             {
                 item.PropertyChanged -= OnEquipmentPropertyChanged;
             }
 
+            // ✅ Clear and repopulate
             EquipmentItems.Clear();
+
+            Console.WriteLine("[LoadEquipmentDataAsync] Adding new items...");
             foreach (var equipment in equipmentList)
             {
                 equipment.PropertyChanged += OnEquipmentPropertyChanged;
                 EquipmentItems.Add(equipment);
             }
+
             TotalCount = EquipmentItems.Count;
 
-            if (EquipmentItems.Count > 0)
+            if (EquipmentItems.Count > 0 && SelectedEquipment == null)
             {
                 SelectedEquipment = EquipmentItems[0];
             }
 
-            // ✅ ApplyEquipmentFilter already handles unsubscribe correctly
+            // ✅ Apply filters and update UI
+            Console.WriteLine("[LoadEquipmentDataAsync] Applying filters...");
             ApplyEquipmentFilter();
             UpdateEquipmentCounts();
+
+            Console.WriteLine($"[LoadEquipmentDataAsync] ✅ UI updated - {EquipmentItems.Count} items displayed");
+
+            // Show alerts
             await _inventoryService.ShowEquipmentAlertsAsync();
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[LoadEquipmentDataAsync] ❌ Exception: {ex.Message}");
+            Console.WriteLine($"[LoadEquipmentDataAsync] StackTrace: {ex.StackTrace}");
+
             _toastManager.CreateToast("Error Loading Equipment")
                 .WithContent($"Failed to load equipment data: {ex.Message}")
                 .DismissOnClick()
@@ -220,7 +253,8 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         finally
         {
             IsLoadingData = false;
-            _isLoadingDataFlag = false; // ✅ Reset flag
+            _isLoadingDataFlag = false;
+            Console.WriteLine("[LoadEquipmentDataAsync] Complete - flag reset");
         }
     }
 
@@ -333,6 +367,8 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
     private void ApplyEquipmentFilter()
     {
+        Console.WriteLine($"[ApplyEquipmentFilter] Starting... Original: {OriginalEquipmentData.Count}");
+
         if (OriginalEquipmentData.Count == 0) return;
 
         List<Equipment> filteredList = OriginalEquipmentData.ToList();
@@ -363,15 +399,18 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 .ToList();
         }
 
+        Console.WriteLine($"[ApplyEquipmentFilter] After filters: {filteredList.Count}");
+
         CurrentFilteredEquipmentData = filteredList;
 
-        // ✅ Already unsubscribing from old items
+        // ✅ Unsubscribe from old items
         foreach (var item in EquipmentItems)
         {
             item.PropertyChanged -= OnEquipmentPropertyChanged;
         }
 
         EquipmentItems.Clear();
+
         foreach (var equipment in filteredList)
         {
             equipment.PropertyChanged += OnEquipmentPropertyChanged;
@@ -379,6 +418,11 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         }
 
         UpdateEquipmentCounts();
+
+        // ✅ FIX: Force UI refresh
+        OnPropertyChanged(nameof(EquipmentItems));
+
+        Console.WriteLine($"[ApplyEquipmentFilter] ✅ Complete - {EquipmentItems.Count} items in view");
     }
 
     [RelayCommand]
@@ -751,7 +795,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 .ShowError();
         }
     }
-    
+
     private void UpdateFilteredStatusItems()
     {
         if (SelectedConditionFilterItem == "All")
@@ -769,7 +813,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             };
 
             FilteredStatusFilterItems = allowedStatuses;
-        
+
             // Reset status if current selection is not in the filtered list
             if (!FilteredStatusFilterItems.Contains(SelectedStatusFilterItem))
             {
@@ -777,7 +821,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
             }
         }
     }
-    
+
     public bool CanDeleteSelectedEquipments
     {
         get
@@ -791,8 +835,8 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
                 return false;
             }
 
-            return selectedEquipments.All(equipment 
-                => equipment.Status != null && 
+            return selectedEquipments.All(equipment
+                => equipment.Status != null &&
                    equipment.Status.Equals("Not Available", StringComparison.OrdinalIgnoreCase));
         }
     }
@@ -827,7 +871,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         OnPropertyChanged(nameof(CanDeleteSelectedEquipments));
     }
-    
+
     partial void OnSelectedConditionFilterItemChanged(string value)
     {
         UpdateFilteredStatusItems();
@@ -838,21 +882,45 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
     {
         ApplyEquipmentFilter();
     }
-    
+
     private async void OnEquipmentDataChanged(object? sender, EventArgs e)
     {
-        if (_isLoadingDataFlag) return;
+        Console.WriteLine($"[OnEquipmentDataChanged] Event received! IsLoadingDataFlag: {_isLoadingDataFlag}");
+
+        if (_isLoadingDataFlag)
+        {
+            Console.WriteLine("[OnEquipmentDataChanged] Already loading, skipping...");
+            return;
+        }
+
         try
         {
+            Console.WriteLine("[OnEquipmentDataChanged] Starting reload...");
             _isLoadingDataFlag = true;
-            await LoadEquipmentDataAsync();
+
+            // Small delay to debounce rapid events
+            await Task.Delay(100);
+
+            // ✅ FIX: Ensure we're on UI thread
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                await LoadEquipmentDataAsync();
+            });
+
+            Console.WriteLine("[OnEquipmentDataChanged] ✅ Reload complete");
         }
         catch (Exception ex)
         {
-            _toastManager?.CreateToast("Error Reloading Equipment")
-                .WithContent($"Failed to reload: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
+            Console.WriteLine($"[OnEquipmentDataChanged] ❌ Error: {ex.Message}");
+
+            // ✅ Show toast on UI thread
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                _toastManager?.CreateToast("Error Reloading Equipment")
+                    .WithContent($"Failed to reload: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+            });
         }
         finally
         {
@@ -864,6 +932,8 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
     protected override void DisposeManagedResources()
     {
+        Console.WriteLine("[DisposeManagedResources] Cleaning up...");
+
         var eventService = DashboardEventService.Instance;
         eventService.EquipmentAdded -= OnEquipmentDataChanged;
         eventService.EquipmentUpdated -= OnEquipmentDataChanged;
