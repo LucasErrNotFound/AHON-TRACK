@@ -99,13 +99,20 @@
                                                             shadui:ControlAssist.Label="Item Name"
                                                             Text="{CompiledBinding ItemName, Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
-                                                            Width="195" />
+                                                            Width="155" />
+														<ComboBox
+                                                            shadui:ControlAssist.Label="Category"
+                                                            ItemsSource="{CompiledBinding Category}"
+                                                            SelectedItem="{CompiledBinding SelectedCategory,Mode=TwoWay}"
+                                                            IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
+                                                            Width="150"
+                                                            Margin="0,-4,0,0" />
 														<NumericUpDown
                                                             shadui:ControlAssist.Label="Price"
                                                             Value="{CompiledBinding Price, Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
                                                             Classes="Clearable"
-                                                            Width="195"
+                                                            Width="155"
                                                             FormatString="N2"
                                                             ShowButtonSpinner="False"
                                                             Watermark="0.00">
@@ -118,14 +125,14 @@
                                                             ItemsSource="{CompiledBinding UnitList}"
                                                             SelectedItem="{CompiledBinding SelectedUnit,Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
-                                                            Width="195"
+                                                            Width="155"
                                                             Margin="0,-4,0,0" />
 														<NumericUpDown
                                                             Classes="Clearable"
                                                             shadui:ControlAssist.Label="Quantity"
                                                             Value="{CompiledBinding Quantity, Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
-                                                            Width="195"
+                                                            Width="155"
                                                             Minimum="1"
                                                             Maximum="100"
                                                             FormatString="N0"

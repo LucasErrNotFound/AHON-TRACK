@@ -1004,6 +1004,10 @@ public partial class Item : ObservableValidator
     [ObservableProperty]
     [Required(ErrorMessage = "Unit is required")]
     private string? _selectedUnit;
+    
+    [ObservableProperty]
+    [Required(ErrorMessage = "Category is required")]
+    private string? _selectedCategory;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ItemTotal))]
@@ -1018,6 +1022,7 @@ public partial class Item : ObservableValidator
     public decimal ItemTotal => Quantity * Price;
 
     public string[] UnitList { get; } = ["pcs", "kg", "lbs", "box", "pack", "unit"];
+    public string[] Category { get; } = ["Product", "Equipment"];
 
     public Item()
     {
