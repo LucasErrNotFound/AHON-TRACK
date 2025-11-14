@@ -685,23 +685,29 @@ public sealed partial class TrainingSchedulesViewModel : ViewModelBase, INavigab
     // ✅ FIXED: Thread-safe event handler
     private async void OnCoachDataChanged(object? sender, EventArgs e)
     {
-        if (!await _refreshLock.WaitAsync(0)) return;
-
         try
         {
-            await Task.Delay(100); // Small debounce
-            await LoadCoachesAsync();
+            if (!await _refreshLock.WaitAsync(0)) return;
+            try
+            {
+                await Task.Delay(100); // Small debounce
+                await LoadCoachesAsync();
+            }
+            catch (Exception ex)
+            {
+                _toastManager?.CreateToast("Refresh Error")
+                    .WithContent($"Failed to reload coaches: {ex.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
         }
-        catch (Exception ex)
+        catch
         {
-            _toastManager?.CreateToast("Refresh Error")
-                .WithContent($"Failed to reload coaches: {ex.Message}")
-                .DismissOnClick()
-                .ShowError();
-        }
-        finally
-        {
-            _refreshLock.Release();
+
         }
     }
 
