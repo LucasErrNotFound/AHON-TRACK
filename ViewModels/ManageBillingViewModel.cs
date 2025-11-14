@@ -258,6 +258,7 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
             OriginalInvoiceData = invoices.Select(i => new Invoices
             {
                 ID = i.ID,  // Already int from InvoiceModel
+                InvoiceId = i.InvoiceId,
                 CustomerName = i.CustomerName,
                 PurchasedItem = i.PurchasedItem,
                 Quantity = i.Quantity,  // Already int from InvoiceModel
@@ -805,11 +806,15 @@ public partial class Invoices : ObservableObject
     [ObservableProperty]
     private string _status = string.Empty;
 
+    [ObservableProperty] 
+    private string? _invoiceId = string.Empty;
+
     [ObservableProperty]
     private bool _isSelected;
 
     public DateTime? DatePurchased { get; set; }
-    public string DateFormatted => DatePurchased?.ToString("MMMM dd, yyyy dddd") ?? string.Empty;
+    public string DateFormatted => DatePurchased?.ToString("MM/dd/yyyy") ?? string.Empty;
+    public string AmountFormatted => $"₱{Amount:N2}";
 }
 
 public partial class Package : ObservableObject

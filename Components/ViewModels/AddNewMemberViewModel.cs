@@ -991,7 +991,6 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
             bool isSuccess;
             string successMessage;
-            string? invoiceNumber = null;
 
             if (ViewContext == MemberViewContext.AddNew)
             {
@@ -1008,10 +1007,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 Debug.WriteLine($"[Payment] Reference Number: {member.ReferenceNumber ?? "N/A"}");
                 Debug.WriteLine($"[Payment] =======================================");
 
-                var (success, message, memberId, generatedInvoice) = await _memberService.AddMemberAsync(member);
+                var (success, message, memberId) = await _memberService.AddMemberAsync(
+                    member, 
+                    CurrentInvoiceNo);
+
                 isSuccess = success;
-                invoiceNumber = generatedInvoice;
-                successMessage = $"{member.FirstName} {member.LastName} registered successfully!\nInvoice: {invoiceNumber}";
+                successMessage = $"{member.FirstName} {member.LastName} registered successfully!\nInvoice: {CurrentInvoiceNo}";
 
                 _ = GenerateReceipt();
 
@@ -1043,13 +1044,14 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
                 member.MemberID = _selectedMemberId;
 
-                var (success, message, generatedInvoice) = await _memberService.UpdateMemberAsync(member);
-                isSuccess = success;
-                invoiceNumber = generatedInvoice;
+                var (success, message) = await _memberService.UpdateMemberAsync(
+                    member, 
+                    CurrentInvoiceNo);
 
+                isSuccess = success;
                 successMessage = ViewContext == MemberViewContext.Upgrade
-                    ? $"{member.FirstName} {member.LastName} upgraded successfully! Extended by {MembershipDuration} months.\nInvoice: {invoiceNumber}"
-                    : $"{member.FirstName} {member.LastName} renewed successfully! Extended by {MembershipDuration} months.\nInvoice: {invoiceNumber}";
+                    ? $"{member.FirstName} {member.LastName} upgraded successfully! Extended by {MembershipDuration} months.\nInvoice: {CurrentInvoiceNo}"
+                    : $"{member.FirstName} {member.LastName} renewed successfully! Extended by {MembershipDuration} months.\nInvoice: {CurrentInvoiceNo}";
                 
                 _ = GenerateReceipt();
 
@@ -1070,7 +1072,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
             decimal totalAmount = SelectedMonthlyPackage.Price * MembershipDuration.Value;
 
-            _toastManager?.CreateToast(successMessage)
+            _toastManager.CreateToast(successMessage)
                 .WithContent($"{SelectedMonthlyPackage.Title} ({MembershipDuration} months) = ₱{totalAmount:N2}")
                 .DismissOnClick()
                 .ShowSuccess();

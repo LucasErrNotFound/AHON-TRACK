@@ -985,7 +985,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             Debug.WriteLine($"[PaymentAsync] =======================================");
 
             // ✅ CALL SERVICE WITH INVOICE NUMBER BEING GENERATED INTERNALLY
-            var (success, message, customerId, invoiceNumber) = await _walkInService.AddWalkInCustomerAsync(walkIn, SelectedDate);
+            var (success, message, customerId) = await _walkInService.AddWalkInCustomerAsync(
+                walkIn, 
+                SelectedDate,
+                CurrentInvoiceNo);
 
             if (success)
             {
@@ -997,7 +1000,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 _ = GenerateReceipt();
 
                 _toastManager.CreateToast("Payment Successful!")
-                    .WithContent($"Walk-in customer registered with ID: {customerId}\nInvoice: {invoiceNumber}\n{paymentInfo}")
+                    .WithContent($"Walk-in customer registered with ID: {customerId}\nInvoice: {CurrentInvoiceNo}\n{paymentInfo}")
                     .DismissOnClick()
                     .ShowSuccess();
 

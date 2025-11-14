@@ -162,16 +162,22 @@ namespace AHON_TRACK.Services
 
         #region CREATE
 
-        public async Task<(bool Success, string Message, int? MemberId, string? InvoiceNumber)> AddMemberAsync(ManageMemberModel member)
+        public async Task<(bool Success, string Message, int? MemberId)> AddMemberAsync(
+            ManageMemberModel member, 
+            string? invoiceNumber = null)
         {
             if (!CanCreate())
             {
                 ShowAccessDeniedToast("add members");
-                return (false, "Insufficient permissions to add members.", null, null);
+                return (false, "Insufficient permissions to add members.", null);
             }
 
-            string invoiceNumber = await GenerateInvoiceNumberAsync();
-            Debug.WriteLine($"[AddMemberAsync] Generated Invoice: {invoiceNumber}");
+            // ✅ USE PROVIDED INVOICE NUMBER OR GENERATE NEW ONE
+            string finalInvoiceNumber = !string.IsNullOrWhiteSpace(invoiceNumber) 
+                ? invoiceNumber 
+                : await GenerateInvoiceNumberAsync();
+
+            Debug.WriteLine($"[AddMemberAsync] Using Invoice: {finalInvoiceNumber}");
 
             try
             {
@@ -185,17 +191,16 @@ namespace AHON_TRACK.Services
 
                     if (existingMemberId.HasValue && isDeleted)
                     {
-                        var result = await RestoreMemberAsync(conn, transaction, existingMemberId.Value, member, invoiceNumber);
-                        return (result.Success, result.Message, result.MemberId, invoiceNumber);
+                        var result = await RestoreMemberAsync(conn, transaction, existingMemberId.Value, member, finalInvoiceNumber);
+                        return (result.Success, result.Message, result.MemberId);
                     }
 
                     if (existingMemberId.HasValue)
                     {
                         ShowMemberExistsToast(member);
-                        return (false, "Member already exists.", null, null);
+                        return (false, "Member already exists.", null);
                     }
 
-                    // ✅ CHECK AND MIGRATE WALK-IN CUSTOMER BEFORE CREATING NEW MEMBER
                     var migratedWalkInId = await CheckAndMigrateWalkInCustomerEnhancedAsync(conn, transaction, member);
                     if (migratedWalkInId.HasValue)
                     {
@@ -207,12 +212,11 @@ namespace AHON_TRACK.Services
 
                     if (member.PackageID.HasValue && member.PackageID.Value > 0)
                     {
-                        // ✅ PASS INVOICE NUMBER TO PACKAGE SALE
-                        await RecordPackageSaleAsync(conn, transaction, member, memberId, null, invoiceNumber);
+                        await RecordPackageSaleAsync(conn, transaction, member, memberId, null, finalInvoiceNumber);
                     }
 
                     await LogActionAsync(conn, transaction, "CREATE", 
-                        $"Added new member: {member.FirstName} {member.LastName} - Invoice: {invoiceNumber}", true);
+                        $"Added new member: {member.FirstName} {member.LastName} - Invoice: {finalInvoiceNumber}", true);
                     transaction.Commit();
 
                     DashboardEventService.Instance.NotifyMemberAdded();
@@ -220,12 +224,12 @@ namespace AHON_TRACK.Services
                     if (migratedWalkInId.HasValue)
                     {
                         _toastManager?.CreateToast("Member Added & Migrated")
-                            .WithContent($"{member.FirstName} {member.LastName} registered as member (walk-in record archived).\nInvoice: {invoiceNumber}")
+                            .WithContent($"{member.FirstName} {member.LastName} registered as member (walk-in record archived).\nInvoice: {finalInvoiceNumber}")
                             .DismissOnClick()
                             .ShowSuccess();
                     }
 
-                    return (true, "Member added successfully.", memberId, invoiceNumber);
+                    return (true, "Member added successfully.", memberId);
                 }
                 catch
                 {
@@ -237,13 +241,13 @@ namespace AHON_TRACK.Services
             {
                 ShowDatabaseErrorToast("add member", ex.Message);
                 Debug.WriteLine($"AddMemberAsync Error: {ex}");
-                return (false, $"Database error: {ex.Message}", null, null);
+                return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
                 ShowErrorToast(ex.Message);
                 Debug.WriteLine($"AddMemberAsync Error: {ex}");
-                return (false, $"Error: {ex.Message}", null, null);
+                return (false, $"Error: {ex.Message}", null);
             }
         }
 
@@ -1019,12 +1023,14 @@ m.IsNotified,
 
         #region UPDATE
 
-        public async Task<(bool Success, string Message, string? InvoiceNumber)> UpdateMemberAsync(ManageMemberModel member)
+        public async Task<(bool Success, string Message)> UpdateMemberAsync(
+            ManageMemberModel member, 
+            string? invoiceNumber = null)
         {
             if (!CanUpdate())
             {
                 ShowAccessDeniedToast("update member data");
-                return (false, "Insufficient permissions to update members.", null);
+                return (false, "Insufficient permissions to update members.");
             }
 
             try
@@ -1041,7 +1047,7 @@ m.IsNotified,
                             .WithContent("The member you're trying to update doesn't exist.")
                             .DismissOnClick()
                             .ShowWarning();
-                        return (false, "Member not found.", null);
+                        return (false, "Member not found.");
                     }
 
                     var originalMember = await GetOriginalMemberDataAsync(conn, member.MemberID, transaction);
@@ -1076,8 +1082,6 @@ m.IsNotified,
 
                     int rows = await cmd.ExecuteNonQueryAsync();
 
-                    string? invoiceNumber = null;
-
                     if (rows > 0)
                     {
                         bool isGymMembershipRenewal = await IsGymMembershipRenewalAsync(
@@ -1085,18 +1089,21 @@ m.IsNotified,
 
                         if (isGymMembershipRenewal && member.PackageID.HasValue && member.PackageID.Value > 0)
                         {
-                            // ✅ GENERATE INVOICE FOR RENEWAL/UPGRADE
-                            invoiceNumber = await GenerateInvoiceNumberAsync();
-                            Debug.WriteLine($"[UpdateMemberAsync] Generated Invoice for renewal/upgrade: {invoiceNumber}");
+                            // ✅ USE PROVIDED INVOICE NUMBER OR GENERATE NEW ONE
+                            string finalInvoiceNumber = !string.IsNullOrWhiteSpace(invoiceNumber) 
+                                ? invoiceNumber 
+                                : await GenerateInvoiceNumberAsync();
+                    
+                            Debug.WriteLine($"[UpdateMemberAsync] Generated Invoice for renewal/upgrade: {finalInvoiceNumber}");
 
-                            await RecordPackageSaleAsync(conn, transaction, member, member.MemberID, originalMember, invoiceNumber);
+                            await RecordPackageSaleAsync(conn, transaction, member, member.MemberID, originalMember, finalInvoiceNumber);
 
                             string actionType = originalMember?.PackageID == member.PackageID ? "RENEWAL" : "UPGRADE";
                             await LogActionAsync(conn, transaction, actionType,
-                                $"{actionType}: {member.FirstName} {member.LastName} - Package ID: {member.PackageID} - Invoice: {invoiceNumber}", true);
+                                $"{actionType}: {member.FirstName} {member.LastName} - Package ID: {member.PackageID} - Invoice: {finalInvoiceNumber}", true);
 
                             _toastManager?.CreateToast($"Package {actionType}")
-                                .WithContent($"Successfully {actionType.ToLower()}ed gym membership for {member.FirstName} {member.LastName}\nInvoice: {invoiceNumber}")
+                                .WithContent($"Successfully {actionType.ToLower()}ed gym membership for {member.FirstName} {member.LastName}\nInvoice: {finalInvoiceNumber}")
                                 .DismissOnClick()
                                 .ShowSuccess();
                         }
@@ -1108,10 +1115,10 @@ m.IsNotified,
 
                         transaction.Commit();
                         DashboardEventService.Instance.NotifyMemberUpdated();
-                        return (true, "Member updated successfully.", invoiceNumber);
+                        return (true, "Member updated successfully.");
                     }
 
-                    return (false, "Failed to update member.", null);
+                    return (false, "Failed to update member.");
                 }
                 catch
                 {
@@ -1123,13 +1130,13 @@ m.IsNotified,
             {
                 ShowDatabaseErrorToast("update member", ex.Message);
                 Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
-                return (false, $"Database error: {ex.Message}", null);
+                return (false, $"Database error: {ex.Message}");
             }
             catch (Exception ex)
             {
                 ShowErrorToast(ex.Message);
                 Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
-                return (false, $"Error: {ex.Message}", null);
+                return (false, $"Error: {ex.Message}");
             }
         }
 

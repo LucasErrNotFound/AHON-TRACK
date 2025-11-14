@@ -143,7 +143,7 @@ namespace AHON_TRACK.Services
 
         #region CREATE
 
-        public async Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod, string? referenceNumber = null)
+        public async Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod, string? referenceNumber = null, string? invoiceNumber = null)
         {
             if (!CanCreate())
             {
@@ -163,16 +163,19 @@ namespace AHON_TRACK.Services
                 return false;
             }
 
-            // ✅ VALIDATE PAYMENT METHOD AND REFERENCE NUMBER
             var (isValid, errorMessage) = ValidatePaymentReferenceNumber(paymentMethod, referenceNumber);
             if (!isValid)
             {
                 ShowError("Payment Validation Failed", errorMessage);
                 return false;
             }
-            
-            string invoiceNumber = await GenerateInvoiceNumberAsync();
-            Debug.WriteLine($"[ProcessPaymentAsync] Generated Invoice: {invoiceNumber}");
+    
+            // ✅ USE PROVIDED INVOICE NUMBER OR GENERATE NEW ONE
+            string finalInvoiceNumber = !string.IsNullOrWhiteSpace(invoiceNumber) 
+                ? invoiceNumber 
+                : await GenerateInvoiceNumberAsync();
+    
+            Debug.WriteLine($"[ProcessPaymentAsync] Using Invoice: {finalInvoiceNumber}");
 
             using var conn = new SqlConnection(_connectionString);
             await conn.OpenAsync();
@@ -184,7 +187,6 @@ namespace AHON_TRACK.Services
                 int totalTransactions = 0;
                 bool anyDiscountApplied = false;
 
-                // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
                 string processedRefNumber = ProcessReferenceNumber(paymentMethod, referenceNumber);
 
                 Debug.WriteLine($"[ProcessPaymentAsync] Payment Method: {paymentMethod}");
@@ -202,19 +204,18 @@ namespace AHON_TRACK.Services
                         anyDiscountApplied = true;
                     }
 
-                    // ✅ PASS PROCESSED REFERENCE NUMBER TO SALES RECORD
-                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, processedRefNumber, invoiceNumber, conn, transaction);
+                    // ✅ USE finalInvoiceNumber instead of invoiceNumber variable
+                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, processedRefNumber, finalInvoiceNumber, conn, transaction);
                     await RecordPurchaseAsync(item, customer, itemTotal, conn, transaction);
                     await HandleInventoryAndSessionsAsync(item, customer, conn, transaction);
                 }
 
                 await UpdateDailySalesAsync(employeeId, totalAmount, totalTransactions, conn, transaction);
 
-                // ✅ Commit the transaction
                 transaction.Commit();
 
-                // ✅ Log success AFTER transaction is committed
-                await LogSuccessfulPaymentAsync(customer, totalAmount, paymentMethod, cartItems, invoiceNumber);
+                // ✅ USE finalInvoiceNumber for logging
+                await LogSuccessfulPaymentAsync(customer, totalAmount, paymentMethod, cartItems, finalInvoiceNumber);
 
                 ShowPaymentSuccess(totalAmount, paymentMethod, cartItems, anyDiscountApplied);
 
@@ -224,7 +225,6 @@ namespace AHON_TRACK.Services
             {
                 try
                 {
-                    // ✅ Rollback the transaction
                     transaction.Rollback();
                 }
                 catch (Exception rollbackEx)
@@ -232,7 +232,6 @@ namespace AHON_TRACK.Services
                     Console.WriteLine($"Rollback failed: {rollbackEx.Message}");
                 }
 
-                // ✅ Log failure AFTER transaction is rolled back
                 await LogFailedPaymentAsync(customer, ex.Message);
 
                 ShowError("Payment Failed", $"Transaction failed: {ex.Message}");
@@ -846,7 +845,6 @@ namespace AHON_TRACK.Services
             return customers;
         }
 
-        // ✅ UPDATED: GetInvoicesByDateAsync - Groups purchases by customer AND payment method/reference
         public async Task<List<InvoiceModel>> GetInvoicesByDateAsync(DateTime date)
         {
             var invoices = new List<InvoiceModel>();
@@ -855,108 +853,106 @@ namespace AHON_TRACK.Services
                 ShowError("Access Denied", "You do not have permission to view invoice data.");
                 return invoices;
             }
-
+        
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
-
-                // ✅ GROUP BY customer, payment method, AND reference number (separate transactions)
+        
+                // ✅ ADDED: InvoiceNumber to SELECT statement and GROUP BY
                 string query = @"
-            SELECT 
-                MIN(s.SaleID) AS SaleID,
-                
-                -- ✅ Payment method for this transaction
-                COALESCE(
-                    s.PaymentMethod,
-                    CASE 
-                        WHEN s.MemberID IS NOT NULL THEN m.PaymentMethod
-                        WHEN s.CustomerID IS NOT NULL THEN wc.PaymentMethod
-                        ELSE NULL
-                    END,
-                    'Unknown'
-                ) AS PaymentMethod,
-                
-                -- ✅ Reference number for this transaction
-                COALESCE(
-                    s.ReferenceNumber,
-                    CASE 
-                        WHEN s.MemberID IS NOT NULL THEN m.ReferenceNumber
-                        WHEN s.CustomerID IS NOT NULL THEN wc.ReferenceNumber
-                        ELSE NULL
-                    END,
-                    ''
-                ) AS ReferenceNumber,
-                
-                -- Customer name
-                CASE 
-                    WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
-                    WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
-                    ELSE 'Unknown Customer'
-                END AS CustomerName,
-                
-                -- ✅ Concatenate all item names with their quantities for THIS transaction
-                STRING_AGG(
-                    CASE 
-                        WHEN s.ProductID IS NOT NULL THEN CONCAT(p.ProductName, ' (', s.Quantity, ')')
-                        WHEN s.PackageID IS NOT NULL THEN CONCAT(pkg.PackageName, ' (', s.Quantity, ')')
-                        ELSE 'Unknown Item'
-                    END, 
-                    ', '
-                ) AS PurchasedItem,
-                
-                SUM(s.Quantity) AS Quantity,      -- ✅ Total quantity for this transaction
-                SUM(s.Amount) AS Amount,          -- ✅ Total amount for this transaction
-                MIN(s.SaleDate) AS SaleDate
-                
-            FROM Sales s
-            LEFT JOIN Products p ON s.ProductID = p.ProductID
-            LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
-            LEFT JOIN Members m ON s.MemberID = m.MemberID
-            LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
-            WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
-                AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-            
-            -- ✅ GROUP BY customer, payment method, AND reference number
-            GROUP BY 
-                COALESCE(s.MemberID, 0),
-                COALESCE(s.CustomerID, 0),
-                CASE 
-                    WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
-                    WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
-                    ELSE 'Unknown Customer'
-                END,
-                COALESCE(
-                    s.PaymentMethod,
-                    CASE 
-                        WHEN s.MemberID IS NOT NULL THEN m.PaymentMethod
-                        WHEN s.CustomerID IS NOT NULL THEN wc.PaymentMethod
-                        ELSE NULL
-                    END,
-                    'Unknown'
-                ),
-                COALESCE(
-                    s.ReferenceNumber,
-                    CASE 
-                        WHEN s.MemberID IS NOT NULL THEN m.ReferenceNumber
-                        WHEN s.CustomerID IS NOT NULL THEN wc.ReferenceNumber
-                        ELSE NULL
-                    END,
-                    ''
-                )
-            
-            ORDER BY MIN(s.SaleDate) DESC;";
-
+                    SELECT 
+                        MIN(s.SaleID) AS SaleID,
+                        
+                        MIN(s.InvoiceNumber) AS InvoiceNumber,
+                        
+                        COALESCE(
+                            s.PaymentMethod,
+                            CASE 
+                                WHEN s.MemberID IS NOT NULL THEN m.PaymentMethod
+                                WHEN s.CustomerID IS NOT NULL THEN wc.PaymentMethod
+                                ELSE NULL
+                            END,
+                            'Unknown'
+                        ) AS PaymentMethod,
+                        
+                        COALESCE(
+                            s.ReferenceNumber,
+                            CASE 
+                                WHEN s.MemberID IS NOT NULL THEN m.ReferenceNumber
+                                WHEN s.CustomerID IS NOT NULL THEN wc.ReferenceNumber
+                                ELSE NULL
+                            END,
+                            ''
+                        ) AS ReferenceNumber,
+                        
+                        CASE 
+                            WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
+                            WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
+                            ELSE 'Unknown Customer'
+                        END AS CustomerName,
+                        
+                        STRING_AGG(
+                            CASE 
+                                WHEN s.ProductID IS NOT NULL THEN CONCAT(p.ProductName, ' (', s.Quantity, ')')
+                                WHEN s.PackageID IS NOT NULL THEN CONCAT(pkg.PackageName, ' (', s.Quantity, ')')
+                                ELSE 'Unknown Item'
+                            END, 
+                            ', '
+                        ) AS PurchasedItem,
+                        
+                        SUM(s.Quantity) AS Quantity,
+                        SUM(s.Amount) AS Amount,
+                        MIN(s.SaleDate) AS SaleDate
+                        
+                    FROM Sales s
+                    LEFT JOIN Products p ON s.ProductID = p.ProductID
+                    LEFT JOIN Packages pkg ON s.PackageID = pkg.PackageID
+                    LEFT JOIN Members m ON s.MemberID = m.MemberID
+                    LEFT JOIN WalkInCustomers wc ON s.CustomerID = wc.CustomerID
+                    WHERE CAST(s.SaleDate AS DATE) = @SelectedDate
+                        AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+                    
+                    GROUP BY 
+                        COALESCE(s.MemberID, 0),
+                        COALESCE(s.CustomerID, 0),
+                        s.InvoiceNumber,
+                        CASE 
+                            WHEN s.MemberID IS NOT NULL THEN CONCAT(m.FirstName, ' ', m.LastName)
+                            WHEN s.CustomerID IS NOT NULL THEN CONCAT(wc.FirstName, ' ', wc.LastName)
+                            ELSE 'Unknown Customer'
+                        END,
+                        COALESCE(
+                            s.PaymentMethod,
+                            CASE 
+                                WHEN s.MemberID IS NOT NULL THEN m.PaymentMethod
+                                WHEN s.CustomerID IS NOT NULL THEN wc.PaymentMethod
+                                ELSE NULL
+                            END,
+                            'Unknown'
+                        ),
+                        COALESCE(
+                            s.ReferenceNumber,
+                            CASE 
+                                WHEN s.MemberID IS NOT NULL THEN m.ReferenceNumber
+                                WHEN s.CustomerID IS NOT NULL THEN wc.ReferenceNumber
+                                ELSE NULL
+                            END,
+                            ''
+                        )
+                    
+                    ORDER BY MIN(s.SaleDate) DESC;";
+        
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@SelectedDate", date.Date);
-
+        
                 using var reader = await cmd.ExecuteReaderAsync();
-
+        
                 while (await reader.ReadAsync())
                 {
                     string paymentMethod = reader["PaymentMethod"]?.ToString() ?? "Unknown";
                     string referenceNumber = reader["ReferenceNumber"]?.ToString() ?? string.Empty;
-
+        
                     // ✅ DISPLAY "PAID" FOR CASH PAYMENTS
                     if (paymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase) &&
                         referenceNumber.Equals("PAID", StringComparison.OrdinalIgnoreCase))
@@ -968,10 +964,11 @@ namespace AHON_TRACK.Services
                     {
                         referenceNumber = "PAID";
                     }
-
+        
                     invoices.Add(new InvoiceModel
                     {
                         ID = reader.GetInt32(reader.GetOrdinal("SaleID")),
+                        InvoiceId = reader["InvoiceNumber"]?.ToString() ?? string.Empty,  // ✅ ADDED: Map InvoiceNumber
                         ReferenceNumber = referenceNumber,
                         CustomerName = reader["CustomerName"]?.ToString() ?? "Unknown",
                         PurchasedItem = reader["PurchasedItem"]?.ToString() ?? "Unknown",
@@ -980,18 +977,18 @@ namespace AHON_TRACK.Services
                         PaymentMethod = paymentMethod,
                         DatePurchased = reader.GetDateTime(reader.GetOrdinal("SaleDate"))
                     });
-
-                    Debug.WriteLine($"[Invoice] Customer: {reader["CustomerName"]}, Items: {reader["PurchasedItem"]}, Total Qty: {reader.GetInt32(reader.GetOrdinal("Quantity"))}, Total Amount: ₱{reader.GetDecimal(reader.GetOrdinal("Amount")):N2}");
+        
+                    Debug.WriteLine($"[Invoice] Invoice#: {reader["InvoiceNumber"]}, Customer: {reader["CustomerName"]}, Items: {reader["PurchasedItem"]}, Total Qty: {reader.GetInt32(reader.GetOrdinal("Quantity"))}, Total Amount: ₱{reader.GetDecimal(reader.GetOrdinal("Amount")):N2}");
                 }
-
-                Debug.WriteLine($"✅ Total invoices found: {invoices.Count} (grouped by customer)");
+        
+                Debug.WriteLine($"✅ Total invoices found: {invoices.Count} (grouped by customer and invoice)");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"❌ ERROR in GetInvoicesByDateAsync: {ex.ToString()}");
                 ShowError("Database Error", $"Error loading invoices: {ex.Message}");
             }
-
+        
             return invoices;
         }
 

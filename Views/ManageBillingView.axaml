@@ -310,7 +310,7 @@
 											<shadui:BreakpointViewPort>
 												<shadui:BreakpointView Breakpoint="XlAndUp">
 													<DataGrid
-														Height="315"
+														Height="510"
 														CanUserReorderColumns="False"
 														CanUserSortColumns="False"
 														GridLinesVisibility="All"
@@ -335,9 +335,9 @@
 														<DataGrid.Columns>
 															<DataGridTextColumn
 																Width="Auto"
-																MinWidth="80"
-																Header="ID"
-																Binding="{CompiledBinding ID}" />
+																MinWidth="180"
+																Header="Invoice ID"
+																Binding="{CompiledBinding InvoiceId}" />
 															<DataGridTextColumn
 																Width="*"
 																MinWidth="120"
@@ -350,14 +350,14 @@
 																Binding="{CompiledBinding PurchasedItem}" />
 															<DataGridTextColumn
 																Width="Auto"
-																MinWidth="150"
+																MinWidth="80"
 																Header="Quantity"
 																Binding="{CompiledBinding Quantity}" />
 															<DataGridTextColumn
 																Width="Auto"
-																MinWidth="150"
+																MinWidth="130"
 																Header="Amount"
-																Binding="{CompiledBinding Amount}" />
+																Binding="{CompiledBinding AmountFormatted}" />
 															<DataGridTextColumn
 																Width="Auto"
 																MinWidth="150"
@@ -421,9 +421,9 @@
 														<DataGrid.Columns>
 															<DataGridTextColumn
 																Width="Auto"
-																MinWidth="50"
-																Header="ID"
-																Binding="{CompiledBinding ID}" />
+																MinWidth="120"
+																Header="Invoice ID"
+																Binding="{CompiledBinding InvoiceId}" />
 															<DataGridTextColumn
 																Width="*"
 																MinWidth="160"
@@ -443,7 +443,7 @@
 																Width="Auto"
 																MinWidth="60"
 																Header="Amount"
-																Binding="{CompiledBinding Amount}" />
+																Binding="{CompiledBinding AmountFormatted}" />
 															<DataGridTextColumn
 																Width="Auto"
 																MinWidth="90"

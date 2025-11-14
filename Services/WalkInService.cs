@@ -156,107 +156,109 @@ namespace AHON_TRACK.Services
 
         #region CREATE
 
-        public async Task<(bool Success, string Message, int? CustomerID, string? InvoiceNumber)> AddWalkInCustomerAsync(ManageWalkInModel walkIn, DateTime selectedDate)
+        public async Task<(bool Success, string Message, int? CustomerID)> AddWalkInCustomerAsync(
+            ManageWalkInModel walkIn, 
+            DateTime selectedDate, 
+            string? invoiceNumber = null)
         {
             if (!CanCreate())
             {
                 ShowAccessDeniedToast("register walk-in customers");
-                return (false, "Insufficient permissions to register walk-in customers.", null, null);
+                return (false, "Insufficient permissions to register walk-in customers.", null);
             }
-
+        
             if (!IsValidCheckInDate(selectedDate))
             {
                 ShowWarningToast("Invalid Date",
                     "Walk-in check-in is only allowed for today's date.");
-                return (false, "Check-in is only allowed for today's date.", null, null);
+                return (false, "Check-in is only allowed for today's date.", null);
             }
             
-            string invoiceNumber = await GenerateInvoiceNumberAsync();
-            Debug.WriteLine($"[AddWalkInCustomerAsync] Generated Invoice: {invoiceNumber}");
+            // ✅ USE PROVIDED INVOICE NUMBER OR GENERATE NEW ONE
+            string finalInvoiceNumber = !string.IsNullOrWhiteSpace(invoiceNumber) 
+                ? invoiceNumber 
+                : await GenerateInvoiceNumberAsync();
+            
+            Debug.WriteLine($"[AddWalkInCustomerAsync] Using Invoice: {finalInvoiceNumber}");
             
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
                 using var transaction = conn.BeginTransaction();
-
+        
                 try
                 {
-                    // ✅ STRICT CHECK: Block if FirstName + LastName matches ANY active member
                     var (isActiveMember, isExpiredMember, memberId, memberName, multipleMatches) =
                         await CheckMemberStatusAsync(conn, transaction, walkIn);
-
+        
                     if (isActiveMember)
                     {
-                        // BLOCK: Active member detected
                         string blockMessage = $"❌ Cannot register as walk-in.\n\n" +
                             $"'{walkIn.FirstName} {walkIn.LastName}' matches an active member:\n" +
                             $"• Member: {memberName} (ID: {memberId})\n\n" +
                             $"Please use the MEMBER CHECK-IN system instead.";
-
+        
                         ShowWarningToast("Active Member Detected", blockMessage);
-
+        
                         await LogActionAsync(conn, transaction, "BLOCKED",
                             $"Walk-in blocked - {walkIn.FirstName} {walkIn.LastName} (Age: {walkIn.Age}) matches active member {memberName} (ID: {memberId})", true);
-
+        
                         transaction.Commit();
-                        return (false, $"Active member '{memberName}' detected. Use member check-in system.", null, null);
+                        return (false, $"Active member '{memberName}' detected. Use member check-in system.", null);
                     }
-
-                    // If expired/inactive member found, notify but allow
+        
                     if (isExpiredMember)
                     {
                         string expiredMessage = multipleMatches != null && multipleMatches.Count > 1
                             ? $"Found {multipleMatches.Count} expired member records with this name. Allowing walk-in registration."
                             : $"{memberName}'s membership has expired. Allowing walk-in registration.";
-
+        
                         Debug.WriteLine($"[AddWalkInCustomerAsync] {expiredMessage}");
                         _toastManager?.CreateToast("Expired Member Detected")
                             .WithContent(expiredMessage)
                             .DismissOnClick()
                             .ShowInfo();
                     }
-
-                    // Continue with existing walk-in logic
+        
                     var (existingId, existingType) = await GetExistingCustomerAsync(conn, transaction, walkIn);
-
+        
                     if (existingId.HasValue)
                     {
-                        var result = await HandleExistingCustomerAsync(conn, transaction, walkIn, existingId.Value, existingType, invoiceNumber);
+                        var result = await HandleExistingCustomerAsync(conn, transaction, walkIn, existingId.Value, existingType, finalInvoiceNumber);
                         if (!result.Success)
                         {
                             transaction.Rollback();
-                            return (result.Success, result.Message, result.CustomerID, null);
+                            return (result.Success, result.Message, result.CustomerID);
                         }
-
+        
                         transaction.Commit();
                         NotifyDashboardEvents();
-                        return (result.Success, result.Message, result.CustomerID, invoiceNumber);
+                        return (result.Success, result.Message, result.CustomerID);
                     }
-
-                    // New customer flow
+        
                     var customerId = await CreateNewCustomerAsync(conn, transaction, walkIn);
-
+        
                     if (IsRegularWithPackage(walkIn))
                     {
-                        await ProcessPackageSaleAsync(conn, transaction, customerId, walkIn, invoiceNumber);
+                        await ProcessPackageSaleAsync(conn, transaction, customerId, walkIn, finalInvoiceNumber);
                     }
-
+        
                     await CreateCheckInRecordAsync(conn, transaction, customerId);
-
+        
                     string logMessage = isExpiredMember
-                        ? $"Registered expired member as walk-in: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) - Invoice: {invoiceNumber} - Previous Member ID: {memberId}"
-                        : $"Registered walk-in customer: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) with {walkIn.WalkInPackage} - Invoice: {invoiceNumber}";
-
+                        ? $"Registered expired member as walk-in: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) - Invoice: {finalInvoiceNumber} - Previous Member ID: {memberId}"
+                        : $"Registered walk-in customer: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) with {walkIn.WalkInPackage} - Invoice: {finalInvoiceNumber}";
+        
                     await LogActionAsync(conn, transaction, "CREATE", logMessage, true);
-
+        
                     transaction.Commit();
                     NotifyDashboardEvents();
-
+        
                     ShowSuccessToast("Walk-in Registered",
-                        $"{walkIn.FirstName} {walkIn.LastName} checked in successfully. Invoice: {invoiceNumber}");
-
-                    return (true, "Walk-in customer registered and checked in successfully.", customerId, invoiceNumber);
+                        $"{walkIn.FirstName} {walkIn.LastName} checked in successfully. Invoice: {finalInvoiceNumber}");
+        
+                    return (true, "Walk-in customer registered and checked in successfully.", customerId);
                 }
                 catch
                 {
@@ -267,12 +269,12 @@ namespace AHON_TRACK.Services
             catch (SqlException ex)
             {
                 ShowErrorToast("Database Error", $"Failed to register customer: {ex.Message}");
-                return (false, $"Database error: {ex.Message}", null, null);
+                return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
                 ShowErrorToast("Error", $"An unexpected error occurred: {ex.Message}");
-                return (false, $"Error: {ex.Message}", null, null);
+                return (false, $"Error: {ex.Message}", null);
             }
         }
 
