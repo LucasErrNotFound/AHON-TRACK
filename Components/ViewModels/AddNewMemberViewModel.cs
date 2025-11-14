@@ -1148,10 +1148,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             await receiptContext
                 .FeedLine(2)
                 .AddText("Thank you for your membership!", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText($"Printed by: {CurrentUserModel.Username}", x => x.Alignment(HorizontalAlignment.Left))
                 .FeedLine(3).ExecuteAsync();
-
+            
             _toastManager.CreateToast("Invoice Printed")
-                .WithContent($"Invoice {CurrentInvoiceNo} printed successfully")
+                .WithContent("Invoice has been printed successfully")
                 .ShowSuccess();
         }
         catch (Exception ex)

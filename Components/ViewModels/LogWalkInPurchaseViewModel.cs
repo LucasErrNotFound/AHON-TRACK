@@ -1087,11 +1087,12 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             await receiptContext
                 .FeedLine(2)
                 .AddText("Thank you for your visit!", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText($"Printed by: {CurrentUserModel.Username}", x => x.Alignment(HorizontalAlignment.Left))
                 .FeedLine(3)
                 .ExecuteAsync();
-
+            
             _toastManager.CreateToast("Invoice Printed")
-                .WithContent($"Invoice {CurrentInvoiceNo} printed successfully")
+                .WithContent("Invoice has been printed successfully")
                 .ShowSuccess();
         }
         catch (Exception ex)
