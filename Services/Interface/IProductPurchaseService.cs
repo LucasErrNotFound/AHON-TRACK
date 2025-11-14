@@ -17,6 +17,8 @@ namespace AHON_TRACK.Services.Interface
         Task<List<SellingModel>> GetAllGymPackagesAsync();
         Task<List<InvoiceModel>> GetInvoicesByDateAsync(DateTime date);
         Task<List<RecentPurchaseModel>> GetRecentPurchasesAsync(int limit = 50);
+        Task<string> GenerateInvoiceNumberAsync();
+        Task<bool> InvoiceNumberExistsAsync(string invoiceNumber);
 
         (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(string paymentMethod, string? referenceNumber);
     }

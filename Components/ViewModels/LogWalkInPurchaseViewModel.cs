@@ -67,6 +67,12 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private string? _consentFilePath;
+    
+    [ObservableProperty]
+    private string _currentInvoiceNo = string.Empty;
+
+    [ObservableProperty]
+    private bool _isGeneratingInvoice;
 
     public int? LastRegisteredCustomerID { get; private set; }
 
@@ -83,6 +89,10 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     public bool IsMayaVisible => IsMayaSelected;
     public bool IsReferenceNumberVisible => IsMayaSelected || IsGCashSelected;
     public string SelectedWalkInType => SelectedWalkInTypeItem;
+    
+    public string InvoiceNumberDisplay => string.IsNullOrWhiteSpace(CurrentInvoiceNo) 
+        ? "Generating..." 
+        : CurrentInvoiceNo;
     
     public bool IsReferenceNumberVisibleInReceipt => 
         (IsGCashSelected || IsMayaSelected) && !string.IsNullOrWhiteSpace(ReferenceNumber);
@@ -101,7 +111,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         _toastManager = toastManager;
         _pageManager = pageManager;
         _walkInService = walkInService;
+        
         _ = LoadAvailablePackagesAsync();
+        _ = GenerateNewInvoiceNumberAsync();
 
         SelectedDate = NavigationDate.SelectedCheckInDate;
     }
@@ -118,6 +130,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     public async void Initialize()
     {
         await LoadAvailablePackagesAsync();
+        await GenerateNewInvoiceNumberAsync();
     }
 
     private async Task LoadAvailablePackagesAsync()
@@ -915,8 +928,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         if (SelectedDate.Date != DateTime.Today)
         {
             _toastManager.CreateToast("Invalid Date")
-                    .WithContent("Walk-in registration is only allowed for today's date. Please return to Check-In page and select today.")
-                    .ShowError();
+                .WithContent("Walk-in registration is only allowed for today's date. Please return to Check-In page and select today.")
+                .ShowError();
             return;
         }
 
@@ -944,7 +957,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 WalkInType = SelectedWalkInTypeItem,
                 WalkInPackage = SelectedSpecializedPackageItem,
                 PaymentMethod = paymentMethod,
-                ReferenceNumber = ReferenceNumber, // ✅ Pass reference number from UI
+                ReferenceNumber = ReferenceNumber,
                 ConsentLetter = ConsentFilePath,
                 Quantity = SelectedSpecializedPackageItem != "None" ? SpecializedPackageQuantity : null
             };
@@ -962,6 +975,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             }
 
             Debug.WriteLine($"[PaymentAsync] ========== WALK-IN REGISTRATION ==========");
+            Debug.WriteLine($"[PaymentAsync] Invoice: {CurrentInvoiceNo}");
             Debug.WriteLine($"[PaymentAsync] Name: {walkIn.FirstName} {walkIn.LastName}");
             Debug.WriteLine($"[PaymentAsync] Type: {walkIn.WalkInType}");
             Debug.WriteLine($"[PaymentAsync] Package: {walkIn.WalkInPackage}");
@@ -970,22 +984,27 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             Debug.WriteLine($"[PaymentAsync] Reference Number: {walkIn.ReferenceNumber ?? "N/A"}");
             Debug.WriteLine($"[PaymentAsync] =======================================");
 
-            var (success, message, customerId) = await _walkInService.AddWalkInCustomerAsync(walkIn, SelectedDate);
+            // ✅ CALL SERVICE WITH INVOICE NUMBER BEING GENERATED INTERNALLY
+            var (success, message, customerId, invoiceNumber) = await _walkInService.AddWalkInCustomerAsync(walkIn, SelectedDate);
 
             if (success)
             {
                 string paymentInfo = paymentMethod == "Cash"
                     ? "Cash payment"
                     : $"{paymentMethod} - Ref: {ReferenceNumber}";
-                
+            
+                // ✅ GENERATE RECEIPT WITH INVOICE NUMBER FROM SERVICE
                 _ = GenerateReceipt();
 
                 _toastManager.CreateToast("Payment Successful!")
-                    .WithContent($"Walk-in customer registered with ID: {customerId}\n{paymentInfo}")
+                    .WithContent($"Walk-in customer registered with ID: {customerId}\nInvoice: {invoiceNumber}\n{paymentInfo}")
                     .DismissOnClick()
                     .ShowSuccess();
 
                 ClearForm();
+            
+                // ✅ GENERATE NEW INVOICE FOR NEXT TRANSACTION
+                await GenerateNewInvoiceNumberAsync();
 
                 _pageManager.Navigate<CheckInOutViewModel>();
             }
@@ -1019,7 +1038,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             {
                 PortName = "COM6",
                 BaudRate = 9600,
-                MaxLineCharacter = 40,
+                MaxLineCharacter = 33,
                 CutPaper = true
             };
 
@@ -1029,22 +1048,31 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 .AddText("AHON VICTORY GYM", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("2nd Flr. Event Hub", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("Victory Central Mall", x => x.Alignment(HorizontalAlignment.Center))
-                .AddText("Brgy. Balibago, Sta. Rosa, Laguna", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("Brgy Balibago, Sta. Rosa, Laguna", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
                 .AddText("PURCHASE INVOICE", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
-                .AddText($"Invoice No.: {TransactionID}")
+                .AddText($"Invoice ID: {CurrentInvoiceNo}")
                 .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
                 .AddText($"Customer: {CustomerFullName}")
+                .AddText($"Type: {SelectedWalkInType}")
                 .FeedLine(1)
                 .AddText("--------------------------------")
                 .FeedLine(1);
 
+            // Add package details if applicable
+            if (SelectedSpecializedPackageItem != "None")
+            {
+                receiptContext
+                    .AddText($"{SelectedSpecializedPackageItem}")
+                    .AddText($"  {SpecializedPackageQuantity} x {FormatCurrencyForReceipt(PackageUnitPrice)}");
+            }
+
             receiptContext
                 .FeedLine(1)
                 .AddText("--------------------------------")
-                .AddText($"TOTAL: P{TotalAmount:N2}", x => x.Alignment(HorizontalAlignment.Right))
+                .AddText($"TOTAL: {FormatCurrencyForReceipt(TotalAmount)}", x => x.Alignment(HorizontalAlignment.Right))
                 .FeedLine(1)
                 .AddText($"Payment: {SelectedPaymentMethod}");
 
@@ -1060,7 +1088,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 .ExecuteAsync();
 
             _toastManager.CreateToast("Invoice Printed")
-                .WithContent("Invoice has been printed successfully")
+                .WithContent($"Invoice {CurrentInvoiceNo} printed successfully")
                 .ShowSuccess();
         }
         catch (Exception ex)
@@ -1068,9 +1096,50 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             _toastManager.CreateToast("Print Error")
                 .WithContent($"Failed to print invoice: {ex.Message}")
                 .ShowError();
-        
+    
             Debug.WriteLine($"Printer error: {ex}");
         }
+    }
+    
+    private async Task GenerateNewInvoiceNumberAsync()
+    {
+        if (IsGeneratingInvoice) return;
+
+        try
+        {
+            IsGeneratingInvoice = true;
+
+            if (_walkInService != null)
+            {
+                CurrentInvoiceNo = await _walkInService.GenerateInvoiceNumberAsync();
+                Debug.WriteLine($"[GenerateNewInvoiceNumberAsync] Generated Invoice: {CurrentInvoiceNo}");
+            }
+            else
+            {
+                // Fallback for design-time or when service is null
+                CurrentInvoiceNo = $"INV-{DateTime.Now:yyyyMMdd}-{new Random().Next(10000, 99999)}";
+                Debug.WriteLine($"[GenerateNewInvoiceNumberAsync] Fallback Invoice: {CurrentInvoiceNo}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GenerateNewInvoiceNumberAsync] Error: {ex.Message}");
+            CurrentInvoiceNo = $"INV-{DateTime.Now:yyyyMMdd}-ERROR";
+        
+            _toastManager?.CreateToast("Invoice Generation Error")
+                .WithContent("Failed to generate invoice number. Using fallback.")
+                .DismissOnClick()
+                .ShowWarning();
+        }
+        finally
+        {
+            IsGeneratingInvoice = false;
+        }
+    }
+    
+    private string FormatCurrencyForReceipt(string currencyText)
+    {
+        return currencyText.Replace("₱", "P");
     }
 
     partial void OnConsentFilePathChanged(string value)
@@ -1097,7 +1166,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         SelectedWalkInTypeItem = string.Empty;
         SelectedSpecializedPackageItem = "None";
         SpecializedPackageQuantity = 1;
-        ReferenceNumber = string.Empty; // ✅ Clear reference number
+        ReferenceNumber = string.Empty;
         ConsentFilePath = string.Empty;
         IsCashSelected = false;
         IsGCashSelected = false;

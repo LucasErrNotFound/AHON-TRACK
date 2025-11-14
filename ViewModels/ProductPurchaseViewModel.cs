@@ -126,7 +126,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     private string? _referenceNumber = string.Empty;
 
     [ObservableProperty]
-    private string _currentTransactionId = "GM-2025-001234";
+    private string _currentInvoiceNo = string.Empty;
 
     private int _lastIdNumber = 1234;
 
@@ -896,9 +896,9 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 _ = GenerateReceipt();
                 
                 ClearCart();
-                CurrentTransactionId = GenerateNewTransactionId();
+                CurrentInvoiceNo = GenerateNewTransactionId();
 
-                // Reload products to update stock counts
+                await GenerateNewInvoiceNumberAsync();
                 await LoadProductsFromDatabaseAsync();
             }
         }
@@ -918,7 +918,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             {
                 PortName = "COM6",
                 BaudRate = 9600,
-                MaxLineCharacter = 40,
+                MaxLineCharacter = 33,
                 CutPaper = true
             };
 
@@ -928,12 +928,12 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 .AddText("AHON VICTORY GYM", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("2nd Flr. Event Hub", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("Victory Central Mall", x => x.Alignment(HorizontalAlignment.Center))
-                .AddText("Brgy. Balibago, Sta. Rosa, Laguna", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("Brgy Balibago, Sta. Rosa, Laguna", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
                 .AddText("PURCHASE INVOICE", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
-                .AddText($"Invoice No.: {CurrentTransactionId}")
+                .AddText($"Invoice ID: {CurrentInvoiceNo}")
                 .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
                 .AddText($"Customer: {CustomerFullName}")
                 .FeedLine(1)
@@ -1003,6 +1003,27 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         SelectedCustomer = null;
     }
 
+    private async Task GenerateNewInvoiceNumberAsync()
+    {
+        try
+        {
+            if (_productPurchaseService != null)
+            {
+                CurrentInvoiceNo = await _productPurchaseService.GenerateInvoiceNumberAsync();
+                Debug.WriteLine($"[GenerateNewInvoiceNumberAsync] Invoice: {CurrentInvoiceNo}");
+            }
+            else
+            {
+                // Fallback for design time
+                CurrentInvoiceNo = $"INV-{DateTime.Now:yyyyMMdd}-{new Random().Next(10000, 99999)}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GenerateNewInvoiceNumberAsync] Error: {ex.Message}");
+            CurrentInvoiceNo = $"INV-{DateTime.Now:yyyyMMdd}-ERROR";
+        }
+    }
 
     private void UpdateCustomerCounts()
     {
@@ -1159,6 +1180,14 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         }
         OnPropertyChanged(nameof(IsPaymentPossible));
         OnPropertyChanged(nameof(IsReferenceNumberVisible));
+    }
+    
+    partial void OnIsInitializedChanged(bool value)
+    {
+        if (value)
+        {
+            _ = GenerateNewInvoiceNumberAsync();
+        }
     }
 
     public bool IsReferenceNumberVisible => IsGCashSelected || IsMayaSelected;

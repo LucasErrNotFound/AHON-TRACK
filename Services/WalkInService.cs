@@ -156,20 +156,24 @@ namespace AHON_TRACK.Services
 
         #region CREATE
 
-        public async Task<(bool Success, string Message, int? CustomerID)> AddWalkInCustomerAsync(ManageWalkInModel walkIn, DateTime selectedDate)
+        public async Task<(bool Success, string Message, int? CustomerID, string? InvoiceNumber)> AddWalkInCustomerAsync(ManageWalkInModel walkIn, DateTime selectedDate)
         {
             if (!CanCreate())
             {
                 ShowAccessDeniedToast("register walk-in customers");
-                return (false, "Insufficient permissions to register walk-in customers.", null);
+                return (false, "Insufficient permissions to register walk-in customers.", null, null);
             }
 
             if (!IsValidCheckInDate(selectedDate))
             {
                 ShowWarningToast("Invalid Date",
                     "Walk-in check-in is only allowed for today's date.");
-                return (false, "Check-in is only allowed for today's date.", null);
+                return (false, "Check-in is only allowed for today's date.", null, null);
             }
+            
+            string invoiceNumber = await GenerateInvoiceNumberAsync();
+            Debug.WriteLine($"[AddWalkInCustomerAsync] Generated Invoice: {invoiceNumber}");
+            
             try
             {
                 using var conn = new SqlConnection(_connectionString);
@@ -196,7 +200,7 @@ namespace AHON_TRACK.Services
                             $"Walk-in blocked - {walkIn.FirstName} {walkIn.LastName} (Age: {walkIn.Age}) matches active member {memberName} (ID: {memberId})", true);
 
                         transaction.Commit();
-                        return (false, $"Active member '{memberName}' detected. Use member check-in system.", null);
+                        return (false, $"Active member '{memberName}' detected. Use member check-in system.", null, null);
                     }
 
                     // If expired/inactive member found, notify but allow
@@ -218,16 +222,16 @@ namespace AHON_TRACK.Services
 
                     if (existingId.HasValue)
                     {
-                        var result = await HandleExistingCustomerAsync(conn, transaction, walkIn, existingId.Value, existingType);
+                        var result = await HandleExistingCustomerAsync(conn, transaction, walkIn, existingId.Value, existingType, invoiceNumber);
                         if (!result.Success)
                         {
                             transaction.Rollback();
-                            return result;
+                            return (result.Success, result.Message, result.CustomerID, null);
                         }
 
                         transaction.Commit();
                         NotifyDashboardEvents();
-                        return result;
+                        return (result.Success, result.Message, result.CustomerID, invoiceNumber);
                     }
 
                     // New customer flow
@@ -235,14 +239,14 @@ namespace AHON_TRACK.Services
 
                     if (IsRegularWithPackage(walkIn))
                     {
-                        await ProcessPackageSaleAsync(conn, transaction, customerId, walkIn);
+                        await ProcessPackageSaleAsync(conn, transaction, customerId, walkIn, invoiceNumber);
                     }
 
                     await CreateCheckInRecordAsync(conn, transaction, customerId);
 
                     string logMessage = isExpiredMember
-                        ? $"Registered expired member as walk-in: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) - Previous Member ID: {memberId}"
-                        : $"Registered walk-in customer: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) with {walkIn.WalkInPackage}";
+                        ? $"Registered expired member as walk-in: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) - Invoice: {invoiceNumber} - Previous Member ID: {memberId}"
+                        : $"Registered walk-in customer: {walkIn.FirstName} {walkIn.LastName} ({walkIn.WalkInType}) with {walkIn.WalkInPackage} - Invoice: {invoiceNumber}";
 
                     await LogActionAsync(conn, transaction, "CREATE", logMessage, true);
 
@@ -250,9 +254,9 @@ namespace AHON_TRACK.Services
                     NotifyDashboardEvents();
 
                     ShowSuccessToast("Walk-in Registered",
-                        $"{walkIn.FirstName} {walkIn.LastName} checked in successfully.");
+                        $"{walkIn.FirstName} {walkIn.LastName} checked in successfully. Invoice: {invoiceNumber}");
 
-                    return (true, "Walk-in customer registered and checked in successfully.", customerId);
+                    return (true, "Walk-in customer registered and checked in successfully.", customerId, invoiceNumber);
                 }
                 catch
                 {
@@ -263,12 +267,12 @@ namespace AHON_TRACK.Services
             catch (SqlException ex)
             {
                 ShowErrorToast("Database Error", $"Failed to register customer: {ex.Message}");
-                return (false, $"Database error: {ex.Message}", null);
+                return (false, $"Database error: {ex.Message}", null, null);
             }
             catch (Exception ex)
             {
                 ShowErrorToast("Error", $"An unexpected error occurred: {ex.Message}");
-                return (false, $"Error: {ex.Message}", null);
+                return (false, $"Error: {ex.Message}", null, null);
             }
         }
 
@@ -295,7 +299,7 @@ namespace AHON_TRACK.Services
 
         private async Task<(bool Success, string Message, int? CustomerID)> HandleExistingCustomerAsync(
     SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn,
-    int existingCustomerId, string? existingType)
+    int existingCustomerId, string? existingType, string invoiceNumber)
         {
             // Prevent Regular customers from downgrading to Free Trial
             if (IsRegular(existingType) && IsFreeTrial(walkIn.WalkInType))
@@ -316,7 +320,6 @@ namespace AHON_TRACK.Services
             // Free Trial upgrading to Regular
             if (IsFreeTrial(existingType) && IsRegular(walkIn.WalkInType))
             {
-                // Check if already checked in today before upgrading
                 if (await HasCheckedInTodayAsync(conn, transaction, existingCustomerId))
                 {
                     ShowWarningToast("Already Checked In",
@@ -325,9 +328,16 @@ namespace AHON_TRACK.Services
                 }
 
                 await UpgradeToRegularAsync(conn, transaction, existingCustomerId, walkIn);
+        
+                // ✅ PROCESS PACKAGE SALE WITH INVOICE NUMBER IF APPLICABLE
+                if (IsRegularWithPackage(walkIn))
+                {
+                    await ProcessPackageSaleAsync(conn, transaction, existingCustomerId, walkIn, invoiceNumber);
+                }
+        
                 await CreateCheckInRecordAsync(conn, transaction, existingCustomerId);
                 await LogActionAsync(conn, transaction, "UPDATE",
-                    $"Updated walk-in customer from Free Trial to Regular and checked in: {walkIn.FirstName} {walkIn.LastName}", true);
+                    $"Updated walk-in customer from Free Trial to Regular and checked in: {walkIn.FirstName} {walkIn.LastName} - Invoice: {invoiceNumber}", true);
 
                 return (true, "Customer updated to Regular and checked in.", existingCustomerId);
             }
@@ -442,7 +452,7 @@ namespace AHON_TRACK.Services
         }
 
         private async Task ProcessPackageSaleAsync(SqlConnection conn, SqlTransaction transaction,
-    int customerId, ManageWalkInModel walkIn)
+    int customerId, ManageWalkInModel walkIn, string invoiceNumber)
         {
             var (packageId, price) = await GetPackageDetailsAsync(conn, transaction, walkIn.WalkInPackage);
 
@@ -455,18 +465,18 @@ namespace AHON_TRACK.Services
 
             // ✅ PASS PAYMENT METHOD AND REFERENCE NUMBER TO SALES RECORD
             await RecordSaleAsync(conn, transaction, packageId.Value, customerId,
-                walkIn.Quantity ?? 1, totalAmount, walkIn.PaymentMethod, processedRefNumber);
+                walkIn.Quantity ?? 1, totalAmount, walkIn.PaymentMethod, processedRefNumber, invoiceNumber);
 
             await UpdateDailySalesAsync(conn, transaction, totalAmount);
 
             Debug.WriteLine($"[ProcessPackageSaleAsync] Package sale processed:");
+            Debug.WriteLine($"  Invoice: {invoiceNumber}");
             Debug.WriteLine($"  Package: {walkIn.WalkInPackage}");
             Debug.WriteLine($"  Quantity: {walkIn.Quantity ?? 1}");
             Debug.WriteLine($"  Total Amount: ₱{totalAmount:N2}");
             Debug.WriteLine($"  Payment Method: {walkIn.PaymentMethod}");
             Debug.WriteLine($"  Reference Number: {processedRefNumber}");
         }
-
 
         private async Task<(int? PackageId, decimal Price)> GetPackageDetailsAsync(
             SqlConnection conn, SqlTransaction transaction, string? packageName)
@@ -488,11 +498,11 @@ namespace AHON_TRACK.Services
 
         private async Task RecordSaleAsync(SqlConnection conn, SqlTransaction transaction,
     int packageId, int customerId, int quantity, decimal amount,
-    string? paymentMethod = null, string? referenceNumber = null)
+    string? paymentMethod = null, string? referenceNumber = null, string? invoiceNumber = null)
         {
             using var cmd = new SqlCommand(
-                @"INSERT INTO Sales (SaleDate, PackageID, CustomerID, Quantity, Amount, RecordedBy, PaymentMethod, ReferenceNumber)
-          VALUES (GETDATE(), @packageId, @customerId, @quantity, @amount, @employeeId, @paymentMethod, @referenceNumber)",
+                @"INSERT INTO Sales (SaleDate, PackageID, CustomerID, Quantity, Amount, RecordedBy, PaymentMethod, ReferenceNumber, InvoiceNumber)
+          VALUES (GETDATE(), @packageId, @customerId, @quantity, @amount, @employeeId, @paymentMethod, @referenceNumber, @invoiceNumber)",
                 conn, transaction);
 
             cmd.Parameters.AddWithValue("@packageId", packageId);
@@ -500,12 +510,12 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@quantity", quantity);
             cmd.Parameters.AddWithValue("@amount", amount);
             cmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-            // ✅ CAPTURE PAYMENT METHOD AND REFERENCE NUMBER FOR THIS SPECIFIC TRANSACTION
             cmd.Parameters.AddWithValue("@paymentMethod", paymentMethod ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@referenceNumber", referenceNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@invoiceNumber", invoiceNumber ?? (object)DBNull.Value);
 
             Debug.WriteLine($"[RecordSaleAsync] Sale recorded:");
+            Debug.WriteLine($"  Invoice: {invoiceNumber ?? "N/A"}");
             Debug.WriteLine($"  Package ID: {packageId}, Customer ID: {customerId}");
             Debug.WriteLine($"  Quantity: {quantity}, Amount: ₱{amount:N2}");
             Debug.WriteLine($"  Payment Method: {paymentMethod ?? "N/A"}");
@@ -1366,6 +1376,97 @@ namespace AHON_TRACK.Services
                 .WithContent(message)
                 .DismissOnClick()
                 .ShowSuccess();
+        }
+
+        #endregion
+        
+        #region INVOICE NUMBER GENERATION
+
+        /// <summary>
+        /// Generates a unique invoice number in format: INV-YYYYMMDD-XXXXX
+        /// Where XXXXX is a random alphanumeric code
+        /// </summary>
+        public async Task<string> GenerateInvoiceNumberAsync()
+        {
+            const int maxAttempts = 10;
+            int attempts = 0;
+
+            while (attempts < maxAttempts)
+            {
+                string invoiceNumber = GenerateInvoiceNumberFormat();
+        
+                bool exists = await InvoiceNumberExistsAsync(invoiceNumber);
+        
+                if (!exists)
+                {
+                    Debug.WriteLine($"[GenerateInvoiceNumberAsync] Generated unique invoice: {invoiceNumber}");
+                    return invoiceNumber;
+                }
+
+                attempts++;
+                Debug.WriteLine($"[GenerateInvoiceNumberAsync] Invoice collision, retry {attempts}/{maxAttempts}");
+            }
+
+            // Fallback: use timestamp to ensure uniqueness
+            string fallbackInvoice = $"INV-{DateTime.Now:yyyyMMdd}-{DateTime.Now.Ticks % 100000:D5}";
+            Debug.WriteLine($"[GenerateInvoiceNumberAsync] Using fallback invoice: {fallbackInvoice}");
+            return fallbackInvoice;
+        }
+
+        /// <summary>
+        /// Generates invoice number in format: INV-YYYYMMDD-XXXXX
+        /// </summary>
+        private string GenerateInvoiceNumberFormat()
+        {
+            string datePrefix = DateTime.Now.ToString("yyyyMMdd");
+            string randomSuffix = GenerateRandomAlphanumeric(5);
+    
+            return $"INV-{datePrefix}-{randomSuffix}";
+        }
+
+        /// <summary>
+        /// Generates a random alphanumeric string of specified length
+        /// </summary>
+        private string GenerateRandomAlphanumeric(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+            var result = new char[length];
+    
+            for (int i = 0; i < length; i++)
+            {
+                result[i] = chars[random.Next(chars.Length)];
+            }
+    
+            return new string(result);
+        }
+
+        /// <summary>
+        /// Checks if an invoice number already exists in the database
+        /// </summary>
+        public async Task<bool> InvoiceNumberExistsAsync(string invoiceNumber)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string query = @"
+            SELECT COUNT(1) 
+            FROM Sales 
+            WHERE InvoiceNumber = @InvoiceNumber";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@InvoiceNumber", invoiceNumber ?? (object)DBNull.Value);
+
+                int count = (int)await cmd.ExecuteScalarAsync();
+                return count > 0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[InvoiceNumberExistsAsync] Error: {ex.Message}");
+                return false; // Assume doesn't exist on error
+            }
         }
 
         #endregion

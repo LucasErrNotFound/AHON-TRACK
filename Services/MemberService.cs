@@ -162,13 +162,16 @@ namespace AHON_TRACK.Services
 
         #region CREATE
 
-        public async Task<(bool Success, string Message, int? MemberId)> AddMemberAsync(ManageMemberModel member)
+        public async Task<(bool Success, string Message, int? MemberId, string? InvoiceNumber)> AddMemberAsync(ManageMemberModel member)
         {
             if (!CanCreate())
             {
                 ShowAccessDeniedToast("add members");
-                return (false, "Insufficient permissions to add members.", null);
+                return (false, "Insufficient permissions to add members.", null, null);
             }
+
+            string invoiceNumber = await GenerateInvoiceNumberAsync();
+            Debug.WriteLine($"[AddMemberAsync] Generated Invoice: {invoiceNumber}");
 
             try
             {
@@ -182,13 +185,14 @@ namespace AHON_TRACK.Services
 
                     if (existingMemberId.HasValue && isDeleted)
                     {
-                        return await RestoreMemberAsync(conn, transaction, existingMemberId.Value, member);
+                        var result = await RestoreMemberAsync(conn, transaction, existingMemberId.Value, member, invoiceNumber);
+                        return (result.Success, result.Message, result.MemberId, invoiceNumber);
                     }
 
                     if (existingMemberId.HasValue)
                     {
                         ShowMemberExistsToast(member);
-                        return (false, "Member already exists.", null);
+                        return (false, "Member already exists.", null, null);
                     }
 
                     // ✅ CHECK AND MIGRATE WALK-IN CUSTOMER BEFORE CREATING NEW MEMBER
@@ -203,24 +207,25 @@ namespace AHON_TRACK.Services
 
                     if (member.PackageID.HasValue && member.PackageID.Value > 0)
                     {
-                        await RecordPackageSaleAsync(conn, transaction, member, memberId);
+                        // ✅ PASS INVOICE NUMBER TO PACKAGE SALE
+                        await RecordPackageSaleAsync(conn, transaction, member, memberId, null, invoiceNumber);
                     }
 
-                    await LogActionAsync(conn, transaction, "CREATE", $"Added new member: {member.FirstName} {member.LastName}", true);
+                    await LogActionAsync(conn, transaction, "CREATE", 
+                        $"Added new member: {member.FirstName} {member.LastName} - Invoice: {invoiceNumber}", true);
                     transaction.Commit();
 
                     DashboardEventService.Instance.NotifyMemberAdded();
 
-                    // Show appropriate success message
                     if (migratedWalkInId.HasValue)
                     {
                         _toastManager?.CreateToast("Member Added & Migrated")
-                            .WithContent($"{member.FirstName} {member.LastName} registered as member (walk-in record archived).")
+                            .WithContent($"{member.FirstName} {member.LastName} registered as member (walk-in record archived).\nInvoice: {invoiceNumber}")
                             .DismissOnClick()
                             .ShowSuccess();
                     }
 
-                    return (true, "Member added successfully.", memberId);
+                    return (true, "Member added successfully.", memberId, invoiceNumber);
                 }
                 catch
                 {
@@ -232,13 +237,13 @@ namespace AHON_TRACK.Services
             {
                 ShowDatabaseErrorToast("add member", ex.Message);
                 Debug.WriteLine($"AddMemberAsync Error: {ex}");
-                return (false, $"Database error: {ex.Message}", null);
+                return (false, $"Database error: {ex.Message}", null, null);
             }
             catch (Exception ex)
             {
                 ShowErrorToast(ex.Message);
                 Debug.WriteLine($"AddMemberAsync Error: {ex}");
-                return (false, $"Error: {ex.Message}", null);
+                return (false, $"Error: {ex.Message}", null, null);
             }
         }
 
@@ -269,7 +274,7 @@ namespace AHON_TRACK.Services
         }
 
         private async Task<(bool Success, string Message, int? MemberId)> RestoreMemberAsync(
-            SqlConnection conn, SqlTransaction transaction, int memberId, ManageMemberModel member)
+            SqlConnection conn, SqlTransaction transaction, int memberId, ManageMemberModel member, string invoiceNumber)
         {
             const string query = @"
                 UPDATE Members 
@@ -293,11 +298,18 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@MemberID", memberId);
 
             await cmd.ExecuteNonQueryAsync();
-            await LogActionAsync(conn, transaction, "RESTORE", $"Restored member: {member.FirstName} {member.LastName}", true);
+            
+            if (member.PackageID.HasValue && member.PackageID.Value > 0)
+            {
+                await RecordPackageSaleAsync(conn, transaction, member, memberId, null, invoiceNumber);
+            }
+            
+            await LogActionAsync(conn, transaction, "RESTORE", 
+                $"Restored member: {member.FirstName} {member.LastName} - Invoice: {invoiceNumber}", true);
             transaction.Commit();
 
             _toastManager?.CreateToast("Member Restored")
-                .WithContent($"Successfully restored {member.FirstName} {member.LastName}.")
+                .WithContent($"Successfully restored {member.FirstName} {member.LastName}.\nInvoice: {invoiceNumber}")
                 .DismissOnClick()
                 .ShowSuccess();
 
@@ -325,7 +337,7 @@ namespace AHON_TRACK.Services
 
         private async Task RecordPackageSaleAsync(
     SqlConnection conn, SqlTransaction transaction,
-    ManageMemberModel member, int memberId, ManageMemberModel? originalMember = null)
+    ManageMemberModel member, int memberId, ManageMemberModel? originalMember = null, string? invoiceNumber = null)
         {
             var (packagePrice, packageName, duration) = await GetPackageDetailsAsync(
                 conn, transaction, member.PackageID!.Value);
@@ -340,6 +352,7 @@ namespace AHON_TRACK.Services
                 quantity = CalculateMonthsAdded(originalMember.ValidUntil, member.ValidUntil);
 
                 Debug.WriteLine($"[RecordPackageSaleAsync] RENEWAL/UPGRADE");
+                Debug.WriteLine($"  Invoice: {invoiceNumber ?? "N/A"}");
                 Debug.WriteLine($"  Old ValidUntil: {originalMember.ValidUntil}");
                 Debug.WriteLine($"  New ValidUntil: {member.ValidUntil}");
                 Debug.WriteLine($"  Months ADDED: {quantity}");
@@ -350,6 +363,7 @@ namespace AHON_TRACK.Services
                 quantity = CalculateQuantityFromValidUntil(member.ValidUntil);
 
                 Debug.WriteLine($"[RecordPackageSaleAsync] NEW MEMBER");
+                Debug.WriteLine($"  Invoice: {invoiceNumber ?? "N/A"}");
                 Debug.WriteLine($"  ValidUntil: {member.ValidUntil}");
                 Debug.WriteLine($"  Months from today: {quantity}");
             }
@@ -359,16 +373,17 @@ namespace AHON_TRACK.Services
             // ✅ PROCESS REFERENCE NUMBER BASED ON CURRENT PAYMENT METHOD
             string processedRefNumber = ProcessReferenceNumber(member);
 
-            // ✅ PASS PAYMENT METHOD AND REFERENCE NUMBER TO SALES RECORD
+            // ✅ PASS PAYMENT METHOD, REFERENCE NUMBER, AND INVOICE NUMBER TO SALES RECORD
             await InsertSaleRecordAsync(
                 conn, transaction, member.PackageID!.Value, memberId,
-                quantity, totalAmount, member.PaymentMethod, processedRefNumber);
+                quantity, totalAmount, member.PaymentMethod, processedRefNumber, invoiceNumber);
 
             await UpdateDailySalesAsync(conn, transaction, totalAmount);
 
             Debug.WriteLine($"[RecordPackageSaleAsync] Sale recorded: {packageName} x{quantity} months = ₱{totalAmount:N2}");
             Debug.WriteLine($"  Payment Method: {member.PaymentMethod}");
             Debug.WriteLine($"  Reference Number: {processedRefNumber}");
+            Debug.WriteLine($"  Invoice Number: {invoiceNumber ?? "N/A"}");
         }
 
         private int CalculateMonthsAdded(string? oldValidUntil, string? newValidUntil)
@@ -418,11 +433,11 @@ namespace AHON_TRACK.Services
 
         private async Task InsertSaleRecordAsync(
     SqlConnection conn, SqlTransaction transaction, int packageId, int memberId,
-    int quantity, decimal amount, string? paymentMethod = null, string? referenceNumber = null)
+    int quantity, decimal amount, string? paymentMethod = null, string? referenceNumber = null, string? invoiceNumber = null)
         {
             const string query = @"
-        INSERT INTO Sales (SaleDate, PackageID, MemberID, Quantity, Amount, RecordedBy, PaymentMethod, ReferenceNumber)
-        VALUES (GETDATE(), @packageId, @memberId, @quantity, @amount, @employeeId, @paymentMethod, @referenceNumber)";
+        INSERT INTO Sales (SaleDate, PackageID, MemberID, Quantity, Amount, RecordedBy, PaymentMethod, ReferenceNumber, InvoiceNumber)
+        VALUES (GETDATE(), @packageId, @memberId, @quantity, @amount, @employeeId, @paymentMethod, @referenceNumber, @invoiceNumber)";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@packageId", packageId);
@@ -434,6 +449,7 @@ namespace AHON_TRACK.Services
             // ✅ CAPTURE PAYMENT METHOD AND REFERENCE NUMBER FOR THIS SPECIFIC TRANSACTION
             cmd.Parameters.AddWithValue("@paymentMethod", paymentMethod ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@referenceNumber", referenceNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@invoiceNumber", invoiceNumber ?? (object)DBNull.Value);
 
             await cmd.ExecuteNonQueryAsync();
         }
@@ -1004,12 +1020,12 @@ m.IsNotified,
 
         #region UPDATE
 
-        public async Task<(bool Success, string Message)> UpdateMemberAsync(ManageMemberModel member)
+        public async Task<(bool Success, string Message, string? InvoiceNumber)> UpdateMemberAsync(ManageMemberModel member)
         {
             if (!CanUpdate())
             {
                 ShowAccessDeniedToast("update member data");
-                return (false, "Insufficient permissions to update members.");
+                return (false, "Insufficient permissions to update members.", null);
             }
 
             try
@@ -1026,7 +1042,7 @@ m.IsNotified,
                             .WithContent("The member you're trying to update doesn't exist.")
                             .DismissOnClick()
                             .ShowWarning();
-                        return (false, "Member not found.");
+                        return (false, "Member not found.", null);
                     }
 
                     var originalMember = await GetOriginalMemberDataAsync(conn, member.MemberID, transaction);
@@ -1048,8 +1064,8 @@ m.IsNotified,
                     ReferenceNumber = @ReferenceNumber,
                     ConsentLetter = @ConsentLetter,
                     ProfilePicture = @ProfilePicture,
-                    IsNotified = 0,              -- ✅ CLEAR notification flag
-                    LastNotificationDate = NULL  -- ✅ CLEAR notification date
+                    IsNotified = 0,
+                    LastNotificationDate = NULL
                 WHERE MemberID = @MemberID";
 
                     using var cmd = new SqlCommand(query, conn, transaction);
@@ -1061,6 +1077,8 @@ m.IsNotified,
 
                     int rows = await cmd.ExecuteNonQueryAsync();
 
+                    string? invoiceNumber = null;
+
                     if (rows > 0)
                     {
                         bool isGymMembershipRenewal = await IsGymMembershipRenewalAsync(
@@ -1068,14 +1086,18 @@ m.IsNotified,
 
                         if (isGymMembershipRenewal && member.PackageID.HasValue && member.PackageID.Value > 0)
                         {
-                            await RecordPackageSaleAsync(conn, transaction, member, member.MemberID, originalMember);
+                            // ✅ GENERATE INVOICE FOR RENEWAL/UPGRADE
+                            invoiceNumber = await GenerateInvoiceNumberAsync();
+                            Debug.WriteLine($"[UpdateMemberAsync] Generated Invoice for renewal/upgrade: {invoiceNumber}");
+
+                            await RecordPackageSaleAsync(conn, transaction, member, member.MemberID, originalMember, invoiceNumber);
 
                             string actionType = originalMember?.PackageID == member.PackageID ? "RENEWAL" : "UPGRADE";
                             await LogActionAsync(conn, transaction, actionType,
-                                $"{actionType}: {member.FirstName} {member.LastName} - Package ID: {member.PackageID}", true);
+                                $"{actionType}: {member.FirstName} {member.LastName} - Package ID: {member.PackageID} - Invoice: {invoiceNumber}", true);
 
                             _toastManager?.CreateToast($"Package {actionType}")
-                                .WithContent($"Successfully {actionType.ToLower()}ed gym membership for {member.FirstName} {member.LastName}")
+                                .WithContent($"Successfully {actionType.ToLower()}ed gym membership for {member.FirstName} {member.LastName}\nInvoice: {invoiceNumber}")
                                 .DismissOnClick()
                                 .ShowSuccess();
                         }
@@ -1087,10 +1109,10 @@ m.IsNotified,
 
                         transaction.Commit();
                         DashboardEventService.Instance.NotifyMemberUpdated();
-                        return (true, "Member updated successfully.");
+                        return (true, "Member updated successfully.", invoiceNumber);
                     }
 
-                    return (false, "Failed to update member.");
+                    return (false, "Failed to update member.", null);
                 }
                 catch
                 {
@@ -1102,13 +1124,13 @@ m.IsNotified,
             {
                 ShowDatabaseErrorToast("update member", ex.Message);
                 Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
-                return (false, $"Database error: {ex.Message}");
+                return (false, $"Database error: {ex.Message}", null);
             }
             catch (Exception ex)
             {
                 ShowErrorToast(ex.Message);
                 Debug.WriteLine($"UpdateMemberAsync Error: {ex}");
-                return (false, $"Error: {ex.Message}");
+                return (false, $"Error: {ex.Message}", null);
             }
         }
 
@@ -1952,6 +1974,97 @@ m.IsNotified,
             {
                 Debug.WriteLine($"[CheckAndMigrateWalkInCustomerEnhancedAsync] Error: {ex.Message}");
                 return null;
+            }
+        }
+
+        #endregion
+        
+        #region INVOICE NUMBER GENERATION
+
+        /// <summary>
+        /// Generates a unique invoice number in format: INV-YYYYMMDD-XXXXX
+        /// Where XXXXX is a random alphanumeric code
+        /// </summary>
+        public async Task<string> GenerateInvoiceNumberAsync()
+        {
+            const int maxAttempts = 10;
+            int attempts = 0;
+
+            while (attempts < maxAttempts)
+            {
+                string invoiceNumber = GenerateInvoiceNumberFormat();
+        
+                bool exists = await InvoiceNumberExistsAsync(invoiceNumber);
+        
+                if (!exists)
+                {
+                    Debug.WriteLine($"[GenerateInvoiceNumberAsync] Generated unique invoice: {invoiceNumber}");
+                    return invoiceNumber;
+                }
+
+                attempts++;
+                Debug.WriteLine($"[GenerateInvoiceNumberAsync] Invoice collision, retry {attempts}/{maxAttempts}");
+            }
+
+            // Fallback: use timestamp to ensure uniqueness
+            string fallbackInvoice = $"INV-{DateTime.Now:yyyyMMdd}-{DateTime.Now.Ticks % 100000:D5}";
+            Debug.WriteLine($"[GenerateInvoiceNumberAsync] Using fallback invoice: {fallbackInvoice}");
+            return fallbackInvoice;
+        }
+
+        /// <summary>
+        /// Generates invoice number in format: INV-YYYYMMDD-XXXXX
+        /// </summary>
+        private string GenerateInvoiceNumberFormat()
+        {
+            string datePrefix = DateTime.Now.ToString("yyyyMMdd");
+            string randomSuffix = GenerateRandomAlphanumeric(5);
+    
+            return $"INV-{datePrefix}-{randomSuffix}";
+        }
+
+        /// <summary>
+        /// Generates a random alphanumeric string of specified length
+        /// </summary>
+        private string GenerateRandomAlphanumeric(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+            var result = new char[length];
+    
+            for (int i = 0; i < length; i++)
+            {
+                result[i] = chars[random.Next(chars.Length)];
+            }
+    
+            return new string(result);
+        }
+
+        /// <summary>
+        /// Checks if an invoice number already exists in the database
+        /// </summary>
+        public async Task<bool> InvoiceNumberExistsAsync(string invoiceNumber)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string query = @"
+            SELECT COUNT(1) 
+            FROM Sales 
+            WHERE InvoiceNumber = @InvoiceNumber";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@InvoiceNumber", invoiceNumber ?? (object)DBNull.Value);
+
+                int count = (int)await cmd.ExecuteScalarAsync();
+                return count > 0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[InvoiceNumberExistsAsync] Error: {ex.Message}");
+                return false; // Assume doesn't exist on error
             }
         }
 

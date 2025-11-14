@@ -9,7 +9,7 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface IWalkInService
     {
-        Task<(bool Success, string Message, int? CustomerID)> AddWalkInCustomerAsync(ManageWalkInModel walkIn, DateTime selectedDate);
+        Task<(bool Success, string Message, int? CustomerID, string? InvoiceNumber)> AddWalkInCustomerAsync(ManageWalkInModel walkIn, DateTime selectedDate);
         Task<(bool Success, string Message, List<ManageWalkInModel>? WalkIns)> GetAllWalkInCustomersAsync();
         Task<(bool Success, string Message, ManageWalkInModel? WalkIn)> GetWalkInCustomerByIdAsync(int customerId);
         Task<(bool Success, string Message, List<ManageWalkInModel>? WalkIns)> GetWalkInsByTypeAsync(string walkInType);
@@ -19,6 +19,8 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message, int DeletedCount)> DeleteMultipleWalkInCustomersAsync(List<int> customerIds);
         Task<(bool Success, bool HasUsedFreeTrial, string Message)> CheckFreeTrialEligibilityAsync(string firstName, string lastName, string? contactNumber);
         Task<List<SellingModel>> GetAvailablePackagesForWalkInAsync(string? walkInType = null);
+        Task<string> GenerateInvoiceNumberAsync();
+        Task<bool> InvoiceNumberExistsAsync(string invoiceNumber);
         (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(ManageWalkInModel walkIn);
     }
 }

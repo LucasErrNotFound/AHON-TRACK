@@ -452,6 +452,17 @@
 														Text="{CompiledBinding MemberFullName}"
 														Classes="h4" />
 												</StackPanel>
+												<StackPanel Orientation="Horizontal" Margin="45,0,0,0">
+													<TextBlock
+														Text="Invoice ID: "
+														VerticalAlignment="Center"
+														Classes="h4" />
+													<TextBlock
+														Text="{CompiledBinding CurrentInvoiceNo}"
+														FontSize="15"
+														VerticalAlignment="Center"
+														FontWeight="Medium"/>
+												</StackPanel>
 											</StackPanel>
 										</Grid>
 										<Separator Background="{StaticResource ForegroundColor}" />
@@ -1160,6 +1171,17 @@
 													<TextBlock
 														Text="{CompiledBinding MemberFullName}"
 														Classes="h4" />
+												</StackPanel>
+												<StackPanel Orientation="Horizontal" Margin="45,0,0,0">
+													<TextBlock
+														Text="Invoice ID: "
+														VerticalAlignment="Center"
+														Classes="h4" />
+													<TextBlock
+														Text="{CompiledBinding CurrentInvoiceNo}"
+														FontSize="15"
+														VerticalAlignment="Center"
+														FontWeight="Medium"/>
 												</StackPanel>
 											</StackPanel>
 										</Grid>

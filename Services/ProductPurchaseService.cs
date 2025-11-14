@@ -170,6 +170,9 @@ namespace AHON_TRACK.Services
                 ShowError("Payment Validation Failed", errorMessage);
                 return false;
             }
+            
+            string invoiceNumber = await GenerateInvoiceNumberAsync();
+            Debug.WriteLine($"[ProcessPaymentAsync] Generated Invoice: {invoiceNumber}");
 
             using var conn = new SqlConnection(_connectionString);
             await conn.OpenAsync();
@@ -200,7 +203,7 @@ namespace AHON_TRACK.Services
                     }
 
                     // ✅ PASS PROCESSED REFERENCE NUMBER TO SALES RECORD
-                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, processedRefNumber, conn, transaction);
+                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, processedRefNumber, invoiceNumber, conn, transaction);
                     await RecordPurchaseAsync(item, customer, itemTotal, conn, transaction);
                     await HandleInventoryAndSessionsAsync(item, customer, conn, transaction);
                 }
@@ -211,7 +214,7 @@ namespace AHON_TRACK.Services
                 transaction.Commit();
 
                 // ✅ Log success AFTER transaction is committed
-                await LogSuccessfulPaymentAsync(customer, totalAmount, paymentMethod, cartItems);
+                await LogSuccessfulPaymentAsync(customer, totalAmount, paymentMethod, cartItems, invoiceNumber);
 
                 ShowPaymentSuccess(totalAmount, paymentMethod, cartItems, anyDiscountApplied);
 
@@ -309,11 +312,11 @@ namespace AHON_TRACK.Services
             return (item.Price * item.Quantity, false);
         }
 
-        private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, string paymentMethod, string referenceNumber, SqlConnection conn, SqlTransaction transaction)
+        private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, string paymentMethod, string referenceNumber, string invoiceNumber, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
-                INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, PaymentMethod, ReferenceNumber, RecordedBy)
-                VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @PaymentMethod, @ReferenceNumber, @RecordedBy);
+                INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, PaymentMethod, ReferenceNumber, InvoiceNumber, RecordedBy)
+                VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @PaymentMethod, @ReferenceNumber, @InvoiceNumber, @RecordedBy);
                 SELECT SCOPE_IDENTITY();";
 
             using var cmd = new SqlCommand(query, conn, transaction);
@@ -326,6 +329,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@Amount", itemTotal);
             cmd.Parameters.AddWithValue("@PaymentMethod", paymentMethod ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@ReferenceNumber", string.IsNullOrWhiteSpace(referenceNumber) ? (object)DBNull.Value : referenceNumber);
+            cmd.Parameters.AddWithValue("@InvoiceNumber", invoiceNumber ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@RecordedBy", employeeId);
 
             await cmd.ExecuteScalarAsync();
@@ -1163,7 +1167,7 @@ namespace AHON_TRACK.Services
             }*/
         }
 
-        private async Task LogSuccessfulPaymentAsync(CustomerModel customer, decimal totalAmount, string paymentMethod, List<SellingModel> cartItems)
+        private async Task LogSuccessfulPaymentAsync(CustomerModel customer, decimal totalAmount, string paymentMethod, List<SellingModel> cartItems, string invoiceNumber)
         {
             try
             {
@@ -1171,14 +1175,87 @@ namespace AHON_TRACK.Services
                 await logConn.OpenAsync();
 
                 string itemsList = string.Join(", ", cartItems.Select(i => $"{i.Title} x{i.Quantity}"));
-                string description = $"Payment processed for {customer.FirstName} {customer.LastName} ({customer.CustomerType}). Total: ₱{totalAmount:N2} via {paymentMethod}. Items: {itemsList}";
+                string description = $"Payment processed for {customer.FirstName} {customer.LastName} ({customer.CustomerType}). Invoice: {invoiceNumber}. Total: ₱{totalAmount:N2} via {paymentMethod}. Items: {itemsList}";
 
                 await LogActionAsync(logConn, "Purchase", description, true);
             }
             catch (Exception ex)
             {
-                // Silently log to console but don't throw - logging shouldn't break the main flow
                 Console.WriteLine($"Failed to log successful payment: {ex.Message}");
+            }
+        }
+        
+        public async Task<string> GenerateInvoiceNumberAsync()
+        {
+            const int maxAttempts = 10;
+            int attempts = 0;
+
+            while (attempts < maxAttempts)
+            {
+                string invoiceNumber = GenerateInvoiceNumberFormat();
+        
+                bool exists = await InvoiceNumberExistsAsync(invoiceNumber);
+        
+                if (!exists)
+                {
+                    Debug.WriteLine($"[GenerateInvoiceNumberAsync] Generated unique invoice: {invoiceNumber}");
+                    return invoiceNumber;
+                }
+
+                attempts++;
+                Debug.WriteLine($"[GenerateInvoiceNumberAsync] Invoice collision, retry {attempts}/{maxAttempts}");
+            }
+
+            // Fallback: use timestamp to ensure uniqueness
+            string fallbackInvoice = $"INV-{DateTime.Now:yyyyMMdd}-{DateTime.Now.Ticks % 100000:D5}";
+            Debug.WriteLine($"[GenerateInvoiceNumberAsync] Using fallback invoice: {fallbackInvoice}");
+            return fallbackInvoice;
+        }
+        
+        private string GenerateInvoiceNumberFormat()
+        {
+            string datePrefix = DateTime.Now.ToString("yyyyMMdd");
+            string randomSuffix = GenerateRandomAlphanumeric(5);
+            
+            return $"INV-{datePrefix}-{randomSuffix}";
+        }
+        
+        private string GenerateRandomAlphanumeric(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+            var result = new char[length];
+    
+            for (int i = 0; i < length; i++)
+            {
+                result[i] = chars[random.Next(chars.Length)];
+            }
+    
+            return new string(result);
+        }
+        
+        public async Task<bool> InvoiceNumberExistsAsync(string invoiceNumber)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+        
+                const string query = @"
+                    SELECT COUNT(1) 
+                    FROM Sales 
+                    WHERE InvoiceNumber = @InvoiceNumber";
+        
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@InvoiceNumber", invoiceNumber ?? (object)DBNull.Value);
+        
+                int count = (int)await cmd.ExecuteScalarAsync();
+                return count > 0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[InvoiceNumberExistsAsync] Error: {ex.Message}");
+                return false; // Assume doesn't exist on error
             }
         }
 

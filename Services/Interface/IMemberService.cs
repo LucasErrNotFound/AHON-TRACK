@@ -10,10 +10,10 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface IMemberService
     {
-        Task<(bool Success, string Message, int? MemberId)> AddMemberAsync(ManageMemberModel member);
+        Task<(bool Success, string Message, int? MemberId, string? InvoiceNumber)> AddMemberAsync(ManageMemberModel member);
         Task<(bool Success, string Message, List<ManageMemberModel>? Members)> GetMembersAsync();
         Task<(bool Success, string Message, ManageMemberModel? Member)> GetMemberByIdAsync(int memberId);
-        Task<(bool Success, string Message)> UpdateMemberAsync(ManageMemberModel member);
+        Task<(bool Success, string Message, string? InvoiceNumber)> UpdateMemberAsync(ManageMemberModel member);
         Task<(bool Success, string Message)> DeleteMemberAsync(int memberId);
         Task<(bool Success, string Message)> DeleteMultipleMembersAsync(List<int> memberIds);
         Task<List<SellingModel>> GetAvailablePackagesForMembersAsync();
@@ -23,6 +23,8 @@ namespace AHON_TRACK.Services.Interface
         Task AutoInactivateExpiredMembersAsync();
         Task ShowMemberExpirationAlertsAsync(Action<Notification>? addNotificationCallback = null);
         Task<MemberExpirationSummary> GetMemberExpirationSummaryAsync();
+        Task<string> GenerateInvoiceNumberAsync();
+        Task<bool> InvoiceNumberExistsAsync(string invoiceNumber);
 
         (bool IsValid, string ErrorMessage) ValidatePaymentReferenceNumber(ManageMemberModel member);
 

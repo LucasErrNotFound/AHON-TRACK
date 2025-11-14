@@ -69,6 +69,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     
     [ObservableProperty]
     private string? _consentFilePath;
+    
+    [ObservableProperty]
+    private string _currentInvoiceNo = string.Empty;
+
+    [ObservableProperty]
+    private bool _isGeneratingInvoice;
 
     // Personal Details Section
     private string _memberFirstName = string.Empty;
@@ -529,6 +535,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        
+        _ = GenerateNewInvoiceNumberAsync();
     }
 
     public AddNewMemberViewModel()
@@ -551,6 +559,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         }
 
         await LoadMonthlyPackagesAsync();
+        await GenerateNewInvoiceNumberAsync();
     }
 
     private async Task LoadMonthlyPackagesAsync()
@@ -982,12 +991,14 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
             bool isSuccess;
             string successMessage;
+            string? invoiceNumber = null;
 
             if (ViewContext == MemberViewContext.AddNew)
             {
                 // ADD NEW MEMBER
                 Debug.WriteLine($"[Payment] ========== NEW MEMBER REGISTRATION ==========");
                 Debug.WriteLine($"[Payment] Name: {member.FirstName} {member.LastName}");
+                Debug.WriteLine($"[Payment] Invoice (Pre-generated): {CurrentInvoiceNo}");
                 Debug.WriteLine($"[Payment] Package: {SelectedMonthlyPackage.Title} (ID: {SelectedMonthlyPackage.SellingID})");
                 Debug.WriteLine($"[Payment] Price per month: ₱{SelectedMonthlyPackage.Price:N2}");
                 Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months");
@@ -997,22 +1008,23 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 Debug.WriteLine($"[Payment] Reference Number: {member.ReferenceNumber ?? "N/A"}");
                 Debug.WriteLine($"[Payment] =======================================");
 
-                var result = await _memberService.AddMemberAsync(member);
-                isSuccess = result.Success;
-                successMessage = $"{member.FirstName} {member.LastName} registered successfully!";
+                var (success, message, memberId, generatedInvoice) = await _memberService.AddMemberAsync(member);
+                isSuccess = success;
+                invoiceNumber = generatedInvoice;
+                successMessage = $"{member.FirstName} {member.LastName} registered successfully!\nInvoice: {invoiceNumber}";
 
                 _ = GenerateReceipt();
 
-                if (!result.Success)
+                if (!success)
                 {
                     _toastManager?.CreateToast("Registration Failed")
-                        .WithContent(result.Message)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowError();
                     return;
                 }
 
-                member.MemberID = result.MemberId ?? 0;
+                member.MemberID = memberId ?? 0;
             }
             else if (ViewContext == MemberViewContext.Upgrade || ViewContext == MemberViewContext.Renew)
             {
@@ -1020,6 +1032,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 string actionType = ViewContext == MemberViewContext.Upgrade ? "UPGRADE" : "RENEW";
                 Debug.WriteLine($"[Payment] ========== {actionType} MEMBER ==========");
                 Debug.WriteLine($"[Payment] Member ID: {_selectedMemberId}");
+                Debug.WriteLine($"[Payment] Invoice (Pre-generated): {CurrentInvoiceNo}");
                 Debug.WriteLine($"[Payment] Name: {member.FirstName} {member.LastName}");
                 Debug.WriteLine($"[Payment] New Package: {SelectedMonthlyPackage.Title}");
                 Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months added");
@@ -1030,19 +1043,20 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
                 member.MemberID = _selectedMemberId;
 
-                var result = await _memberService.UpdateMemberAsync(member);
-                isSuccess = result.Success;
+                var (success, message, generatedInvoice) = await _memberService.UpdateMemberAsync(member);
+                isSuccess = success;
+                invoiceNumber = generatedInvoice;
 
                 successMessage = ViewContext == MemberViewContext.Upgrade
-                    ? $"{member.FirstName} {member.LastName} upgraded successfully! Extended by {MembershipDuration} months."
-                    : $"{member.FirstName} {member.LastName} renewed successfully! Extended by {MembershipDuration} months.";
+                    ? $"{member.FirstName} {member.LastName} upgraded successfully! Extended by {MembershipDuration} months.\nInvoice: {invoiceNumber}"
+                    : $"{member.FirstName} {member.LastName} renewed successfully! Extended by {MembershipDuration} months.\nInvoice: {invoiceNumber}";
                 
                 _ = GenerateReceipt();
 
-                if (!result.Success)
+                if (!success)
                 {
                     _toastManager?.CreateToast("Update Failed")
-                        .WithContent(result.Message)
+                        .WithContent(message)
                         .DismissOnClick()
                         .ShowError();
                     return;
@@ -1062,6 +1076,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 .ShowSuccess();
 
             ClearAllFields();
+            await GenerateNewInvoiceNumberAsync();
             _pageManager.Navigate<ManageMembershipViewModel>();
         }
         catch (Exception ex)
@@ -1083,7 +1098,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             {
                 PortName = "COM6",
                 BaudRate = 9600,
-                MaxLineCharacter = 40,
+                MaxLineCharacter = 33,
                 CutPaper = true
             };
 
@@ -1093,22 +1108,28 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 .AddText("AHON VICTORY GYM", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("2nd Flr. Event Hub", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("Victory Central Mall", x => x.Alignment(HorizontalAlignment.Center))
-                .AddText("Brgy. Balibago, Sta. Rosa, Laguna", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("Brgy Balibago, Sta. Rosa, Laguna", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
-                .AddText("PURCHASE INVOICE", x => x.Alignment(HorizontalAlignment.Center))
+                .AddText("MEMBERSHIP INVOICE", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
-                .AddText($"Invoice No.: {TransactionID}")
+                .AddText($"Invoice ID: {CurrentInvoiceNo}") // ✅ USE CURRENT INVOICE
                 .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
-                .AddText($"Customer: {MemberFullName}")
+                .AddText($"Member: {MemberFullName}")
                 .FeedLine(1)
                 .AddText("--------------------------------")
                 .FeedLine(1);
 
+            decimal pricePerMonth = SelectedMonthlyPackage?.Price ?? 0;
+            receiptContext
+                .AddText($"{SelectedMonthlyPackage?.Title ?? "Membership Package"}")
+                .AddText($"  {MembershipDuration} months x P{pricePerMonth:N2}")
+                .AddText($"  Total: {ToPrinterFormat(SubtotalDisplay)}");
+
             receiptContext
                 .FeedLine(1)
                 .AddText("--------------------------------")
-                .AddText($"TOTAL: P{SubtotalDisplay:N2}", x => x.Alignment(HorizontalAlignment.Right))
+                .AddText($"TOTAL: {ToPrinterFormat(SubtotalDisplay)}", x => x.Alignment(HorizontalAlignment.Right))
                 .FeedLine(1)
                 .AddText($"Payment: {(IsCashSelected ? "Cash" : IsGCashSelected ? "GCash" : "Maya")}");
 
@@ -1117,14 +1138,18 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 receiptContext.AddText($"Reference No: {ReferenceNumber}");
             }
 
+            receiptContext
+                .FeedLine(1)
+                .AddText($"Valid From: {ValidFromDate}")
+                .AddText($"Valid Until: {ValidUntilDate}");
+
             await receiptContext
                 .FeedLine(2)
-                .AddText("Thank you for your purchase!", x => x.Alignment(HorizontalAlignment.Center))
-                .FeedLine(3)
-                .ExecuteAsync();
+                .AddText("Thank you for your membership!", x => x.Alignment(HorizontalAlignment.Center))
+                .FeedLine(3).ExecuteAsync();
 
             _toastManager.CreateToast("Invoice Printed")
-                .WithContent("Invoice has been printed successfully")
+                .WithContent($"Invoice {CurrentInvoiceNo} printed successfully")
                 .ShowSuccess();
         }
         catch (Exception ex)
@@ -1132,9 +1157,50 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             _toastManager.CreateToast("Print Error")
                 .WithContent($"Failed to print invoice: {ex.Message}")
                 .ShowError();
-        
+    
             Debug.WriteLine($"Printer error: {ex}");
         }
+    }
+    
+    private async Task GenerateNewInvoiceNumberAsync()
+    {
+        if (IsGeneratingInvoice) return;
+
+        try
+        {
+            IsGeneratingInvoice = true;
+
+            if (_memberService != null)
+            {
+                CurrentInvoiceNo = await _memberService.GenerateInvoiceNumberAsync();
+                Debug.WriteLine($"[GenerateNewInvoiceNumberAsync] Generated Invoice: {CurrentInvoiceNo}");
+            }
+            else
+            {
+                // Fallback for design-time or when service is null
+                CurrentInvoiceNo = $"INV-{DateTime.Now:yyyyMMdd}-{new Random().Next(10000, 99999)}";
+                Debug.WriteLine($"[GenerateNewInvoiceNumberAsync] Fallback Invoice: {CurrentInvoiceNo}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[GenerateNewInvoiceNumberAsync] Error: {ex.Message}");
+            CurrentInvoiceNo = $"INV-{DateTime.Now:yyyyMMdd}-{DateTime.Now.Ticks % 100000:D5}";
+        
+            _toastManager?.CreateToast("Invoice Generation Error")
+                .WithContent("Failed to generate invoice number. Using fallback.")
+                .DismissOnClick()
+                .ShowWarning();
+        }
+        finally
+        {
+            IsGeneratingInvoice = false;
+        }
+    }
+    
+    private string ToPrinterFormat(string displayText)
+    {
+        return displayText.Replace("₱", "P");
     }
 
     public bool IsPaymentPossible
