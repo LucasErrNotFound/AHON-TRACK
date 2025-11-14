@@ -31,6 +31,8 @@ namespace AHON_TRACK.Models
         public DateTime? UpdatedAt { get; set; }
         public bool IsDeleted { get; set; }
 
+        public string Category { get; set; }
+
         // ⭐ NEW: Sent to inventory tracking fields
         public bool SentToInventory { get; set; }
         public DateTime? SentToInventoryDate { get; set; }
@@ -53,6 +55,8 @@ namespace AHON_TRACK.Models
         public string Unit { get; set; }
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
+
+        public string Category { get; set; }
 
         public decimal LineTotal => Quantity * Price;
     }

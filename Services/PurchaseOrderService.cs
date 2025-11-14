@@ -83,7 +83,7 @@ namespace AHON_TRACK.Services
                         $"Created Purchase Order: {purchaseOrder.PONumber} with {purchaseOrder.Items.Count} items - Total: ₱{purchaseOrder.Total:N2}", true);
 
                     transaction.Commit();
-
+                    DashboardEventService.Instance.NotifySupplierUpdated();
                     ShowToast("Purchase Order Created",
                         $"PO Number: {purchaseOrder.PONumber}\nTotal: ₱{purchaseOrder.Total:N2}",
                         ToastType.Success);
@@ -113,19 +113,19 @@ namespace AHON_TRACK.Services
             Console.WriteLine($"[InsertPurchaseOrderAsync] SupplierID being saved: {po.SupplierID}");
 
             const string query = @"
-                INSERT INTO PurchaseOrders (
-                    PONumber, SupplierID, OrderDate, ExpectedDeliveryDate,
-                    ShippingStatus, PaymentStatus, InvoiceNumber,
-                    Subtotal, TaxRate, TaxAmount, Total,
-                    CreatedByEmployeeID, IsDeleted
-                )
-                OUTPUT INSERTED.PurchaseOrderID
-                VALUES (
-                    @poNumber, @supplierId, @orderDate, @expectedDelivery,
-                    @shippingStatus, @paymentStatus, @invoiceNumber,
-                    @subtotal, @taxRate, @taxAmount, @total,
-                    @employeeId, 0
-                )";
+        INSERT INTO PurchaseOrders (
+            PONumber, SupplierID, OrderDate, ExpectedDeliveryDate,
+            ShippingStatus, PaymentStatus, InvoiceNumber,
+            Subtotal, TaxRate, TaxAmount, Total,
+            CreatedByEmployeeID, IsDeleted, Category
+        )
+        OUTPUT INSERTED.PurchaseOrderID
+        VALUES (
+            @poNumber, @supplierId, @orderDate, @expectedDelivery,
+            @shippingStatus, @paymentStatus, @invoiceNumber,
+            @subtotal, @taxRate, @taxAmount, @total,
+            @employeeId, 0, @category
+        )";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@poNumber", po.PONumber);
@@ -133,12 +133,10 @@ namespace AHON_TRACK.Services
             if (po.SupplierID.HasValue && po.SupplierID.Value > 0)
             {
                 cmd.Parameters.AddWithValue("@supplierId", po.SupplierID.Value);
-                Console.WriteLine($"[SQL] Saving SupplierID: {po.SupplierID.Value}");
             }
             else
             {
                 cmd.Parameters.AddWithValue("@supplierId", DBNull.Value);
-                Console.WriteLine("[SQL WARNING] SupplierID is NULL!");
             }
 
             cmd.Parameters.AddWithValue("@orderDate", po.OrderDate);
@@ -151,6 +149,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@taxAmount", po.TaxAmount);
             cmd.Parameters.AddWithValue("@total", po.Total);
             cmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@category", po.Category ?? "Product");  // ⭐ NEW
 
             return (int)await cmd.ExecuteScalarAsync();
         }
@@ -159,8 +158,8 @@ namespace AHON_TRACK.Services
             int poId, List<PurchaseOrderItemModel> items)
         {
             const string query = @"
-                INSERT INTO PurchaseOrderItems (PurchaseOrderID, ItemName, Unit, Quantity, Price)
-                VALUES (@poId, @itemName, @unit, @quantity, @price)";
+                INSERT INTO PurchaseOrderItems (PurchaseOrderID, ItemName, Unit, Quantity, Price, Category)
+                VALUES (@poId, @itemName, @unit, @quantity, @price, @category)";
 
             foreach (var item in items)
             {
@@ -170,6 +169,7 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@unit", item.Unit);
                 cmd.Parameters.AddWithValue("@quantity", item.Quantity);
                 cmd.Parameters.AddWithValue("@price", item.Price);
+                cmd.Parameters.AddWithValue("@category", item.Category);
 
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -481,16 +481,17 @@ namespace AHON_TRACK.Services
         private async Task UpdatePurchaseOrderMainAsync(SqlConnection conn, SqlTransaction transaction, PurchaseOrderModel po)
         {
             const string query = @"
-                UPDATE PurchaseOrders
-                SET ExpectedDeliveryDate = @expectedDelivery,
-                    ShippingStatus = @shippingStatus,
-                    PaymentStatus = @paymentStatus,
-                    InvoiceNumber = @invoiceNumber,
-                    Subtotal = @subtotal,
-                    TaxAmount = @taxAmount,
-                    Total = @total,
-                    UpdatedAt = GETDATE()
-                WHERE PurchaseOrderID = @poId";
+        UPDATE PurchaseOrders
+        SET ExpectedDeliveryDate = @expectedDelivery,
+            ShippingStatus = @shippingStatus,
+            PaymentStatus = @paymentStatus,
+            InvoiceNumber = @invoiceNumber,
+            Category = @category,
+            Subtotal = @subtotal,
+            TaxAmount = @taxAmount,
+            Total = @total,
+            UpdatedAt = GETDATE()
+        WHERE PurchaseOrderID = @poId";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@poId", po.PurchaseOrderID);
@@ -498,6 +499,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@shippingStatus", po.ShippingStatus);
             cmd.Parameters.AddWithValue("@paymentStatus", po.PaymentStatus);
             cmd.Parameters.AddWithValue("@invoiceNumber", po.InvoiceNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@category", po.Category ?? "Product");  // ⭐ NEW
             cmd.Parameters.AddWithValue("@subtotal", po.Subtotal);
             cmd.Parameters.AddWithValue("@taxAmount", po.TaxAmount);
             cmd.Parameters.AddWithValue("@total", po.Total);
@@ -692,7 +694,10 @@ namespace AHON_TRACK.Services
                 }
 
                 var po = poResult.PurchaseOrder;
+                bool isEquipment = string.Equals(po.Category, "Equipment", StringComparison.OrdinalIgnoreCase);
+
                 Console.WriteLine($"[SendToInventoryAsync] PO loaded: {po.PONumber}");
+                Console.WriteLine($"  - Category: {po.Category}");
                 Console.WriteLine($"  - Shipping Status: {po.ShippingStatus}");
                 Console.WriteLine($"  - Payment Status: {po.PaymentStatus}");
                 Console.WriteLine($"  - Already Sent: {po.SentToInventory}");
@@ -734,13 +739,25 @@ namespace AHON_TRACK.Services
                     var updateDetails = new StringBuilder();
                     var notFoundProducts = new List<string>();
 
-                    // ⭐ NEW: Process each item - update existing or track missing
+                    // ⭐ FIXED: Process each item and actually increment counters
                     foreach (var item in po.Items)
                     {
-                        Console.WriteLine($"[SendToInventoryAsync] Processing item: {item.ItemName}, Qty: {item.Quantity}");
+                        Console.WriteLine($"[SendToInventoryAsync] Processing item: {item.ItemName}, Qty: {item.Quantity}, Category: {po.Category}");
 
-                        var (updated, oldStock, newStock) = await UpdateProductStockFromPOAsync(conn, transaction, item);
+                        (bool updated, int oldStock, int newStock) result;
 
+                        if (isEquipment)
+                        {
+                            result = await UpdateEquipmentStockFromPOAsync(conn, transaction, item);
+                        }
+                        else
+                        {
+                            result = await UpdateProductStockFromPOAsync(conn, transaction, item);
+                        }
+
+                        var (updated, oldStock, newStock) = result;
+
+                        // ⭐ CRITICAL FIX: Actually increment the counters!
                         if (updated)
                         {
                             updatedCount++;
@@ -752,27 +769,28 @@ namespace AHON_TRACK.Services
                             notFoundCount++;
                             notFoundProducts.Add(item.ItemName);
                             updateDetails.AppendLine($"  ✗ {item.ItemName}: Not found in inventory");
-                            Console.WriteLine($"  ✗ Product not found in inventory");
+                            Console.WriteLine($"  ✗ Item not found in inventory");
                         }
                     }
 
-                    // ⭐ CRITICAL: Check if there are products that need to be added first
+                    // ⭐ CRITICAL: Check if there are items that need to be added first
                     if (notFoundCount > 0)
                     {
                         transaction.Rollback();
 
                         var notFoundList = string.Join("\n• ", notFoundProducts);
-                        var message = $"Cannot send to inventory. The following products don't exist:\n\n• {notFoundList}\n\nPlease add these products first, then try again.";
+                        var itemType = isEquipment ? "equipment" : "products";
+                        var message = $"Cannot send to inventory. The following {itemType} don't exist:\n\n• {notFoundList}\n\nPlease add these {itemType} first, then try again.";
 
-                        ShowToast("Products Not Found",
-                            $"{notFoundCount} product(s) not found in inventory. Please add them first.",
+                        ShowToast($"{(isEquipment ? "Equipment" : "Products")} Not Found",
+                            $"{notFoundCount} {itemType} not found in inventory. Please add them first.",
                             ToastType.Warning);
 
-                        Console.WriteLine($"[ABORT] {notFoundCount} products not found");
+                        Console.WriteLine($"[ABORT] {notFoundCount} {itemType} not found");
                         return (false, message);
                     }
 
-                    // ⭐ MARK PO as sent to inventory (only if all products exist)
+                    // ⭐ MARK PO as sent to inventory (only if all items exist)
                     const string markSentQuery = @"
                 UPDATE PurchaseOrders 
                 SET SentToInventory = 1,
@@ -794,16 +812,27 @@ namespace AHON_TRACK.Services
                     }
 
                     // Log action with details
+                    var inventoryType = isEquipment ? "Equipment" : "Product";
                     await LogActionAsync(conn, transaction, "INVENTORY",
-                        $"Sent PO {po.PONumber} to inventory\n{updateDetails}", true);
+                        $"Sent PO {po.PONumber} to {inventoryType} Inventory\n{updateDetails}", true);
 
                     transaction.Commit();
 
-                    var successMessage = $"All {updatedCount} items successfully sent to inventory and stock updated.";
+                    var successMessage = $"All {updatedCount} items successfully sent to {inventoryType.ToLower()} inventory and stock updated.";
                     ShowToast("Sent to Inventory", successMessage, ToastType.Success);
                     Console.WriteLine($"[SUCCESS] {successMessage}");
 
-                    DashboardEventService.Instance.NotifyProductUpdated();
+                    // ⭐ CRITICAL FIX: Notify BOTH inventories
+                    if (isEquipment)
+                    {
+                        DashboardEventService.Instance.NotifyEquipmentUpdated();
+                        Console.WriteLine("✅ Notified EquipmentUpdated event");
+                    }
+                    else
+                    {
+                        DashboardEventService.Instance.NotifyProductUpdated();
+                        Console.WriteLine("✅ Notified ProductUpdated event");
+                    }
 
                     return (true, successMessage);
                 }
@@ -890,6 +919,52 @@ namespace AHON_TRACK.Services
                 Console.WriteLine($"[UpdateSupplierProductsAsync] Error: {ex.Message}");
             }
         }
+
+        private async Task<(bool Success, int OldStock, int NewStock)> UpdateEquipmentStockFromPOAsync(
+    SqlConnection conn, SqlTransaction transaction, PurchaseOrderItemModel item)
+        {
+            const string findQuery = @"
+SELECT EquipmentID, Quantity
+FROM Equipment
+WHERE EquipmentName = @name AND IsDeleted = 0";
+
+            using var findCmd = new SqlCommand(findQuery, conn, transaction);
+            findCmd.Parameters.AddWithValue("@name", item.ItemName);
+
+            using var reader = await findCmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                int equipmentId = reader.GetInt32(0);
+                int currentQty = reader.GetInt32(1);
+                reader.Close();
+
+                // Equipment quantity is always direct (no unit conversion)
+                int quantityToAdd = (int)item.Quantity;
+
+                int newQty = currentQty + quantityToAdd;
+
+                const string updateQuery = @"
+UPDATE Equipment
+SET Quantity = @qty
+WHERE EquipmentID = @id";
+
+                using var updateCmd = new SqlCommand(updateQuery, conn, transaction);
+                updateCmd.Parameters.AddWithValue("@qty", newQty);
+                updateCmd.Parameters.AddWithValue("@id", equipmentId);
+
+                await updateCmd.ExecuteNonQueryAsync();
+
+                Console.WriteLine($"🏋️ Updated Equipment: {item.ItemName} {currentQty} → {newQty}");
+
+                return (true, currentQty, newQty);
+            }
+
+            reader.Close();
+
+            Console.WriteLine($"⚠️ Equipment not found: {item.ItemName}");
+            return (false, 0, 0);
+        }
+
 
         private async Task<(bool Success, int OldStock, int NewStock)> UpdateProductStockFromPOAsync(
             SqlConnection conn, SqlTransaction transaction, PurchaseOrderItemModel item)
@@ -1120,6 +1195,10 @@ namespace AHON_TRACK.Services
                     ? null
                     : reader.GetString(reader.GetOrdinal("InvoiceNumber")),
 
+                Category = reader.IsDBNull(reader.GetOrdinal("Category"))  // ⭐ NEW
+                    ? "Product"
+                    : reader.GetString(reader.GetOrdinal("Category")),
+
                 Subtotal = reader.GetDecimal(reader.GetOrdinal("Subtotal")),
                 TaxRate = reader.GetDecimal(reader.GetOrdinal("TaxRate")),
                 TaxAmount = reader.GetDecimal(reader.GetOrdinal("TaxAmount")),
@@ -1135,7 +1214,6 @@ namespace AHON_TRACK.Services
                     ? null
                     : reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
 
-                // ⭐ NEW: Map sent to inventory fields
                 SentToInventory = reader.IsDBNull(reader.GetOrdinal("SentToInventory"))
                     ? false
                     : reader.GetBoolean(reader.GetOrdinal("SentToInventory")),

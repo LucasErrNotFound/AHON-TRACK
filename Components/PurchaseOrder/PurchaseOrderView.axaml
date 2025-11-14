@@ -102,8 +102,8 @@
                                                             Width="155" />
 														<ComboBox
                                                             shadui:ControlAssist.Label="Category"
-                                                            ItemsSource="{CompiledBinding Category}"
-                                                            SelectedItem="{CompiledBinding SelectedCategory,Mode=TwoWay}"
+                                                            ItemsSource="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).CategoryOptions}"
+                                                            SelectedItem="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).SelectedCategory, Mode=TwoWay}"
                                                             IsEnabled="{CompiledBinding $parent[ItemsControl].((viewModel:PurchaseOrderViewModel)DataContext).IsInEditMode, FallbackValue={x:Null}}"
                                                             Width="150"
                                                             Margin="0,-4,0,0" />
