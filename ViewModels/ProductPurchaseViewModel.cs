@@ -857,8 +857,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         {
             // Determine payment method
             string paymentMethod = IsCashSelected ? CategoryConstants.Cash :
-                                  IsGCashSelected ? CategoryConstants.GCash :
-                                  CategoryConstants.Maya;
+                IsGCashSelected ? CategoryConstants.GCash :
+                CategoryConstants.Maya;
 
             // Convert cart items to SellingModel list
             var sellingItems = CartItems.Select(item => new SellingModel
@@ -882,23 +882,24 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             // Get logged-in employee ID
             int employeeId = CurrentUserModel.UserId ?? 0;
 
-            // ✅ PASS REFERENCE NUMBER TO SERVICE
+            // ✅ FIX: Pass CurrentInvoiceNo to ensure receipt and database use SAME invoice number
             bool success = await _productPurchaseService.ProcessPaymentAsync(
                 sellingItems,
                 customerModel,
                 employeeId,
                 paymentMethod,
-                ReferenceNumber  // ✅ Pass reference number from UI
+                ReferenceNumber,
+                CurrentInvoiceNo  // ✅ Pass current invoice number
             );
 
             if (success)
             {
-                _ = GenerateReceipt();
-                
+                await GenerateReceipt();
+            
                 ClearCart();
-                CurrentInvoiceNo = GenerateNewTransactionId();
 
                 await GenerateNewInvoiceNumberAsync();
+            
                 await LoadProductsFromDatabaseAsync();
             }
         }
@@ -975,7 +976,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             _toastManager.CreateToast("Print Error")
                 .WithContent($"Failed to print invoice: {ex.Message}")
                 .ShowError();
-        
+    
             Debug.WriteLine($"Printer error: {ex}");
         }
     }
@@ -1000,7 +1001,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
-        ReferenceNumber = null;  // ✅ Clear reference number
+        ReferenceNumber = null;
         SelectedCustomer = null;
     }
 
@@ -1015,7 +1016,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             }
             else
             {
-                // Fallback for design time
                 CurrentInvoiceNo = $"INV-{DateTime.Now:yyyyMMdd}-{new Random().Next(10000, 99999)}";
             }
         }
@@ -1141,13 +1141,6 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         DashboardEventService.Instance.PackageAdded -= (s, e) => OnPackagesChanged();
         DashboardEventService.Instance.PackageUpdated -= (s, e) => OnPackagesChanged();
         DashboardEventService.Instance.PackageDeleted -= (s, e) => OnPackagesChanged();
-    }
-
-    private string GenerateNewTransactionId()
-    {
-        _lastIdNumber++;
-        var year = DateTime.Today.Year;
-        return $"GM-{year}-{_lastIdNumber:D6}";
     }
 
     partial void OnIsCashSelectedChanged(bool value)
