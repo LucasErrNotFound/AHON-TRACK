@@ -764,9 +764,7 @@ m.IsNotified,
                 const string query = @"
     SELECT 
         m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
-        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, m.LastNotificationDate,
-m.NotificationCount,
-m.IsNotified,
+        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, 
         
         -- Get gym membership package name
         p.PackageName AS GymPackageName,
@@ -789,6 +787,7 @@ m.IsNotified,
         END AS Status,
         
         m.PaymentMethod, m.ConsentLetter, m.RegisteredByEmployeeID, m.DateJoined,
+        m.LastNotificationDate, m.NotificationCount, m.IsNotified,
         
         (SELECT TOP 1 CheckIn FROM MemberCheckIns 
          WHERE MemberID = m.MemberID AND (IsDeleted = 0 OR IsDeleted IS NULL)
@@ -938,17 +937,17 @@ m.IsNotified,
             int ageIdx = includeRegisteredBy ? 7 : 7;
             int dobIdx = includeRegisteredBy ? 8 : 8;
             int validUntilIdx = includeRegisteredBy ? 9 : 9;
-            int lastNotificationDateIdx = includeRegisteredBy ? 10 : 10;
-            int notificationCountIdx = includeRegisteredBy ? 11 : 11;
-            int isNotifiedIdx = includeRegisteredBy ? 12 : 12;
-            int packageIdIdx = includeRegisteredBy ? 13 : 13;
-            int gymPackageNameIdx = includeRegisteredBy ? 14 : 14;
-            int sessionPackagesIdx = includeRegisteredBy ? 15 : 15;
-            int statusIdx = includeRegisteredBy ? 16 : 16;
-            int paymentMethodIdx = includeRegisteredBy ? 17 : 17;
-            int consentLetterIdx = includeRegisteredBy ? 18 : 19;
-            int registeredByEmployeeIdIdx = includeRegisteredBy ? 19 : -1;
-            int dateJoinedIdx = includeRegisteredBy ? 20 : 20;
+            int lastNotificationDateIdx = includeRegisteredBy ? 18 : 10;
+            int notificationCountIdx = includeRegisteredBy ? 19 : 11;
+            int isNotifiedIdx = includeRegisteredBy ? 20 : 12;
+            int packageIdIdx = includeRegisteredBy ? 10 : 13;
+            int gymPackageNameIdx = includeRegisteredBy ? 11 : 14;
+            int sessionPackagesIdx = includeRegisteredBy ? 12 : 15;
+            int statusIdx = includeRegisteredBy ? 13 : 16;
+            int paymentMethodIdx = includeRegisteredBy ? 14 : 17;
+            int consentLetterIdx = includeRegisteredBy ? 15 : 19;
+            int registeredByEmployeeIdIdx = includeRegisteredBy ? 16 : -1;
+            int dateJoinedIdx = includeRegisteredBy ? 17 : 20;
             int lastCheckInIdx = includeRegisteredBy ? 21 : 21;
             int lastCheckOutIdx = includeRegisteredBy ? 22 : 22;
             int recentPurchaseItemIdx = includeRegisteredBy ? 23 : 23;
