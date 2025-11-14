@@ -72,6 +72,7 @@ namespace AHON_TRACK;
 [Singleton<IProductPurchaseService, ProductPurchaseService>]
 [Singleton<DataCountingService, DataCountingService>]
 
+[Singleton(typeof(ISmsService), Factory = nameof(SmsServiceFactory))]
 [Singleton(typeof(IPurchaseOrderService), Factory = nameof(PurchaseOrderServiceFactory))]
 [Singleton(typeof(BackupDatabaseService), Factory = nameof(BackupDatabaseServiceFactory))]
 [Singleton(typeof(BackupSchedulerService), Factory = nameof(BackupSchedulerServiceFactory))]
@@ -100,6 +101,19 @@ public partial class ServiceProvider
     public PageManager PageManagerFactory()
     {
         return new PageManager(this);
+    }
+    
+    private ISmsService SmsServiceFactory()
+    {
+        // ⚠️ IMPORTANT: Replace these with your actual HttpSMS credentials
+        // Get your API key from https://httpsms.com/settings
+        const string apiKey = "uk_a0sh3JfokZPdEA3tSGD1UGizW3JCetUHIAEKAcaHLLrMRC_NDnQnbtbacOhh_Mx6";
+        
+        // Your sending phone number (must be registered with HttpSMS)
+        // Format: +639XXXXXXXXX (Philippine number)
+        const string fromPhoneNumber = "+639157055726";
+
+        return new SmsService(apiKey, fromPhoneNumber);
     }
 
     private IPurchaseOrderService PurchaseOrderServiceFactory()

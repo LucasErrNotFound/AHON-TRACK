@@ -686,7 +686,7 @@ m.IsNotified,
         
         CASE 
             WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
-            WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
+            WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 0 AND @ExpirationThreshold THEN 'Near Expiry'
             ELSE m.Status
         END AS Status,
         
@@ -786,7 +786,7 @@ m.IsNotified,
         
         CASE 
             WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 'Expired'
-            WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @ExpirationThreshold THEN 'Near Expiry'
+            WHEN DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 0 AND @ExpirationThreshold THEN 'Near Expiry'
             ELSE m.Status
         END AS Status,
         
@@ -1310,7 +1310,7 @@ m.IsNotified,
                     WHERE m.ValidUntil IS NOT NULL
                     AND m.Status = 'Active'
                     AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
-                    AND DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 1 AND @DaysThreshold
+                    AND DATEDIFF(DAY, GETDATE(), m.ValidUntil) BETWEEN 0 AND @DaysThreshold
                     ORDER BY m.ValidUntil ASC";
 
                 using var cmd = new SqlCommand(query, conn);
@@ -1353,7 +1353,7 @@ m.IsNotified,
                     WHERE ValidUntil IS NOT NULL
                     AND Status = 'Active'
                     AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                    AND DATEDIFF(DAY, GETDATE(), ValidUntil) BETWEEN 1 AND @DaysThreshold";
+                    AND DATEDIFF(DAY, GETDATE(), ValidUntil) BETWEEN 0 AND @DaysThreshold";
 
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@DaysThreshold", EXPIRATION_THRESHOLD_DAYS);

@@ -606,6 +606,16 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
             return;
         }
 
+        // Check if member has a contact number
+        if (string.IsNullOrWhiteSpace(SelectedMember.ContactNumber))
+        {
+            _toastManager.CreateToast("No Contact Number")
+                .WithContent($"{SelectedMember.Name} does not have a contact number on file. Please update their profile first.")
+                .DismissOnClick()
+                .ShowWarning();
+            return;
+        }
+
         _notifyDialogCardViewmodel.Initialize();
         _notifyDialogCardViewmodel.SetMemberInfo(SelectedMember);
 
@@ -623,7 +633,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     {
                         // Show success toast
                         _toastManager.CreateToast("Member Notified")
-                            .WithContent($"Successfully notified {SelectedMember.Name}")
+                            .WithContent($"Successfully notified {SelectedMember.Name} via SMS")
                             .DismissOnClick()
                             .WithDelay(5)
                             .ShowSuccess();
