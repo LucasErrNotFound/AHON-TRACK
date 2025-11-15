@@ -163,34 +163,32 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
     private async Task LoadEquipmentDataAsync()
     {
-        Console.WriteLine($"[LoadEquipmentDataAsync] Starting... Service null? {_inventoryService == null}");
+        Console.WriteLine($"[LoadEquipmentDataAsync] 📊 START - _isLoadingDataFlag: {_isLoadingDataFlag}");
 
         if (_inventoryService == null)
         {
-            Console.WriteLine("[LoadEquipmentDataAsync] ❌ Service is null, exiting");
+            Console.WriteLine("[LoadEquipmentDataAsync] ❌ _inventoryService is NULL!");
             return;
         }
 
-        // ✅ Prevent duplicate loads
-        if (_isLoadingDataFlag)
-        {
-            Console.WriteLine("[LoadEquipmentDataAsync] Already loading, exiting...");
-            return;
-        }
+        // ❌ REMOVE THIS DUPLICATE CHECK - it's preventing reloads!
+        // if (_isLoadingDataFlag) return;
 
+        // ✅ Set flags
         _isLoadingDataFlag = true;
         IsLoadingData = true;
 
         try
         {
-            Console.WriteLine("[LoadEquipmentDataAsync] Fetching from database...");
+            Console.WriteLine("[LoadEquipmentDataAsync] 🔍 Calling GetEquipmentAsync()...");
 
             var (success, message, equipmentModels) = await _inventoryService.GetEquipmentAsync();
+
+            Console.WriteLine($"[LoadEquipmentDataAsync] GetEquipmentAsync returned - Success: {success}, Count: {equipmentModels?.Count ?? 0}");
 
             if (!success || equipmentModels == null)
             {
                 Console.WriteLine($"[LoadEquipmentDataAsync] ❌ Failed: {message}");
-
                 _toastManager.CreateToast("Error Loading Equipment")
                     .WithContent(message)
                     .DismissOnClick()
@@ -200,50 +198,70 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
 
             Console.WriteLine($"[LoadEquipmentDataAsync] ✅ Got {equipmentModels.Count} items from database");
 
+            // Check if Root beer is in the results
+            var rootBeerInDb = equipmentModels.FirstOrDefault(e => e.EquipmentName.Contains("Root beer"));
+            if (rootBeerInDb != null)
+            {
+                Console.WriteLine($"[LoadEquipmentDataAsync] 🍺 Root beer in DB: Qty={rootBeerInDb.Quantity}");
+            }
+
             var equipmentList = equipmentModels.Select(MapToEquipment).ToList();
 
-            // ✅ Update data collections
+            // Check mapped data
+            var rootBeerMapped = equipmentList.FirstOrDefault(e => e.BrandName?.Contains("Root beer") == true);
+            if (rootBeerMapped != null)
+            {
+                Console.WriteLine($"[LoadEquipmentDataAsync] 🍺 Root beer after mapping: Qty={rootBeerMapped.Quantity}");
+            }
+
             OriginalEquipmentData = equipmentList;
             CurrentFilteredEquipmentData = [.. equipmentList];
 
-            // ✅ CRITICAL: Unsubscribe from OLD items before clearing
-            Console.WriteLine($"[LoadEquipmentDataAsync] Cleaning up {EquipmentItems.Count} old items...");
+            Console.WriteLine($"[LoadEquipmentDataAsync] 📋 Updated data collections");
+
+            // ✅ CRITICAL: Unsubscribe before clearing
+            Console.WriteLine($"[LoadEquipmentDataAsync] 🧹 Cleaning {EquipmentItems.Count} old items...");
             foreach (var item in EquipmentItems)
             {
                 item.PropertyChanged -= OnEquipmentPropertyChanged;
             }
 
-            // ✅ Clear and repopulate
             EquipmentItems.Clear();
+            Console.WriteLine($"[LoadEquipmentDataAsync] 🗑️ Cleared EquipmentItems");
 
-            Console.WriteLine("[LoadEquipmentDataAsync] Adding new items...");
             foreach (var equipment in equipmentList)
             {
                 equipment.PropertyChanged += OnEquipmentPropertyChanged;
                 EquipmentItems.Add(equipment);
             }
 
+            Console.WriteLine($"[LoadEquipmentDataAsync] ➕ Added {EquipmentItems.Count} items to EquipmentItems");
+
             TotalCount = EquipmentItems.Count;
 
-            if (EquipmentItems.Count > 0 && SelectedEquipment == null)
+            if (EquipmentItems.Count > 0)
             {
                 SelectedEquipment = EquipmentItems[0];
             }
 
-            // ✅ Apply filters and update UI
-            Console.WriteLine("[LoadEquipmentDataAsync] Applying filters...");
+            // ✅ Check if Root beer is in EquipmentItems
+            var rootBeerInItems = EquipmentItems.FirstOrDefault(e => e.BrandName?.Contains("Root beer") == true);
+            if (rootBeerInItems != null)
+            {
+                Console.WriteLine($"[LoadEquipmentDataAsync] 🍺 Root beer in EquipmentItems: Qty={rootBeerInItems.Quantity}");
+            }
+
             ApplyEquipmentFilter();
             UpdateEquipmentCounts();
 
-            Console.WriteLine($"[LoadEquipmentDataAsync] ✅ UI updated - {EquipmentItems.Count} items displayed");
+            Console.WriteLine($"[LoadEquipmentDataAsync] ✅ COMPLETE - Final count: {EquipmentItems.Count}");
 
-            // Show alerts
             await _inventoryService.ShowEquipmentAlertsAsync();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[LoadEquipmentDataAsync] ❌ Exception: {ex.Message}");
-            Console.WriteLine($"[LoadEquipmentDataAsync] StackTrace: {ex.StackTrace}");
+            Console.WriteLine($"[LoadEquipmentDataAsync] ❌ EXCEPTION: {ex.Message}");
+            Console.WriteLine($"[LoadEquipmentDataAsync] Stack: {ex.StackTrace}");
 
             _toastManager.CreateToast("Error Loading Equipment")
                 .WithContent($"Failed to load equipment data: {ex.Message}")
@@ -254,7 +272,7 @@ public sealed partial class EquipmentInventoryViewModel : ViewModelBase, INaviga
         {
             IsLoadingData = false;
             _isLoadingDataFlag = false;
-            Console.WriteLine("[LoadEquipmentDataAsync] Complete - flag reset");
+            Console.WriteLine($"[LoadEquipmentDataAsync] 🏁 Flags reset - _isLoadingDataFlag: {_isLoadingDataFlag}");
         }
     }
 
