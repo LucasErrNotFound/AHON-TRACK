@@ -96,6 +96,14 @@ namespace AHON_TRACK.Services
                         return false;
                     }
 
+                    var (isValidWalkIn, walkInError) = await ValidateWalkInScheduleAsync(connection, transaction, training);
+                    if (!isValidWalkIn)
+                    {
+                        ShowToast("Walk-In Restriction", walkInError, ToastType.Warning);
+                        transaction.Rollback();
+                        return false;
+                    }
+
                     // Check daily capacity
                     if (!await CheckDailyCapacityAsync(connection, transaction, coachId.Value, training.scheduledDate))
                     {
@@ -532,6 +540,14 @@ WHERE TrainingID = @TrainingID";
 
                 try
                 {
+                    var (isValidWalkIn, walkInError) = await ValidateWalkInScheduleAsync(connection, transaction, training);
+                    if (!isValidWalkIn)
+                    {
+                        ShowToast("Walk-In Restriction", walkInError, ToastType.Warning);
+                        transaction.Rollback();
+                        return false;
+                    }
+
                     // Check for package time conflicts (excluding current training)
                     const string conflictQuery = @"
                     SELECT TOP 1 PackageType, ScheduledTimeStart, ScheduledTimeEnd
@@ -720,6 +736,99 @@ WHERE TrainingID = @TrainingID";
         #endregion
 
         #region HELPER METHODS - Coach & Schedule Management
+
+        /// <summary>
+        /// Validates that walk-in customers can only schedule training on their check-in date
+        /// and only if they haven't checked out yet
+        /// </summary>
+        private async Task<(bool IsValid, string ErrorMessage)> ValidateWalkInScheduleAsync(
+            SqlConnection connection,
+            SqlTransaction transaction,
+            TrainingModel training)
+        {
+            // Only validate for Walk-In customers
+            if (!training.customerType?.Equals("WalkIn", StringComparison.OrdinalIgnoreCase) == true &&
+                !training.customerType?.Equals("Walk-in", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return (true, string.Empty); // Not a walk-in, no restriction
+            }
+
+            const string query = @"
+        SELECT TOP 1 
+            CAST(CheckIn AS DATE) AS CheckInDate,
+            CheckOut,
+            CASE 
+                WHEN CheckOut IS NOT NULL THEN 1 
+                ELSE 0 
+            END AS HasCheckedOut
+        FROM WalkInRecords
+        WHERE CustomerID = @CustomerID
+        ORDER BY CheckIn DESC";
+
+            using var cmd = new SqlCommand(query, connection, transaction);
+            cmd.Parameters.AddWithValue("@CustomerID", training.customerID);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            if (!await reader.ReadAsync())
+            {
+                // No check-in record found
+                return (false,
+                    $"{training.firstName} {training.lastName} must check in first before scheduling training.");
+            }
+
+            DateTime checkInDate = reader.GetDateTime(0);
+            bool hasCheckedOut = reader.GetInt32(2) == 1;
+
+            reader.Close();
+
+            // Check if they've already checked out
+            if (hasCheckedOut)
+            {
+                return (false,
+                    $"{training.firstName} {training.lastName} has already checked out today. " +
+                    "Walk-in customers must be checked in to schedule training.");
+            }
+
+            // Check if trying to schedule for a future date
+            if (training.scheduledDate.Date > checkInDate)
+            {
+                return (false,
+                    $"Walk-in customers can only schedule training for their check-in date ({checkInDate:MMM dd, yyyy}). " +
+                    "Advanced scheduling is not allowed for walk-ins.");
+            }
+
+            // Check if trying to schedule for a past date
+            if (training.scheduledDate.Date < checkInDate)
+            {
+                return (false,
+                    "Cannot schedule training for a past date.");
+            }
+
+            return (true, string.Empty);
+        }
+
+        /// <summary>
+        /// Checks if a walk-in customer is currently checked in (hasn't checked out yet)
+        /// </summary>
+        private async Task<bool> IsWalkInCurrentlyCheckedInAsync(
+            SqlConnection connection,
+            SqlTransaction transaction,
+            int customerId)
+        {
+            const string query = @"
+        SELECT COUNT(1)
+        FROM WalkInRecords
+        WHERE CustomerID = @CustomerID
+          AND CAST(CheckIn AS DATE) = CAST(GETDATE() AS DATE)
+          AND CheckOut IS NULL";
+
+            using var cmd = new SqlCommand(query, connection, transaction);
+            cmd.Parameters.AddWithValue("@CustomerID", customerId);
+
+            var count = (int)await cmd.ExecuteScalarAsync();
+            return count > 0;
+        }
 
         private async Task<int?> GetCoachIdByNameAsync(SqlConnection connection, SqlTransaction transaction, string coachFullName)
         {
