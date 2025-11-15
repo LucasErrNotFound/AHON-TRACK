@@ -182,14 +182,21 @@
 							HorizontalAlignment="Left"/>
 					</StackPanel>
 
-					<!-- Date of Birth Field -->
+					<!-- Birth Year Field -->
 					<StackPanel Grid.Row="1" Grid.Column="2" Margin="-10,-91">
-						<CalendarDatePicker
-							shadui:ControlAssist.Label="Date of Birth"
-							shadui:ControlAssist.ReadOnly="True"
-							Width="150"
-							HorizontalAlignment="Left"
-							SelectedDate="{CompiledBinding MemberBirthDate}"/>
+						<TextBlock
+							Text="Birth Year"
+							FontSize="15"
+							FontWeight="Regular" />
+						<DatePicker
+							Width="100"
+							Height="35"
+							DayVisible="False"
+							MonthVisible="False" 
+							YearFormat="yyyy"
+							MinYear="{CompiledBinding MinSelectableYear}"
+							MaxYear="{CompiledBinding MaxSelectableYear}"
+							SelectedDate="{CompiledBinding MemberBirthDate, Mode=TwoWay}" />
 					</StackPanel>
 				</Grid>
 

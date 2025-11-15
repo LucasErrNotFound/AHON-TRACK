@@ -28,7 +28,7 @@ namespace AHON_TRACK.Models
         public string? MembershipType { get; set; }
         public string? CustomerType { get; set; }
         public int? Age { get; set; }
-        public DateTime? DateOfBirth { get; set; }
+        public int? BirthYear { get; set; }
         public string? ValidUntil { get; set; }
         public string Status { get; set; } = "Active";      // must be "Active" | "Inactive" | "Terminated"
         public string? PaymentMethod { get; set; }

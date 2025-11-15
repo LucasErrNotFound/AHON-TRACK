@@ -259,12 +259,12 @@ namespace AHON_TRACK.Services
                 FROM Members 
                 WHERE Firstname = @Firstname 
                 AND Lastname = @Lastname 
-                AND DateOfBirth = @DateOfBirth";
+                AND BirthYear = @BirthYear";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@Firstname", member.FirstName ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Lastname", member.LastName ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@BirthYear", member.BirthYear ?? (object)DBNull.Value);
 
             using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
@@ -281,33 +281,34 @@ namespace AHON_TRACK.Services
             SqlConnection conn, SqlTransaction transaction, int memberId, ManageMemberModel member, string invoiceNumber)
         {
             const string query = @"
-                UPDATE Members 
-                SET IsDeleted = 0,
-                    MiddleInitial = @MiddleInitial,
-                    Gender = @Gender,
-                    ProfilePicture = @ProfilePicture,
-                    ContactNumber = @ContactNumber,
-                    Age = @Age,
-                    ValidUntil = @ValidUntil,
-                    PackageID = @PackageID,
-                    Status = @Status,
-                    PaymentMethod = @PaymentMethod,
-                    ReferenceNumber = @ReferenceNumber,
-                    ConsentLetter = @ConsentLetter,
-                    RegisteredByEmployeeID = @RegisteredByEmployeeID
-                WHERE MemberID = @MemberID";
+            UPDATE Members 
+            SET IsDeleted = 0,
+                MiddleInitial = @MiddleInitial,
+                Gender = @Gender,
+                ProfilePicture = @ProfilePicture,
+                ContactNumber = @ContactNumber,
+                Age = @Age,
+                BirthYear = @BirthYear,
+                ValidUntil = @ValidUntil,
+                PackageID = @PackageID,
+                Status = @Status,
+                PaymentMethod = @PaymentMethod,
+                ReferenceNumber = @ReferenceNumber,
+                ConsentLetter = @ConsentLetter,
+                RegisteredByEmployeeID = @RegisteredByEmployeeID
+            WHERE MemberID = @MemberID";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             AddMemberParameters(cmd, member);
             cmd.Parameters.AddWithValue("@MemberID", memberId);
 
             await cmd.ExecuteNonQueryAsync();
-            
+        
             if (member.PackageID.HasValue && member.PackageID.Value > 0)
             {
                 await RecordPackageSaleAsync(conn, transaction, member, memberId, null, invoiceNumber);
             }
-            
+        
             await LogActionAsync(conn, transaction, "RESTORE", 
                 $"Restored member: {member.FirstName} {member.LastName} - Invoice: {invoiceNumber}", true);
             transaction.Commit();
@@ -324,17 +325,16 @@ namespace AHON_TRACK.Services
             SqlConnection conn, SqlTransaction transaction, ManageMemberModel member)
         {
             const string query = @"
-                INSERT INTO Members 
-                (Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, DateOfBirth, 
-                 ValidUntil, PackageID, Status, PaymentMethod, ReferenceNumber, ConsentLetter, RegisteredByEmployeeID, IsDeleted)
-                OUTPUT INSERTED.MemberID
-                VALUES 
-                (@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @DateOfBirth, 
-                 @ValidUntil, @PackageID, @Status, @PaymentMethod, @ReferenceNumber, @ConsentLetter, @RegisteredByEmployeeID, 0)";
+            INSERT INTO Members 
+            (Firstname, MiddleInitial, Lastname, Gender, ProfilePicture, ContactNumber, Age, BirthYear, 
+             ValidUntil, PackageID, Status, PaymentMethod, ReferenceNumber, ConsentLetter, RegisteredByEmployeeID, IsDeleted)
+            OUTPUT INSERTED.MemberID
+            VALUES 
+            (@Firstname, @MiddleInitial, @Lastname, @Gender, @ProfilePicture, @ContactNumber, @Age, @BirthYear, 
+             @ValidUntil, @PackageID, @Status, @PaymentMethod, @ReferenceNumber, @ConsentLetter, @RegisteredByEmployeeID, 0)";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             AddMemberParameters(cmd, member);
-            cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
 
             return (int)await cmd.ExecuteScalarAsync();
         }
@@ -493,12 +493,14 @@ namespace AHON_TRACK.Services
             cmd.Parameters.Add("@ProfilePicture", SqlDbType.VarBinary, -1).Value = member.ProfilePicture ?? (object)DBNull.Value;
             cmd.Parameters.AddWithValue("@ContactNumber", member.ContactNumber ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Age", member.Age > 0 ? member.Age : (object)DBNull.Value);
+        
+            cmd.Parameters.AddWithValue("@BirthYear", member.BirthYear ?? (object)DBNull.Value);
+        
             cmd.Parameters.AddWithValue("@ValidUntil", member.ValidUntil ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@PackageID", member.PackageID ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Status", member.Status ?? "Active");
             cmd.Parameters.AddWithValue("@PaymentMethod", member.PaymentMethod ?? (object)DBNull.Value);
 
-            // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
             string processedRefNumber = ProcessReferenceNumber(member);
             cmd.Parameters.AddWithValue("@ReferenceNumber",
                 string.IsNullOrWhiteSpace(processedRefNumber) ? (object)DBNull.Value : processedRefNumber);
@@ -665,15 +667,12 @@ namespace AHON_TRACK.Services
     SELECT 
         m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname,
         LTRIM(RTRIM(m.Firstname + ISNULL(' ' + m.MiddleInitial + '.', '') + ' ' + m.Lastname)) AS Name,
-        m.Gender, m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.LastNotificationDate,
-m.NotificationCount,
-m.IsNotified,
+        m.Gender, m.ContactNumber, m.Age, m.BirthYear, m.ValidUntil, 
+        m.LastNotificationDate, m.NotificationCount, m.IsNotified,
         m.PackageID, 
         
-        -- Get gym membership package name
         p.PackageName AS GymPackageName,
         
-        -- Get all session-based packages the member has (with sessions left > 0)
         STUFF((
             SELECT ', ' + pkg.PackageName
             FROM MemberSessions ms
@@ -768,12 +767,10 @@ m.IsNotified,
                 const string query = @"
     SELECT 
         m.MemberID, m.Firstname, m.MiddleInitial, m.Lastname, m.Gender, m.ProfilePicture,
-        m.ContactNumber, m.Age, m.DateOfBirth, m.ValidUntil, m.PackageID, 
+        m.ContactNumber, m.Age, m.BirthYear, m.ValidUntil, m.PackageID, 
         
-        -- Get gym membership package name
         p.PackageName AS GymPackageName,
         
-        -- Get all session-based packages (with sessions left > 0)
         STUFF((
             SELECT ', ' + pkg.PackageName
             FROM MemberSessions ms
@@ -939,7 +936,7 @@ m.IsNotified,
             int profilePicIdx = includeRegisteredBy ? 5 : 18;
             int contactIdx = includeRegisteredBy ? 6 : 6;
             int ageIdx = includeRegisteredBy ? 7 : 7;
-            int dobIdx = includeRegisteredBy ? 8 : 8;
+            int birthYearIdx = includeRegisteredBy ? 8 : 8; // ✅ CHANGED from dobIdx to birthYearIdx
             int validUntilIdx = includeRegisteredBy ? 9 : 9;
             int lastNotificationDateIdx = includeRegisteredBy ? 18 : 10;
             int notificationCountIdx = includeRegisteredBy ? 19 : 11;
@@ -989,7 +986,10 @@ m.IsNotified,
                 Gender = reader.IsDBNull(genderIdx) ? string.Empty : reader.GetString(genderIdx),
                 ContactNumber = reader.IsDBNull(contactIdx) ? string.Empty : reader.GetString(contactIdx),
                 Age = reader.IsDBNull(ageIdx) ? null : reader.GetInt32(ageIdx),
-                DateOfBirth = reader.IsDBNull(dobIdx) ? null : reader.GetDateTime(dobIdx),
+            
+                // ✅ CHANGED: Read BirthYear instead of DateOfBirth
+                BirthYear = reader.IsDBNull(birthYearIdx) ? null : reader.GetInt32(birthYearIdx),
+            
                 ValidUntil = reader.IsDBNull(validUntilIdx) ? null : reader.GetDateTime(validUntilIdx).ToString("MMM dd, yyyy"),
                 LastNotificationDate = reader.IsDBNull(lastNotificationDateIdx) ? null : reader.GetDateTime(lastNotificationDateIdx),
                 NotificationCount = reader.IsDBNull(notificationCountIdx) ? 0 : reader.GetInt32(notificationCountIdx),
@@ -1061,7 +1061,7 @@ m.IsNotified,
                     Gender = @Gender,
                     ContactNumber = @ContactNumber, 
                     Age = @Age,
-                    DateOfBirth = @DateOfBirth,
+                    BirthYear = @BirthYear,
                     ValidUntil = @ValidUntil,
                     PackageID = @PackageID,
                     Status = @Status,
@@ -1078,7 +1078,6 @@ m.IsNotified,
 
                     AddMemberParameters(cmd, member);
                     cmd.Parameters.AddWithValue("@MemberID", member.MemberID);
-                    cmd.Parameters.AddWithValue("@DateOfBirth", member.DateOfBirth ?? (object)DBNull.Value);
 
                     int rows = await cmd.ExecuteNonQueryAsync();
 
@@ -1089,7 +1088,6 @@ m.IsNotified,
 
                         if (isGymMembershipRenewal && member.PackageID.HasValue && member.PackageID.Value > 0)
                         {
-                            // ✅ USE PROVIDED INVOICE NUMBER OR GENERATE NEW ONE
                             string finalInvoiceNumber = !string.IsNullOrWhiteSpace(invoiceNumber) 
                                 ? invoiceNumber 
                                 : await GenerateInvoiceNumberAsync();
@@ -1887,13 +1885,14 @@ m.IsNotified,
         {
             try
             {
+                // ✅ UPDATED: Match by name only (since we're not storing full birth dates anymore)
                 const string checkQuery = @"
-                    SELECT CustomerID, FirstName, LastName, Age, ContactNumber, WalkinType 
-                    FROM WalkInCustomers 
-                    WHERE FirstName = @FirstName 
-                        AND LastName = @LastName 
-                        AND (IsDeleted = 0 OR IsDeleted IS NULL)
-                    ORDER BY CustomerID DESC";
+                SELECT CustomerID, FirstName, LastName, Age, ContactNumber, WalkinType 
+                FROM WalkInCustomers 
+                WHERE FirstName = @FirstName 
+                    AND LastName = @LastName 
+                    AND (IsDeleted = 0 OR IsDeleted IS NULL)
+                ORDER BY CustomerID DESC";
 
                 using var checkCmd = new SqlCommand(checkQuery, conn, transaction);
                 checkCmd.Parameters.AddWithValue("@FirstName", member.FirstName ?? (object)DBNull.Value);
@@ -1934,9 +1933,9 @@ m.IsNotified,
                 foreach (var match in walkInMatches)
                 {
                     const string deleteQuery = @"
-                        UPDATE WalkInCustomers 
-                        SET IsDeleted = 1 
-                        WHERE CustomerID = @CustomerID";
+                    UPDATE WalkInCustomers 
+                    SET IsDeleted = 1 
+                    WHERE CustomerID = @CustomerID";
 
                     using var deleteCmd = new SqlCommand(deleteQuery, conn, transaction);
                     deleteCmd.Parameters.AddWithValue("@CustomerID", match.CustomerId);

@@ -222,22 +222,15 @@
 												HorizontalAlignment="Left" />
 										</StackPanel>
 
-										<!-- Date of Birth Field -->
+										<!-- Birth Year Field -->
 										<StackPanel 
 											Grid.Row="1" 
 											Grid.Column="2" 
 											Orientation="Vertical"
 											Spacing="10"
 											Margin="-10,-75,0,0">
-											<CalendarDatePicker
-												shadui:ControlAssist.Label="Date of Birth"
-												shadui:ControlAssist.ReadOnly="True"
-												Width="150"
-												HorizontalAlignment="Left"
-												SelectedDate="{CompiledBinding MemberBirthDate}" />
-											<!--
 											<TextBlock
-												Text="Year of Birth"
+												Text="Birth Year"
 												FontSize="15"
 												FontWeight="Regular" />
 											<DatePicker
@@ -246,8 +239,9 @@
 												DayVisible="False"
 												MonthVisible="False" 
 												YearFormat="yyyy"
-												SelectedDate="{CompiledBinding MemberBirthDate}" />
-												-->
+												MinYear="{CompiledBinding MinSelectableYear}"
+												MaxYear="{CompiledBinding MaxSelectableYear}"
+												SelectedDate="{CompiledBinding MemberBirthDate, Mode=TwoWay}" />
 										</StackPanel>
 									</Grid>
 									
@@ -903,21 +897,14 @@
 												HorizontalAlignment="Left" />
 										</StackPanel>
 
-										<!-- Date of Birth Field -->
+										<!-- Birth Year Field -->
 										<StackPanel 
 											Grid.Row="1" 
 											Grid.Column="2" 
 											Spacing="6"
 											Margin="30,-5,0,0">
-											<CalendarDatePicker
-												shadui:ControlAssist.Label="Date of Birth"
-												shadui:ControlAssist.ReadOnly="True"
-												Width="150"
-												HorizontalAlignment="Left"
-												SelectedDate="{CompiledBinding MemberBirthDate}" />
-											<!--
 											<TextBlock
-												Text="Year of Birth"
+												Text="Birth Year"
 												FontSize="15"
 												FontWeight="Regular" />
 											<DatePicker
@@ -926,8 +913,9 @@
 												DayVisible="False"
 												MonthVisible="False" 
 												YearFormat="yyyy"
-												SelectedDate="{CompiledBinding MemberBirthDate}" />
-												-->
+												MinYear="{CompiledBinding MinSelectableYear}"
+												MaxYear="{CompiledBinding MaxSelectableYear}"
+												SelectedDate="{CompiledBinding MemberBirthDate, Mode=TwoWay}" />
 										</StackPanel>
 										
 										<!-- Profile Image Field -->

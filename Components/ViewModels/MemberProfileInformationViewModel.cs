@@ -189,7 +189,7 @@ public sealed partial class MemberProfileInformationViewModel : ViewModelBase, I
             MemberFullNameHeader = IsFromCurrentUser ? "My Profile" : $"{MemberFullName}'s Profile";
 
             MemberAge = member.Age?.ToString() ?? "N/A";
-            MemberBirthDate = member.DateOfBirth?.ToString("MMMM dd, yyyy") ?? "N/A";
+            MemberBirthDate = member.BirthYear?.ToString("yyyy") ?? "N/A";
             MemberGender = member.Gender ?? "N/A";
             MemberPhoneNumber = member.ContactNumber ?? "N/A";
             MemberPackage = member.MembershipType ?? "None";

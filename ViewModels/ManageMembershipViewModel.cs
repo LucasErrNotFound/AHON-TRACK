@@ -255,6 +255,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     Status = m.Status ?? "Active",
                     Validity = DateTime.TryParse(m.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue,
                     DateJoined = m.DateJoined,
+                    BirthYear = m.BirthYear,
                     LastCheckIn = m.LastCheckIn,
                     LastCheckOut = m.LastCheckOut,
                     RecentPurchaseItem = m.RecentPurchaseItem,
@@ -1108,7 +1109,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     Validity = DateTime.TryParse(result.Member.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue,
 
                     Gender = result.Member.Gender ?? string.Empty,
-                    BirthDate = result.Member.DateOfBirth ?? DateTime.MinValue,
+                    BirthYear = result.Member.BirthYear,
                     Age = result.Member.Age ?? 0,
                     DateJoined = result.Member.DateJoined,
                     LastCheckIn = result.Member.LastCheckIn,
@@ -1173,7 +1174,7 @@ public sealed partial class ManageMembershipViewModel : ViewModelBase, INavigabl
                     Validity = DateTime.TryParse(result.Member.ValidUntil, out var parsedDate) ? parsedDate : DateTime.MinValue,
 
                     Gender = result.Member.Gender ?? string.Empty,
-                    BirthDate = result.Member.DateOfBirth ?? DateTime.MinValue,
+                    BirthYear = result.Member.BirthYear,
                     Age = result.Member.Age ?? 0,
                     DateJoined = result.Member.DateJoined,
                     LastCheckIn = result.Member.LastCheckIn,
@@ -1379,7 +1380,7 @@ public partial class ManageMembersItem : ObservableObject
     private DateTime _validity;
 
     [ObservableProperty]
-    private DateTime _birthDate;
+    private int? _birthYear;
 
     [ObservableProperty]
     private DateTime? _dateJoined;

@@ -85,7 +85,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     private int? _memberAge;
     private string? _referenceNumber = string.Empty;
     private int _selectedMemberId = 0;
-    private DateTime? _memberBirthDate;
+    private DateTimeOffset? _memberBirthDate;
     private DateTime _currentMemberValidUntil = DateTime.MinValue;
 
     // Membership Plan 
@@ -241,9 +241,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         }
     }
 
-    [Required(ErrorMessage = "Birth date is required")]
-    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? MemberBirthDate
+    [Required(ErrorMessage = "Birth year is required")]
+    public DateTimeOffset? MemberBirthDate
     {
         get => _memberBirthDate;
         set
@@ -251,9 +250,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             SetProperty(ref _memberBirthDate, value, true);
             if (value.HasValue)
             {
-                MemberAge = CalculateAge(value.Value);
-
-                // ✅ DON'T CLEAR CONSENT FILE PATH WHEN UPGRADING/RENEWING
+                // ✅ Calculate age from birth year only
+                MemberAge = CalculateAgeFromYear(value.Value.Year);
+                
+                // ✅ Clear consent file only for new members
                 if (ViewContext == MemberViewContext.AddNew)
                 {
                     ConsentFilePath = null;
@@ -262,14 +262,15 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             else
             {
                 MemberAge = null;
-
-                // ✅ DON'T CLEAR CONSENT FILE PATH WHEN UPGRADING/RENEWING
+                
                 if (ViewContext == MemberViewContext.AddNew)
                 {
                     ConsentFilePath = null;
                 }
             }
             OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsMinor));
+            OnPropertyChanged(nameof(IsConsentLetterRequired));
         }
     }
 
@@ -528,6 +529,12 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 : $"{packageName} ({quantity} Months)";
         }
     }
+    
+    [ObservableProperty]
+    private DateTimeOffset _maxSelectableYear = new DateTimeOffset(2022, 12, 31, 0, 0, 0, TimeSpan.Zero);
+
+    [ObservableProperty]
+    private DateTimeOffset _minSelectableYear = new DateTimeOffset(1925, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     public AddNewMemberViewModel(IMemberService memberService, DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
@@ -675,10 +682,10 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         MemberGender = member.Gender;
         ConsentFilePath = member.ConsentLetter;
 
-        if (member.BirthDate != DateTime.MinValue)
+        if (member.BirthYear.HasValue && member.BirthYear > 0)
         {
-            MemberBirthDate = member.BirthDate;
-            MemberAge = CalculateAge(member.BirthDate);
+            MemberBirthDate = new DateTimeOffset(member.BirthYear.Value, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            MemberAge = CalculateAgeFromYear(member.BirthYear.Value);
         }
 
         if (member.Validity != DateTime.MinValue)
@@ -966,7 +973,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 Gender = MemberGender,
                 ContactNumber = MemberContactNumber,
                 Age = MemberAge,
-                DateOfBirth = MemberBirthDate,
+                BirthYear = MemberBirthDate?.Year,
                 ValidUntil = validUntilDate.ToString("MMM dd, yyyy"),
                 MembershipType = SelectedMonthlyPackage.Title,
                 PackageID = SelectedMonthlyPackage.SellingID,
@@ -1240,12 +1247,18 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         }
     }
 
-    private int CalculateAge(DateTime birthDate)
+    private int CalculateAgeFromYear(int birthYear)
     {
-        var today = DateTime.Today;
-        var age = today.Year - birthDate.Year;
-
-        if (birthDate.Date > today.AddYears(-age)) age--;
+        int currentYear = DateTime.Today.Year;
+        int age = currentYear - birthYear;
+            
+        // Basic validation
+        if (age < 0 || age > 150)
+        {
+            Debug.WriteLine($"[CalculateAgeFromYear] Invalid age calculated: {age} from birth year {birthYear}");
+            return 0;
+        }
+            
         return age;
     }
 
@@ -1352,7 +1365,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         MemberStatus = string.Empty;
         MembershipDuration = null;
         SelectedMonthlyPackage = null;
-        ReferenceNumber = string.Empty; // ✅ Clear reference number
+        ReferenceNumber = string.Empty;
         ReferenceNumber = string.Empty;
         ConsentFilePath = string.Empty;
         IsCashSelected = false;

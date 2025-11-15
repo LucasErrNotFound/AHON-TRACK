@@ -44,6 +44,12 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
 
     [ObservableProperty]
     private Bitmap? _profileImageSource;
+    
+    [ObservableProperty]
+    private DateTimeOffset _maxSelectableYear = new DateTimeOffset(2022, 12, 31, 0, 0, 0, TimeSpan.Zero);
+
+    [ObservableProperty]
+    private DateTimeOffset _minSelectableYear = new DateTimeOffset(1925, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     // Personal Details Section
     private string _memberFirstName = string.Empty;
@@ -53,7 +59,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
     private string _memberContactNumber = string.Empty;
     private string _memberPackages = string.Empty;
     private int? _memberAge;
-    private DateTime? _memberBirthDate;
+    private DateTimeOffset? _memberBirthDate;
     private DateTime? _memberDateJoined;
 
     // Account Section
@@ -155,9 +161,8 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         } 
     }
 
-    [Required(ErrorMessage = "Birth date is required")]
-    [DataType(DataType.Date, ErrorMessage = "Invalid date format")]
-    public DateTime? MemberBirthDate
+    [Required(ErrorMessage = "Birth year is required")]
+    public DateTimeOffset? MemberBirthDate
     {
         get => _memberBirthDate;
         set
@@ -165,7 +170,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             SetProperty(ref _memberBirthDate, value, true);
             if (value.HasValue)
             {
-                MemberAge = CalculateAge(value.Value);
+                MemberAge = CalculateAgeFromYear(value.Value.Year);
             }
             else
             {
@@ -295,7 +300,10 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
             _memberPackageId = memberData.PackageID;
 
             MemberAge = memberData.Age;
-            MemberBirthDate = memberData.DateOfBirth;
+            if (memberData.BirthYear.HasValue && memberData.BirthYear > 0)
+            {
+                MemberBirthDate = new DateTimeOffset(memberData.BirthYear.Value, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            }
             MemberStatus = memberData.Status ?? "Active";
 
             LetterConsentPath = memberData.ConsentLetter;
@@ -332,12 +340,16 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
         }
     }
 
-    private int CalculateAge(DateTime birthDate)
+    private int CalculateAgeFromYear(int birthYear)
     {
-        var today = DateTime.Today;
-        var age = today.Year - birthDate.Year;
-
-        if (birthDate.Date > today.AddYears(-age)) age--;
+        int currentYear = DateTime.Today.Year;
+        int age = currentYear - birthYear;
+        
+        if (age < 0 || age > 150)
+        {
+            return 0;
+        }
+        
         return age;
     }
 
@@ -443,7 +455,7 @@ public partial class MemberDialogCardViewModel : ViewModelBase, INavigable, INot
                 Gender = MemberGender,
                 ContactNumber = MemberContactNumber,
                 Age = MemberAge,
-                DateOfBirth = MemberBirthDate,
+                BirthYear = MemberBirthDate?.Year,
                 ValidUntil = MemberValidUntil?.ToString("MMM dd, yyyy"),
                 MembershipType = MemberPackages,
                 PackageID = _memberPackageId,
