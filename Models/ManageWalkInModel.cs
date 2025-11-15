@@ -16,6 +16,7 @@ namespace AHON_TRACK.Models
         public string? LastName { get; set; }
         public string? ContactNumber { get; set; }
         public int Age { get; set; }
+        public int? BirthYear { get; set; }
         public string? Gender { get; set; }
         public string? WalkInType { get; set; }
         public string? WalkInPackage { get; set; }

@@ -285,17 +285,17 @@ namespace AHON_TRACK.Services
                 @"SELECT CustomerID, WalkinType FROM WalkInCustomers 
                   WHERE FirstName = @firstName AND LastName = @lastName AND ContactNumber = @contactNumber
                   AND (IsDeleted = 0 OR IsDeleted IS NULL)", conn, transaction);
-
+        
             cmd.Parameters.AddWithValue("@firstName", walkIn.FirstName ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@lastName", walkIn.LastName ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@contactNumber", walkIn.ContactNumber ?? (object)DBNull.Value);
-
+        
             using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
                 return (reader.GetInt32(0), reader.IsDBNull(1) ? null : reader.GetString(1));
             }
-
+        
             return (null, null);
         }
 
@@ -377,14 +377,13 @@ namespace AHON_TRACK.Services
 
         private async Task<int> CreateNewCustomerAsync(SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn)
         {
-            // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
             string processedRefNumber = ProcessReferenceNumber(walkIn);
 
             using var cmd = new SqlCommand(
-                @"INSERT INTO WalkInCustomers (FirstName, MiddleInitial, LastName, ContactNumber, Age, Gender, 
+                @"INSERT INTO WalkInCustomers (FirstName, MiddleInitial, LastName, ContactNumber, Age, BirthYear, Gender, 
           WalkInType, WalkInPackage, PaymentMethod, ReferenceNumber, ConsentLetter, Quantity, RegisteredByEmployeeID, IsDeleted) 
           OUTPUT INSERTED.CustomerID
-          VALUES (@firstName, @middleInitial, @lastName, @contactNumber, @age, @gender, 
+          VALUES (@firstName, @middleInitial, @lastName, @contactNumber, @age, @birthYear, @gender, 
           @walkInType, @walkInPackage, @paymentMethod, @referenceNumber, @consentLetter, @quantity, @employeeID, 0)", conn, transaction);
 
             cmd.Parameters.AddWithValue("@firstName", walkIn.FirstName ?? (object)DBNull.Value);
@@ -392,6 +391,7 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@lastName", walkIn.LastName ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@contactNumber", walkIn.ContactNumber ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@age", walkIn.Age);
+            cmd.Parameters.AddWithValue("@birthYear", walkIn.BirthYear ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@gender", walkIn.Gender ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@walkInType", walkIn.WalkInType ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@walkInPackage", walkIn.WalkInPackage ?? (object)DBNull.Value);
@@ -404,21 +404,21 @@ namespace AHON_TRACK.Services
 
             Debug.WriteLine($"[CreateNewCustomerAsync] Payment Method: {walkIn.PaymentMethod}");
             Debug.WriteLine($"[CreateNewCustomerAsync] Reference Number: {processedRefNumber}");
+            Debug.WriteLine($"[CreateNewCustomerAsync] Birth Year: {walkIn.BirthYear}");
 
             return (int)await cmd.ExecuteScalarAsync();
         }
 
         private async Task UpgradeToRegularAsync(SqlConnection conn, SqlTransaction transaction,
-    int customerId, ManageWalkInModel walkIn)
+            int customerId, ManageWalkInModel walkIn)
         {
-            // ✅ PROCESS REFERENCE NUMBER BASED ON PAYMENT METHOD
             string processedRefNumber = ProcessReferenceNumber(walkIn);
 
             using var cmd = new SqlCommand(
                 @"UPDATE WalkInCustomers 
           SET WalkinType = @walkInType, WalkinPackage = @walkInPackage, 
               PaymentMethod = @paymentMethod, ReferenceNumber = @referenceNumber, ConsentLetter = @consentLetter,
-              Quantity = @quantity, Age = @age, Gender = @gender, MiddleInitial = @middleInitial
+              Quantity = @quantity, Age = @age, BirthYear = @birthYear, Gender = @gender, MiddleInitial = @middleInitial
           WHERE CustomerID = @customerId", conn, transaction);
 
             cmd.Parameters.AddWithValue("@customerId", customerId);
@@ -431,11 +431,13 @@ namespace AHON_TRACK.Services
                 string.IsNullOrWhiteSpace(walkIn.ConsentLetter) ? (object)DBNull.Value : walkIn.ConsentLetter);
             cmd.Parameters.AddWithValue("@quantity", walkIn.Quantity ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@age", walkIn.Age);
+            cmd.Parameters.AddWithValue("@birthYear", walkIn.BirthYear ?? (object)DBNull.Value); // ✅ ADDED
             cmd.Parameters.AddWithValue("@gender", walkIn.Gender ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@middleInitial", walkIn.MiddleInitial ?? (object)DBNull.Value);
 
             Debug.WriteLine($"[UpgradeToRegularAsync] Payment Method: {walkIn.PaymentMethod}");
             Debug.WriteLine($"[UpgradeToRegularAsync] Reference Number: {processedRefNumber}");
+            Debug.WriteLine($"[UpgradeToRegularAsync] Birth Year: {walkIn.BirthYear}");
 
             await cmd.ExecuteNonQueryAsync();
         }
@@ -1092,43 +1094,44 @@ namespace AHON_TRACK.Services
         /// If match found, blocks walk-in registration completely
         /// </summary>
         private async Task<(bool IsActiveMember, bool IsExpiredMember, int? MemberId, string? MemberName, List<string>? MultipleMatches)> CheckMemberStatusAsync(
-    SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn)
+            SqlConnection conn, SqlTransaction transaction, ManageWalkInModel walkIn)
         {
             try
             {
                 const string query = @"
-    SELECT 
-        m.MemberID, 
-        m.Firstname, 
-        m.MiddleInitial,
-        m.Lastname,
-        m.ContactNumber,
-        m.Age,
-        m.Status,
-        m.ValidUntil,
-        CASE 
-            WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 1
-            ELSE 0
-        END AS IsExpired
-    FROM Members m
-    WHERE m.FirstName = @FirstName 
-        AND m.LastName = @LastName 
-        AND m.Age = @Age
-        AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
-    ORDER BY 
-        CASE 
-            WHEN m.Status = 'Active' THEN 1
-            WHEN m.ValidUntil >= CAST(GETDATE() AS DATE) THEN 2
-            ELSE 3
-        END,
-        m.DateJoined DESC";
+            SELECT 
+                m.MemberID, 
+                m.Firstname, 
+                m.MiddleInitial,
+                m.Lastname,
+                m.ContactNumber,
+                m.Age,
+                m.BirthYear,
+                m.Status,
+                m.ValidUntil,
+                CASE 
+                    WHEN m.ValidUntil < CAST(GETDATE() AS DATE) THEN 1
+                    ELSE 0
+                END AS IsExpired
+            FROM Members m
+            WHERE m.FirstName = @FirstName 
+                AND m.LastName = @LastName 
+                AND m.BirthYear = @BirthYear
+                AND (m.IsDeleted = 0 OR m.IsDeleted IS NULL)
+            ORDER BY 
+                CASE 
+                    WHEN m.Status = 'Active' THEN 1
+                    WHEN m.ValidUntil >= CAST(GETDATE() AS DATE) THEN 2
+                    ELSE 3
+                END,
+                m.DateJoined DESC";
 
                 using var cmd = new SqlCommand(query, conn, transaction);
                 cmd.Parameters.AddWithValue("@FirstName", walkIn.FirstName ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@LastName", walkIn.LastName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Age", walkIn.Age); // ✅ Added age parameter
+                cmd.Parameters.AddWithValue("@BirthYear", walkIn.BirthYear ?? (object)DBNull.Value);
 
-                var matches = new List<(int MemberId, string MemberName, string Status, bool IsExpired, int Age, string Contact)>();
+                var matches = new List<(int MemberId, string MemberName, string Status, bool IsExpired, int Age, int? BirthYear, string Contact)>();
 
                 using var reader = await cmd.ExecuteReaderAsync();
 
@@ -1140,24 +1143,25 @@ namespace AHON_TRACK.Services
                     string lastName = reader.GetString(3);
                     string contactNumber = reader.IsDBNull(4) ? "N/A" : reader.GetString(4);
                     int age = reader.IsDBNull(5) ? 0 : reader.GetInt32(5);
-                    string status = reader.IsDBNull(6) ? "Active" : reader.GetString(6);
-                    bool isExpired = reader.GetInt32(8) == 1;
+                    int? birthYear = reader.IsDBNull(6) ? null : reader.GetInt32(6);
+                    string status = reader.IsDBNull(7) ? "Active" : reader.GetString(7);
+                    bool isExpired = reader.GetInt32(9) == 1;
 
                     string memberName = string.IsNullOrWhiteSpace(middleInitial)
                         ? $"{firstName} {lastName}"
                         : $"{firstName} {middleInitial}. {lastName}";
 
-                    matches.Add((memberId, memberName, status, isExpired, age, contactNumber));
+                    matches.Add((memberId, memberName, status, isExpired, age, birthYear, contactNumber));
 
                     Debug.WriteLine($"[CheckMemberStatusAsync] Found member match: {memberName}");
-                    Debug.WriteLine($"  ID: {memberId}, Age: {age}, Contact: {contactNumber}");
-                    Debug.WriteLine($"  Walk-in Age: {walkIn.Age} ✅ AGES MATCH");
+                    Debug.WriteLine($"  ID: {memberId}, Age: {age}, Birth Year: {birthYear}, Contact: {contactNumber}");
+                    Debug.WriteLine($"  Walk-in Birth Year: {walkIn.BirthYear} ✅ YEARS MATCH");
                     Debug.WriteLine($"  Status: {status}, Expired: {isExpired}");
                 }
 
                 if (matches.Count == 0)
                 {
-                    Debug.WriteLine("[CheckMemberStatusAsync] ✓ No member matches found (name + age) - allowing walk-in");
+                    Debug.WriteLine("[CheckMemberStatusAsync] ✓ No member matches found (name + birth year) - allowing walk-in");
                     return (false, false, null, null, null);
                 }
 
@@ -1165,22 +1169,22 @@ namespace AHON_TRACK.Services
                 foreach (var match in matches)
                 {
                     bool isActive = !match.IsExpired &&
-                                   !match.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase) &&
-                                   !match.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase);
+                                    !match.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase) &&
+                                    !match.Status.Equals("Expired", StringComparison.OrdinalIgnoreCase);
 
                     if (isActive)
                     {
-                        Debug.WriteLine($"[CheckMemberStatusAsync] ❌ BLOCKING - Active member found: {match.MemberName} (ID: {match.MemberId}, Age: {match.Age})");
+                        Debug.WriteLine($"[CheckMemberStatusAsync] ❌ BLOCKING - Active member found: {match.MemberName} (ID: {match.MemberId}, Birth Year: {match.BirthYear})");
                         return (true, false, match.MemberId, match.MemberName, null);
                     }
                 }
 
                 // All matches are expired/inactive - allow walk-in but notify
                 var firstMatch = matches.First();
-                Debug.WriteLine($"[CheckMemberStatusAsync] ⚠️ Allowing - All matches are expired/inactive (Age: {firstMatch.Age})");
+                Debug.WriteLine($"[CheckMemberStatusAsync] ⚠️ Allowing - All matches are expired/inactive (Birth Year: {firstMatch.BirthYear})");
 
                 return (false, true, firstMatch.MemberId, firstMatch.MemberName,
-                        matches.Count > 1 ? matches.Select(m => m.MemberName).ToList() : null);
+                    matches.Count > 1 ? matches.Select(m => m.MemberName).ToList() : null);
             }
             catch (Exception ex)
             {

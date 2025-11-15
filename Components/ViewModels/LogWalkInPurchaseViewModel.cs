@@ -78,6 +78,14 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private DateTime _selectedDate = DateTime.Today;
+    
+    private DateTimeOffset? _walkInBirthDate;
+
+    [ObservableProperty]
+    private DateTimeOffset _maxSelectableYear = new DateTimeOffset(DateTime.Now.Year - 3, 12, 31, 0, 0, 0, TimeSpan.Zero);
+
+    [ObservableProperty]
+    private DateTimeOffset _minSelectableYear = new DateTimeOffset(DateTime.Now.Year - 100, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -244,7 +252,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             _ = CheckFreeTrialEligibilityAsync();
         }
     }
-
+    
     [Required(ErrorMessage = "Age is required")]
     [Range(3, 100, ErrorMessage = "Age must be between 3 and 100")]
     public int? WalkInAge
@@ -253,6 +261,28 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         set
         {
             SetProperty(ref _walkInAge, value, true);
+            OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsMinor));
+            OnPropertyChanged(nameof(IsConsentLetterRequired));
+        }
+    }
+
+    [Required(ErrorMessage = "Birth year is required")]
+    public DateTimeOffset? WalkInBirthDate
+    {
+        get => _walkInBirthDate;
+        set
+        {
+            SetProperty(ref _walkInBirthDate, value, true);
+            if (value.HasValue)
+            {
+                // ✅ Calculate age from birth year only
+                WalkInAge = CalculateAgeFromYear(value.Value.Year);
+            }
+            else
+            {
+                WalkInAge = null;
+            }
             OnPropertyChanged(nameof(IsPaymentPossible));
             OnPropertyChanged(nameof(IsMinor));
             OnPropertyChanged(nameof(IsConsentLetterRequired));
@@ -368,6 +398,22 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             OnPropertyChanged(nameof(IsReferenceNumberVisibleInReceipt));
         } 
     }
+    
+    private int CalculateAgeFromYear(int birthYear)
+    {
+        int currentYear = DateTime.Today.Year;
+        int age = currentYear - birthYear;
+    
+        // Basic validation
+        if (age < 0 || age > 150)
+        {
+            Debug.WriteLine($"[CalculateAgeFromYear] Invalid age calculated: {age} from birth year {birthYear}");
+            return 0;
+        }
+    
+        return age;
+    }
+
 
     public bool IsQuantityVisible =>
         !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
@@ -953,6 +999,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 LastName = WalkInLastName,
                 ContactNumber = WalkInContactNumber,
                 Age = WalkInAge ?? 0,
+                BirthYear = WalkInBirthDate?.Year,
                 Gender = WalkInGender,
                 WalkInType = SelectedWalkInTypeItem,
                 WalkInPackage = SelectedSpecializedPackageItem,
@@ -1165,6 +1212,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         SelectedMiddleInitialItem = string.Empty;
         WalkInLastName = string.Empty;
         WalkInContactNumber = string.Empty;
+        WalkInBirthDate = null;
         WalkInAge = null;
         WalkInGender = string.Empty;
         SelectedWalkInTypeItem = string.Empty;

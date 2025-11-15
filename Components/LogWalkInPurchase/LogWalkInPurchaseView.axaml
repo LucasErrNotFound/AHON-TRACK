@@ -96,7 +96,7 @@
 									<Grid
 										Margin="0,30"
 										RowDefinitions="Auto Auto"
-										ColumnDefinitions="Auto Auto Auto">
+										ColumnDefinitions="Auto Auto Auto Auto">
 
 										<!-- First Name -->
 										<StackPanel Grid.Row="0" Grid.Column="0">
@@ -117,7 +117,7 @@
 												shadui:ControlAssist.Height="35"
 												Width="100"
 												HorizontalAlignment="Left"
-												Margin="30,0"
+												Margin="30,-5,0,0"
 												PlaceholderText="-"
 												ItemsSource="{CompiledBinding MiddleInitialItems}"
 												SelectedItem="{CompiledBinding SelectedMiddleInitialItem, Mode=TwoWay}">
@@ -125,7 +125,7 @@
 										</StackPanel>
 
 										<!-- Last Name -->
-										<StackPanel Grid.Row="0" Grid.Column="2">
+										<StackPanel Grid.Row="0" Grid.Column="2" Margin="30,0,0,0">
 											<TextBox
 												Width="200"
 												FontSize="15"
@@ -149,24 +149,45 @@
 												Watermark="Contact Number"
 												HorizontalAlignment="Left" />
 										</StackPanel>
-
+										
 										<!-- Age Field -->
-										<StackPanel Grid.Row="1" Grid.Column="1">
+										<StackPanel Grid.Row="1" Grid.Column="1" Margin="30,30,0,0">
 											<NumericUpDown
 												Value="{CompiledBinding WalkInAge, Mode=TwoWay}"
 												shadui:ControlAssist.Label="Age"
-												FormatString="N0"
-												ParsingNumberStyle="Integer"
-												Watermark="Age"
-												Width="140"
 												Minimum="1"
 												Maximum="100"
-												Margin="30,32"
+												ShowButtonSpinner="False"
+												FormatString="N0"
+												Watermark="Age"
+												Width="130"
+												IsReadOnly="True"
+												IsEnabled="False"
 												HorizontalAlignment="Left" />
 										</StackPanel>
 
+										<!-- Birth Year Field -->
+										<StackPanel Grid.Row="1" Grid.Column="2">
+											<StackPanel Margin="30,32">
+												<TextBlock
+													Text="Birth Year"
+													FontSize="15"
+													FontWeight="Regular" />
+												<DatePicker
+													Margin="0,5,0,0"
+													Width="140"
+													Height="35"
+													DayVisible="False"
+													MonthVisible="False" 
+													YearFormat="yyyy"
+													MinYear="{CompiledBinding MinSelectableYear}"
+													MaxYear="{CompiledBinding MaxSelectableYear}"
+													SelectedDate="{CompiledBinding WalkInBirthDate, Mode=TwoWay}"/>
+											</StackPanel>
+										</StackPanel>
+
 										<!-- Gender Field -->
-										<StackPanel Grid.Row="1" Grid.Column="2" Margin="0,30">
+										<StackPanel Grid.Row="1" Grid.Column="3" Margin="20,30,0,0">
 											<TextBlock Text="Gender" Classes="LabelField" />
 											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="15">
 												<CheckBox
@@ -766,7 +787,7 @@
 									<Grid
 										Margin="0,30"
 										RowDefinitions="Auto Auto"
-										ColumnDefinitions="Auto Auto Auto">
+										ColumnDefinitions="Auto Auto Auto Auto">
 
 										<!-- First Name -->
 										<StackPanel Grid.Row="0" Grid.Column="0">
@@ -787,7 +808,7 @@
 												shadui:ControlAssist.Height="35"
 												Width="100"
 												HorizontalAlignment="Left"
-												Margin="30,0"
+												Margin="30,-5,0,0"
 												PlaceholderText="-"
 												ItemsSource="{CompiledBinding MiddleInitialItems}"
 												SelectedItem="{CompiledBinding SelectedMiddleInitialItem, Mode=TwoWay}">
@@ -795,7 +816,7 @@
 										</StackPanel>
 
 										<!-- Last Name -->
-										<StackPanel Grid.Row="0" Grid.Column="2">
+										<StackPanel Grid.Row="0" Grid.Column="2" Margin="30,0,0,0">
 											<TextBox
 												Width="200"
 												FontSize="15"
@@ -819,24 +840,45 @@
 												Watermark="Contact Number"
 												HorizontalAlignment="Left" />
 										</StackPanel>
-
+										
 										<!-- Age Field -->
-										<StackPanel Grid.Row="1" Grid.Column="1">
+										<StackPanel Grid.Row="1" Grid.Column="1" Margin="30,30,0,0">
 											<NumericUpDown
 												Value="{CompiledBinding WalkInAge, Mode=TwoWay}"
 												shadui:ControlAssist.Label="Age"
-												FormatString="N0"
-												ParsingNumberStyle="Integer"
-												Watermark="Age"
-												Width="140"
 												Minimum="1"
 												Maximum="100"
-												Margin="30,32"
+												ShowButtonSpinner="False"
+												FormatString="N0"
+												Watermark="Age"
+												Width="130"
+												IsReadOnly="True"
+												IsEnabled="False"
 												HorizontalAlignment="Left" />
 										</StackPanel>
 
+										<!-- Birth Year Field -->
+										<StackPanel Grid.Row="1" Grid.Column="2">
+											<StackPanel Margin="30,32">
+												<TextBlock
+													Text="Birth Year"
+													FontSize="15"
+													FontWeight="Regular" />
+												<DatePicker
+													Margin="0,5,0,0"
+													Width="120"
+													Height="35"
+													DayVisible="False"
+													MonthVisible="False" 
+													YearFormat="yyyy"
+													MinYear="{CompiledBinding MinSelectableYear}"
+													MaxYear="{CompiledBinding MaxSelectableYear}"
+													SelectedDate="{CompiledBinding WalkInBirthDate, Mode=TwoWay}"/>
+											</StackPanel>
+										</StackPanel>
+
 										<!-- Gender Field -->
-										<StackPanel Grid.Row="1" Grid.Column="2" Margin="0,30">
+										<StackPanel Grid.Row="1" Grid.Column="3" Margin="0,30">
 											<TextBlock Text="Gender" Classes="LabelField" />
 											<StackPanel Orientation="Vertical" Margin="10,8,0,0" Spacing="15">
 												<CheckBox
