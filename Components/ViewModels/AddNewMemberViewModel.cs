@@ -113,6 +113,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     public bool IsMinor => MemberAge.HasValue && MemberAge >= 3 && MemberAge <= 14;
     public bool IsConsentLetterRequired => IsMinor && string.IsNullOrWhiteSpace(ConsentFilePath);
     public bool IsConsentFileSelected => !string.IsNullOrWhiteSpace(ConsentFilePath);
+    
+    private decimal? _tenderedPrice;
 
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
@@ -329,6 +331,24 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             Debug.WriteLine($"ProfileImage updated: {(value != null ? $"{value.Length} bytes" : "null")}");
         }
     }
+    
+    [Required(ErrorMessage = "Tendered price is required")]
+    public decimal? TenderedPrice
+    {
+        get => _tenderedPrice;
+        set
+        {
+            SetProperty(ref _tenderedPrice, value, true);
+            
+            OnPropertyChanged(nameof(CalculatedChange));
+            OnPropertyChanged(nameof(PurchasedTenderedPrice));
+            OnPropertyChanged(nameof(PurchaseChange));
+            OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsTenderedPriceSufficient));
+            OnPropertyChanged(nameof(ShowInsufficientTenderedWarning));
+            OnPropertyChanged(nameof(GrandTenderedPrice));
+        }
+    }
 
     public bool IsCashSelected
     {
@@ -408,6 +428,77 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             OnPropertyChanged(nameof(IsPaymentPossible));
         }
     }
+    
+    // Add these computed properties in the "Payment Summary Display Properties" region (around line 772)
+    public decimal CalculatedChange
+    {
+        get
+        {
+            if (!TenderedPrice.HasValue) return 0;
+        
+            decimal subtotal = GetSubtotalAsDecimal();
+            decimal change = TenderedPrice.Value - subtotal;
+        
+            // Return 0 if insufficient (negative change)
+            return change >= 0 ? change : 0;
+        }
+    }
+
+    public bool IsTenderedPriceSufficient
+    {
+        get
+        {
+            if (!TenderedPrice.HasValue) return false;
+        
+            decimal subtotal = GetSubtotalAsDecimal();
+            return TenderedPrice.Value >= subtotal;
+        }
+    }
+
+    private decimal GetSubtotalAsDecimal()
+    {
+        if (SelectedMonthlyPackage == null || !MembershipDuration.HasValue || MembershipDuration <= 0)
+            return 0;
+    
+        return SelectedMonthlyPackage.Price * MembershipDuration.Value;
+    }
+
+    public string PurchasedTenderedPrice
+    {
+        get
+        {
+            if (!TenderedPrice.HasValue)
+                return "₱0.00";
+        
+            return $"₱{TenderedPrice.Value:N2}";
+        }
+    }
+
+    public string PurchaseChange
+    {
+        get
+        {
+            return $"₱{CalculatedChange:N2}";
+        }
+    }
+
+    public bool ShowInsufficientTenderedWarning
+    {
+        get
+        {
+            // Don't show if no package selected
+            if (SelectedMonthlyPackage == null || !MembershipDuration.HasValue || MembershipDuration <= 0)
+                return false;
+        
+            // Show if tendered price is entered but insufficient
+            if (!TenderedPrice.HasValue)
+                return false;
+        
+            return !IsTenderedPriceSufficient;
+        }
+    }
+
+    public string GrandTenderedPrice => $"Pay ₱{TenderedPrice:N2}";
 
     public bool IsActiveSelected
     {
@@ -1122,26 +1213,30 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 .AddText("MEMBERSHIP INVOICE", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
-                .AddText($"Invoice ID: {CurrentInvoiceNo}") // ✅ USE CURRENT INVOICE
-                .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
+                .AddText($"Invoice ID: {CurrentInvoiceNo}")
+                .AddText($"Date: {DateTime.Now:yyyy-MM-dd hh:mm tt}")
                 .AddText($"Member: {MemberFullName}")
                 .FeedLine(1)
                 .AddText("--------------------------------")
                 .FeedLine(1);
+            
 
             decimal pricePerMonth = SelectedMonthlyPackage?.Price ?? 0;
             receiptContext
                 .AddText($"{SelectedMonthlyPackage?.Title ?? "Membership Package"}")
                 .AddText($"  {MembershipDuration} months x P{pricePerMonth:N2}")
-                .AddText($"  Total: {ToPrinterFormat(SubtotalDisplay)}");
-
+                .AddText($"  Total: {ToPrinterFormat(SubtotalDisplay)}")
+                .FeedLine(1);
+            
             receiptContext
-                .FeedLine(1)
-                .AddText("--------------------------------")
-                .AddText($"TOTAL: {ToPrinterFormat(SubtotalDisplay)}", x => x.Alignment(HorizontalAlignment.Right))
-                .FeedLine(1)
+                .AddText($"Valid From: {ValidFromDate}")
+                .AddText($"Valid Until: {ValidUntilDate}");
+            
+            receiptContext.AddText("--------------------------------");
+            
+            receiptContext
                 .AddText($"Payment: {(IsCashSelected ? "Cash" : IsGCashSelected ? "GCash" : "Maya")}");
-
+            
             if (IsGCashSelected || IsMayaSelected)
             {
                 receiptContext.AddText($"Reference No: {ReferenceNumber}");
@@ -1149,15 +1244,23 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
 
             receiptContext
                 .FeedLine(1)
-                .AddText($"Valid From: {ValidFromDate}")
-                .AddText($"Valid Until: {ValidUntilDate}");
+                .AddText("--------------------------------")
+                .AddText($"TOTAL AMOUNT: {ToPrinterFormat(SubtotalDisplay)}", x => x.Alignment(HorizontalAlignment.Right))
+                .AddText($"AMOUNT TENDERED: {ToPrinterFormat(PurchasedTenderedPrice)}", 
+                    x => x.Alignment(HorizontalAlignment.Right));
+            
+            receiptContext.AddText("--------------------------------");
+            
+            receiptContext.AddText($"CHANGE: {ToPrinterFormat(PurchaseChange)}", 
+                    x => x.Alignment(HorizontalAlignment.Right))
+                .FeedLine(1);
 
             await receiptContext
                 .FeedLine(2)
                 .AddText("Thank you for your membership!", x => x.Alignment(HorizontalAlignment.Center))
                 .AddText($"Printed by: {CurrentUserModel.Username}", x => x.Alignment(HorizontalAlignment.Left))
                 .FeedLine(3).ExecuteAsync();
-            
+        
             _toastManager.CreateToast("Invoice Printed")
                 .WithContent("Invoice has been printed successfully")
                 .ShowSuccess();
@@ -1167,7 +1270,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
             _toastManager.CreateToast("Print Error")
                 .WithContent($"Failed to print invoice: {ex.Message}")
                 .ShowError();
-    
+
             Debug.WriteLine($"Printer error: {ex}");
         }
     }
@@ -1242,8 +1345,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                                           && MayaReferenceRegex().IsMatch(ReferenceNumber);
             }
 
+            bool hasSufficientTenderedPrice = IsTenderedPriceSufficient;
+
             return hasValidInputs && hasValidQuantity && hasPaymentMethod
-                   && hasPackage && hasValidReferenceNumber && hasConsentLetterIfRequired;
+                   && hasPackage && hasValidReferenceNumber && hasConsentLetterIfRequired 
+                   && hasSufficientTenderedPrice;
         }
     }
 
@@ -1368,6 +1474,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
         ReferenceNumber = string.Empty;
         ReferenceNumber = string.Empty;
         ConsentFilePath = string.Empty;
+        TenderedPrice = null;
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;

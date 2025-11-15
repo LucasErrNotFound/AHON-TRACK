@@ -325,6 +325,25 @@
 									</Grid>
 
 									<TextBlock Text="Payment Method" Classes="h4" Margin="0,25,0,0" />
+									<StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Spacing="15" Margin="0,25,0,0">
+										<TextBlock
+											Text="Amount Tendered"
+											FontSize="15"
+											FontWeight="Medium"
+											VerticalAlignment="Center"/>
+										<NumericUpDown
+											Width="150"
+											Classes="Clearable"
+											FormatString="N2"
+											ShowButtonSpinner="False"
+											Watermark="0"
+											HorizontalAlignment="Left"
+											Value="{CompiledBinding TenderedPrice, Mode=TwoWay}">
+											<NumericUpDown.InnerLeftContent>
+												<TextBlock Margin="8,0,-8,0" Text="₱" />
+											</NumericUpDown.InnerLeftContent>
+										</NumericUpDown>
+									</StackPanel>
 									<Grid
 										RowDefinitions="Auto"
 										ColumnDefinitions="Auto Auto Auto"
@@ -676,7 +695,13 @@
 															Text="{CompiledBinding MembershipDurationQuantitySummary}"
 															Classes="h5" />
 														<TextBlock
-															Text="Subtotal:"
+															Text="Total:"
+															Classes="h5" />
+														<TextBlock
+															Text="Tendered Price:"
+															Classes="h5" />
+														<TextBlock
+															Text="Change:"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
@@ -688,10 +713,15 @@
 												            HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="{CompiledBinding PackagePriceDisplay}"
+															Text="{CompiledBinding SubtotalDisplay}"
+															TextAlignment="Right"
 															Classes="h5" />
 														<TextBlock
-															Text="{CompiledBinding SubtotalDisplay}"
+															Text="{CompiledBinding PurchasedTenderedPrice}"
+															Classes="h5" />
+														<TextBlock
+															Text="{CompiledBinding PurchaseChange}"
+															TextAlignment="Right"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
@@ -708,7 +738,7 @@
 														Classes="h2"
 														FontWeight="Bold"
 														FontSize="25"
-														Text="Total Amount:"
+														Text="Change:"
 														VerticalAlignment="Center" />
 												</StackPanel>
 											</StackPanel>
@@ -717,7 +747,7 @@
 												            HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="{CompiledBinding SubtotalDisplay}"
+															Text="{CompiledBinding PurchaseChange}"
 															Foreground="{DynamicResource SuccessColor}"
 															Classes="h2" />
 													</StackPanel>
@@ -789,7 +819,7 @@
 										</Grid>
 									</StackPanel>
 									<Button
-										Content="{CompiledBinding SubtotalDisplay, StringFormat='Pay {0}'}"
+										Content="{CompiledBinding GrandTenderedPrice}"
 										Classes="Primary"
 										FontSize="20"
 										Height="50"
@@ -1039,6 +1069,25 @@
 									</Grid>
 
 									<TextBlock Text="Payment Method" Classes="h4" Margin="0,25,0,0" />
+									<StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Spacing="15" Margin="0,25,0,0">
+										<TextBlock
+											Text="Amount Tendered"
+											FontSize="15"
+											FontWeight="Medium"
+											VerticalAlignment="Center"/>
+										<NumericUpDown
+											Width="150"
+											Classes="Clearable"
+											FormatString="N2"
+											ShowButtonSpinner="False"
+											Watermark="0"
+											HorizontalAlignment="Left"
+											Value="{CompiledBinding TenderedPrice, Mode=TwoWay}">
+											<NumericUpDown.InnerLeftContent>
+												<TextBlock Margin="8,0,-8,0" Text="₱" />
+											</NumericUpDown.InnerLeftContent>
+										</NumericUpDown>
+									</StackPanel>
 									<Grid
 										RowDefinitions="Auto"
 										ColumnDefinitions="Auto Auto Auto"
@@ -1390,7 +1439,13 @@
 															Text="{CompiledBinding MembershipDurationQuantitySummary}"
 															Classes="h5" />
 														<TextBlock
-															Text="Subtotal:"
+															Text="Total:"
+															Classes="h5" />
+														<TextBlock
+															Text="Tendered Price:"
+															Classes="h5" />
+														<TextBlock
+															Text="Change:"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
@@ -1402,10 +1457,15 @@
 												            HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="{CompiledBinding PackagePriceDisplay}"
+															Text="{CompiledBinding SubtotalDisplay}"
+															TextAlignment="Right"
 															Classes="h5" />
 														<TextBlock
-															Text="{CompiledBinding SubtotalDisplay}"
+															Text="{CompiledBinding PurchasedTenderedPrice}"
+															Classes="h5" />
+														<TextBlock
+															Text="{CompiledBinding PurchaseChange}"
+															TextAlignment="Right"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
@@ -1422,7 +1482,7 @@
 														Classes="h2"
 														FontWeight="Bold"
 														FontSize="25"
-														Text="Total Amount:"
+														Text="Change:"
 														VerticalAlignment="Center" />
 												</StackPanel>
 											</StackPanel>
@@ -1431,7 +1491,7 @@
 												            HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="{CompiledBinding SubtotalDisplay}"
+															Text="{CompiledBinding PurchaseChange}"
 															Foreground="{DynamicResource SuccessColor}"
 															Classes="h2" />
 													</StackPanel>
@@ -1503,7 +1563,7 @@
 										</Grid>
 									</StackPanel>
 									<Button
-										Content="{CompiledBinding SubtotalDisplay, StringFormat='Pay {0}'}"
+										Content="{CompiledBinding GrandTenderedPrice}"
 										Classes="Primary"
 										FontSize="20"
 										Height="50"

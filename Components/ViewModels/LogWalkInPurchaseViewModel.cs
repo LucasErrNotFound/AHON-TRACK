@@ -1283,7 +1283,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
                 .AddText($"Invoice ID: {CurrentInvoiceNo}")
-                .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
+                .AddText($"Date: {DateTime.Now:yyyy-MM-dd hh:mm tt}")
                 .AddText($"Customer: {CustomerFullName}")
                 .AddText($"Type: {SelectedWalkInType}")
                 .FeedLine(1)
