@@ -25,6 +25,9 @@ namespace AHON_TRACK.Models
         public string? ConsentLetter { get; set; }
         public int? Quantity { get; set; } // If the Walk In Package choosen is Boxing, Muay Thai, Cross Fit
         public decimal? TotalAmount { get; set; }
+        
+        public decimal? TenderedPrice { get; set; }
+        public decimal? Change { get; set; }
 
         // For WalkInRecords
         public int? RecordID { get; set; }

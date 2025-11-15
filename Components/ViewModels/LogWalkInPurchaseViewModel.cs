@@ -73,6 +73,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private bool _isGeneratingInvoice;
+    
+    private decimal? _tenderedPrice;
 
     public int? LastRegisteredCustomerID { get; private set; }
 
@@ -313,6 +315,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             OnPropertyChanged(nameof(IsPlanVisible));
             OnPropertyChanged(nameof(IsPaymentPossible));
             OnPropertyChanged(nameof(IsQuantityEditable));
+            OnPropertyChanged(nameof(IsFreeTrial));
+            OnPropertyChanged(nameof(IsTenderedPriceEnabled));
+            OnPropertyChanged(nameof(IsPaymentMethodEnabled));
 
             OnPropertyChanged(nameof(PurchaseSummarySubtotal));
             OnPropertyChanged(nameof(TotalAmount));
@@ -323,6 +328,24 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             {
                 SpecializedPackageQuantity = 1;
             }
+            
+            if (value == "Free Trial")
+            {
+                IsCashSelected = false;
+                IsGCashSelected = false;
+                IsMayaSelected = false;
+
+                TenderedPrice = 0m;
+                _toastManager?.CreateToast("Free Trial Selected")
+                    .WithContent("Amount tendered automatically set to ₱0.00")
+                    .DismissOnClick()
+                    .ShowInfo();
+            }
+            else if (value == "Regular")
+            {
+                TenderedPrice = null;
+            }
+            
             OnPropertyChanged(nameof(SpecializedPackageQuantity));
             OnPropertyChanged(nameof(SessionQuantity));
 
@@ -414,6 +437,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         return age;
     }
 
+    public bool IsTenderedPriceEnabled => SelectedWalkInTypeItem != "Free Trial";
 
     public bool IsQuantityVisible =>
         !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
@@ -465,6 +489,49 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 WalkInGender = "Female";
             else if (WalkInGender == "Female")
                 WalkInGender = string.Empty;
+        }
+    }
+    
+    [Required(ErrorMessage = "Tendered price is required")]
+    public decimal? TenderedPrice
+    {
+        get => _tenderedPrice;
+        set
+        {
+            // ✅ FREE TRIAL VALIDATION: Only allow 0 for Free Trial
+            if (SelectedWalkInTypeItem == "Free Trial")
+            {
+                if (value.HasValue && value.Value > 0)
+                {
+                    // Reject non-zero values for Free Trial
+                    _toastManager?.CreateToast("Invalid Amount")
+                        .WithContent("Free Trial customers cannot make payments. Amount must be ₱0.00")
+                        .DismissOnClick()
+                        .ShowWarning();
+                
+                    // Keep it at 0
+                    SetProperty(ref _tenderedPrice, 0m, true);
+                }
+                else
+                {
+                    // Allow 0 or null
+                    SetProperty(ref _tenderedPrice, value ?? 0m, true);
+                }
+            }
+            else
+            {
+                // Regular validation for non-Free Trial
+                SetProperty(ref _tenderedPrice, value, true);
+            }
+        
+            // Recalculate change whenever tendered price changes
+            OnPropertyChanged(nameof(CalculatedChange));
+            OnPropertyChanged(nameof(PurchasedTenderedPrice));
+            OnPropertyChanged(nameof(PurchaseChange));
+            OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsTenderedPriceSufficient));
+            OnPropertyChanged(nameof(ShowInsufficientTenderedWarning));
+            OnPropertyChanged(nameof(GrandTenderedPrice));
         }
     }
 
@@ -577,6 +644,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             return parts.Count > 0 ? string.Join(" ", parts) : "Customer Name";
         }
     }
+    
+    public bool IsPaymentMethodEnabled => SelectedWalkInTypeItem != "Free Trial";
 
     public bool IsPackageDetailsVisible =>
         !string.IsNullOrEmpty(SelectedSpecializedPackageItem) &&
@@ -608,21 +677,29 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         get
         {
             bool hasValidInputs = !string.IsNullOrWhiteSpace(WalkInFirstName)
-                && !string.IsNullOrWhiteSpace(WalkInLastName)
-                && !string.IsNullOrWhiteSpace(WalkInContactNumber)
-                && ContactNumberRegex().IsMatch(WalkInContactNumber)
-                && WalkInAge >= 3 && WalkInAge <= 100
-                && !string.IsNullOrWhiteSpace(WalkInGender)
-                && !string.IsNullOrWhiteSpace(SelectedWalkInTypeItem)
-                && !string.IsNullOrWhiteSpace(SelectedSpecializedPackageItem)
-                && SelectedSpecializedPackageItem != "None";
+                                  && !string.IsNullOrWhiteSpace(WalkInLastName)
+                                  && !string.IsNullOrWhiteSpace(WalkInContactNumber)
+                                  && ContactNumberRegex().IsMatch(WalkInContactNumber)
+                                  && WalkInAge >= 3 && WalkInAge <= 100
+                                  && !string.IsNullOrWhiteSpace(WalkInGender)
+                                  && !string.IsNullOrWhiteSpace(SelectedWalkInTypeItem)
+                                  && !string.IsNullOrWhiteSpace(SelectedSpecializedPackageItem)
+                                  && SelectedSpecializedPackageItem != "None";
 
             bool hasValidQuantity = SpecializedPackageQuantity.HasValue && SpecializedPackageQuantity > 0;
-            bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
             bool isValidDate = SelectedDate.Date == DateTime.Today;
             bool hasConsentLetterIfRequired = !IsConsentLetterRequired;
 
-            // ✅ VALIDATE REFERENCE NUMBER FOR GCASH/MAYA
+            if (SelectedWalkInTypeItem == "Free Trial")
+            {
+                return hasValidInputs 
+                       && hasValidQuantity 
+                       && isValidDate 
+                       && hasConsentLetterIfRequired;
+            }
+
+            bool hasPaymentMethod = IsCashSelected || IsGCashSelected || IsMayaSelected;
+        
             bool hasValidReferenceNumber = true;
             if (IsGCashSelected)
             {
@@ -635,8 +712,15 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                                           && MayaReferenceRegex().IsMatch(ReferenceNumber);
             }
 
-            return hasValidInputs && hasValidQuantity && hasPaymentMethod 
-                   && isValidDate && hasValidReferenceNumber && hasConsentLetterIfRequired;
+            bool hasSufficientTenderedPrice = IsTenderedPriceSufficient;
+
+            return hasValidInputs 
+                   && hasValidQuantity 
+                   && hasPaymentMethod 
+                   && isValidDate 
+                   && hasValidReferenceNumber 
+                   && hasConsentLetterIfRequired 
+                   && hasSufficientTenderedPrice;
         }
     }
 
@@ -750,7 +834,75 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             return $"₱{total:N2}";
         }
     }
-
+    
+    public decimal CalculatedChange
+    {
+        get
+        {
+            if (!TenderedPrice.HasValue) return 0;
+        
+            decimal subtotal = GetSubtotalAsDecimal();
+        
+            // If Free Trial, no payment needed
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return TenderedPrice.Value;
+        
+            // Calculate change
+            decimal change = TenderedPrice.Value - subtotal;
+        
+            // Return 0 if insufficient (negative change)
+            return change >= 0 ? change : 0;
+        }
+    }
+    
+    public bool IsTenderedPriceSufficient
+    {
+        get
+        {
+            // Free Trial: Must be exactly 0
+            if (SelectedWalkInTypeItem == "Free Trial")
+            {
+                return TenderedPrice.HasValue && TenderedPrice.Value == 0;
+            }
+        
+            // Regular: Must have value and be >= subtotal
+            if (!TenderedPrice.HasValue) return false;
+        
+            decimal subtotal = GetSubtotalAsDecimal();
+            return TenderedPrice.Value >= subtotal;
+        }
+    }
+    
+    private decimal GetSubtotalAsDecimal()
+    {
+        var package = SelectedPackage;
+        if (package == null || !SpecializedPackageQuantity.HasValue)
+            return 0;
+    
+        if (SelectedWalkInTypeItem == "Free Trial")
+            return 0;
+    
+        return package.Price * SpecializedPackageQuantity.Value;
+    }
+    
+    public string PurchasedTenderedPrice
+    {
+        get
+        {
+            if (!TenderedPrice.HasValue)
+                return "₱0.00";
+        
+            return $"₱{TenderedPrice.Value:N2}";
+        }
+    }
+    
+    public string PurchaseChange
+    {
+        get
+        {
+            return $"₱{CalculatedChange:N2}";
+        }
+    }
 
     // Purchase Summary - Package amount
     public string PurchaseSummaryPackage
@@ -827,6 +979,29 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             return $"Pay ₱{total:N2}";
         }
     }
+    
+    public bool ShowInsufficientTenderedWarning
+    {
+        get
+        {
+            // Don't show for Free Trial
+            if (SelectedWalkInTypeItem == "Free Trial")
+                return false;
+        
+            // Don't show if no package selected
+            if (string.IsNullOrEmpty(SelectedSpecializedPackageItem) || 
+                SelectedSpecializedPackageItem == "None")
+                return false;
+        
+            // Show if tendered price is entered but insufficient
+            if (!TenderedPrice.HasValue)
+                return false;
+        
+            return !IsTenderedPriceSufficient;
+        }
+    }
+    
+    public string GrandTenderedPrice => $"Pay ₱{TenderedPrice:N2}";
 
     // Selected payment method display
     public string SelectedPaymentMethod
@@ -839,6 +1014,8 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             return "None";
         }
     }
+    
+    public bool IsFreeTrial => SelectedWalkInTypeItem == "Free Trial";
 
     // Current Date
     public string CurrentDate => DateTime.Now.ToString("MMMM dd, yyyy");
@@ -1006,7 +1183,9 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 PaymentMethod = paymentMethod,
                 ReferenceNumber = ReferenceNumber,
                 ConsentLetter = ConsentFilePath,
-                Quantity = SelectedSpecializedPackageItem != "None" ? SpecializedPackageQuantity : null
+                Quantity = SelectedSpecializedPackageItem != "None" ? SpecializedPackageQuantity : null,
+                TenderedPrice = TenderedPrice,
+                Change = CalculatedChange
             };
 
             // ✅ VALIDATE PAYMENT & REFERENCE NUMBER BEFORE SAVING
@@ -1121,15 +1300,34 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
 
             receiptContext
                 .FeedLine(1)
-                .AddText("--------------------------------")
-                .AddText($"TOTAL: {FormatCurrencyForReceipt(TotalAmount)}", x => x.Alignment(HorizontalAlignment.Right))
-                .FeedLine(1)
+                .AddText("--------------------------------");
+            receiptContext
                 .AddText($"Payment: {SelectedPaymentMethod}");
-
+            
             if (IsGCashSelected || IsMayaSelected)
             {
                 receiptContext.AddText($"Reference No: {ReferenceNumber}");
             }
+            
+            receiptContext
+                .AddText("--------------------------------");
+
+            // ✅ ADD PAYMENT DETAILS SECTION
+            if (SelectedWalkInTypeItem != "Free Trial")
+            {
+                receiptContext
+                    .AddText($"TOTAL AMOUNT: {FormatCurrencyForReceipt(PurchaseSummarySubtotal)}", 
+                        x => x.Alignment(HorizontalAlignment.Right))
+                    .AddText($"AMOUNT TENDERED: {FormatCurrencyForReceipt(PurchasedTenderedPrice)}", 
+                        x => x.Alignment(HorizontalAlignment.Right));
+                
+            }
+            
+            receiptContext.AddText("--------------------------------");
+
+            receiptContext
+                .AddText($"Change: {FormatCurrencyForReceipt(PurchaseChange)}",
+                    x => x.Alignment(HorizontalAlignment.Right));
 
             await receiptContext
                 .FeedLine(2)
@@ -1137,7 +1335,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 .AddText($"Printed by: {CurrentUserModel.Username}", x => x.Alignment(HorizontalAlignment.Left))
                 .FeedLine(3)
                 .ExecuteAsync();
-            
+        
             _toastManager.CreateToast("Invoice Printed")
                 .WithContent("Invoice has been printed successfully")
                 .ShowSuccess();
@@ -1147,7 +1345,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
             _toastManager.CreateToast("Print Error")
                 .WithContent($"Failed to print invoice: {ex.Message}")
                 .ShowError();
-    
+
             Debug.WriteLine($"Printer error: {ex}");
         }
     }
@@ -1220,6 +1418,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         SpecializedPackageQuantity = 1;
         ReferenceNumber = string.Empty;
         ConsentFilePath = string.Empty;
+        TenderedPrice = null;
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;
@@ -1276,6 +1475,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
         SpecializedPackageQuantity = 1;
 
         // Reset payment selections
+        TenderedPrice = null;
         IsCashSelected = false;
         IsGCashSelected = false;
         IsMayaSelected = false;

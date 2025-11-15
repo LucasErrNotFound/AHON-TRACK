@@ -301,6 +301,26 @@
 									</Grid>
 
 									<TextBlock Text="Payment Method" Classes="h4" Margin="0,30,0,10" />
+									<StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Spacing="15" Margin="0,0,0,15">
+										<TextBlock
+											Text="Amount Tendered"
+											FontSize="15"
+											FontWeight="Medium"
+											VerticalAlignment="Center"/>
+										<NumericUpDown
+											Width="150"
+											IsEnabled="{CompiledBinding IsTenderedPriceEnabled}"
+											Classes="Clearable"
+											FormatString="N2"
+											ShowButtonSpinner="False"
+											Watermark="0"
+											HorizontalAlignment="Left"
+											Value="{CompiledBinding TenderedPrice, Mode=TwoWay}">
+											<NumericUpDown.InnerLeftContent>
+												<TextBlock Margin="8,0,-8,0" Text="₱" />
+											</NumericUpDown.InnerLeftContent>
+										</NumericUpDown>
+									</StackPanel>
 									<Grid
 										RowDefinitions="Auto"
 										ColumnDefinitions="Auto Auto Auto">
@@ -311,6 +331,7 @@
 												HorizontalAlignment="Center"
 												VerticalAlignment="Center"
 												Classes="Outline"
+												IsEnabled="{CompiledBinding IsPaymentMethodEnabled}"
 												IsChecked="{CompiledBinding IsCashSelected}">
 												<StackPanel Orientation="Vertical">
 													<Svg
@@ -329,6 +350,7 @@
 												HorizontalAlignment="Center"
 												VerticalAlignment="Center"
 												Classes="Outline"
+												IsEnabled="{CompiledBinding IsPaymentMethodEnabled}"
 												IsChecked="{CompiledBinding IsGCashSelected}">
 												<StackPanel Orientation="Vertical">
 													<Svg
@@ -347,6 +369,7 @@
 												HorizontalAlignment="Center"
 												VerticalAlignment="Center"
 												Classes="Outline"
+												IsEnabled="{CompiledBinding IsPaymentMethodEnabled}"
 												IsChecked="{CompiledBinding IsMayaSelected}">
 												<StackPanel Orientation="Vertical">
 													<Svg
@@ -652,10 +675,13 @@
 												<StackPanel Orientation="Vertical" Margin="0,-25,0,20" Spacing="10">
 													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 														<TextBlock
-															Text="Specialized Package:"
+															Text="Total:"
 															Classes="h5" />
 														<TextBlock
-															Text="Subtotal:"
+															Text="Tendered Price:"
+															Classes="h5" />
+														<TextBlock
+															Text="Change:"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
@@ -666,10 +692,14 @@
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="{CompiledBinding PurchaseSummaryPackage}"
+															Text="{CompiledBinding PurchaseSummarySubtotal}"
+															TextAlignment="Right"
 															Classes="h5" />
 														<TextBlock
-															Text="{CompiledBinding PurchaseSummarySubtotal}"
+															Text="{CompiledBinding PurchasedTenderedPrice}"
+															Classes="h5" />
+														<TextBlock
+															Text="{CompiledBinding PurchaseChange}"
 															TextAlignment="Right"
 															Classes="h5" />
 													</StackPanel>
@@ -685,7 +715,7 @@
 														Classes="h2"
 														FontWeight="Bold"
 														FontSize="25"
-														Text="Total Amount:"
+														Text="Change:"
 														VerticalAlignment="Center" />
 												</StackPanel>
 											</StackPanel>
@@ -693,7 +723,7 @@
 												<StackPanel Orientation="Vertical" Margin="0,15,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="{CompiledBinding TotalAmount}"
+															Text="{CompiledBinding PurchaseChange}"
 															Foreground="{DynamicResource SuccessColor}"
 															Classes="h2" />
 													</StackPanel>
@@ -760,7 +790,7 @@
 										</Grid>
 									</StackPanel>
 									<Button
-										Content="{CompiledBinding GrandTotal}"
+										Content="{CompiledBinding GrandTenderedPrice}"
 										Classes="Primary"
 										FontSize="20"
 										Height="50"
@@ -992,6 +1022,26 @@
 									</Grid>
 
 									<TextBlock Text="Payment Method" Classes="h4" Margin="0,40" />
+									<StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Spacing="15" Margin="0,0,0,15">
+										<TextBlock
+											Text="Amount Tendered"
+											FontSize="15"
+											FontWeight="Medium"
+											VerticalAlignment="Center"/>
+										<NumericUpDown
+											IsEnabled="{CompiledBinding IsTenderedPriceEnabled}"
+											Width="150"
+											Classes="Clearable"
+											FormatString="N2"
+											ShowButtonSpinner="False"
+											Watermark="0"
+											HorizontalAlignment="Left"
+											Value="{CompiledBinding TenderedPrice, Mode=TwoWay}">
+											<NumericUpDown.InnerLeftContent>
+												<TextBlock Margin="8,0,-8,0" Text="₱" />
+											</NumericUpDown.InnerLeftContent>
+										</NumericUpDown>
+									</StackPanel>
 									<Grid
 										RowDefinitions="Auto"
 										ColumnDefinitions="Auto Auto Auto">
@@ -1002,6 +1052,7 @@
 												HorizontalAlignment="Center"
 												VerticalAlignment="Center"
 												Classes="Outline"
+												IsEnabled="{CompiledBinding IsPaymentMethodEnabled}"
 												IsChecked="{CompiledBinding IsCashSelected}">
 												<StackPanel Orientation="Vertical">
 													<Svg
@@ -1020,6 +1071,7 @@
 												HorizontalAlignment="Center"
 												VerticalAlignment="Center"
 												Classes="Outline"
+												IsEnabled="{CompiledBinding IsPaymentMethodEnabled}"
 												IsChecked="{CompiledBinding IsGCashSelected}">
 												<StackPanel Orientation="Vertical">
 													<Svg
@@ -1038,6 +1090,7 @@
 												HorizontalAlignment="Center"
 												VerticalAlignment="Center"
 												Classes="Outline"
+												IsEnabled="{Binding IsPaymentMethodEnabled}"
 												IsChecked="{CompiledBinding IsMayaSelected}">
 												<StackPanel Orientation="Vertical">
 													<Svg
@@ -1342,10 +1395,13 @@
 												<StackPanel Orientation="Vertical" Margin="0,-25,0,20" Spacing="10">
 													<StackPanel Orientation="Vertical" Spacing="5" Margin="0,15">
 														<TextBlock
-															Text="Specialized Package:"
+															Text="Total:"
 															Classes="h5" />
 														<TextBlock
-															Text="Subtotal:"
+															Text="Tendered Price:"
+															Classes="h5" />
+														<TextBlock
+															Text="Change:"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
@@ -1356,10 +1412,15 @@
 												<StackPanel Orientation="Vertical" Margin="0,70,0,0" Spacing="15" HorizontalAlignment="Right">
 													<StackPanel Spacing="5" Margin="0,4,0,0">
 														<TextBlock
-															Text="{CompiledBinding PurchaseSummaryPackage}"
+															Text="{CompiledBinding PurchaseSummarySubtotal}"
+															TextAlignment="Right"
 															Classes="h5" />
 														<TextBlock
-															Text="{CompiledBinding PurchaseSummarySubtotal}"
+															Text="{CompiledBinding PurchasedTenderedPrice}"
+															Classes="h5" />
+														<TextBlock
+															Text="{CompiledBinding PurchaseChange}"
+															TextAlignment="Right"
 															Classes="h5" />
 													</StackPanel>
 												</StackPanel>
@@ -1449,7 +1510,7 @@
 										</Grid>
 									</StackPanel>
 									<Button
-										Content="{CompiledBinding GrandTotal}"
+										Content="{CompiledBinding GrandTenderedPrice}"
 										Classes="Primary"
 										FontSize="20"
 										Height="50"
