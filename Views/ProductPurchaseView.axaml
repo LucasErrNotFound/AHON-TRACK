@@ -240,20 +240,29 @@
 												</ToggleButton>
 											</StackPanel>
 										</Grid>
+										<StackPanel>
+											<NumericUpDown
+												shadui:ControlAssist.Label="Input Tendered Amount"
+												Width="250"
+												Classes="Clearable"
+												FormatString="N2"
+												ShowButtonSpinner="False"
+												Watermark="0"
+												HorizontalAlignment="Left"
+												Value="{CompiledBinding TenderedPrice, Mode=TwoWay}">
+												<NumericUpDown.InnerLeftContent>
+													<TextBlock Margin="8,0,-8,0" Text="₱" />
+												</NumericUpDown.InnerLeftContent>
+											</NumericUpDown>
+										</StackPanel>
 										<StackPanel 
 											Orientation="Horizontal" 
 											Spacing="20"
-											Margin="0,20,0,0"
+											Margin="0,10,0,0"
 											IsVisible="{CompiledBinding IsReferenceNumberVisible}">
-											<TextBlock
-												Classes="h4"
-												Text="Reference No.:"
-												TextAlignment="Right"
-												TextWrapping="WrapWithOverflow"
-												HorizontalAlignment="Right"
-												VerticalAlignment="Top" />
 											<TextBox
 												Classes="Clearable"
+												shadui:ControlAssist.Label="Reference No."
 												Text="{CompiledBinding ReferenceNumber, Mode=TwoWay}"
 												MaxLength="13"
 												Width="250"/>
@@ -379,20 +388,46 @@
 								</StackPanel>
 								<shadui:Card.Footer>
 									<StackPanel Orientation="Vertical" Spacing="20">
-										<Grid RowDefinitions="Auto" ColumnDefinitions="* *" IsVisible="{CompiledBinding IsPaymentPossible}">
+										<!-- ✅ ADD PURCHASE SUMMARY -->
+										<Grid RowDefinitions="Auto" ColumnDefinitions="* *">
+											<StackPanel Grid.Column="0" Spacing="5">
+												<TextBlock Text="Total:" FontSize="16" FontWeight="Medium" />
+												<TextBlock Text="Tendered:" FontSize="16" FontWeight="Medium" />
+											</StackPanel>
+											<StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="5">
+												<TextBlock
+													Text="{CompiledBinding FormattedTotalPrice}"
+													FontSize="16"
+													FontWeight="Medium"
+													Margin="0,0,20,0"
+													TextAlignment="Right" />
+												<TextBlock
+													Text="{CompiledBinding PurchasedTenderedPrice}"
+													FontSize="16"
+													FontWeight="Medium"
+													Margin="0,0,20,0"
+													TextAlignment="Right" />
+											</StackPanel>
+										</Grid>
+										<Separator
+											Background="{StaticResource ForegroundColor}"
+											Margin="0,0,20,0" />
+
+										<!-- ✅ UPDATE TOTAL AMOUNT DISPLAY -->
+										<Grid RowDefinitions="Auto" ColumnDefinitions="* *">
 											<StackPanel Grid.Row="0" Grid.Column="0">
 												<TextBlock
 													Classes="h2"
 													FontWeight="Bold"
 													FontSize="25"
-													Text="Total Amount:"
+													Text="Change:"
 													VerticalAlignment="Center" />
 											</StackPanel>
 											<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,20,0">
 												<StackPanel Orientation="Vertical" HorizontalAlignment="Right">
 													<StackPanel>
 														<TextBlock
-															Text="{CompiledBinding FormattedTotalPrice}"
+															Text="{CompiledBinding PurchaseChange}"
 															Foreground="{DynamicResource SuccessColor}"
 															Classes="h2" />
 													</StackPanel>
@@ -421,7 +456,7 @@
 										<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,0">
 											<Button
 												Classes="Primary"
-												Content="{CompiledBinding FormattedTotalPrice, StringFormat='Pay {0}'}"
+												Content="{CompiledBinding GrandTenderedPrice}"
 												Padding="15,0"
 												Command="{CompiledBinding PaymentCommand}"
 												IsEnabled="{CompiledBinding IsPaymentPossible}" />
@@ -607,20 +642,29 @@
 												</ToggleButton>
 											</StackPanel>
 										</Grid>
+										<StackPanel>
+											<NumericUpDown
+												shadui:ControlAssist.Label="Input Tendered Amount"
+												Width="250"
+												Classes="Clearable"
+												FormatString="N2"
+												ShowButtonSpinner="False"
+												Watermark="0"
+												HorizontalAlignment="Left"
+												Value="{CompiledBinding TenderedPrice, Mode=TwoWay}">
+												<NumericUpDown.InnerLeftContent>
+													<TextBlock Margin="8,0,-8,0" Text="₱" />
+												</NumericUpDown.InnerLeftContent>
+											</NumericUpDown>
+										</StackPanel>
 										<StackPanel 
 											Orientation="Horizontal" 
 											Spacing="20"
-											Margin="0,20,0,0"
+											Margin="0,10,0,0"
 											IsVisible="{CompiledBinding IsReferenceNumberVisible}">
-											<TextBlock
-												Classes="h4"
-												Text="Reference No.:"
-												TextAlignment="Right"
-												TextWrapping="WrapWithOverflow"
-												HorizontalAlignment="Right"
-												VerticalAlignment="Top" />
 											<TextBox
 												Classes="Clearable"
+												shadui:ControlAssist.Label="Reference No."
 												Text="{CompiledBinding ReferenceNumber, Mode=TwoWay}"
 												MaxLength="13"
 												Width="250"/>
@@ -746,20 +790,46 @@
 								</StackPanel>
 								<shadui:Card.Footer>
 									<StackPanel Orientation="Vertical" Spacing="20">
-										<Grid RowDefinitions="Auto" ColumnDefinitions="* *" IsVisible="{CompiledBinding IsPaymentPossible}">
+										<!-- ✅ ADD PURCHASE SUMMARY -->
+										<Grid RowDefinitions="Auto" ColumnDefinitions="* *">
+											<StackPanel Grid.Column="0" Spacing="5">
+												<TextBlock Text="Total:" FontSize="16" FontWeight="Medium" />
+												<TextBlock Text="Tendered:" FontSize="16" FontWeight="Medium" />
+											</StackPanel>
+											<StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="5">
+												<TextBlock
+													Text="{CompiledBinding FormattedTotalPrice}"
+													FontSize="16"
+													FontWeight="Medium"
+													Margin="0,0,20,0"
+													TextAlignment="Right" />
+												<TextBlock
+													Text="{CompiledBinding PurchasedTenderedPrice}"
+													FontSize="16"
+													FontWeight="Medium"
+													Margin="0,0,20,0"
+													TextAlignment="Right" />
+											</StackPanel>
+										</Grid>
+										<Separator
+											Background="{StaticResource ForegroundColor}"
+											Margin="0,0,20,0" />
+
+										<!-- ✅ UPDATE TOTAL AMOUNT DISPLAY -->
+										<Grid RowDefinitions="Auto" ColumnDefinitions="* *">
 											<StackPanel Grid.Row="0" Grid.Column="0">
 												<TextBlock
 													Classes="h2"
 													FontWeight="Bold"
 													FontSize="25"
-													Text="Total Amount:"
+													Text="Change:"
 													VerticalAlignment="Center" />
 											</StackPanel>
 											<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,20,0">
 												<StackPanel Orientation="Vertical" HorizontalAlignment="Right">
 													<StackPanel>
 														<TextBlock
-															Text="{CompiledBinding FormattedTotalPrice}"
+															Text="{CompiledBinding PurchaseChange}"
 															Foreground="{DynamicResource SuccessColor}"
 															Classes="h2" />
 													</StackPanel>
@@ -788,7 +858,7 @@
 										<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,0">
 											<Button
 												Classes="Primary"
-												Content="{CompiledBinding FormattedTotalPrice, StringFormat='Pay {0}'}"
+												Content="{CompiledBinding GrandTenderedPrice}"
 												Padding="15,0"
 												Command="{CompiledBinding PaymentCommand}"
 												IsEnabled="{CompiledBinding IsPaymentPossible}" />

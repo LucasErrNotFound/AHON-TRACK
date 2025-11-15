@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -127,6 +128,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
     [ObservableProperty]
     private string _currentInvoiceNo = string.Empty;
+    
+    private decimal? _tenderedPrice;
 
     private int _lastIdNumber = 1234;
 
@@ -855,6 +858,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
 
         try
         {
+            ClearAllErrors();
             // Determine payment method
             string paymentMethod = IsCashSelected ? CategoryConstants.Cash :
                 IsGCashSelected ? CategoryConstants.GCash :
@@ -935,7 +939,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 .AddText("================================", x => x.Alignment(HorizontalAlignment.Center))
                 .FeedLine(1)
                 .AddText($"Invoice ID: {CurrentInvoiceNo}")
-                .AddText($"Date: {DateTime.Now:yyyy-MM-dd HH:mm tt}")
+                .AddText($"Date: {DateTime.Now:yyyy-MM-dd hh:mm tt}")
                 .AddText($"Customer: {CustomerFullName}")
                 .FeedLine(1)
                 .AddText("--------------------------------")
@@ -947,18 +951,25 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                     .AddText($"{item.Title}")
                     .AddText($"  {item.Quantity} x P{item.Price:N2} = P{item.TotalPrice:N2}");
             }
-
-            receiptContext
-                .FeedLine(1)
-                .AddText("--------------------------------")
-                .AddText($"TOTAL: P{TotalPrice:N2}", x => x.Alignment(HorizontalAlignment.Right))
-                .FeedLine(1)
-                .AddText($"Payment: {(IsCashSelected ? "Cash" : IsGCashSelected ? "GCash" : "Maya")}");
+            
+            receiptContext.AddText("--------------------------------");
+            receiptContext.AddText($"Payment: {(IsCashSelected ? "Cash" : IsGCashSelected ? "GCash" : "Maya")}");
 
             if (IsGCashSelected || IsMayaSelected)
             {
                 receiptContext.AddText($"Reference No: {ReferenceNumber}");
             }
+
+            receiptContext
+                .FeedLine(1)
+                .AddText("--------------------------------")
+                .AddText($"TOTAL AMOUNT: P{TotalPrice:N2}", x => x.Alignment(HorizontalAlignment.Right))
+                .AddText($"AMOUNT TENDERED: P{TenderedPrice:N2}",
+                    x => x.Alignment(HorizontalAlignment.Right));
+            
+            receiptContext.AddText("--------------------------------");
+            receiptContext.AddText($"CHANGE: P{CalculatedChange:N2}",
+                x => x.Alignment(HorizontalAlignment.Right));
 
             await receiptContext
                 .FeedLine(2)
@@ -976,7 +987,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             _toastManager.CreateToast("Print Error")
                 .WithContent($"Failed to print invoice: {ex.Message}")
                 .ShowError();
-    
+
             Debug.WriteLine($"Printer error: {ex}");
         }
     }
@@ -1002,6 +1013,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         IsGCashSelected = false;
         IsMayaSelected = false;
         ReferenceNumber = null;
+        TenderedPrice = null;
         SelectedCustomer = null;
     }
 
@@ -1032,6 +1044,85 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
         TotalCount = CustomerList.Count;
         SelectAll = CustomerList.Count > 0 && CustomerList.All(x => x.IsSelected);
     }
+    
+    [Required(ErrorMessage = "Tendered price is required")]
+    public decimal? TenderedPrice
+    {
+        get => _tenderedPrice;
+        set
+        {
+            SetProperty(ref _tenderedPrice, value, true);
+        
+            // Recalculate change whenever tendered price changes
+            OnPropertyChanged(nameof(CalculatedChange));
+            OnPropertyChanged(nameof(PurchasedTenderedPrice));
+            OnPropertyChanged(nameof(PurchaseChange));
+            OnPropertyChanged(nameof(IsPaymentPossible));
+            OnPropertyChanged(nameof(IsTenderedPriceSufficient));
+            OnPropertyChanged(nameof(ShowInsufficientTenderedWarning));
+            OnPropertyChanged(nameof(GrandTenderedPrice));
+        }
+    }
+    
+    public decimal CalculatedChange
+    {
+        get
+        {
+            if (!TenderedPrice.HasValue) return 0;
+        
+            decimal change = TenderedPrice.Value - TotalPrice;
+        
+            // Return 0 if insufficient (negative change)
+            return change >= 0 ? change : 0;
+        }
+    }
+
+    public bool IsTenderedPriceSufficient
+    {
+        get
+        {
+            if (!TenderedPrice.HasValue) return false;
+        
+            return TenderedPrice.Value >= TotalPrice;
+        }
+    }
+
+    public string PurchasedTenderedPrice
+    {
+        get
+        {
+            if (!TenderedPrice.HasValue)
+                return "₱0.00";
+        
+            return $"₱{TenderedPrice.Value:N2}";
+        }
+    }
+
+    public string PurchaseChange
+    {
+        get
+        {
+            return $"₱{CalculatedChange:N2}";
+        }
+    }
+
+    public bool ShowInsufficientTenderedWarning
+    {
+        get
+        {
+            // Don't show if no items in cart
+            if (IsCartEmpty)
+                return false;
+        
+            // Show if tendered price is entered but insufficient
+            if (!TenderedPrice.HasValue)
+                return false;
+        
+            return !IsTenderedPriceSufficient;
+        }
+    }
+
+    public string GrandTenderedPrice => $"Pay ₱{TenderedPrice:N2}";
 
     partial void OnCustomerSearchStringResultChanged(string value)
     {
@@ -1120,6 +1211,11 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
     {
         TotalPrice = CartItems.Sum(item => item.TotalPrice);
         FormattedTotalPrice = $"₱{TotalPrice:N2}";
+    
+        OnPropertyChanged(nameof(CalculatedChange));
+        OnPropertyChanged(nameof(PurchaseChange));
+        OnPropertyChanged(nameof(IsTenderedPriceSufficient));
+        OnPropertyChanged(nameof(ShowInsufficientTenderedWarning));
     }
 
     private void UpdateCartEmptyState()
@@ -1206,7 +1302,10 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                                           && MayaReferenceRegex().IsMatch(ReferenceNumber);
             }
 
-            return hasCustomer && hasItems && hasPaymentMethod && hasValidReferenceNumber;
+            bool hasSufficientTenderedPrice = IsTenderedPriceSufficient;
+
+            return hasCustomer && hasItems && hasPaymentMethod 
+                   && hasValidReferenceNumber && hasSufficientTenderedPrice;
         }
     }
 
