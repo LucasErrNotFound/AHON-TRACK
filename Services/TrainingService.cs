@@ -96,6 +96,7 @@ namespace AHON_TRACK.Services
                         return false;
                     }
 
+                    // ✅ NEW: Validate walk-in scheduling restrictions
                     var (isValidWalkIn, walkInError) = await ValidateWalkInScheduleAsync(connection, transaction, training);
                     if (!isValidWalkIn)
                     {
@@ -528,22 +529,23 @@ WHERE TrainingID = @TrainingID";
                 await connection.OpenAsync();
                 using var transaction = connection.BeginTransaction();
 
-                // Check if customer already has another session on this date
-                if (await CheckCustomerDailySessionAsync(connection, transaction, training.customerID, training.scheduledDate, training.trainingID))
-                {
-                    ShowToast("Daily Limit Reached",
-                        $"{training.firstName} {training.lastName} already has a training session scheduled for {training.scheduledDate:MMM dd, yyyy}. Only one session per day is allowed.",
-                        ToastType.Warning);
-                    transaction.Rollback();
-                    return false;
-                }
-
                 try
                 {
+                    // ✅ NEW: Validate walk-in scheduling restrictions for updates
                     var (isValidWalkIn, walkInError) = await ValidateWalkInScheduleAsync(connection, transaction, training);
                     if (!isValidWalkIn)
                     {
                         ShowToast("Walk-In Restriction", walkInError, ToastType.Warning);
+                        transaction.Rollback();
+                        return false;
+                    }
+
+                    // Check if customer already has another session on this date
+                    if (await CheckCustomerDailySessionAsync(connection, transaction, training.customerID, training.scheduledDate, training.trainingID))
+                    {
+                        ShowToast("Daily Limit Reached",
+                            $"{training.firstName} {training.lastName} already has a training session scheduled for {training.scheduledDate:MMM dd, yyyy}. Only one session per day is allowed.",
+                            ToastType.Warning);
                         transaction.Rollback();
                         return false;
                     }
@@ -735,7 +737,7 @@ WHERE TrainingID = @TrainingID";
 
         #endregion
 
-        #region HELPER METHODS - Coach & Schedule Management
+        #region WALK-IN VALIDATION
 
         /// <summary>
         /// Validates that walk-in customers can only schedule training on their check-in date
@@ -746,65 +748,98 @@ WHERE TrainingID = @TrainingID";
             SqlTransaction transaction,
             TrainingModel training)
         {
-            // Only validate for Walk-In customers
-            if (!training.customerType?.Equals("WalkIn", StringComparison.OrdinalIgnoreCase) == true &&
-                !training.customerType?.Equals("Walk-in", StringComparison.OrdinalIgnoreCase) == true)
+            // ✅ FIX: Normalize customer type for comparison
+            string normalizedCustomerType = training.customerType?.Trim().ToUpperInvariant() ?? "";
+
+            Debug.WriteLine($"[ValidateWalkInScheduleAsync] CustomerType: '{training.customerType}' | Normalized: '{normalizedCustomerType}'");
+
+            // Only validate for Walk-In customers (handle multiple variations)
+            bool isWalkIn = normalizedCustomerType == "WALKIN" ||
+                           normalizedCustomerType == "WALK-IN" ||
+                           normalizedCustomerType == "WALK IN";
+
+            if (!isWalkIn)
             {
+                Debug.WriteLine($"[ValidateWalkInScheduleAsync] Not a walk-in customer - skipping validation");
                 return (true, string.Empty); // Not a walk-in, no restriction
             }
 
+            Debug.WriteLine($"[ValidateWalkInScheduleAsync] Walk-in customer detected - applying restrictions");
+
+            DateTime today = DateTime.Today;
+            DateTime scheduledDate = training.scheduledDate.Date;
+
+            Debug.WriteLine($"[ValidateWalkInScheduleAsync] Today: {today:yyyy-MM-dd} | Scheduled: {scheduledDate:yyyy-MM-dd}");
+
+            // ✅ CRITICAL: Walk-ins can ONLY schedule for TODAY
+            if (scheduledDate != today)
+            {
+                if (scheduledDate > today)
+                {
+                    Debug.WriteLine($"[ValidateWalkInScheduleAsync] ❌ BLOCKED - Future date detected!");
+                    return (false,
+                        $"Walk-in customers cannot schedule training in advance. " +
+                        $"You can only schedule training for today ({today:MMM dd, yyyy}). " +
+                        "Please check in on the day you want to train.");
+                }
+                else
+                {
+                    Debug.WriteLine($"[ValidateWalkInScheduleAsync] ❌ BLOCKED - Past date detected!");
+                    return (false, "Cannot schedule training for a past date.");
+                }
+            }
+
+            // ✅ Check if walk-in is currently checked in TODAY
             const string query = @"
-        SELECT TOP 1 
-            CAST(CheckIn AS DATE) AS CheckInDate,
-            CheckOut,
-            CASE 
-                WHEN CheckOut IS NOT NULL THEN 1 
-                ELSE 0 
-            END AS HasCheckedOut
-        FROM WalkInRecords
-        WHERE CustomerID = @CustomerID
-        ORDER BY CheckIn DESC";
+                SELECT COUNT(1)
+                FROM WalkInRecords
+                WHERE CustomerID = @CustomerID
+                  AND CAST(CheckIn AS DATE) = @Today
+                  AND CheckOut IS NULL";
 
             using var cmd = new SqlCommand(query, connection, transaction);
             cmd.Parameters.AddWithValue("@CustomerID", training.customerID);
+            cmd.Parameters.AddWithValue("@Today", today);
 
-            using var reader = await cmd.ExecuteReaderAsync();
+            var count = (int)await cmd.ExecuteScalarAsync();
 
-            if (!await reader.ReadAsync())
+            Debug.WriteLine($"[ValidateWalkInScheduleAsync] Active check-in count: {count}");
+
+            if (count == 0)
             {
-                // No check-in record found
-                return (false,
-                    $"{training.firstName} {training.lastName} must check in first before scheduling training.");
+                // Check if they checked out already today
+                const string checkOutQuery = @"
+                    SELECT COUNT(1)
+                    FROM WalkInRecords
+                    WHERE CustomerID = @CustomerID
+                      AND CAST(CheckIn AS DATE) = @Today
+                      AND CheckOut IS NOT NULL";
+
+                using var checkOutCmd = new SqlCommand(checkOutQuery, connection, transaction);
+                checkOutCmd.Parameters.AddWithValue("@CustomerID", training.customerID);
+                checkOutCmd.Parameters.AddWithValue("@Today", today);
+
+                var checkedOutCount = (int)await checkOutCmd.ExecuteScalarAsync();
+
+                Debug.WriteLine($"[ValidateWalkInScheduleAsync] Checked out count: {checkedOutCount}");
+
+                if (checkedOutCount > 0)
+                {
+                    Debug.WriteLine($"[ValidateWalkInScheduleAsync] ❌ BLOCKED - Already checked out!");
+                    return (false,
+                        $"{training.firstName} {training.lastName} has already checked out today. " +
+                        "Walk-in customers must be currently checked in to schedule training.");
+                }
+                else
+                {
+                    Debug.WriteLine($"[ValidateWalkInScheduleAsync] ❌ BLOCKED - Not checked in yet!");
+                    return (false,
+                        $"{training.firstName} {training.lastName} must check in today first before scheduling training. " +
+                        "Walk-in customers can only schedule training on their check-in day.");
+                }
             }
 
-            DateTime checkInDate = reader.GetDateTime(0);
-            bool hasCheckedOut = reader.GetInt32(2) == 1;
-
-            reader.Close();
-
-            // Check if they've already checked out
-            if (hasCheckedOut)
-            {
-                return (false,
-                    $"{training.firstName} {training.lastName} has already checked out today. " +
-                    "Walk-in customers must be checked in to schedule training.");
-            }
-
-            // Check if trying to schedule for a future date
-            if (training.scheduledDate.Date > checkInDate)
-            {
-                return (false,
-                    $"Walk-in customers can only schedule training for their check-in date ({checkInDate:MMM dd, yyyy}). " +
-                    "Advanced scheduling is not allowed for walk-ins.");
-            }
-
-            // Check if trying to schedule for a past date
-            if (training.scheduledDate.Date < checkInDate)
-            {
-                return (false,
-                    "Cannot schedule training for a past date.");
-            }
-
+            Debug.WriteLine($"[ValidateWalkInScheduleAsync] ✅ PASSED - Walk-in is checked in today and scheduling for today");
             return (true, string.Empty);
         }
 
@@ -817,11 +852,11 @@ WHERE TrainingID = @TrainingID";
             int customerId)
         {
             const string query = @"
-        SELECT COUNT(1)
-        FROM WalkInRecords
-        WHERE CustomerID = @CustomerID
-          AND CAST(CheckIn AS DATE) = CAST(GETDATE() AS DATE)
-          AND CheckOut IS NULL";
+                SELECT COUNT(1)
+                FROM WalkInRecords
+                WHERE CustomerID = @CustomerID
+                  AND CAST(CheckIn AS DATE) = CAST(GETDATE() AS DATE)
+                  AND CheckOut IS NULL";
 
             using var cmd = new SqlCommand(query, connection, transaction);
             cmd.Parameters.AddWithValue("@CustomerID", customerId);
@@ -829,6 +864,10 @@ WHERE TrainingID = @TrainingID";
             var count = (int)await cmd.ExecuteScalarAsync();
             return count > 0;
         }
+
+        #endregion
+
+        #region HELPER METHODS - Coach & Schedule Management
 
         private async Task<int?> GetCoachIdByNameAsync(SqlConnection connection, SqlTransaction transaction, string coachFullName)
         {
@@ -1036,7 +1075,34 @@ WHERE ScheduleID = @ScheduleID
         {
             try
             {
-                string table = customerType == DEFAULT_CUSTOMER_TYPE ? "MemberSessions" : "WalkInSessions";
+                // ✅ FIX: Normalize customer type for proper table selection
+                string normalizedType = customerType?.Trim().ToUpperInvariant() ?? "";
+
+                Debug.WriteLine($"[DecrementSessionCountAsync] CustomerType: '{customerType}' | Normalized: '{normalizedType}'");
+
+                // Determine which table to use
+                bool isMember = normalizedType == "MEMBER";
+                bool isWalkIn = normalizedType == "WALKIN" ||
+                               normalizedType == "WALK-IN" ||
+                               normalizedType == "WALK IN";
+
+                string table;
+                if (isMember)
+                {
+                    table = "MemberSessions";
+                    Debug.WriteLine($"[DecrementSessionCountAsync] Using MemberSessions table");
+                }
+                else if (isWalkIn)
+                {
+                    table = "WalkInSessions";
+                    Debug.WriteLine($"[DecrementSessionCountAsync] Using WalkInSessions table");
+                }
+                else
+                {
+                    Debug.WriteLine($"[DecrementSessionCountAsync] ⚠️ Unknown customer type, defaulting to MemberSessions");
+                    table = "MemberSessions";
+                }
+
                 string query = $@"
 UPDATE {table}
 SET SessionsLeft = SessionsLeft - 1
@@ -1047,11 +1113,20 @@ WHERE CustomerID = @CustomerID
                 using var command = new SqlCommand(query, connection, transaction);
                 command.Parameters.AddWithValue("@CustomerID", customerID);
                 command.Parameters.AddWithValue("@PackageID", packageID);
-                await command.ExecuteNonQueryAsync();
+
+                int rowsAffected = await command.ExecuteNonQueryAsync();
+
+                Debug.WriteLine($"[DecrementSessionCountAsync] Rows affected: {rowsAffected}");
+
+                if (rowsAffected == 0)
+                {
+                    Debug.WriteLine($"[DecrementSessionCountAsync] ⚠️ WARNING: No sessions were decremented! Check if CustomerID={customerID} and PackageID={packageID} exist in {table}");
+                }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[DecrementSessionCountAsync] {ex.Message}");
+                Debug.WriteLine($"[DecrementSessionCountAsync] ❌ ERROR: {ex.Message}");
+                Debug.WriteLine($"[DecrementSessionCountAsync] Stack: {ex.StackTrace}");
             }
         }
 
