@@ -13,10 +13,10 @@ using ShadUI;
 
 namespace AHON_TRACK.Components.ViewModels;
 
-public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
+public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavigable, INotifyPropertyChanged
 {
     [ObservableProperty]
-    private ObservableCollection<ProductItems> _supplierItems = [];
+    private ObservableCollection<EquipmentItems> _equipmentItems = [];
     
     private string? _supplierName = string.Empty;
     private string? _contactPerson = string.Empty;
@@ -28,7 +28,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
 
-    public SupplierDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager,
+    public SupplierEquipmentDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager,
         PageManager pageManager)
     {
         _dialogManager = dialogManager;
@@ -38,7 +38,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         AddInitialItem();
     }
 
-    public SupplierDialogCardViewModel()
+    public SupplierEquipmentDialogCardViewModel()
     {
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
@@ -51,9 +51,9 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     public void Initialize()
     {
         ClearAllFields();
-        ClearAllSupplierItems();
+        ClearAllEquipmentItems();
         
-        if (SupplierItems.Count == 0)
+        if (EquipmentItems.Count == 0)
         {
             AddInitialItem();
         }
@@ -68,32 +68,32 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     [RelayCommand(CanExecute = nameof(CanSaveSupplier))]
     private void AddSupplier()
     {
-        if (!ValidateSupplier())
+        if (!ValidateSupplierEquipment())
         {
             return;
         }
 
         _dialogManager
             .CreateDialog(
-                "Confirm Supplier",
-                "Are you ready to proceed with adding this supplier?")
-            .WithPrimaryButton("Yes, proceed with adding",
+                "Confirm Purchase",
+                "Are you ready to proceed with purchasing these equipments?")
+            .WithPrimaryButton("Yes, proceed with the purchase",
                 () => {
-                    // All Data will be sent to the Supplier Management Page
-                    // No Supplier Management Page yet, that is why you kept going back to this dialog
+                    // All Data will be sent to the Purchase Order Page
+                    // No Purchase order Page yet, that is why you kept going back to this dialog
                     /*
-                    var supplierData = new SupplierData
+                    var supplierData = new SupplierEquipmentData
                     {
                         SupplierName = this.SupplierName,
                         ContactPerson = this.ContactPerson,
                         Email = this.Email,
                         PhoneNumber = this.PhoneNumber,
                         Address = this.Address,
-                        SupplierItems = this.SupplierItems.ToList()
+                        EquipmentItems = this.EquipmentItems.ToList()
                     };
 
                     _toastManager.CreateToast("Success")
-                        .WithContent("Supplier added successfully!")
+                        .WithContent("Supplier and equipment added successfully!")
                         .DismissOnClick()
                         .ShowSuccess();
                 
@@ -104,10 +104,10 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                     });
                     */
                 })
-            .WithCancelButton("No, I want to add more items",
+            .WithCancelButton("No, I want to add more equipments",
                 () => {
                     _toastManager.CreateToast("Action Cancelled")
-                        .WithContent("Continue editing your supplier information")
+                        .WithContent("Continue editing your equipment list")
                         .DismissOnClick()
                         .ShowInfo();
                 })
@@ -119,19 +119,19 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     [RelayCommand]
     private void AddItem()
     {
-        var newItem = new ProductItems();
-        newItem.PropertyChanged += OnSupplierItemPropertyChanged;
-        SupplierItems.Add(newItem);
+        var newItem = new EquipmentItems();
+        newItem.PropertyChanged += OnEquipmentItemPropertyChanged;
+        EquipmentItems.Add(newItem);
         OnPropertyChanged(nameof(CanSaveSupplier));
     }
     
     [RelayCommand]
-    private void RemoveItem(ProductItems item)
+    private void RemoveItem(EquipmentItems item)
     {
-        if (SupplierItems.Count > 1)
+        if (EquipmentItems.Count > 1)
         {
-            item.PropertyChanged -= OnSupplierItemPropertyChanged;
-            SupplierItems.Remove(item);
+            item.PropertyChanged -= OnEquipmentItemPropertyChanged;
+            EquipmentItems.Remove(item);
             OnPropertyChanged(nameof(CanSaveSupplier));
         }
         else
@@ -143,7 +143,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         }
     }
     
-    private bool ValidateSupplier()
+    private bool ValidateSupplierEquipment()
     {
         if (string.IsNullOrWhiteSpace(SupplierName))
         {
@@ -190,26 +190,40 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
             return false;
         }
 
-        if (SupplierItems.Count == 0)
+        if (EquipmentItems.Count == 0 || EquipmentItems.All(i => i.Price == 0))
         {
             _toastManager.CreateToast("Validation Error")
-                .WithContent("Please add at least one supplier item with valid data")
+                .WithContent("Please add at least one equipment item with a valid price")
                 .DismissOnClick()
                 .ShowError();
             return false;
         }
 
-        var invalidItems = SupplierItems.Where(i =>
+        var invalidItems = EquipmentItems.Where(i =>
+            string.IsNullOrWhiteSpace(i.ItemId) ||
             string.IsNullOrWhiteSpace(i.ItemName) ||
-            string.IsNullOrWhiteSpace(i.Description) ||
-            i.MarkupPrice <= 0 ||
-            !i.SellingPrice.HasValue ||
-            i.SupplierPrice <= 0).ToList();
+            string.IsNullOrWhiteSpace(i.BatchCode) ||
+            string.IsNullOrWhiteSpace(i.SelectedUnit) ||
+            string.IsNullOrWhiteSpace(i.SelectedCategory) ||
+            string.IsNullOrWhiteSpace(i.SelectedCondition) ||
+            i.Price <= 0).ToList();
 
         if (invalidItems.Any())
         {
             _toastManager.CreateToast("Validation Error")
-                .WithContent("All supplier items must have name, description, quantity and valid unit price")
+                .WithContent("All equipment items must have ID, name, batch code, unit, category, condition and valid price")
+                .DismissOnClick()
+                .ShowError();
+            return false;
+        }
+
+        var itemsWithInvalidWarranty = EquipmentItems.Where(i => 
+            i.WarrantExpiry.HasValue && i.WarrantExpiry.Value.Date <= DateTimeOffset.Now.Date).ToList();
+
+        if (itemsWithInvalidWarranty.Any())
+        {
+            _toastManager.CreateToast("Validation Error")
+                .WithContent("Warranty expiry date must be in the future (tomorrow or later)")
                 .DismissOnClick()
                 .ShowError();
             return false;
@@ -220,23 +234,13 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     
     private void AddInitialItem()
     {
-        var initialItem = new ProductItems();
-        initialItem.PropertyChanged += OnSupplierItemPropertyChanged;
-        SupplierItems.Add(initialItem);
+        var initialItem = new EquipmentItems();
+        initialItem.PropertyChanged += OnEquipmentItemPropertyChanged;
+        EquipmentItems.Add(initialItem);
     }
     
-    public bool CanSaveSupplier => 
-        !string.IsNullOrWhiteSpace(SupplierName) &&
-        !string.IsNullOrWhiteSpace(ContactPerson) &&
-        !string.IsNullOrWhiteSpace(Email) &&
-        !string.IsNullOrWhiteSpace(PhoneNumber) &&
-        !string.IsNullOrWhiteSpace(Address) &&
-        SupplierItems.Count > 0 &&
-        SupplierItems.Any(i => 
-            !string.IsNullOrWhiteSpace(i.ItemName) && 
-            i.MarkupPrice > 0 && 
-            i.SupplierPrice > 0 && 
-            i.SellingPrice.HasValue);
+    public bool CanSaveSupplier => !EquipmentItems.Any(i => 
+        i.WarrantExpiry.HasValue && i.WarrantExpiry.Value.Date <= DateTimeOffset.Now.Date);
     
     [Required(ErrorMessage = "Supplier name is required")]
     [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
@@ -293,34 +297,31 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         ClearAllErrors();
     }
     
-    private void ClearAllSupplierItems()
+    private void ClearAllEquipmentItems()
     {
-        foreach (var item in SupplierItems)
+        foreach (var item in EquipmentItems)
         {
-            item.PropertyChanged -= OnSupplierItemPropertyChanged;
+            item.PropertyChanged -= OnEquipmentItemPropertyChanged;
         }
         
-        SupplierItems.Clear();
+        EquipmentItems.Clear();
         
         OnPropertyChanged(nameof(CanSaveSupplier));
     }
     
-    partial void OnSupplierItemsChanged(ObservableCollection<ProductItems> value)
+    partial void OnEquipmentItemsChanged(ObservableCollection<EquipmentItems> value)
     {
         foreach (var item in value)
         {
-            item.PropertyChanged += OnSupplierItemPropertyChanged;
+            item.PropertyChanged += OnEquipmentItemPropertyChanged;
         }
         
         OnPropertyChanged(nameof(CanSaveSupplier));
     }
 
-    private void OnSupplierItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnEquipmentItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ProductItems.ItemName) || 
-            e.PropertyName == nameof(ProductItems.SupplierPrice) || 
-            e.PropertyName == nameof(ProductItems.MarkupPrice) ||
-            e.PropertyName == nameof(ProductItems.SellingPrice))
+        if (e.PropertyName == "WarrantExpiry")
         {
             OnPropertyChanged(nameof(CanSaveSupplier));
             AddSupplierCommand.NotifyCanExecuteChanged();
@@ -329,9 +330,9 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     
     protected override void DisposeManagedResources()
     {
-        foreach (var item in SupplierItems)
+        foreach (var item in EquipmentItems)
         {
-            item.PropertyChanged -= OnSupplierItemPropertyChanged;
+            item.PropertyChanged -= OnEquipmentItemPropertyChanged;
         }
         
         _supplierName = null;
@@ -344,23 +345,23 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     }
 }
 
-public partial class ProductItems : ObservableValidator
+public partial class EquipmentItems : ObservableValidator
 {
     [ObservableProperty]
     [Required(ErrorMessage = "Item ID is required")]
     [MaxLength(50, ErrorMessage = "Item ID cannot exceed 50 characters")]
     private string? _itemId;
-    
+
     [ObservableProperty]
     [Required(ErrorMessage = "Item name is required")]
     [MaxLength(200, ErrorMessage = "Item name cannot exceed 200 characters")]
     private string? _itemName;
 
     [ObservableProperty]
-    [Required(ErrorMessage = "Description is required")]
-    [MaxLength(50, ErrorMessage = "Description cannot exceed 50 characters")]
-    private string? _description;
-    
+    [Required(ErrorMessage = "Batch code is required")]
+    [MaxLength(50, ErrorMessage = "Batch code cannot exceed 50 characters")]
+    private string? _batchCode;
+
     [ObservableProperty]
     [Required(ErrorMessage = "Unit is required")]
     private string? _selectedUnit;
@@ -370,71 +371,49 @@ public partial class ProductItems : ObservableValidator
     private string? _selectedCategory;
 
     [ObservableProperty]
-    [Range(1, 1000000, ErrorMessage = "Unit price must be between 1 and 1,000,000")]
-    private decimal? _supplierPrice;
-    
+    [Required(ErrorMessage = "Condition is required")]
+    private string? _selectedCondition;
+
     [ObservableProperty]
-    [Range(1, 1000000, ErrorMessage = "Markup price must be between 1 and 1,000,000")]
-    private decimal? _markupPrice;
-    
+    [NotifyPropertyChangedFor(nameof(ItemTotal))]
+    [Range(0, 1000, ErrorMessage = "Quantity must be between 0.01 and 10000")]
+    private int? _quantity;
+
     [ObservableProperty]
-    [Required(ErrorMessage = "Batch code is required")]
-    [MaxLength(50, ErrorMessage = "Batch code cannot exceed 50 characters")]
-    private string? _batchCode;
-    
+    [NotifyPropertyChangedFor(nameof(ItemTotal))]
+    [Range(0.01, 1000000, ErrorMessage = "Price must be between 0.01 and 1,000,000")]
+    private decimal? _price;
+
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsExpirationValid))]
-    private DateTimeOffset? _expiration;
+    [NotifyPropertyChangedFor(nameof(IsWarrantyValid))]
+    private DateTimeOffset? _warrantExpiry;
+
+    public decimal? ItemTotal => Quantity * Price;
     
-    public decimal? SellingPrice
-    {
-        get
-        {
-            if (SupplierPrice.HasValue && MarkupPrice.HasValue)
-            {
-                return SupplierPrice.Value + MarkupPrice.Value;
-            }
-            return null;
-        }
-    }
-    
+    public bool IsWarrantyValid => !WarrantExpiry.HasValue || WarrantExpiry.Value.Date > DateTimeOffset.Now.Date;
+
     public string[] UnitList { get; } = ["Piece (pc)", "Pair (pr)", "Set (set)", "Kilogram (kg)", 
         "Box (box)", "Pack (pack)", "Roll (roll)", "Bottle (bt)"];
-    
     public string[] Category { get; } = ["Strength", "Cardio", "Machines", "Accessories"];
-    
-    public bool IsExpirationValid => !Expiration.HasValue || Expiration.Value.Date > DateTimeOffset.Now.Date;
+    public string[] ConditionList { get; } = ["Excellent", "Repairing", "Broken"];
 
-    public ProductItems()
+    public EquipmentItems()
     {
         SelectedUnit = "Piece (pc)";
         SelectedCategory = "Pair (pr)";
-        ItemName = string.Empty;
-        Description = string.Empty;
-    }
-    
-    partial void OnSupplierPriceChanged(decimal? value)
-    {
-        OnPropertyChanged(nameof(SellingPrice));
-    }
-
-    partial void OnMarkupPriceChanged(decimal? value)
-    {
-        OnPropertyChanged(nameof(SellingPrice));
-    }
-
-    partial void OnItemNameChanged(string? value)
-    {
-        OnPropertyChanged(nameof(ItemName));
+        SelectedCondition = "Excellent";
+        Quantity = 0;
+        Price = 0;
+        WarrantExpiry = DateTimeOffset.Now.AddDays(1).Date;
     }
 }
 
-public class SupplierData
+public class SupplierEquipmentData
 {
     public string? SupplierName { get; set; }
     public string? ContactPerson { get; set; }
     public string? Email { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Address { get; set; }
-    public List<ProductItems> SupplierItems { get; set; } = new();
+    public List<EquipmentItems> EquipmentItems { get; set; } = new();
 }

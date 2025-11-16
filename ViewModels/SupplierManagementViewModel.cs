@@ -94,20 +94,22 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
-    private readonly SupplierDialogCardViewModel _supplierDialogCardViewModel;
+    private readonly SupplierDialogCardViewModel _supplierProductDialogCardViewModel;
+    private readonly SupplierEquipmentDialogCardViewModel _supplierEquipmentDialogCardViewModel;
     private readonly ISupplierService _supplierService;
     private readonly IPurchaseOrderService? _purchaseOrderService;
     private readonly SettingsService _settingsService;
     private AppSettings? _currentSettings;
 
     public SupplierManagementViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager,
-        SupplierDialogCardViewModel supplierDialogCardViewModel, SettingsService settingsService,
-        ISupplierService supplierService, IPurchaseOrderService? purchaseOrderService = null)
+        SupplierDialogCardViewModel supplierDialogCardViewModel, SupplierEquipmentDialogCardViewModel supplierEquipmentDialogCardViewModel, 
+        SettingsService settingsService, ISupplierService supplierService, IPurchaseOrderService? purchaseOrderService = null)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
-        _supplierDialogCardViewModel = supplierDialogCardViewModel;
+        _supplierProductDialogCardViewModel = supplierDialogCardViewModel;
+        _supplierEquipmentDialogCardViewModel = supplierEquipmentDialogCardViewModel;
         _supplierService = supplierService;
         _purchaseOrderService = purchaseOrderService;
         _settingsService = settingsService;
@@ -126,7 +128,8 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
-        _supplierDialogCardViewModel = new SupplierDialogCardViewModel();
+        _supplierProductDialogCardViewModel = new SupplierDialogCardViewModel();
+        _supplierEquipmentDialogCardViewModel = new SupplierEquipmentDialogCardViewModel();
         _settingsService = new SettingsService();
         _supplierService = null!;
         _purchaseOrderService = null;
@@ -482,20 +485,71 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private void ShowAddSupplierDialog()
+    private void ShowSupplierConfirmationDialog()
     {
-        _supplierDialogCardViewModel.Initialize();
-        _dialogManager.CreateDialog(_supplierDialogCardViewModel)
+        _dialogManager
+            .CreateDialog(
+                "Choose the following",
+                "What would be the tye of your purchase?")
+            .WithPrimaryButton("Products", ShowAddSupplierProductDialog)
+            .WithCancelButton("Equipments", ShowAddSupplierEquipmentDialog)
+            .WithMaxWidth(800)
+            .Dismissible()
+            .Show();
+    }
+
+    private void ShowAddSupplierEquipmentDialog()
+    {
+        _supplierEquipmentDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_supplierEquipmentDialogCardViewModel)
+            .WithSuccessCallback(_ =>
+            {
+                /*
+                var newSupplier = new SupplierManagementModel
+                {
+                    SupplierName = _supplierProductDialogCardViewModel.SupplierName,
+                    ContactPerson = _supplierProductDialogCardViewModel.ContactPerson,
+                    Email = _supplierProductDialogCardViewModel.Email,
+                    PhoneNumber = _supplierProductDialogCardViewModel.PhoneNumber,
+                    Address = _supplierProductDialogCardViewModel.Address,
+                    Status = _supplierProductDialogCardViewModel.Status ?? "Active",
+                };
+
+                var result = await _supplierService.AddSupplierAsync(newSupplier);
+
+                if (result.Success)
+                {
+                    await LoadSupplierDataFromDatabaseAsync();
+
+                    _toastManager.CreateToast("Supplier Added Successfully")
+                        .WithContent($"Successfully added '{newSupplier.SupplierName}' to the database!")
+                        .DismissOnClick()
+                        .ShowSuccess();
+                }
+                */
+            })
+            .WithCancelCallback(() =>
+                _toastManager.CreateToast("Adding new supplier equipment cancelled")
+                    .WithContent("If you want to add a new supplier equipment, please try again.")
+                    .DismissOnClick()
+                    .ShowWarning())
+            .WithMaxWidth(2000)
+            .Show();
+    }
+
+    private void ShowAddSupplierProductDialog()
+    {
+        _supplierProductDialogCardViewModel.Initialize();
+        _dialogManager.CreateDialog(_supplierProductDialogCardViewModel)
             .WithSuccessCallback(async _ =>
             {
                 var newSupplier = new SupplierManagementModel
                 {
-                    SupplierName = _supplierDialogCardViewModel.SupplierName,
-                    ContactPerson = _supplierDialogCardViewModel.ContactPerson,
-                    Email = _supplierDialogCardViewModel.Email,
-                    PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
-                    Address = _supplierDialogCardViewModel.Address,
-                    Status = _supplierDialogCardViewModel.Status ?? "Active",
+                    SupplierName = _supplierProductDialogCardViewModel.SupplierName,
+                    ContactPerson = _supplierProductDialogCardViewModel.ContactPerson,
+                    Email = _supplierProductDialogCardViewModel.Email,
+                    PhoneNumber = _supplierProductDialogCardViewModel.PhoneNumber,
+                    Address = _supplierProductDialogCardViewModel.Address,
                 };
 
                 var result = await _supplierService.AddSupplierAsync(newSupplier);
@@ -515,51 +569,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     .WithContent("If you want to add a new supplier contact, please try again.")
                     .DismissOnClick()
                     .ShowWarning())
-            .WithMaxWidth(650)
-            .Dismissible()
-            .Show();
-    }
-
-    [RelayCommand]
-    private void ShowEditSupplierDialog(Supplier? supplier)
-    {
-        if (supplier == null) return;
-
-        _supplierDialogCardViewModel.InitializeForEditMode(supplier);
-        _dialogManager.CreateDialog(_supplierDialogCardViewModel)
-            .WithSuccessCallback(async _ =>
-            {
-                var currentStatus = _supplierDialogCardViewModel.Status ?? "Active";
-
-                var updatedSupplier = new SupplierManagementModel
-                {
-                    SupplierID = supplier.ID ?? 0,
-                    SupplierName = _supplierDialogCardViewModel.SupplierName,
-                    ContactPerson = _supplierDialogCardViewModel.ContactPerson,
-                    Email = _supplierDialogCardViewModel.Email,
-                    PhoneNumber = _supplierDialogCardViewModel.PhoneNumber,
-                    Address = _supplierDialogCardViewModel.Address,
-                    Status = currentStatus,
-                };
-
-                var result = await _supplierService.UpdateSupplierAsync(updatedSupplier);
-
-                if (result.Success)
-                {
-                    await LoadSupplierDataFromDatabaseAsync();
-
-                    _toastManager.CreateToast("Supplier Updated")
-                        .WithContent($"Successfully updated '{updatedSupplier.SupplierName}'!")
-                        .DismissOnClick()
-                        .ShowSuccess();
-                }
-            })
-            .WithCancelCallback(() =>
-                _toastManager.CreateToast("Modifying supplier Details Cancelled")
-                    .WithContent($"Try again if you really want to modify {supplier.Name}'s details")
-                    .DismissOnClick()
-                    .ShowWarning())
-            .WithMaxWidth(950)
+            .WithMaxWidth(2000)
             .Dismissible()
             .Show();
     }

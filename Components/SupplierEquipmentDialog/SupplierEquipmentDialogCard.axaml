@@ -5,15 +5,15 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
     xmlns:converters="clr-namespace:AHON_TRACK.Converters"
-    Width="1245"
+    Width="1225"
     MaxHeight="780"
     mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
     xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
-    x:DataType="viewModel:SupplierDialogCardViewModel"
-    x:Class="AHON_TRACK.Components.SupplierDialog.SupplierDialogCard">
+    x:DataType="viewModel:SupplierEquipmentDialogCardViewModel"
+    x:Class="AHON_TRACK.Components.SupplierEquipmentDialog.SupplierEquipmentDialogCard">
     
     <Design.DataContext>
-        <viewModel:SupplierDialogCardViewModel />
+        <viewModel:SupplierEquipmentDialogCardViewModel />
     </Design.DataContext>
     
     <UserControl.Resources>
@@ -37,7 +37,7 @@
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <StackPanel Spacing="0" Margin="0,0,10,0">
                 <TextBlock
-                    Text="Add Supplier Contact"
+                    Text="Add Supplier Equipment"
                     Foreground="{DynamicResource FontForeground}"
                     Classes="h4" />
                 <TextBlock
@@ -107,7 +107,7 @@
                             </StackPanel>
                         </StackPanel>
                     </shadui:Card>
-                    <shadui:Card Grid.Column="1" Margin="0,5,0,0" VerticalAlignment="Top" Height="470" HasShadow="True">
+                    <shadui:Card Grid.Column="1" Margin="0,5,0,0" VerticalAlignment="Top" Height="460" HasShadow="True">
                         <StackPanel Orientation="Vertical" Margin="0,0,30,0">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <Svg
@@ -116,78 +116,48 @@
                                     VerticalAlignment="Center"
                                     Path="avares://AHON_TRACK/Assets/EquipmentInventoryView/package-icon.svg" />
                                 <TextBlock
-                                    Text="Supplier Items"
+                                    Text="Equipment Information"
                                     FontSize="15"
                                     VerticalAlignment="Center"
                                     Margin="10,0,0,0" />
                             </StackPanel>
                             
-                            <ItemsControl ItemsSource="{CompiledBinding SupplierItems}">
+                            <ItemsControl ItemsSource="{CompiledBinding EquipmentItems}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModel:ProductItems">
+                                    <DataTemplate x:DataType="viewModel:EquipmentItems">
                                         <StackPanel Margin="0,0,0,20">
-                                            <StackPanel Orientation="Horizontal" Spacing="30">
-                                                <Grid RowDefinitions="* * *" RowSpacing="30">
-                                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
-                                                        <StackPanel Orientation="Horizontal" Spacing="20">
-                                                            <TextBox
-                                                                Width="200"
-                                                                Classes="Clearable"
-                                                                shadui:ControlAssist.Label="Item ID"
-                                                                Text="{CompiledBinding ItemId, Mode=TwoWay}" />
-                                                            <TextBox
-                                                                Width="200"
-                                                                Classes="Clearable"
-                                                                shadui:ControlAssist.Label="Item Name"
-                                                                Text="{CompiledBinding ItemName, Mode=TwoWay}"/>
-                                                        </StackPanel>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Row="1">
-                                                        <TextBox
-                                                            shadui:ControlAssist.Height="100"
-                                                            shadui:ControlAssist.Label="Description"
-                                                            Watermark="Enter a product description here..."
-                                                            Text="{CompiledBinding Description, Mode=TwoWay}"
-                                                            AcceptsReturn="True"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Row="2">
-                                                        <StackPanel Orientation="Horizontal" Spacing="20">
-                                                            <TextBox
-                                                                Width="200"
-                                                                Classes="Clearable"
-                                                                shadui:ControlAssist.Label="Batch Code"
-                                                                Text="{CompiledBinding BatchCode, Mode=TwoWay}" />
-                                                            <ComboBox
-                                                                shadui:ControlAssist.Label="Category"
-                                                                ItemsSource="{CompiledBinding Category}"
-                                                                SelectedItem="{CompiledBinding SelectedCategory, Mode=TwoWay}"
-                                                                Width="200"
-                                                                Margin="0,-5,0,0"/>
-                                                        </StackPanel>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <Grid RowDefinitions="* * * *" RowSpacing="20">
-                                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,0">
-                                                        <ComboBox
-                                                            shadui:ControlAssist.Label="Unit of Measures"
-                                                            ItemsSource="{CompiledBinding UnitList}"
-                                                            SelectedItem="{CompiledBinding SelectedUnit, Mode=TwoWay}"
-                                                            Width="200"
-                                                            Margin="0,-5,0,0"/>
-                                                        <Button
-                                                            Margin="30,0,0,0"
-                                                            Classes="Destructive"
-                                                            VerticalAlignment="Bottom"
-                                                            Command="{CompiledBinding $parent[ItemsControl].((viewModel:SupplierDialogCardViewModel)DataContext).RemoveItemCommand, FallbackValue={x:Null}}"
-                                                            CommandParameter="{CompiledBinding}">
-                                                            <Svg
-                                                                Width="20"
-                                                                Height="20"
-                                                                Path="avares://AHON_TRACK/Assets/SupplierManagementView/cancel-icon2.svg" />
-                                                        </Button>
-                                                    </StackPanel>
-                                                    <NumericUpDown 
-                                                        Grid.Row="1"
+                                            <Grid RowDefinitions="* * *" RowSpacing="15">
+                                                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
+                                                    <TextBox
+                                                        shadui:ControlAssist.Label="Item ID"
+                                                        Classes="Clearable"
+                                                        Width="200"
+                                                        Text="{CompiledBinding ItemId, Mode=TwoWay}"/>
+                                                    <TextBox
+                                                        shadui:ControlAssist.Label="Item Name"
+                                                        Classes="Clearable"
+                                                        Width="200"
+                                                        Text="{CompiledBinding ItemName, Mode=TwoWay}"/>
+                                                    <ComboBox
+                                                        shadui:ControlAssist.Label="Unit of Measures"
+                                                        Margin="0,-5,0,0"
+                                                        Width="200"
+                                                        ItemsSource="{CompiledBinding UnitList}"
+                                                        SelectedItem="{CompiledBinding SelectedUnit, Mode=TwoWay}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+                                                    <TextBox
+                                                        shadui:ControlAssist.Label="Batch Code"
+                                                        Classes="Clearable"
+                                                        Width="200"
+                                                        Text="{CompiledBinding BatchCode, Mode=TwoWay}"/>
+                                                    <ComboBox
+                                                        shadui:ControlAssist.Label="Category"
+                                                        Margin="0,-5,0,0"
+                                                        Width="200"
+                                                        ItemsSource="{CompiledBinding Category}"
+                                                        SelectedItem="{CompiledBinding SelectedCategory, Mode=TwoWay}"/>
+                                                    <NumericUpDown
                                                         shadui:ControlAssist.Label="Supplier's Price"
                                                         Classes="Clearable"
                                                         Width="200"
@@ -195,43 +165,43 @@
                                                         ShowButtonSpinner="False"
                                                         Watermark="0.00"
                                                         Minimum="0.00"
-                                                        Value="{CompiledBinding SupplierPrice, Mode=TwoWay}">
+                                                        Value="{CompiledBinding Price, Mode=TwoWay}">
                                                         <NumericUpDown.InnerLeftContent>
                                                             <TextBlock Margin="8,0,-8,0" Text="₱" />
                                                         </NumericUpDown.InnerLeftContent>
                                                     </NumericUpDown>
-                                                    <NumericUpDown 
-                                                        Grid.Row="2"
-                                                        shadui:ControlAssist.Label="Markup Price"
-                                                        Classes="Clearable"
+                                                    <Button
+                                                        Margin="30,0,0,0"
+                                                        Classes="Destructive"
+                                                        VerticalAlignment="Bottom"
+                                                        Command="{CompiledBinding $parent[ItemsControl].((viewModel:SupplierEquipmentDialogCardViewModel)DataContext).RemoveItemCommand}"
+                                                        CommandParameter="{CompiledBinding}">
+                                                        <Svg
+                                                            Width="20"
+                                                            Height="20"
+                                                            Path="avares://AHON_TRACK/Assets/SupplierManagementView/cancel-icon2.svg" />
+                                                    </Button>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10">
+                                                    <StackPanel Orientation="Vertical" Spacing="5" HorizontalAlignment="Left">
+                                                        <TextBlock
+                                                            Text="Warrant Expiry"
+                                                            FontSize="14"
+                                                            FontWeight="Medium"/>
+                                                        <DatePicker
+                                                            Height="40"
+                                                            HorizontalAlignment="Left"
+                                                            Width="350"
+                                                            SelectedDate="{CompiledBinding WarrantExpiry, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                    <ComboBox
+                                                        shadui:ControlAssist.Label="Condition"
                                                         Width="200"
-                                                        FormatString="N2"
-                                                        ShowButtonSpinner="False"
-                                                        Watermark="0.00"
-                                                        Minimum="0.00"
-                                                        Value="{CompiledBinding MarkupPrice, Mode=TwoWay}">
-                                                        <NumericUpDown.InnerLeftContent>
-                                                            <TextBlock Margin="8,0,-8,0" Text="₱" />
-                                                        </NumericUpDown.InnerLeftContent>
-                                                    </NumericUpDown>
-                                                    <NumericUpDown 
-                                                        Grid.Row="3"
-                                                        shadui:ControlAssist.Label="Selling Price"
-                                                        Classes="Clearable"
-                                                        Width="200"
-                                                        IsEnabled="False"
-                                                        FormatString="N2"
-                                                        ShowButtonSpinner="False"
-                                                        Watermark="0.00"
-                                                        Minimum="0.00"
-                                                        Value="{CompiledBinding SellingPrice, Mode=TwoWay}">
-                                                        <NumericUpDown.InnerLeftContent>
-                                                            <TextBlock Margin="8,0,-8,0" Text="₱" />
-                                                        </NumericUpDown.InnerLeftContent>
-                                                    </NumericUpDown>
-                                                </Grid>
-                                            </StackPanel>
-                                            <Separator Margin="0,30,0,0" Height="2"/>
+                                                        ItemsSource="{CompiledBinding ConditionList}"
+                                                        SelectedItem="{CompiledBinding SelectedCondition, Mode=TwoWay}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <Separator Margin="0,20" Height="2"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
