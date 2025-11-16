@@ -11,6 +11,7 @@ using AHON_TRACK.Components.MemberDialog;
 using AHON_TRACK.Components.NotifyDialog;
 using AHON_TRACK.Components.SettingsDialog;
 using AHON_TRACK.Components.SupplierDialog;
+using AHON_TRACK.Components.SupplierEquipmentDialog;
 using ShadUI;
 
 namespace AHON_TRACK;
@@ -32,6 +33,7 @@ public static class Extensions
         dialogService.Register<SettingsDialogCard, SettingsDialogCardViewModel>();
         dialogService.Register<ForgotPasswordDialogCard, ForgotPasswordDialogCardViewModel>();
         dialogService.Register<NotifyDialogCard, NotifyDialogCardViewmodel>();
+        dialogService.Register<SupplierEquipmentDialogCard, SupplierEquipmentDialogCardViewModel>();
 
         return service;
     }
