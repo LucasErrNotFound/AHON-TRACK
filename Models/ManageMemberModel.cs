@@ -33,6 +33,8 @@ namespace AHON_TRACK.Models
         public string Status { get; set; } = "Active";      // must be "Active" | "Inactive" | "Terminated"
         public string? PaymentMethod { get; set; }
         public string? ReferenceNumber { get; set; }
+        public decimal? TenderedPrice { get; set; }
+        public decimal? Change { get; set; }
         public int RegisteredByEmployeeID { get; set; }
 
         public DateTime? LastNotificationDate { get; set; }

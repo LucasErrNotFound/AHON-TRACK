@@ -373,6 +373,12 @@ namespace AHON_TRACK.Services
             }
 
             decimal totalAmount = packagePrice * quantity;
+            
+            decimal? change = null;
+            if (member.TenderedPrice.HasValue && member.TenderedPrice.Value >= totalAmount)
+            {
+                change = member.TenderedPrice.Value - totalAmount;
+            }
 
             // ✅ PROCESS REFERENCE NUMBER BASED ON CURRENT PAYMENT METHOD
             string processedRefNumber = ProcessReferenceNumber(member);
@@ -380,7 +386,8 @@ namespace AHON_TRACK.Services
             // ✅ PASS PAYMENT METHOD, REFERENCE NUMBER, AND INVOICE NUMBER TO SALES RECORD
             await InsertSaleRecordAsync(
                 conn, transaction, member.PackageID!.Value, memberId,
-                quantity, totalAmount, member.PaymentMethod, processedRefNumber, invoiceNumber);
+                quantity, totalAmount, member.PaymentMethod, processedRefNumber, invoiceNumber,
+                member.TenderedPrice, change);
 
             await UpdateDailySalesAsync(conn, transaction, totalAmount);
 
@@ -388,6 +395,7 @@ namespace AHON_TRACK.Services
             Debug.WriteLine($"  Payment Method: {member.PaymentMethod}");
             Debug.WriteLine($"  Reference Number: {processedRefNumber}");
             Debug.WriteLine($"  Invoice Number: {invoiceNumber ?? "N/A"}");
+            Debug.WriteLine($"  Tendered: ₱{member.TenderedPrice:N2}, Change: ₱{change:N2}");
         }
 
         private int CalculateMonthsAdded(string? oldValidUntil, string? newValidUntil)
@@ -436,12 +444,15 @@ namespace AHON_TRACK.Services
         }
 
         private async Task InsertSaleRecordAsync(
-    SqlConnection conn, SqlTransaction transaction, int packageId, int memberId,
-    int quantity, decimal amount, string? paymentMethod = null, string? referenceNumber = null, string? invoiceNumber = null)
+            SqlConnection conn, SqlTransaction transaction, int packageId, int memberId,
+            int quantity, decimal amount, string? paymentMethod = null, string? referenceNumber = null, 
+            string? invoiceNumber = null, decimal? tenderedPrice = null, decimal? change = null)
         {
             const string query = @"
-        INSERT INTO Sales (SaleDate, PackageID, MemberID, Quantity, Amount, RecordedBy, PaymentMethod, ReferenceNumber, InvoiceNumber)
-        VALUES (GETDATE(), @packageId, @memberId, @quantity, @amount, @employeeId, @paymentMethod, @referenceNumber, @invoiceNumber)";
+        INSERT INTO Sales (SaleDate, PackageID, MemberID, Quantity, Amount, RecordedBy, 
+                          PaymentMethod, ReferenceNumber, InvoiceNumber, TenderedPrice, Change)
+        VALUES (GETDATE(), @packageId, @memberId, @quantity, @amount, @employeeId, 
+                @paymentMethod, @referenceNumber, @invoiceNumber, @tenderedPrice, @change)";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@packageId", packageId);
@@ -449,11 +460,11 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@quantity", quantity);
             cmd.Parameters.AddWithValue("@amount", amount);
             cmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
-
-            // ✅ CAPTURE PAYMENT METHOD AND REFERENCE NUMBER FOR THIS SPECIFIC TRANSACTION
             cmd.Parameters.AddWithValue("@paymentMethod", paymentMethod ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@referenceNumber", referenceNumber ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@invoiceNumber", invoiceNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@tenderedPrice", tenderedPrice ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@change", change ?? (object)DBNull.Value);
 
             await cmd.ExecuteNonQueryAsync();
         }

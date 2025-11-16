@@ -1072,7 +1072,8 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 PaymentMethod = GetSelectedPaymentMethod(),
                 ReferenceNumber = ReferenceNumber,
                 ProfilePicture = ProfileImage ?? ImageHelper.BitmapToBytes(ImageHelper.GetDefaultAvatar()),
-                ConsentLetter = ConsentFilePath
+                ConsentLetter = ConsentFilePath,
+                TenderedPrice = TenderedPrice,
             };
 
             // ✅ VALIDATE PAYMENT & REFERENCE NUMBER BEFORE SAVING
@@ -1100,6 +1101,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 Debug.WriteLine($"[Payment] Price per month: ₱{SelectedMonthlyPackage.Price:N2}");
                 Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months");
                 Debug.WriteLine($"[Payment] Total Amount: ₱{SelectedMonthlyPackage.Price * MembershipDuration:N2}");
+                Debug.WriteLine($"[Payment] Tendered Price: ₱{TenderedPrice:N2}");
                 Debug.WriteLine($"[Payment] ValidUntil: {member.ValidUntil}");
                 Debug.WriteLine($"[Payment] Payment Method: {member.PaymentMethod}");
                 Debug.WriteLine($"[Payment] Reference Number: {member.ReferenceNumber ?? "N/A"}");
@@ -1135,6 +1137,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 Debug.WriteLine($"[Payment] Name: {member.FirstName} {member.LastName}");
                 Debug.WriteLine($"[Payment] New Package: {SelectedMonthlyPackage.Title}");
                 Debug.WriteLine($"[Payment] Duration: {MembershipDuration} months added");
+                Debug.WriteLine($"[Payment] Tendered Price: ₱{TenderedPrice:N2}");
                 Debug.WriteLine($"[Payment] New ValidUntil: {member.ValidUntil}");
                 Debug.WriteLine($"[Payment] Payment Method: {member.PaymentMethod}");
                 Debug.WriteLine($"[Payment] Reference Number: {member.ReferenceNumber ?? "N/A"}");
