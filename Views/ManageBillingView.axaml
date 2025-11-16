@@ -361,7 +361,7 @@
 															<DataGridTextColumn
 																Width="Auto"
 																MinWidth="130"
-																Header="Tendered Price"
+																Header="Tendered Amount"
 																Binding="{CompiledBinding TenderedPriceFormatted}" />
 															<DataGridTextColumn
 																Width="Auto"
@@ -457,7 +457,7 @@
 															<DataGridTextColumn
 																Width="Auto"
 																MinWidth="130"
-																Header="Tendered Price"
+																Header="Tendered Amount"
 																Binding="{CompiledBinding TenderedPriceFormatted}" />
 															<DataGridTextColumn
 																Width="Auto"
