@@ -11,7 +11,8 @@ namespace AHON_TRACK.Services.Interface
 {
     public interface IProductPurchaseService
     {
-        Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod, string? referenceNumber = null, string? invoiceNumber = null);
+        Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, 
+            string paymentMethod, string? referenceNumber = null, string? invoiceNumber = null, decimal? tenderedPrice = null);
         Task<List<CustomerModel>> GetAllCustomersAsync();
         Task<List<SellingModel>> GetAllProductsAsync();
         Task<List<SellingModel>> GetAllGymPackagesAsync();

@@ -143,7 +143,7 @@ namespace AHON_TRACK.Services
 
         #region CREATE
 
-        public async Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod, string? referenceNumber = null, string? invoiceNumber = null)
+        public async Task<bool> ProcessPaymentAsync(List<SellingModel> cartItems, CustomerModel customer, int employeeId, string paymentMethod, string? referenceNumber = null, string? invoiceNumber = null, decimal? tenderedPrice = null)
         {
             if (!CanCreate())
             {
@@ -203,18 +203,32 @@ namespace AHON_TRACK.Services
                     {
                         anyDiscountApplied = true;
                     }
-
-                    // ✅ USE finalInvoiceNumber instead of invoiceNumber variable
-                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, processedRefNumber, finalInvoiceNumber, conn, transaction);
+                }
+                
+                decimal? change = null;
+                if (tenderedPrice.HasValue && tenderedPrice.Value >= totalAmount)
+                {
+                    change = tenderedPrice.Value - totalAmount;
+                }
+                
+                Debug.WriteLine($"[ProcessPaymentAsync] Total Amount: ₱{totalAmount:N2}");
+                Debug.WriteLine($"[ProcessPaymentAsync] Tendered Price: ₱{tenderedPrice:N2}");
+                Debug.WriteLine($"[ProcessPaymentAsync] Change: ₱{change:N2}");
+                
+                foreach (var item in cartItems)
+                {
+                    var (itemTotal, hasDiscount) = await CalculateItemTotal(item, customer, conn, transaction);
+            
+                    await RecordSaleAsync(item, customer, employeeId, itemTotal, paymentMethod, 
+                        processedRefNumber, finalInvoiceNumber, tenderedPrice, change, conn, transaction);
                     await RecordPurchaseAsync(item, customer, itemTotal, conn, transaction);
                     await HandleInventoryAndSessionsAsync(item, customer, conn, transaction);
                 }
-
+                
                 await UpdateDailySalesAsync(employeeId, totalAmount, totalTransactions, conn, transaction);
 
                 transaction.Commit();
 
-                // ✅ USE finalInvoiceNumber for logging
                 await LogSuccessfulPaymentAsync(customer, totalAmount, paymentMethod, cartItems, finalInvoiceNumber);
 
                 ShowPaymentSuccess(totalAmount, paymentMethod, cartItems, anyDiscountApplied);
@@ -311,12 +325,16 @@ namespace AHON_TRACK.Services
             return (item.Price * item.Quantity, false);
         }
 
-        private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, string paymentMethod, string referenceNumber, string invoiceNumber, SqlConnection conn, SqlTransaction transaction)
+        private async Task RecordSaleAsync(SellingModel item, CustomerModel customer, int employeeId, decimal itemTotal, 
+            string paymentMethod, string referenceNumber, string invoiceNumber, decimal? tenderedPrice,
+            decimal? change, SqlConnection conn, SqlTransaction transaction)
         {
             string query = @"
-                INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, PaymentMethod, ReferenceNumber, InvoiceNumber, RecordedBy)
-                VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, @PaymentMethod, @ReferenceNumber, @InvoiceNumber, @RecordedBy);
-                SELECT SCOPE_IDENTITY();";
+        INSERT INTO Sales (SaleDate, PackageID, ProductID, CustomerID, MemberID, Quantity, Amount, 
+                          PaymentMethod, ReferenceNumber, InvoiceNumber, TenderedPrice, Change, RecordedBy)
+        VALUES (@SaleDate, @PackageID, @ProductID, @CustomerID, @MemberID, @Quantity, @Amount, 
+                @PaymentMethod, @ReferenceNumber, @InvoiceNumber, @TenderedPrice, @Change, @RecordedBy);
+        SELECT SCOPE_IDENTITY();";
 
             using var cmd = new SqlCommand(query, conn, transaction);
             cmd.Parameters.AddWithValue("@SaleDate", DateTime.Now);
@@ -329,6 +347,8 @@ namespace AHON_TRACK.Services
             cmd.Parameters.AddWithValue("@PaymentMethod", paymentMethod ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@ReferenceNumber", string.IsNullOrWhiteSpace(referenceNumber) ? (object)DBNull.Value : referenceNumber);
             cmd.Parameters.AddWithValue("@InvoiceNumber", invoiceNumber ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@TenderedPrice", tenderedPrice ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@Change", change ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@RecordedBy", employeeId);
 
             await cmd.ExecuteScalarAsync();
@@ -903,6 +923,8 @@ namespace AHON_TRACK.Services
                         
                         SUM(s.Quantity) AS Quantity,
                         SUM(s.Amount) AS Amount,
+                        MAX(s.TenderedPrice) AS TenderedPrice,
+                        MAX(s.Change) AS Change, 
                         MIN(s.SaleDate) AS SaleDate
                         
                     FROM Sales s
@@ -974,6 +996,8 @@ namespace AHON_TRACK.Services
                         PurchasedItem = reader["PurchasedItem"]?.ToString() ?? "Unknown",
                         Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
                         Amount = reader.GetDecimal(reader.GetOrdinal("Amount")),
+                        TenderedPrice = reader["TenderedPrice"] != DBNull.Value ? (decimal?)reader.GetDecimal(reader.GetOrdinal("TenderedPrice")) : null,
+                        Change = reader["Change"] != DBNull.Value ? (decimal?)reader.GetDecimal(reader.GetOrdinal("Change")) : null,
                         PaymentMethod = paymentMethod,
                         DatePurchased = reader.GetDateTime(reader.GetOrdinal("SaleDate"))
                     });

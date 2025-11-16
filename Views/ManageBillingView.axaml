@@ -356,8 +356,18 @@
 															<DataGridTextColumn
 																Width="Auto"
 																MinWidth="130"
-																Header="Amount"
+																Header="Total Amount"
 																Binding="{CompiledBinding AmountFormatted}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="130"
+																Header="Tendered Price"
+																Binding="{CompiledBinding TenderedPriceFormatted}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="130"
+																Header="Change"
+																Binding="{CompiledBinding ChangeFormatted}" />
 															<DataGridTextColumn
 																Width="Auto"
 																MinWidth="150"
@@ -442,8 +452,18 @@
 															<DataGridTextColumn
 																Width="Auto"
 																MinWidth="60"
-																Header="Amount"
+																Header="Total Amount"
 																Binding="{CompiledBinding AmountFormatted}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="130"
+																Header="Tendered Price"
+																Binding="{CompiledBinding TenderedPriceFormatted}" />
+															<DataGridTextColumn
+																Width="Auto"
+																MinWidth="130"
+																Header="Change"
+																Binding="{CompiledBinding ChangeFormatted}" />
 															<DataGridTextColumn
 																Width="Auto"
 																MinWidth="90"

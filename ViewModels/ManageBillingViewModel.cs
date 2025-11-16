@@ -257,14 +257,16 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
 
             OriginalInvoiceData = invoices.Select(i => new Invoices
             {
-                ID = i.ID,  // Already int from InvoiceModel
+                ID = i.ID,
                 InvoiceId = i.InvoiceId,
                 CustomerName = i.CustomerName,
                 PurchasedItem = i.PurchasedItem,
-                Quantity = i.Quantity,  // Already int from InvoiceModel
+                Quantity = i.Quantity,
                 PaymentMethod = i.PaymentMethod,
                 ReferenceNumber = i.ReferenceNumber,
-                Amount = (int)Math.Round(i.Amount),  // Round decimal to int
+                Amount = (int)Math.Round(i.Amount),
+                TenderedPrice = i.TenderedPrice.HasValue ? (int?)Math.Round(i.TenderedPrice.Value) : null,
+                Change = i.Change.HasValue ? (int?)Math.Round(i.Change.Value) : null,
                 DatePurchased = i.DatePurchased
             }).ToList();
 
@@ -796,6 +798,12 @@ public partial class Invoices : ObservableObject
 
     [ObservableProperty]
     private int? _amount;
+    
+    [ObservableProperty]
+    private int? _tenderedPrice;
+    
+    [ObservableProperty]
+    private int? _change;
 
     [ObservableProperty]
     private string _paymentMethod = string.Empty;
@@ -815,6 +823,8 @@ public partial class Invoices : ObservableObject
     public DateTime? DatePurchased { get; set; }
     public string DateFormatted => DatePurchased?.ToString("MM/dd/yyyy") ?? string.Empty;
     public string AmountFormatted => $"₱{Amount:N2}";
+    public string TenderedPriceFormatted => $"₱{TenderedPrice:N2}";
+    public string ChangeFormatted => $"₱{Change:N2}";
 }
 
 public partial class Package : ObservableObject

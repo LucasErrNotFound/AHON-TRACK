@@ -893,7 +893,8 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
                 employeeId,
                 paymentMethod,
                 ReferenceNumber,
-                CurrentInvoiceNo  // ✅ Pass current invoice number
+                CurrentInvoiceNo,  // ✅ Pass current invoice number
+                TenderedPrice
             );
 
             if (success)
