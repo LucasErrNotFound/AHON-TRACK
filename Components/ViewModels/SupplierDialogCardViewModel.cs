@@ -203,15 +203,21 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
 
         var invalidItems = SupplierItems.Where(i =>
             string.IsNullOrWhiteSpace(i.ItemName) ||
+            string.IsNullOrWhiteSpace(i.ItemId) ||
             string.IsNullOrWhiteSpace(i.Description) ||
+            string.IsNullOrWhiteSpace(i.SelectedUnit) ||
+            string.IsNullOrWhiteSpace(i.SelectedCategory) ||
+            string.IsNullOrWhiteSpace(i.BatchCode) ||
             i.MarkupPrice <= 0 ||
             !i.SellingPrice.HasValue ||
-            i.SupplierPrice <= 0).ToList();
+            i.SupplierPrice <= 0 ||
+            !i.Expiration.HasValue ||
+            i.Expiration.Value.Date <= DateTimeOffset.Now.Date).ToList();
 
-        if (invalidItems.Any())
+        if (invalidItems.Count != 0)
         {
             _toastManager.CreateToast("Validation Error")
-                .WithContent("All supplier items must have name, description, quantity and valid unit price")
+                .WithContent("All supplier items must have complete information and valid expiration dates")
                 .DismissOnClick()
                 .ShowError();
             return false;
@@ -236,9 +242,15 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         SupplierItems.Count > 0 &&
         SupplierItems.Any(i => 
             !string.IsNullOrWhiteSpace(i.ItemName) && 
+            !string.IsNullOrWhiteSpace(i.ItemId) && 
+            !string.IsNullOrWhiteSpace(i.Description) && 
+            !string.IsNullOrWhiteSpace(i.SelectedUnit) && 
+            !string.IsNullOrWhiteSpace(i.SelectedCategory) && 
+            !string.IsNullOrWhiteSpace(i.BatchCode) && 
             i.MarkupPrice > 0 && 
             i.SupplierPrice > 0 && 
-            i.SellingPrice.HasValue);
+            i.SellingPrice.HasValue && 
+            i.Expiration.HasValue && i.Expiration.Value.Date > DateTimeOffset.Now.Date);
     
     [Required(ErrorMessage = "Supplier name is required")]
     [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
@@ -320,6 +332,12 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     private void OnSupplierItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ProductItems.ItemName) || 
+            e.PropertyName == nameof(ProductItems.ItemId) || 
+            e.PropertyName == nameof(ProductItems.SelectedCategory) || 
+            e.PropertyName == nameof(ProductItems.Description) || 
+            e.PropertyName == nameof(ProductItems.BatchCode) || 
+            e.PropertyName == nameof(ProductItems.SelectedUnit) || 
+            e.PropertyName == nameof(ProductItems.Expiration) || 
             e.PropertyName == nameof(ProductItems.SupplierPrice) || 
             e.PropertyName == nameof(ProductItems.MarkupPrice) ||
             e.PropertyName == nameof(ProductItems.SellingPrice))
@@ -413,6 +431,7 @@ public partial class ProductItems : ObservableValidator
         SelectedCategory = "Drinks";
         ItemName = string.Empty;
         Description = string.Empty;
+        Expiration = DateTimeOffset.Now.AddDays(1).Date;
     }
     
     partial void OnSupplierPriceChanged(decimal? value)
