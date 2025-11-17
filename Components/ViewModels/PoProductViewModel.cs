@@ -52,7 +52,10 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     private decimal _total;
 
     [ObservableProperty]
-    private bool _isRetrievalMode;
+    private bool _isRetrievalMode; // True = viewing existing PO, False = creating new PO
+
+    [ObservableProperty]
+    private bool _isInEditMode; // True = edit mode activated (toggle pressed)
 
     [ObservableProperty]
     private DateTime? _orderDate;
@@ -96,6 +99,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
         {
             LoadSupplierData(data);
             IsRetrievalMode = false;
+            IsInEditMode = false; // Not applicable in creation mode
             Debug.WriteLine($"[PoProductViewModel] Loaded supplier data: {data.SupplierName}");
         }
         
@@ -105,6 +109,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
         {
             LoadRetrievalData(retrievalData);
             IsRetrievalMode = true;
+            IsInEditMode = false; // Start in view-only mode
             Debug.WriteLine($"[PoProductViewModel] Loaded retrieval data: PO {retrievalData.PoNumber}");
         }
     }
@@ -282,12 +287,8 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
         _pageManager.Navigate<SupplierManagementViewModel>();
     }
 
-    [RelayCommand]
-    private void ToggleRetrievalMode()
-    {
-        // This command is removed since retrieval mode is now determined by navigation
-        Debug.WriteLine($"[PoProductViewModel] ToggleRetrievalMode should not be called in this context");
-    }
+    // Remove this command - it's no longer needed
+    // The toggle button will directly bind to IsInEditMode property
 
     protected override void DisposeManagedResources()
     {

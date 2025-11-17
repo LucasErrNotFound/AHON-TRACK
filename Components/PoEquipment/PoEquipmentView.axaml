@@ -90,20 +90,23 @@
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Spacing="10">
                     <Grid ColumnDefinitions="* *">
-                        <!-- Purchase Order Number -->
+                        <!-- Purchase Order Number - Only show in retrieval mode -->
                         <TextBlock
                             Grid.Column="0"
                             Classes="h4"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Bottom"
+                            IsVisible="{CompiledBinding IsRetrievalMode}"
                             Text="{CompiledBinding PoNumber, StringFormat='Purchase Order No.: {0}'}" />
                         
-                        <!-- Retrieve Purchase Order Button -->
+                        <!-- Retrieve Purchase Order Toggle - Only show in retrieval mode -->
                         <ToggleButton
                             Grid.Column="1"
                             Content="Retrieve Purchase Order"
                             Classes="Outline"
-                            HorizontalAlignment="Right" />
+                            HorizontalAlignment="Right"
+                            IsVisible="{CompiledBinding IsRetrievalMode}"
+                            IsChecked="{CompiledBinding IsInEditMode}" />
                     </Grid>
                     <shadui:Card Height="390">
                         <StackPanel Orientation="Vertical">
@@ -168,7 +171,7 @@
                                     FontWeight="SemiBold"/>
                             </Grid>
 
-                            <!-- Input Fields -->
+                            <!-- Items List -->
                             <ItemsControl ItemsSource="{CompiledBinding Items}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -240,26 +243,32 @@
                                                 </NumericUpDown.InnerLeftContent>
                                             </NumericUpDown>
 
-                                            <!-- Quantity -->
+                                            <!-- Quantity: Enabled in creation mode OR when in edit mode -->
                                             <NumericUpDown
                                                 Grid.Column="6"
                                                 Width="160"
-                                                IsEnabled="True"
                                                 HorizontalAlignment="Left"
                                                 Value="{CompiledBinding Quantity}"
                                                 Minimum="1"
                                                 FormatString="N0"
                                                 Watermark="1">
+                                                <!-- Enabled only in creation mode, disabled in retrieval mode unless edit mode is active -->
+                                                <NumericUpDown.IsEnabled>
+                                                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                                        <Binding Path="!$parent[UserControl].((viewModel:PoEquipmentViewModel)DataContext).IsRetrievalMode" />
+                                                    </MultiBinding>
+                                                </NumericUpDown.IsEnabled>
                                             </NumericUpDown>
 
-                                            <!-- Quantity Received -->
+                                            <!-- Quantity Received: Only enabled in edit mode (IsInEditMode = true) -->
                                             <NumericUpDown
                                                 Grid.Column="7"
                                                 Width="160"
                                                 HorizontalAlignment="Left"
-                                                IsEnabled="{CompiledBinding $parent[UserControl].((viewModel:PoEquipmentViewModel)DataContext).IsRetrievalMode, FallbackValue={x:Null}}"
+                                                IsEnabled="{CompiledBinding $parent[UserControl].((viewModel:PoEquipmentViewModel)DataContext).IsInEditMode}"
                                                 Value="{CompiledBinding QuantityReceived}"
                                                 Minimum="0"
+                                                Maximum="{CompiledBinding Quantity}"
                                                 FormatString="N0"
                                                 Watermark="0">
                                             </NumericUpDown>
@@ -318,7 +327,7 @@
                         </shadui:Card>
                         
                         <!-- Create Purchase Order Button -->
-                        <!-- Only available during PO creation -->
+                        <!-- Only visible during PO creation (not retrieval mode) -->
                         <StackPanel Margin="0,10,0,0" IsVisible="{CompiledBinding !IsRetrievalMode}">
                             <Button
                                 Content="Create Purchase Order"
@@ -328,13 +337,20 @@
                         </StackPanel>
 
                         <!-- Back and Send To Inventory -->
-                        <!-- Only available during PO retrieval -->
+                        <!-- Only visible during PO retrieval AND when edit mode is active (toggle pressed) -->
                         <StackPanel 
                             Margin="0,10,0,0" 
                             Orientation="Horizontal" 
                             HorizontalAlignment="Right" 
-                            Spacing="10" 
-                            IsVisible="{CompiledBinding IsRetrievalMode}">
+                            Spacing="10">
+                            <!-- Visible when: IsRetrievalMode AND IsInEditMode -->
+                            <StackPanel.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsRetrievalMode" />
+                                    <Binding Path="IsInEditMode" />
+                                </MultiBinding>
+                                <!-- IsInEditMode is messing this up -->
+                            </StackPanel.IsVisible>
                             <Button
                                 Content="Back"
                                 Command="{CompiledBinding BackCommand}"
