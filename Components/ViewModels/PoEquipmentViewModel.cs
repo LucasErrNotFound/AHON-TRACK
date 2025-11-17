@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using AHON_TRACK.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
 using HotAvalonia;
 using ShadUI;
 
@@ -30,4 +31,34 @@ public class PoEquipmentViewModel : ViewModelBase, INavigable, INotifyPropertyCh
     public void Initialize()
     {
     }
+}
+
+public partial class PurchaseOrderProductItem : ObservableValidator
+{
+    [ObservableProperty] 
+    private string? _poNumber;
+    
+    [ObservableProperty] 
+    private string? _itemId;
+    
+    [ObservableProperty] 
+    private string? _itemName;
+    
+    [ObservableProperty] 
+    private string? _unitsOfMeasures;
+    
+    [ObservableProperty] 
+    private string? _category;
+    
+    [ObservableProperty] 
+    private string? _batchCode;
+    
+    [ObservableProperty] 
+    private decimal? _suppliersPrice;
+    
+    [ObservableProperty] 
+    private int? _quantity;
+    
+    [ObservableProperty] 
+    private int? _quantityReceived;
 }

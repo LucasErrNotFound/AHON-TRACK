@@ -450,7 +450,7 @@ public partial class ProductItems : ObservableValidator
     }
 }
 
-public class SupplierData
+public class SupplierProductData
 {
     public string? SupplierName { get; set; }
     public string? ContactPerson { get; set; }
