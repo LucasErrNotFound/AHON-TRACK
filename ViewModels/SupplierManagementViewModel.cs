@@ -570,7 +570,6 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                     .DismissOnClick()
                     .ShowWarning())
             .WithMaxWidth(2000)
-            .Dismissible()
             .Show();
     }
 

@@ -1,0 +1,343 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:shadui="clr-namespace:ShadUI;assembly=ShadUI"
+    xmlns:viewModel="using:AHON_TRACK.Components.ViewModels"
+    xmlns:converters="clr-namespace:AHON_TRACK.Converters"
+    xmlns:scroll="using:Xaml.Behaviors.Interactions.Animated"
+    mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+    x:DataType="viewModel:PoProductViewModel"
+    x:Class="AHON_TRACK.Components.PoProduct.PoProductView">
+    
+    <Design.DataContext>
+        <viewModel:PoProductViewModel />
+    </Design.DataContext>
+    
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="MutedColor" Color="#2C2F36" Opacity="0.70" />
+        <SolidColorBrush x:Key="FontForeground" Color="#2C2F36" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="#2C2F36" />
+
+        <SolidColorBrush x:Key="PrimaryColor" Color="#2C2F36" />
+        <SolidColorBrush x:Key="PrimaryColor75" Color="#2C2F36" Opacity="0.75" />
+        <SolidColorBrush x:Key="PrimaryColor50" Color="#2C2F36" Opacity="0.50" />
+        <SolidColorBrush x:Key="PrimaryColor10" Color="#2C2F36" Opacity="0.10" />
+
+        <converters:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTimeConverter" />
+    </UserControl.Resources>
+    
+    <DockPanel LastChildFill="True">
+        <StackPanel
+            MaxWidth="{StaticResource PageMaxWidth}"
+            Margin="{StaticResource PageMargin}"
+            DockPanel.Dock="Top">
+            <TextBlock
+                FontSize="30"
+                FontWeight="SemiBold"
+                Text="Product Purchase Order"
+                Foreground="{StaticResource FontForeground}"
+                Margin="90,30,0,0" />
+            <TextBlock
+                Classes="Caption Muted"
+                FontSize="14"
+                HorizontalAlignment="Left"
+                Text="Records purchase order for acquiring products or equipments from a supplier"
+                TextWrapping="Wrap"
+                Margin="90,0" />
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Interaction.Behaviors>
+                <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
+            </Interaction.Behaviors>
+            <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,30,90,0" Spacing="16">
+                <StackPanel Orientation="Vertical" Margin="0,-10,0,0">
+                    
+                    <!-- Supplier Name -->
+                    <TextBlock 
+                        Text="San Miguel"
+                        Classes="h4"
+                        FontSize="17"
+                        FontWeight="Medium"/>
+                    
+                    <!-- Supplier Email -->
+                    <TextBlock 
+                        Text="san.miguel@gmail.com"
+                        Classes="h4"
+                        FontSize="17"
+                        FontWeight="Medium"/>
+                    
+                    <!-- Contact Person -->
+                    <TextBlock 
+                        Text="Marc Lorenz Torres"
+                        Classes="h4"
+                        FontSize="17"
+                        FontWeight="Medium"/>
+                    
+                    <!-- Contact Person -->
+                    <TextBlock 
+                        Text="09838847281"
+                        Classes="h4"
+                        FontSize="17"
+                        FontWeight="Medium"/>
+                    
+                    <!-- Address -->
+                    <TextBlock 
+                        Text="Blk 43 Lot 9 PH-1, Main road, San Lorenzo South"
+                        Classes="h4"
+                        FontSize="17"
+                        FontWeight="Medium"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Spacing="10">
+                    <Grid ColumnDefinitions="* *">
+                        <!-- Purchase Order Number -->
+                        <TextBlock
+                            Grid.Column="0"
+                            Classes="h4"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Bottom"
+                            Text="Purchase Order No.: #884992"/>
+                        
+                        <!-- Retrieve Purchase Order Button -->
+                        <ToggleButton
+                            Grid.Column="1"
+                            Content="Retrieve Purchase Order"
+                            Classes="Outline"
+                            HorizontalAlignment="Right" />
+                    </Grid>
+                    <shadui:Card Height="390">
+                        <StackPanel Orientation="Vertical">
+                            
+                            <!-- Column Headers -->
+                            <Grid ColumnDefinitions="* * * * * * * *" Margin="0,0,0,10">
+                                
+                                <!-- Item ID -->
+                                <TextBlock 
+                                    Grid.Column="0"
+                                    Text="Item ID"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Item Name -->
+                                <TextBlock 
+                                    Grid.Column="1"
+                                    Text="Item Name"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Units Of Measures -->
+                                <TextBlock 
+                                    Grid.Column="2"
+                                    Text="Units of Measures"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Supplier's Price -->
+                                <TextBlock 
+                                    Grid.Column="3"
+                                    Text="Supplier's Price"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Markup Price -->
+                                <TextBlock 
+                                    Grid.Column="4"
+                                    Text="Markup Price"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Selling Price -->
+                                <TextBlock 
+                                    Grid.Column="5"
+                                    Text="Selling Price"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Quantity -->
+                                <TextBlock 
+                                    Grid.Column="6"
+                                    Text="Quantity"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Quantity Received -->
+                                <TextBlock 
+                                    Grid.Column="7"
+                                    Text="Quantity Received"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                            </Grid>
+                            
+                            <!-- Input Fields -->
+                            <Grid ColumnDefinitions="* * * * * * * *">
+                                
+                                <!-- Item ID -->
+                                <TextBox 
+                                    Grid.Column="0"
+                                    HorizontalAlignment="Left"
+                                    Width="150"
+                                    IsEnabled="False"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Item Name -->
+                                <TextBox 
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Left"
+                                    Width="150"
+                                    IsEnabled="False"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Units Of Measures -->
+                                <TextBox
+                                    Grid.Column="2"
+                                    HorizontalAlignment="Left"
+                                    Width="150"
+                                    IsEnabled="False"
+                                    FontSize="16"
+                                    FontWeight="SemiBold"/>
+                                
+                                <!-- Supplier's Price -->
+                                <NumericUpDown
+                                    Grid.Column="3"
+                                    HorizontalAlignment="Left"
+                                    Classes="Clearable"
+                                    Width="150"
+                                    IsEnabled="False"
+                                    FormatString="N2"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0.00">
+                                    <NumericUpDown.InnerLeftContent>
+                                        <TextBlock Margin="8,0,-8,0" Text="₱" />
+                                    </NumericUpDown.InnerLeftContent>
+                                </NumericUpDown>
+                                
+                                <!-- Markup Price -->
+                                <NumericUpDown
+                                    Grid.Column="4"
+                                    HorizontalAlignment="Left"
+                                    Classes="Clearable"
+                                    Width="150"
+                                    IsEnabled="False"
+                                    FormatString="N2"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0.00">
+                                    <NumericUpDown.InnerLeftContent>
+                                        <TextBlock Margin="8,0,-8,0" Text="₱" />
+                                    </NumericUpDown.InnerLeftContent>
+                                </NumericUpDown>
+                                
+                                <!-- Selling Price -->
+                                <NumericUpDown
+                                    Grid.Column="5"
+                                    HorizontalAlignment="Left"
+                                    Classes="Clearable"
+                                    Width="150"
+                                    IsEnabled="False"
+                                    FormatString="N2"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0.00">
+                                    <NumericUpDown.InnerLeftContent>
+                                        <TextBlock Margin="8,0,-8,0" Text="₱" />
+                                    </NumericUpDown.InnerLeftContent>
+                                </NumericUpDown>
+                                
+                                <!-- Quantity -->
+                                <NumericUpDown
+                                    Grid.Column="6"
+                                    HorizontalAlignment="Left"
+                                    Width="150"
+                                    IsEnabled="True"
+                                    Minimum="1"
+                                    FormatString="N0"
+                                    Watermark="1">
+                                </NumericUpDown>
+                                
+                                <!-- Quantity Received -->
+                                <NumericUpDown
+                                    Grid.Column="7"
+                                    HorizontalAlignment="Left"
+                                    Width="150"
+                                    IsEnabled="True"
+                                    Minimum="1"
+                                    FormatString="N0"
+                                    Watermark="1">
+                                </NumericUpDown>
+                            </Grid>
+                        </StackPanel>
+                    </shadui:Card>
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Right">
+                        <shadui:Card Width="350">
+                            <StackPanel>
+                                <Grid RowDefinitions="* * *" ColumnDefinitions="* *" RowSpacing="30">
+                                    <TextBlock
+                                        Grid.Row="0"
+                                        Grid.Column="0"
+                                        Text="Subtotal"
+                                        FontSize="20"
+                                        FontWeight="Regular" />
+                                    <TextBlock
+                                        Grid.Row="0"
+                                        Grid.Column="1"
+                                        Text="P200.00"
+                                        TextAlignment="Right"
+                                        FontSize="18"
+                                        FontWeight="Regular" />
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Grid.Column="0"
+                                        Text="VAT (12%)"
+                                        FontSize="20"
+                                        FontWeight="Regular" />
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        TextAlignment="Right"
+                                        FontSize="18"
+                                        FontWeight="Regular" />
+                                    <TextBlock
+                                        Grid.Row="2"
+                                        Grid.Column="0"
+                                        Text="Total"
+                                        FontSize="20"
+                                        FontWeight="Regular" />
+                                    <TextBlock
+                                        Grid.Row="2"
+                                        Grid.Column="1"
+                                        Foreground="{DynamicResource SuccessColor}"
+                                        Text="P200.00"
+                                        TextAlignment="Right"
+                                        FontSize="18"
+                                        FontWeight="Bold" />
+                                </Grid>
+                            </StackPanel>
+                        </shadui:Card>
+                        
+                        <!-- Create Purchase Order Button -->
+                        <!-- Only available during PO creation -->
+                        <StackPanel Margin="0,10,0,0">
+                            <Button
+                                Content="Create Purchase Order"
+                                Classes="Primary"
+                                HorizontalAlignment="Right"/>
+                        </StackPanel>
+                        
+                        <!-- Back and Send To Inventory -->
+                        <!-- Only available during PO retrieval -->
+                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                            <Button
+                                Content="Back"
+                                Classes="Secondary"/>
+                            <Button
+                                Content="Send to Inventory"
+                                Classes="Primary"/>
+                        </StackPanel>
+                        
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

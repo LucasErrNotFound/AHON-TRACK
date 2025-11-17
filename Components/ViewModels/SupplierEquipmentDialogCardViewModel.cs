@@ -79,6 +79,8 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
                 "Are you ready to proceed with purchasing these equipments?")
             .WithPrimaryButton("Yes, proceed with the purchase",
                 () => {
+                    _pageManager.Navigate<PoEquipmentViewModel>();
+                    _dialogManager.Close(this, new CloseDialogOptions{ Success = true });
                     // All Data will be sent to the Purchase Order Page
                     // No Purchase order Page yet, that is why you kept going back to this dialog
                     /*

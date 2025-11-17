@@ -79,6 +79,8 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                 "Are you ready to proceed with adding this supplier?")
             .WithPrimaryButton("Yes, proceed with adding",
                 () => {
+                    _pageManager.Navigate<PoProductViewModel>();
+                    _dialogManager.Close(this, new CloseDialogOptions{ Success = true });
                     // All Data will be sent to the Supplier Management Page
                     // No Supplier Management Page yet, that is why you kept going back to this dialog
                     /*
@@ -401,14 +403,14 @@ public partial class ProductItems : ObservableValidator
     public string[] UnitList { get; } = ["Piece (pc)", "Pair (pr)", "Set (set)", "Kilogram (kg)", 
         "Box (box)", "Pack (pack)", "Roll (roll)", "Bottle (bt)"];
     
-    public string[] Category { get; } = ["Strength", "Cardio", "Machines", "Accessories"];
+    public string[] Category { get; } = ["Drinks", "Supplements", "Apparel", "Products", "Merchandise"];
     
     public bool IsExpirationValid => !Expiration.HasValue || Expiration.Value.Date > DateTimeOffset.Now.Date;
 
     public ProductItems()
     {
         SelectedUnit = "Piece (pc)";
-        SelectedCategory = "Pair (pr)";
+        SelectedCategory = "Drinks";
         ItemName = string.Empty;
         Description = string.Empty;
     }
