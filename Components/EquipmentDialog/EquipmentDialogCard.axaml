@@ -85,6 +85,7 @@
 							<StackPanel Grid.Row="0">
 								<ComboBox
 									shadui:ControlAssist.Label="Supplier"
+									IsEnabled="False"
 									PlaceholderText="Supplier name"
 									ItemsSource="{CompiledBinding SupplierFilterItems}"
 									SelectedItem="{CompiledBinding Supplier, Mode=TwoWay}" />
@@ -101,6 +102,7 @@
 								<ComboBox
 									shadui:ControlAssist.Label="Brand Name"
 									PlaceholderText="e.g., Treadmill Pro X12"
+									IsEnabled="False"
 									ItemsSource="{CompiledBinding BrandNameItems}"
 									SelectedItem="{CompiledBinding BrandName, Mode=TwoWay}" />
 							</StackPanel>
@@ -116,6 +118,7 @@
 								<NumericUpDown
                                     shadui:ControlAssist.Label="Quantity"
                                     Classes="Clearable"
+                                    IsEnabled="False"
                                     Minimum="1"
                                     Maximum="100"
                                     FormatString="N0"
@@ -188,6 +191,7 @@
 								<CalendarDatePicker
                                     shadui:ControlAssist.ReadOnly="True"
                                     shadui:ControlAssist.Label="Warranty Expiry"
+                                    IsEnabled="False"
                                     SelectedDate="{CompiledBinding WarrantyExpiry}"/>
 							</StackPanel>
 							<StackPanel Grid.Row="1">
