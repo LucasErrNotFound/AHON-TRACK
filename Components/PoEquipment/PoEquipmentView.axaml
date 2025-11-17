@@ -336,25 +336,34 @@
                                 HorizontalAlignment="Right"/>
                         </StackPanel>
 
-                        <!-- Back and Send To Inventory -->
-                        <!-- Only visible during PO retrieval AND when edit mode is active (toggle pressed) -->
+                        <!-- Back Button - Visible in retrieval mode, hidden when toggle is pressed -->
                         <StackPanel 
                             Margin="0,10,0,0" 
-                            Orientation="Horizontal" 
-                            HorizontalAlignment="Right" 
-                            Spacing="10">
+                            HorizontalAlignment="Right">
+                            <!-- Visible when: IsRetrievalMode AND NOT IsInEditMode -->
+                            <StackPanel.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsRetrievalMode" />
+                                    <Binding Path="!IsInEditMode" />
+                                </MultiBinding>
+                            </StackPanel.IsVisible>
+                            <Button
+                                Content="Back"
+                                Command="{CompiledBinding BackCommand}"
+                                Classes="Secondary"/>
+                        </StackPanel>
+
+                        <!-- Send to Inventory Button - Only visible when toggle is pressed -->
+                        <StackPanel 
+                            Margin="0,10,0,0" 
+                            HorizontalAlignment="Right">
                             <!-- Visible when: IsRetrievalMode AND IsInEditMode -->
                             <StackPanel.IsVisible>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="IsRetrievalMode" />
                                     <Binding Path="IsInEditMode" />
                                 </MultiBinding>
-                                <!-- IsInEditMode is messing this up -->
                             </StackPanel.IsVisible>
-                            <Button
-                                Content="Back"
-                                Command="{CompiledBinding BackCommand}"
-                                Classes="Secondary"/>
                             <Button
                                 Content="Send to Inventory"
                                 Command="{CompiledBinding SendToInventoryCommand}"
