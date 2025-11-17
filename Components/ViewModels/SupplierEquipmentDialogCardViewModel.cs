@@ -208,12 +208,13 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
             string.IsNullOrWhiteSpace(i.SelectedUnit) ||
             string.IsNullOrWhiteSpace(i.SelectedCategory) ||
             string.IsNullOrWhiteSpace(i.SelectedCondition) ||
+            !i.Price.HasValue ||
             i.Price <= 0).ToList();
 
-        if (invalidItems.Any())
+        if (invalidItems.Count != 0)
         {
             _toastManager.CreateToast("Validation Error")
-                .WithContent("All equipment items must have ID, name, batch code, unit, category, condition and valid price")
+                .WithContent("All supplier items must have complete information and valid warranty expiration dates")
                 .DismissOnClick()
                 .ShowError();
             return false;
@@ -241,8 +242,22 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
         EquipmentItems.Add(initialItem);
     }
     
-    public bool CanSaveSupplier => !EquipmentItems.Any(i => 
-        i.WarrantExpiry.HasValue && i.WarrantExpiry.Value.Date <= DateTimeOffset.Now.Date);
+    public bool CanSaveSupplier => 
+        !string.IsNullOrWhiteSpace(SupplierName) &&
+        !string.IsNullOrWhiteSpace(ContactPerson) &&
+        !string.IsNullOrWhiteSpace(Email) &&
+        !string.IsNullOrWhiteSpace(PhoneNumber) &&
+        !string.IsNullOrWhiteSpace(Address) &&
+        EquipmentItems.Count > 0 &&
+        EquipmentItems.Any(i => 
+            !string.IsNullOrWhiteSpace(i.ItemId) && 
+            !string.IsNullOrWhiteSpace(i.ItemName) && 
+            !string.IsNullOrWhiteSpace(i.BatchCode) && 
+            !string.IsNullOrWhiteSpace(i.SelectedUnit) && 
+            !string.IsNullOrWhiteSpace(i.SelectedCategory) && 
+            !string.IsNullOrWhiteSpace(i.SelectedCondition) && 
+            i.Price > 0 && 
+            (!i.WarrantExpiry.HasValue || i.WarrantExpiry.Value.Date > DateTimeOffset.Now.Date));
     
     [Required(ErrorMessage = "Supplier name is required")]
     [RegularExpression("^[a-zA-Z0-9 ]*$", ErrorMessage = "cannot contain special characters.")]
@@ -323,7 +338,14 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
 
     private void OnEquipmentItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == "WarrantExpiry")
+        if (e.PropertyName == "ItemId" ||
+            e.PropertyName == "ItemName" ||
+            e.PropertyName == "BatchCode" ||
+            e.PropertyName == "SelectedUnit" ||
+            e.PropertyName == "SelectedCategory" ||
+            e.PropertyName == "SelectedCondition" ||
+            e.PropertyName == "Price" ||
+            e.PropertyName == "WarrantExpiry")
         {
             OnPropertyChanged(nameof(CanSaveSupplier));
             AddSupplierCommand.NotifyCanExecuteChanged();
@@ -377,20 +399,12 @@ public partial class EquipmentItems : ObservableValidator
     private string? _selectedCondition;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ItemTotal))]
-    [Range(0, 1000, ErrorMessage = "Quantity must be between 0.01 and 10000")]
-    private int? _quantity;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ItemTotal))]
     [Range(0.01, 1000000, ErrorMessage = "Price must be between 0.01 and 1,000,000")]
     private decimal? _price;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsWarrantyValid))]
     private DateTimeOffset? _warrantExpiry;
-
-    public decimal? ItemTotal => Quantity * Price;
     
     public bool IsWarrantyValid => !WarrantExpiry.HasValue || WarrantExpiry.Value.Date > DateTimeOffset.Now.Date;
 
@@ -404,7 +418,6 @@ public partial class EquipmentItems : ObservableValidator
         SelectedUnit = "Piece (pc)";
         SelectedCategory = "Pair (pr)";
         SelectedCondition = "Excellent";
-        Quantity = 0;
         Price = 0;
         WarrantExpiry = DateTimeOffset.Now.AddDays(1).Date;
     }
