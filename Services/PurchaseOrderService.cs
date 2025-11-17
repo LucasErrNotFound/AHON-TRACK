@@ -406,7 +406,7 @@ namespace AHON_TRACK.Services
                     PurchaseOrderID = reader.GetInt32(1),
                     ItemName = reader.GetString(2),
                     Unit = reader.GetString(3),
-                    Quantity = reader.GetDecimal(4),
+                    Quantity = reader.GetInt32(4),
                     Price = reader.GetDecimal(5)
                 });
             }

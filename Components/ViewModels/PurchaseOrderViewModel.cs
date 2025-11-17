@@ -1033,7 +1033,7 @@ public partial class Item : ObservableValidator
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ItemTotal))]
     [Range(0.01, 10000, ErrorMessage = "Quantity must be between 0.01 and 10000")]
-    private decimal _quantity;
+    private int _quantity;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ItemTotal))]

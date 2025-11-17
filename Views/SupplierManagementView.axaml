@@ -225,7 +225,7 @@
                                                                         </shadui:MenuItemAssist.Label>
                                                                         <MenuItem
                                                                             Header="View Purchase Order"
-                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewProductOrderViewCommand, FallbackValue={x:Null}}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewPurchaseOrderViewCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}" />
                                                                         <Separator />
                                                                         <MenuItem
@@ -439,7 +439,7 @@
                                                                         </shadui:MenuItemAssist.Label>
                                                                         <MenuItem
                                                                             Header="View Purchase Order"
-                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewProductOrderViewCommand, FallbackValue={x:Null}}"
+                                                                            Command="{CompiledBinding $parent[DataGrid].((viewModels:SupplierManagementViewModel)DataContext).ViewPurchaseOrderViewCommand, FallbackValue={x:Null}}"
                                                                             CommandParameter="{CompiledBinding}" />
                                                                         <Separator />
                                                                         <MenuItem

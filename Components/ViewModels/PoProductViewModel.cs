@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -18,6 +19,9 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     private readonly PageManager _pageManager;
 
     [ObservableProperty]
+    private int? _purchaseOrderId;
+
+    [ObservableProperty]
     private string? _supplierName;
 
     [ObservableProperty]
@@ -33,7 +37,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     private string? _address;
 
     [ObservableProperty]
-    private string _poNumber = $"#{System.Random.Shared.Next(100000, 999999)}";
+    private string _poNumber = $"PO-AHON-{DateTime.Now.Year}-{System.Random.Shared.Next(100000, 999999)}";
 
     [ObservableProperty]
     private ObservableCollection<PurchaseOrderProductItem> _items = new();
@@ -49,6 +53,18 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
 
     [ObservableProperty]
     private bool _isRetrievalMode;
+
+    [ObservableProperty]
+    private DateTime? _orderDate;
+
+    [ObservableProperty]
+    private DateTime? _expectedDeliveryDate;
+
+    [ObservableProperty]
+    private string? _shippingStatus;
+
+    [ObservableProperty]
+    private string? _paymentStatus;
 
     public PoProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
     {
@@ -70,16 +86,26 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
         Debug.WriteLine("[PoProductViewModel] Initialize called");
     }
 
-    // ✅ IMPLEMENT SetNavigationParameters
     public void SetNavigationParameters(System.Collections.Generic.Dictionary<string, object> parameters)
     {
         Debug.WriteLine("[PoProductViewModel] SetNavigationParameters called");
 
+        // Handle creation mode (from supplier selection)
         if (parameters.TryGetValue("SupplierData", out var supplierDataObj) && 
             supplierDataObj is SupplierProductData data)
         {
             LoadSupplierData(data);
+            IsRetrievalMode = false;
             Debug.WriteLine($"[PoProductViewModel] Loaded supplier data: {data.SupplierName}");
+        }
+        
+        // Handle retrieval mode (viewing existing PO)
+        if (parameters.TryGetValue("RetrievalData", out var retrievalDataObj) && 
+            retrievalDataObj is PurchaseOrderProductRetrievalData retrievalData)
+        {
+            LoadRetrievalData(retrievalData);
+            IsRetrievalMode = true;
+            Debug.WriteLine($"[PoProductViewModel] Loaded retrieval data: PO {retrievalData.PoNumber}");
         }
     }
 
@@ -121,6 +147,50 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
         Debug.WriteLine($"[PoProductViewModel] Subtotal: ₱{Subtotal:N2}, VAT: ₱{Vat:N2}, Total: ₱{Total:N2}");
     }
 
+    public void LoadRetrievalData(PurchaseOrderProductRetrievalData data)
+    {
+        Debug.WriteLine($"[PoProductViewModel] Loading retrieval data: PO {data.PoNumber}");
+        
+        PurchaseOrderId = data.PurchaseOrderId;
+        PoNumber = data.PoNumber;
+        SupplierName = data.SupplierName;
+        SupplierEmail = data.SupplierEmail;
+        ContactPerson = data.ContactPerson;
+        PhoneNumber = data.PhoneNumber;
+        Address = data.Address;
+        OrderDate = data.OrderDate;
+        ExpectedDeliveryDate = data.ExpectedDeliveryDate;
+        ShippingStatus = data.ShippingStatus;
+        PaymentStatus = data.PaymentStatus;
+        Subtotal = data.Subtotal;
+        Vat = data.Vat;
+        Total = data.Total;
+
+        Items.Clear();
+        foreach (var item in data.Items)
+        {
+            var poItem = new PurchaseOrderProductItem
+            {
+                PoNumber = PoNumber,
+                ItemId = item.ItemId,
+                ItemName = item.ItemName,
+                UnitsOfMeasures = item.Unit,
+                SuppliersPrice = item.SupplierPrice,
+                MarkupPrice = item.MarkupPrice,
+                SellingPrice = item.SellingPrice,
+                Quantity = item.Quantity,
+                QuantityReceived = item.QuantityReceived
+            };
+
+            poItem.PropertyChanged += OnItemPropertyChanged;
+            Items.Add(poItem);
+            
+            Debug.WriteLine($"  Loaded item: {item.ItemName} - Qty: {item.Quantity}, Received: {item.QuantityReceived}");
+        }
+
+        Debug.WriteLine($"[PoProductViewModel] Retrieval data loaded: {Items.Count} items");
+    }
+
     private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(PurchaseOrderProductItem.Quantity) ||
@@ -154,6 +224,8 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 Debug.WriteLine($"[PoProductViewModel] Supplier: {SupplierName}");
                 Debug.WriteLine($"[PoProductViewModel] Items: {Items.Count}");
                 Debug.WriteLine($"[PoProductViewModel] Total: ₱{Total:N2}");
+                
+                _pageManager.Navigate<SupplierManagementViewModel>();
             })
             .WithCancelButton("No")
             .Show();
@@ -161,6 +233,25 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
 
     [RelayCommand]
     private void SendToInventory()
+    {
+        // Validate that all items have quantities received
+        var itemsWithoutReceived = Items.Where(i => (i.QuantityReceived ?? 0) == 0).ToList();
+        
+        if (itemsWithoutReceived.Count > 0)
+        {
+            _dialogManager
+                .CreateDialog("Incomplete Quantities", 
+                    $"{itemsWithoutReceived.Count} item(s) have no quantity received. Do you want to continue anyway?")
+                .WithPrimaryButton("Yes, continue", SendToInventoryConfirmed)
+                .WithCancelButton("No, go back")
+                .Show();
+            return;
+        }
+
+        SendToInventoryConfirmed();
+    }
+
+    private void SendToInventoryConfirmed()
     {
         _dialogManager
             .CreateDialog("Send to Inventory", "Send received items to inventory?")
@@ -171,8 +262,14 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                     .DismissOnClick()
                     .ShowSuccess();
 
-                // TODO: Update inventory
+                // TODO: Update inventory and mark PO as completed
                 Debug.WriteLine($"[PoProductViewModel] Sending {Items.Count} items to inventory");
+                foreach (var item in Items)
+                {
+                    Debug.WriteLine($"  - {item.ItemName}: Received {item.QuantityReceived} of {item.Quantity}");
+                }
+                
+                _pageManager.Navigate<SupplierManagementViewModel>();
             })
             .WithCancelButton("No")
             .Show();
@@ -181,7 +278,6 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     [RelayCommand]
     private void Back()
     {
-        // Navigate back or to a specific page
         Debug.WriteLine("[PoProductViewModel] Back button pressed");
         _pageManager.Navigate<SupplierManagementViewModel>();
     }
@@ -189,9 +285,8 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     [RelayCommand]
     private void ToggleRetrievalMode()
     {
-        IsRetrievalMode = !IsRetrievalMode;
-        Debug.WriteLine($"[PoProductViewModel] Retrieval mode: {IsRetrievalMode}");
-        // TODO: Load PO data if in retrieval mode
+        // This command is removed since retrieval mode is now determined by navigation
+        Debug.WriteLine($"[PoProductViewModel] ToggleRetrievalMode should not be called in this context");
     }
 
     protected override void DisposeManagedResources()

@@ -53,11 +53,19 @@ namespace AHON_TRACK.Models
         public int PurchaseOrderID { get; set; }
         public string ItemName { get; set; }
         public string Unit { get; set; }
-        public decimal Quantity { get; set; }
+        public int Quantity { get; set; } // Change: from decimal to int
         public decimal Price { get; set; }
 
         public string Category { get; set; }
 
         public decimal LineTotal => Quantity * Price;
+        
+        // NEW
+        public string ItemID { get; set; }
+        public decimal SupplierPrice { get; set; }
+        public decimal MarkupPrice { get; set; }
+        public decimal SellingPrice { get; set; }
+        public string BatchCode { get; set; }
+        public int QuantityReceived { get; set; } // Change: from decimal to int
     }
 }

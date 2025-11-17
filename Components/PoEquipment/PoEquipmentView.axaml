@@ -96,7 +96,7 @@
                             Classes="h4"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Bottom"
-                            Text="Purchase Order No.: #884992"/>
+                            Text="{CompiledBinding PoNumber, StringFormat='Purchase Order No.: {0}'}" />
                         
                         <!-- Retrieve Purchase Order Button -->
                         <ToggleButton

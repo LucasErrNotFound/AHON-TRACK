@@ -593,7 +593,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     }
 
     [RelayCommand]
-    private void ViewProductOrderView(PurchaseOrder? purchaseOrder)
+    private async void ViewPurchaseOrderView(PurchaseOrder? purchaseOrder)
     {
         if (purchaseOrder == null || !purchaseOrder.ID.HasValue)
         {
@@ -604,11 +604,142 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             return;
         }
 
-        _pageManager.Navigate<PurchaseOrderViewModel>(new Dictionary<string, object>
+        if (_purchaseOrderService == null)
         {
-            ["Context"] = PurchaseOrderContext.ViewPurchaseOrder,
-            ["PurchaseOrderId"] = purchaseOrder.ID.Value
-        });
+            _toastManager.CreateToast("Service Unavailable")
+                .WithContent("Purchase order service is not available.")
+                .DismissOnClick()
+                .ShowError();
+            return;
+        }
+
+        try
+        {
+            // Fetch full purchase order details from database
+            var result = await _purchaseOrderService.GetPurchaseOrderByIdAsync(purchaseOrder.ID.Value);
+        
+            if (!result.Success || result.PurchaseOrder == null)
+            {
+                _toastManager.CreateToast("Failed to Load Purchase Order")
+                    .WithContent(result.Message ?? "Could not retrieve purchase order details.")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            var fullPO = result.PurchaseOrder;
+
+            // Determine if this is a product or equipment purchase order
+            // Check if items have MarkupPrice and SellingPrice (products) or Category and BatchCode (equipment)
+            bool isProductPO = false;
+            bool isEquipmentPO = false;
+
+            if (fullPO.Items != null && fullPO.Items.Count > 0)
+            {
+                // Check first item to determine type
+                var firstItem = fullPO.Items[0];
+            
+                // If item has markup/selling price fields, it's a product
+                // This logic depends on your database schema - adjust as needed
+                if (!string.IsNullOrEmpty(firstItem.Category) || !string.IsNullOrEmpty(firstItem.BatchCode))
+                {
+                    isEquipmentPO = true;
+                }
+                else
+                {
+                    isProductPO = true;
+                }
+            }
+
+            if (isProductPO)
+            {
+                // Navigate to PoProductViewModel with data
+                var productData = new PurchaseOrderProductRetrievalData
+                {
+                    PurchaseOrderId = fullPO.PurchaseOrderID,
+                    PoNumber = fullPO.PONumber ?? string.Empty,
+                    SupplierName = fullPO.SupplierName ?? string.Empty,
+                    SupplierEmail = GetSupplierEmail(fullPO.SupplierID),
+                    ContactPerson = GetSupplierContactPerson(fullPO.SupplierID),
+                    PhoneNumber = GetSupplierPhoneNumber(fullPO.SupplierID),
+                    Address = GetSupplierAddress(fullPO.SupplierID),
+                    Items = fullPO.Items?.Select(item => new PurchaseOrderProductItemData
+                    {
+                        ItemId = item.ItemID ?? string.Empty,
+                        ItemName = item.ItemName ?? string.Empty,
+                        Unit = item.Unit ?? string.Empty,
+                        SupplierPrice = item.SupplierPrice,
+                        MarkupPrice = item.MarkupPrice,
+                        SellingPrice = item.SellingPrice,
+                        Quantity = item.Quantity,
+                        QuantityReceived = item.QuantityReceived
+                    }).ToList() ?? new List<PurchaseOrderProductItemData>(),
+                    Subtotal = fullPO.Subtotal,
+                    Vat = fullPO.TaxRate,
+                    Total = fullPO.Total,
+                    OrderDate = fullPO.OrderDate,
+                    ExpectedDeliveryDate = fullPO.ExpectedDeliveryDate,
+                    ShippingStatus = fullPO.ShippingStatus ?? string.Empty,
+                    PaymentStatus = fullPO.PaymentStatus ?? string.Empty
+                };
+
+                _pageManager.Navigate<PoProductViewModel>(new Dictionary<string, object>
+                {
+                    ["RetrievalData"] = productData
+                });
+            }
+            else if (isEquipmentPO)
+            {
+                // Navigate to PoEquipmentViewModel with data
+                var equipmentData = new PurchaseOrderEquipmentRetrievalData
+                {
+                    PurchaseOrderId = fullPO.PurchaseOrderID,
+                    PoNumber = fullPO.PONumber ?? string.Empty,
+                    SupplierName = fullPO.SupplierName ?? string.Empty,
+                    SupplierEmail = GetSupplierEmail(fullPO.SupplierID),
+                    ContactPerson = GetSupplierContactPerson(fullPO.SupplierID),
+                    PhoneNumber = GetSupplierPhoneNumber(fullPO.SupplierID),
+                    Address = GetSupplierAddress(fullPO.SupplierID),
+                    Items = fullPO.Items?.Select(item => new PurchaseOrderEquipmentItemData
+                    {
+                        ItemId = item.ItemID ?? string.Empty,
+                        ItemName = item.ItemName ?? string.Empty,
+                        Unit = item.Unit ?? string.Empty,
+                        Category = item.Category ?? string.Empty,
+                        BatchCode = item.BatchCode ?? string.Empty,
+                        Price = item.SupplierPrice,
+                        Quantity = item.Quantity,
+                        QuantityReceived = item.QuantityReceived
+                    }).ToList() ?? new List<PurchaseOrderEquipmentItemData>(),
+                    Subtotal = fullPO.Subtotal,
+                    Vat = fullPO.TaxRate,
+                    Total = fullPO.Total,
+                    OrderDate = fullPO.OrderDate,
+                    ExpectedDeliveryDate = fullPO.ExpectedDeliveryDate,
+                    ShippingStatus = fullPO.ShippingStatus ?? string.Empty,
+                    PaymentStatus = fullPO.PaymentStatus ?? string.Empty
+                };
+
+                _pageManager.Navigate<PoEquipmentViewModel>(new Dictionary<string, object>
+                {
+                    ["RetrievalData"] = equipmentData
+                });
+            }
+            else
+            {
+                _toastManager.CreateToast("Unknown Purchase Order Type")
+                    .WithContent("Could not determine if this is a product or equipment purchase order.")
+                    .DismissOnClick()
+                    .ShowWarning();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Error Loading Purchase Order")
+                .WithContent($"An error occurred: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
     }
 
     [RelayCommand]
@@ -1160,6 +1291,34 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         TotalCount = SupplierItems.Count;
         SelectAll = SupplierItems.Count > 0 && SupplierItems.All(x => x.IsSelected);
     }
+    
+    private string GetSupplierEmail(int? supplierId)
+    {
+        if (!supplierId.HasValue) return string.Empty;
+        var supplier = OriginalSupplierData.FirstOrDefault(s => s.ID == supplierId.Value);
+        return supplier?.Email ?? string.Empty;
+    }
+
+    private string GetSupplierContactPerson(int? supplierId)
+    {
+        if (!supplierId.HasValue) return string.Empty;
+        var supplier = OriginalSupplierData.FirstOrDefault(s => s.ID == supplierId.Value);
+        return supplier?.ContactPerson ?? string.Empty;
+    }
+
+    private string GetSupplierPhoneNumber(int? supplierId)
+    {
+        if (!supplierId.HasValue) return string.Empty;
+        var supplier = OriginalSupplierData.FirstOrDefault(s => s.ID == supplierId.Value);
+        return supplier?.PhoneNumber ?? string.Empty;
+    }
+
+    private string GetSupplierAddress(int? supplierId)
+    {
+        if (!supplierId.HasValue) return string.Empty;
+        var supplier = OriginalSupplierData.FirstOrDefault(s => s.ID == supplierId.Value);
+        return supplier?.Address ?? string.Empty;
+    }
 
     private void OnSupplierPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -1424,4 +1583,66 @@ public partial class PurchaseOrder : ObservableObject
         OnPropertyChanged(nameof(PaymentBackground));
         OnPropertyChanged(nameof(PaymentDisplayText));
     }
+}
+
+public class PurchaseOrderProductRetrievalData
+{
+    public int PurchaseOrderId { get; set; }
+    public string PoNumber { get; set; } = string.Empty;
+    public string SupplierName { get; set; } = string.Empty;
+    public string SupplierEmail { get; set; } = string.Empty;
+    public string ContactPerson { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public List<PurchaseOrderProductItemData> Items { get; set; } = new();
+    public decimal Subtotal { get; set; }
+    public decimal Vat { get; set; }
+    public decimal Total { get; set; }
+    public DateTime? OrderDate { get; set; }
+    public DateTime? ExpectedDeliveryDate { get; set; }
+    public string ShippingStatus { get; set; } = string.Empty;
+    public string PaymentStatus { get; set; } = string.Empty;
+}
+
+public class PurchaseOrderProductItemData
+{
+    public string ItemId { get; set; } = string.Empty;
+    public string ItemName { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public decimal SupplierPrice { get; set; }
+    public decimal MarkupPrice { get; set; }
+    public decimal SellingPrice { get; set; }
+    public int Quantity { get; set; }
+    public int QuantityReceived { get; set; }
+}
+
+public class PurchaseOrderEquipmentRetrievalData
+{
+    public int PurchaseOrderId { get; set; }
+    public string PoNumber { get; set; } = string.Empty;
+    public string SupplierName { get; set; } = string.Empty;
+    public string SupplierEmail { get; set; } = string.Empty;
+    public string ContactPerson { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public List<PurchaseOrderEquipmentItemData> Items { get; set; } = new();
+    public decimal Subtotal { get; set; }
+    public decimal Vat { get; set; }
+    public decimal Total { get; set; }
+    public DateTime? OrderDate { get; set; }
+    public DateTime? ExpectedDeliveryDate { get; set; }
+    public string ShippingStatus { get; set; } = string.Empty;
+    public string PaymentStatus { get; set; } = string.Empty;
+}
+
+public class PurchaseOrderEquipmentItemData
+{
+    public string ItemId { get; set; } = string.Empty;
+    public string ItemName { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public string BatchCode { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public int Quantity { get; set; }
+    public int QuantityReceived { get; set; }
 }
