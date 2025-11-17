@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
@@ -79,11 +80,6 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
                 "Are you ready to proceed with purchasing these equipments?")
             .WithPrimaryButton("Yes, proceed with the purchase",
                 () => {
-                    _pageManager.Navigate<PoEquipmentViewModel>();
-                    _dialogManager.Close(this, new CloseDialogOptions{ Success = true });
-                    // All Data will be sent to the Purchase Order Page
-                    // No Purchase order Page yet, that is why you kept going back to this dialog
-                    /*
                     var supplierData = new SupplierEquipmentData
                     {
                         SupplierName = this.SupplierName,
@@ -94,17 +90,23 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
                         EquipmentItems = this.EquipmentItems.ToList()
                     };
 
+                    Debug.WriteLine($"[SupplierEquipmentDialogCardViewModel] Navigating with supplier: {supplierData.SupplierName}");
+                    Debug.WriteLine($"[SupplierEquipmentDialogCardViewModel] Equipment items count: {supplierData.EquipmentItems.Count}");
+
+                    // ✅ NAVIGATE WITH PARAMETERS
+                    var parameters = new Dictionary<string, object>
+                    {
+                        { "SupplierData", supplierData }
+                    };
+
+                    _pageManager.Navigate<PoEquipmentViewModel>(parameters);
+
                     _toastManager.CreateToast("Success")
-                        .WithContent("Supplier and equipment added successfully!")
+                        .WithContent("Equipment data loaded to Purchase Order!")
                         .DismissOnClick()
                         .ShowSuccess();
                 
-                    _dialogManager.Close(this, new CloseDialogOptions 
-                    { 
-                        Success = true,
-                        Result = supplierData
-                    });
-                    */
+                    _dialogManager.Close(this, new CloseDialogOptions{ Success = true });
                 })
             .WithCancelButton("No, I want to add more equipments",
                 () => {

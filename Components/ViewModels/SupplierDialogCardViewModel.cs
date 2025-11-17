@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
@@ -79,12 +80,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                 "Are you ready to proceed with adding this supplier?")
             .WithPrimaryButton("Yes, proceed with adding",
                 () => {
-                    _pageManager.Navigate<PoProductViewModel>();
-                    _dialogManager.Close(this, new CloseDialogOptions{ Success = true });
-                    // All Data will be sent to the Supplier Management Page
-                    // No Supplier Management Page yet, that is why you kept going back to this dialog
-                    /*
-                    var supplierData = new SupplierData
+                    var supplierData = new SupplierProductData
                     {
                         SupplierName = this.SupplierName,
                         ContactPerson = this.ContactPerson,
@@ -94,17 +90,23 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                         SupplierItems = this.SupplierItems.ToList()
                     };
 
+                    Debug.WriteLine($"[SupplierDialogCardViewModel] Navigating with supplier: {supplierData.SupplierName}");
+                    Debug.WriteLine($"[SupplierDialogCardViewModel] Items count: {supplierData.SupplierItems.Count}");
+
+                    // ✅ NAVIGATE WITH PARAMETERS
+                    var parameters = new Dictionary<string, object>
+                    {
+                        { "SupplierData", supplierData }
+                    };
+
+                    _pageManager.Navigate<PoProductViewModel>(parameters);
+
                     _toastManager.CreateToast("Success")
-                        .WithContent("Supplier added successfully!")
+                        .WithContent("Supplier data loaded to Purchase Order!")
                         .DismissOnClick()
                         .ShowSuccess();
                 
-                    _dialogManager.Close(this, new CloseDialogOptions 
-                    { 
-                        Success = true,
-                        Result = supplierData
-                    });
-                    */
+                    _dialogManager.Close(this, new CloseDialogOptions{ Success = true });
                 })
             .WithCancelButton("No, I want to add more items",
                 () => {

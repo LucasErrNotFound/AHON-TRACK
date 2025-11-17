@@ -53,38 +53,37 @@
             </Interaction.Behaviors>
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,30,90,0" Spacing="16">
                 <StackPanel Orientation="Vertical" Margin="0,-10,0,0">
-                    
                     <!-- Supplier Name -->
                     <TextBlock 
-                        Text="San Miguel"
+                        Text="{CompiledBinding SupplierName}"
                         Classes="h4"
                         FontSize="17"
                         FontWeight="Medium"/>
-                    
+    
                     <!-- Supplier Email -->
                     <TextBlock 
-                        Text="san.miguel@gmail.com"
+                        Text="{CompiledBinding SupplierEmail}"
                         Classes="h4"
                         FontSize="17"
                         FontWeight="Medium"/>
-                    
+    
                     <!-- Contact Person -->
                     <TextBlock 
-                        Text="Marc Lorenz Torres"
+                        Text="{CompiledBinding ContactPerson}"
                         Classes="h4"
                         FontSize="17"
                         FontWeight="Medium"/>
-                    
-                    <!-- Contact Person -->
+    
+                    <!-- Phone Number -->
                     <TextBlock 
-                        Text="09838847281"
+                        Text="{CompiledBinding PhoneNumber}"
                         Classes="h4"
                         FontSize="17"
                         FontWeight="Medium"/>
-                    
+    
                     <!-- Address -->
                     <TextBlock 
-                        Text="Blk 43 Lot 9 PH-1, Main road, San Lorenzo South"
+                        Text="{CompiledBinding Address}"
                         Classes="h4"
                         FontSize="17"
                         FontWeight="Medium"/>
@@ -168,92 +167,106 @@
                                     FontSize="16"
                                     FontWeight="SemiBold"/>
                             </Grid>
-                            
+
                             <!-- Input Fields -->
-                            <Grid ColumnDefinitions="* * * * * * * *">
-                                
-                                <!-- Item ID -->
-                                <TextBox 
-                                    Grid.Column="0"
-                                    HorizontalAlignment="Left"
-                                    Width="150"
-                                    IsEnabled="False"
-                                    FontSize="16"
-                                    FontWeight="SemiBold"/>
-                                
-                                <!-- Item Name -->
-                                <TextBox 
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Left"
-                                    Width="150"
-                                    IsEnabled="False"
-                                    FontSize="16"
-                                    FontWeight="SemiBold"/>
-                                
-                                <!-- Units Of Measures -->
-                                <TextBox
-                                    Grid.Column="2"
-                                    HorizontalAlignment="Left"
-                                    Width="150"
-                                    IsEnabled="False"
-                                    FontSize="16"
-                                    FontWeight="SemiBold"/>
-                                
-                                <!-- Category -->
-                                <TextBox
-                                    Grid.Column="3"
-                                    HorizontalAlignment="Left"
-                                    Width="150"
-                                    IsEnabled="False"
-                                    FontSize="16"
-                                    FontWeight="SemiBold"/>
-                                
-                                <!-- Batch Code -->
-                                <TextBox
-                                    Grid.Column="4"
-                                    HorizontalAlignment="Left"
-                                    Width="150"
-                                    IsEnabled="False"
-                                    FontSize="16"
-                                    FontWeight="SemiBold"/>
-                                
-                                <!-- Supplier's Price -->
-                                <NumericUpDown
-                                    Grid.Column="5"
-                                    HorizontalAlignment="Left"
-                                    Classes="Clearable"
-                                    Width="150"
-                                    IsEnabled="False"
-                                    FormatString="N2"
-                                    ShowButtonSpinner="False"
-                                    Watermark="0.00">
-                                    <NumericUpDown.InnerLeftContent>
-                                        <TextBlock Margin="8,0,-8,0" Text="₱" />
-                                    </NumericUpDown.InnerLeftContent>
-                                </NumericUpDown>
-                                
-                                <!-- Quantity -->
-                                <NumericUpDown
-                                    Grid.Column="6"
-                                    HorizontalAlignment="Left"
-                                    Width="150"
-                                    IsEnabled="True"
-                                    Minimum="1"
-                                    FormatString="N0"
-                                    Watermark="1">
-                                </NumericUpDown>
-                                
-                                <!-- Quantity Received -->
-                                <NumericUpDown
-                                    Grid.Column="7"
-                                    HorizontalAlignment="Left"
-                                    Width="150"
-                                    IsEnabled="True"
-                                    Minimum="1"
-                                    FormatString="N0"
-                                    Watermark="1">
-                                </NumericUpDown>
-                            </Grid>
+                            <ItemsControl ItemsSource="{CompiledBinding Items}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="* * * * * * * *" Margin="0,5">
+
+                                            <!-- Item ID -->
+                                            <TextBox
+                                                Grid.Column="0"
+                                                Width="160"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Left"
+                                                Text="{CompiledBinding ItemId}"
+                                                FontSize="14"
+                                                FontWeight="SemiBold" />
+
+                                            <!-- Item Name -->
+                                            <TextBox
+                                                Grid.Column="1"
+                                                Width="160"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Left"
+                                                Text="{CompiledBinding ItemName}"
+                                                FontSize="14"
+                                                FontWeight="SemiBold" />
+
+                                            <!-- Units Of Measures -->
+                                            <TextBox
+                                                Grid.Column="2"
+                                                Width="160"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Left"
+                                                Text="{CompiledBinding UnitsOfMeasures}"
+                                                FontSize="14"
+                                                FontWeight="SemiBold" />
+
+                                            <!-- Category -->
+                                            <TextBox
+                                                Grid.Column="3"
+                                                Width="160"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Left"
+                                                Text="{CompiledBinding Category}"
+                                                FontSize="14"
+                                                FontWeight="SemiBold" />
+
+                                            <!-- Batch Code -->
+                                            <TextBox
+                                                Grid.Column="4"
+                                                Width="160"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Left"
+                                                Text="{CompiledBinding BatchCode}"
+                                                FontSize="14"
+                                                FontWeight="SemiBold" />
+
+                                            <!-- Supplier's Price -->
+                                            <NumericUpDown
+                                                Grid.Column="5"
+                                                Classes="Clearable"
+                                                Width="160"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Left"
+                                                Value="{CompiledBinding SuppliersPrice}"
+                                                FormatString="N2"
+                                                ShowButtonSpinner="False"
+                                                Watermark="0.00">
+                                                <NumericUpDown.InnerLeftContent>
+                                                    <TextBlock Margin="8,0,-8,0" Text="₱" />
+                                                </NumericUpDown.InnerLeftContent>
+                                            </NumericUpDown>
+
+                                            <!-- Quantity -->
+                                            <NumericUpDown
+                                                Grid.Column="6"
+                                                Width="160"
+                                                IsEnabled="True"
+                                                HorizontalAlignment="Left"
+                                                Value="{CompiledBinding Quantity}"
+                                                Minimum="1"
+                                                FormatString="N0"
+                                                Watermark="1">
+                                            </NumericUpDown>
+
+                                            <!-- Quantity Received -->
+                                            <NumericUpDown
+                                                Grid.Column="7"
+                                                Width="160"
+                                                HorizontalAlignment="Left"
+                                                IsEnabled="{CompiledBinding $parent[UserControl].((viewModel:PoEquipmentViewModel)DataContext).IsRetrievalMode, FallbackValue={x:Null}}"
+                                                Value="{CompiledBinding QuantityReceived}"
+                                                Minimum="0"
+                                                FormatString="N0"
+                                                Watermark="0">
+                                            </NumericUpDown>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </shadui:Card>
                     <StackPanel Orientation="Vertical" HorizontalAlignment="Right">
@@ -269,7 +282,7 @@
                                     <TextBlock
                                         Grid.Row="0"
                                         Grid.Column="1"
-                                        Text="P200.00"
+                                        Text="{CompiledBinding Subtotal, StringFormat='₱{0:N2}'}"
                                         TextAlignment="Right"
                                         FontSize="18"
                                         FontWeight="Regular" />
@@ -282,6 +295,7 @@
                                     <TextBlock
                                         Grid.Row="1"
                                         Grid.Column="1"
+                                        Text="{CompiledBinding Vat, StringFormat='₱{0:N2}'}"
                                         TextAlignment="Right"
                                         FontSize="18"
                                         FontWeight="Regular" />
@@ -295,7 +309,7 @@
                                         Grid.Row="2"
                                         Grid.Column="1"
                                         Foreground="{DynamicResource SuccessColor}"
-                                        Text="P200.00"
+                                        Text="{CompiledBinding Total, StringFormat='₱{0:N2}'}"
                                         TextAlignment="Right"
                                         FontSize="18"
                                         FontWeight="Bold" />
@@ -305,21 +319,29 @@
                         
                         <!-- Create Purchase Order Button -->
                         <!-- Only available during PO creation -->
-                        <StackPanel Margin="0,10,0,0">
+                        <StackPanel Margin="0,10,0,0" IsVisible="{CompiledBinding !IsRetrievalMode}">
                             <Button
                                 Content="Create Purchase Order"
                                 Classes="Primary"
+                                Command="{CompiledBinding CreatePurchaseOrderCommand}"
                                 HorizontalAlignment="Right"/>
                         </StackPanel>
-                        
+
                         <!-- Back and Send To Inventory -->
                         <!-- Only available during PO retrieval -->
-                        <StackPanel Margin="0,10,0,0" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                        <StackPanel 
+                            Margin="0,10,0,0" 
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Spacing="10" 
+                            IsVisible="{CompiledBinding IsRetrievalMode}">
                             <Button
                                 Content="Back"
+                                Command="{CompiledBinding BackCommand}"
                                 Classes="Secondary"/>
                             <Button
                                 Content="Send to Inventory"
+                                Command="{CompiledBinding SendToInventoryCommand}"
                                 Classes="Primary"/>
                         </StackPanel>
                         
