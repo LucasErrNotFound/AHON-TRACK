@@ -65,6 +65,7 @@
 										Grid.Column="0"
 										PlaceholderText="Select its supplier here"
 										shadui:ControlAssist.Label="Product Supplier"
+										IsEnabled="False"
 										ItemsSource="{CompiledBinding ProductSupplierItems}"
 										SelectedItem="{CompiledBinding SelectedProductSupplier, Mode=TwoWay}" />
 									<ComboBox
@@ -72,6 +73,7 @@
 										Margin="0,-5,0,0"
 										PlaceholderText="Select its product here"
 										shadui:ControlAssist.Label="Product Name"
+										IsEnabled="False"
 										ItemsSource="{CompiledBinding  ProductItems}"
 										SelectedItem="{CompiledBinding SelectedProductItem, Mode=TwoWay}" />
 									<!--
@@ -89,11 +91,13 @@
                                         Classes="Clearable"
                                         Watermark="Enter product batch code"
                                         shadui:ControlAssist.Label="Batch Code"
+                                        IsEnabled="False"
                                         Text="{CompiledBinding BatchCode, Mode=TwoWay}"/>
 									<ComboBox
 										Grid.Column="1"
 										Margin="0,-4,0,0"
 										shadui:ControlAssist.Label="Category"
+										IsEnabled="False"
 										ItemsSource="{CompiledBinding ProductCategoryItems}"
 										SelectedItem="{CompiledBinding SelectedProductCategory, Mode=TwoWay}">
 									</ComboBox>
@@ -176,20 +180,6 @@
 						<shadui:Card Grid.Row="0" VerticalAlignment="Top">
 							<StackPanel Orientation="Vertical" Spacing="-5">
 								<shadui:CardTitle Content="Pricing" />
-								<!-- Selling Price -->
-								<NumericUpDown
-                                    Margin="0,30,0,0"
-                                    shadui:ControlAssist.Label="Selling Price"
-                                    IsEnabled="False"
-                                    Classes="Clearable"
-                                    FormatString="N2"
-                                    ShowButtonSpinner="False"
-                                    Watermark="0.00"
-                                    Value="{CompiledBinding ProductPrice, Mode=TwoWay}">
-									<NumericUpDown.InnerLeftContent>
-										<TextBlock Margin="8,0,-8,0" Text="₱" />
-									</NumericUpDown.InnerLeftContent>
-								</NumericUpDown>
 								
 								<!-- Purchased Price -->
 								<NumericUpDown
@@ -219,6 +209,21 @@
 										<TextBlock Margin="8,0,-8,0" Text="₱" />
 									</NumericUpDown.InnerLeftContent>
 								</NumericUpDown>
+								
+								<!-- Selling Price -->
+								<NumericUpDown
+                                    Margin="0,30,0,0"
+                                    shadui:ControlAssist.Label="Selling Price"
+                                    IsEnabled="False"
+                                    Classes="Clearable"
+                                    FormatString="N2"
+                                    ShowButtonSpinner="False"
+                                    Watermark="0.00"
+                                    Value="{CompiledBinding ProductPrice, Mode=TwoWay}">
+									<NumericUpDown.InnerLeftContent>
+										<TextBlock Margin="8,0,-8,0" Text="₱" />
+									</NumericUpDown.InnerLeftContent>
+								</NumericUpDown>
 
 								<!-- Discounted Price -->
 								<NumericUpDown
@@ -244,6 +249,7 @@
 							<StackPanel>
 								<shadui:CardTitle Content="Stock" />
 								<NumericUpDown
+									IsEnabled="False"
                                     Margin="0,20,0,0"
                                     shadui:ControlAssist.Label="Current Stock"
                                     Classes="Clearable"
@@ -265,7 +271,7 @@
 									shadui:ControlAssist.Hint="Pick the product's expiry date (optional)"
 									shadui:ControlAssist.ReadOnly="True"
 									Margin="0,20,0,0"
-									IsEnabled="{CompiledBinding CanEditExpiry}"
+									IsEnabled="False"
 									DisplayDateStart="{CompiledBinding MinimumExpiryDate}"
 									SelectedDate="{CompiledBinding ProductExpiry}">
 								</CalendarDatePicker>
