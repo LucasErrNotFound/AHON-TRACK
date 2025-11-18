@@ -225,23 +225,6 @@
 									</NumericUpDown.InnerLeftContent>
 								</NumericUpDown>
 
-								<!-- Discounted Price -->
-								<NumericUpDown
-                                    Margin="0,30,0,0"
-                                    shadui:ControlAssist.Label="Discounted Price (Optional)"
-                                    Classes="Clearable"
-                                    FormatString="N0"
-                                    ShowButtonSpinner="False"
-                                    Minimum="0"
-                                    Maximum="100"
-                                    Watermark="0"
-                                    Value="{CompiledBinding ProductDiscountedPrice, Mode=TwoWay}">
-									<NumericUpDown.InnerLeftContent>
-										<TextBlock
-                                            Margin="8,0,-8,0"
-                                            Text="%" />
-									</NumericUpDown.InnerLeftContent>
-								</NumericUpDown>
 							</StackPanel>
 						</shadui:Card>
 
