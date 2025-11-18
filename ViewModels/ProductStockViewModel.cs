@@ -693,7 +693,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             Supplier = model.SupplierName ?? "None",
             Expiry = model.ExpiryDate,
             Status = model.Status ?? "",
-            Description = model.Description ?? "",  // ⭐ Ensure this line exists
+            Description = model.Description ?? "",
             DiscountedPrice = model.DiscountedPrice,
             Poster = posterPath
         };

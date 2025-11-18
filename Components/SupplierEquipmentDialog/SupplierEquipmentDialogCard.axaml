@@ -37,7 +37,7 @@
         <ScrollViewer HorizontalScrollBarVisibility="Auto">
             <StackPanel Spacing="0" Margin="0,0,10,0">
                 <TextBlock
-                    Text="Add Supplier Equipment"
+                    Text="Add Equipment Supplier"
                     Foreground="{DynamicResource FontForeground}"
                     Classes="h4" />
                 <TextBlock

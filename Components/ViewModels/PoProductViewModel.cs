@@ -166,7 +166,6 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 SellingPrice = item.SellingPrice,
                 Quantity = 1,
                 QuantityReceived = 0,
-                // ⭐ ADD THESE MAPPINGS
                 BatchCode = item.BatchCode,
                 Category = item.SelectedCategory,
                 Description = item.Description,
@@ -219,7 +218,6 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 SellingPrice = item.SellingPrice,
                 Quantity = item.Quantity,
                 QuantityReceived = item.QuantityReceived,
-                // ⭐ ADD THESE MAPPINGS
                 BatchCode = item.BatchCode,
                 Category = item.Category,
                 Description = item.Description,
@@ -441,13 +439,13 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                     {
                         ProductName = item.ItemName,
                         BatchCode = item.BatchCode ?? $"BATCH-{DateTime.Now.Year}-{System.Random.Shared.Next(100000, 999999)}",
-                        SupplierID = SupplierId, // ⭐ ADD SupplierID
-                        Description = item.Description, // ⭐ ADD Description
-                        Category = item.Category ?? "Products", // ⭐ ADD Category
+                        SupplierID = SupplierId,
+                        Description = item.Description,
+                        Category = item.Category ?? "Products",
                         Price = item.SellingPrice ?? 0,
-                        PurchasedPrice = item.SuppliersPrice, // ⭐ ADD PurchasedPrice
-                        MarkupPrice = item.MarkupPrice, // ⭐ ADD MarkupPrice
-                        ExpiryDate = item.ExpiryDate, // ⭐ ADD ExpiryDate
+                        PurchasedPrice = item.SuppliersPrice,
+                        MarkupPrice = item.MarkupPrice,
+                        ExpiryDate = item.ExpiryDate,
                         CurrentStock = item.QuantityReceived ?? 0,
                         Status = "In Stock"
                     };
