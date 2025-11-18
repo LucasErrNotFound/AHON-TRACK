@@ -501,6 +501,11 @@ public partial class EquipmentDialogCardViewModel : ViewModelBase, INavigable, I
         WarrantyExpiry = equipment?.Warranty;
         LastMaintenance = equipment?.LastMaintenance;
         NextMaintenance = equipment?.NextMaintenance;
+        
+        if (!string.IsNullOrEmpty(equipment?.BrandName))
+        {
+            BrandNameItems = new[] { equipment.BrandName };
+        }
 
         await LoadSuppliersAsync();
 

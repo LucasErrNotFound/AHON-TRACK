@@ -640,6 +640,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 {
                     PurchaseOrderId = fullPO.PurchaseOrderID,
                     PoNumber = fullPO.PONumber ?? string.Empty,
+                    SupplierID = fullPO.SupplierID,
                     SupplierName = fullPO.SupplierName ?? string.Empty,
                     SupplierEmail = GetSupplierEmail(fullPO.SupplierID),
                     ContactPerson = GetSupplierContactPerson(fullPO.SupplierID),
@@ -682,6 +683,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                 {
                     PurchaseOrderId = fullPO.PurchaseOrderID,
                     PoNumber = fullPO.PONumber ?? string.Empty,
+                    SupplierID = fullPO.SupplierID,
                     SupplierName = fullPO.SupplierName ?? string.Empty,
                     SupplierEmail = GetSupplierEmail(fullPO.SupplierID),
                     ContactPerson = GetSupplierContactPerson(fullPO.SupplierID),
@@ -1575,6 +1577,7 @@ public class PurchaseOrderProductRetrievalData
 {
     public int PurchaseOrderId { get; set; }
     public string PoNumber { get; set; } = string.Empty;
+    public int? SupplierID { get; set; }
     public string SupplierName { get; set; } = string.Empty;
     public string SupplierEmail { get; set; } = string.Empty;
     public string ContactPerson { get; set; } = string.Empty;
@@ -1612,6 +1615,7 @@ public class PurchaseOrderEquipmentRetrievalData
 {
     public int PurchaseOrderId { get; set; }
     public string PoNumber { get; set; } = string.Empty;
+    public int? SupplierID { get; set; }
     public string SupplierName { get; set; } = string.Empty;
     public string SupplierEmail { get; set; } = string.Empty;
     public string ContactPerson { get; set; } = string.Empty;

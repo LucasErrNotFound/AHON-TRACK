@@ -698,9 +698,26 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         BatchCode = product.BatchCode;
         CurrentStock = product.CurrentStock;
 
-        if (!string.IsNullOrEmpty(product.Supplier) &&
-            ProductSupplierItems.Contains(product.Supplier))
+        // Populate ProductItems with current product name for edit mode
+        if (!string.IsNullOrEmpty(product.Name))
         {
+            ProductItems = new[] { product.Name };
+            SelectedProductItem = product.Name;
+        }
+
+        // Handle Supplier selection - ensure it's in the list
+        if (!string.IsNullOrEmpty(product.Supplier))
+        {
+            // If supplier is not in the list, add it temporarily for edit mode
+            if (!ProductSupplierItems.Contains(product.Supplier))
+            {
+                var tempList = new List<string>(ProductSupplierItems);
+                if (!tempList.Contains(product.Supplier))
+                {
+                    tempList.Add(product.Supplier);
+                }
+                ProductSupplierItems = tempList.ToArray();
+            }
             SelectedProductSupplier = product.Supplier;
         }
         else

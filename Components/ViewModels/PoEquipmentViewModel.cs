@@ -186,6 +186,7 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
     
         PurchaseOrderId = data.PurchaseOrderId;
         PoNumber = data.PoNumber;
+        SupplierId = data.SupplierID;
         SupplierName = data.SupplierName;
         SupplierEmail = data.SupplierEmail;
         ContactPerson = data.ContactPerson;
