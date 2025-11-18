@@ -5,6 +5,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Interface;
 using AHON_TRACK.Validators;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -28,13 +30,18 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly ISupplierService _supplierService;
 
-    public SupplierDialogCardViewModel(DialogManager dialogManager, ToastManager toastManager,
-        PageManager pageManager)
+    public SupplierDialogCardViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager,
+        PageManager pageManager,
+        ISupplierService supplierService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _supplierService = supplierService;
         
         AddInitialItem();
     }
@@ -67,7 +74,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     }
 
     [RelayCommand(CanExecute = nameof(CanSaveSupplier))]
-    private void AddSupplier()
+    private async void AddSupplier() // Make it async
     {
         if (!ValidateSupplier())
         {
@@ -79,34 +86,73 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
                 "Confirm Supplier",
                 "Are you ready to proceed with adding this supplier?")
             .WithPrimaryButton("Yes, proceed with adding",
-                () => {
-                    var supplierData = new SupplierProductData
+                async () => { // Make this async
+                    try
                     {
-                        SupplierName = this.SupplierName,
-                        ContactPerson = this.ContactPerson,
-                        Email = this.Email,
-                        PhoneNumber = this.PhoneNumber,
-                        Address = this.Address,
-                        SupplierItems = this.SupplierItems.ToList()
-                    };
+                        // Create supplier model for database
+                        var supplierModel = new SupplierManagementModel
+                        {
+                            SupplierName = this.SupplierName,
+                            ContactPerson = this.ContactPerson,
+                            Email = this.Email,
+                            PhoneNumber = this.PhoneNumber,
+                            Address = this.Address,
+                            Products = string.Join(", ", this.SupplierItems.Select(i => i.ItemName)),
+                            Status = "Active"
+                        };
 
-                    Debug.WriteLine($"[SupplierDialogCardViewModel] Navigating with supplier: {supplierData.SupplierName}");
-                    Debug.WriteLine($"[SupplierDialogCardViewModel] Items count: {supplierData.SupplierItems.Count}");
+                        // Add supplier to database and get the ID
+                        var result = await _supplierService.AddSupplierAsync(supplierModel);
+                        
+                        if (!result.Success || !result.SupplierId.HasValue)
+                        {
+                            _toastManager.CreateToast("Error")
+                                .WithContent($"Failed to add supplier: {result.Message}")
+                                .DismissOnClick()
+                                .ShowError();
+                            return;
+                        }
 
-                    // ✅ NAVIGATE WITH PARAMETERS
-                    var parameters = new Dictionary<string, object>
+                        // Now create the supplier data with the ID from database
+                        var supplierData = new SupplierProductData
+                        {
+                            SupplierID = result.SupplierId.Value, // Set the ID from database
+                            SupplierName = this.SupplierName,
+                            ContactPerson = this.ContactPerson,
+                            Email = this.Email,
+                            PhoneNumber = this.PhoneNumber,
+                            Address = this.Address,
+                            SupplierItems = this.SupplierItems.ToList()
+                        };
+
+                        Debug.WriteLine($"[SupplierDialogCardViewModel] Supplier added with ID: {result.SupplierId.Value}");
+                        Debug.WriteLine($"[SupplierDialogCardViewModel] Navigating with supplier: {supplierData.SupplierName}");
+                        Debug.WriteLine($"[SupplierDialogCardViewModel] Items count: {supplierData.SupplierItems.Count}");
+
+                        // Navigate with parameters
+                        var parameters = new Dictionary<string, object>
+                        {
+                            { "SupplierData", supplierData }
+                        };
+
+                        _pageManager.Navigate<PoProductViewModel>(parameters);
+
+                        _toastManager.CreateToast("Success")
+                            .WithContent("Supplier added and data loaded to Purchase Order!")
+                            .DismissOnClick()
+                            .ShowSuccess();
+                    
+                        _dialogManager.Close(this, new CloseDialogOptions{ Success = true });
+                    }
+                    catch (Exception ex)
                     {
-                        { "SupplierData", supplierData }
-                    };
-
-                    _pageManager.Navigate<PoProductViewModel>(parameters);
-
-                    _toastManager.CreateToast("Success")
-                        .WithContent("Supplier data loaded to Purchase Order!")
-                        .DismissOnClick()
-                        .ShowSuccess();
-                
-                    _dialogManager.Close(this, new CloseDialogOptions{ Success = true });
+                        _toastManager.CreateToast("Error")
+                            .WithContent($"An error occurred: {ex.Message}")
+                            .DismissOnClick()
+                            .ShowError();
+                        
+                        Debug.WriteLine($"[AddSupplier] Error: {ex.Message}");
+                    }
                 })
             .WithCancelButton("No, I want to add more items",
                 () => {
