@@ -654,7 +654,12 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                         MarkupPrice = item.MarkupPrice,
                         SellingPrice = item.SellingPrice,
                         Quantity = item.Quantity,
-                        QuantityReceived = item.QuantityReceived
+                        QuantityReceived = item.QuantityReceived,
+                        // ⭐ ADD THESE MAPPINGS
+                        BatchCode = item.BatchCode,
+                        Category = item.Category,
+                        Description = null, // Not stored in PO items currently
+                        ExpiryDate = null   // Not stored in PO items currently
                     }).ToList() ?? new List<PurchaseOrderProductItemData>(),
                     Subtotal = fullPO.Subtotal,
                     Vat = fullPO.TaxAmount,
@@ -1593,6 +1598,12 @@ public class PurchaseOrderProductItemData
     public decimal SellingPrice { get; set; }
     public int Quantity { get; set; }
     public int QuantityReceived { get; set; }
+    
+    // ⭐ ADD THESE FIELDS
+    public string? BatchCode { get; set; }
+    public string? Category { get; set; }
+    public string? Description { get; set; }
+    public DateTime? ExpiryDate { get; set; }
 }
 
 public class PurchaseOrderEquipmentRetrievalData

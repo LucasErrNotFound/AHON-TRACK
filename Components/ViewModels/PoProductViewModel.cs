@@ -165,17 +165,22 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 MarkupPrice = item.MarkupPrice,
                 SellingPrice = item.SellingPrice,
                 Quantity = 1,
-                QuantityReceived = 0
+                QuantityReceived = 0,
+                // ⭐ ADD THESE MAPPINGS
+                BatchCode = item.BatchCode,
+                Category = item.SelectedCategory,
+                Description = item.Description,
+                ExpiryDate = item.Expiration?.DateTime
             };
 
             poItem.PropertyChanged += OnItemPropertyChanged;
             Items.Add(poItem);
-            
+        
             Debug.WriteLine($"  Added item: {item.ItemName} - ₱{item.SupplierPrice}");
         }
 
         CalculateTotals();
-        
+    
         Debug.WriteLine($"[PoProductViewModel] Total items loaded: {Items.Count}");
         Debug.WriteLine($"[PoProductViewModel] Subtotal: ₱{Subtotal:N2}, VAT: ₱{Vat:N2}, Total: ₱{Total:N2}");
     }
@@ -183,7 +188,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     public void LoadRetrievalData(PurchaseOrderProductRetrievalData data)
     {
         Debug.WriteLine($"[PoProductViewModel] Loading retrieval data: PO {data.PoNumber}");
-        
+    
         PurchaseOrderId = data.PurchaseOrderId;
         PoNumber = data.PoNumber;
         SupplierName = data.SupplierName;
@@ -212,12 +217,17 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 MarkupPrice = item.MarkupPrice,
                 SellingPrice = item.SellingPrice,
                 Quantity = item.Quantity,
-                QuantityReceived = item.QuantityReceived
+                QuantityReceived = item.QuantityReceived,
+                // ⭐ ADD THESE MAPPINGS
+                BatchCode = item.BatchCode,
+                Category = item.Category,
+                Description = item.Description,
+                ExpiryDate = item.ExpiryDate
             };
 
             poItem.PropertyChanged += OnItemPropertyChanged;
             Items.Add(poItem);
-            
+        
             Debug.WriteLine($"  Loaded item: {item.ItemName} - Qty: {item.Quantity}, Received: {item.QuantityReceived}");
         }
 
@@ -303,9 +313,9 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 SupplierID = SupplierId.Value, 
                 OrderDate = DateTime.Now,
                 ExpectedDeliveryDate = DateTime.Now.AddDays(7),
-                ShippingStatus = "Pending", // ⭐ Default to Pending
+                ShippingStatus = "Pending",
                 PaymentStatus = "Unpaid",
-                Category = "Product", // ⭐ Mark as Product PO
+                Category = "Product",
                 Subtotal = Subtotal,
                 TaxRate = 0.12m,
                 TaxAmount = Vat,
@@ -315,6 +325,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                     ItemID = item.ItemId,
                     ItemName = item.ItemName,
                     Unit = item.UnitsOfMeasures,
+                    Price = item.SuppliersPrice ?? 0,  // ⭐ ADD THIS - Use SupplierPrice as the Price for calculations
                     SupplierPrice = item.SuppliersPrice ?? 0,
                     MarkupPrice = item.MarkupPrice ?? 0,
                     SellingPrice = item.SellingPrice ?? 0,
@@ -325,7 +336,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
 
             // Save to database
             var result = await _purchaseOrderService.CreatePurchaseOrderAsync(purchaseOrder);
-        
+    
             if (result.Success)
             {
                 _toastManager.CreateToast("Success")
@@ -335,7 +346,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
 
                 // Trigger refresh event
                 DashboardEventService.Instance.NotifyPurchaseOrderAdded();
-            
+        
                 // Navigate back
                 _pageManager.Navigate<SupplierManagementViewModel>();
             }
@@ -353,7 +364,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 .WithContent($"An unexpected error occurred: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
-        
+    
             Debug.WriteLine($"[CreatePurchaseOrderConfirmed] Error: {ex.Message}");
             Debug.WriteLine($"[CreatePurchaseOrderConfirmed] Stack: {ex.StackTrace}");
         }
@@ -424,7 +435,14 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                     var productModel = new ProductModel
                     {
                         ProductName = item.ItemName,
+                        BatchCode = item.BatchCode ?? $"BATCH-{DateTime.Now:yyyyMMdd}-{item.ItemId}", // ⭐ ADD BatchCode
+                        SupplierID = SupplierId, // ⭐ ADD SupplierID
+                        Description = item.Description, // ⭐ ADD Description
+                        Category = item.Category ?? "Products", // ⭐ ADD Category
                         Price = item.SellingPrice ?? 0,
+                        PurchasedPrice = item.SuppliersPrice, // ⭐ ADD PurchasedPrice
+                        MarkupPrice = item.MarkupPrice, // ⭐ ADD MarkupPrice
+                        ExpiryDate = item.ExpiryDate, // ⭐ ADD ExpiryDate
                         CurrentStock = item.QuantityReceived ?? 0,
                         Status = "In Stock"
                     };
@@ -433,9 +451,9 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 }
             }
 
-            // Mark PO as delivered and sent to inventory ⭐
+            // Mark PO as delivered and sent to inventory
             var deliveryResult = await _purchaseOrderService.MarkAsDeliveredAsync(PurchaseOrderId.Value);
-        
+    
             if (deliveryResult.Success)
             {
                 _toastManager.CreateToast("Success")
@@ -445,7 +463,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
 
                 // Trigger refresh event
                 DashboardEventService.Instance.NotifyPurchaseOrderUpdated();
-            
+        
                 // Navigate back
                 _pageManager.Navigate<SupplierManagementViewModel>();
             }
@@ -455,7 +473,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                     .WithContent("Items added but status update failed.")
                     .DismissOnClick()
                     .ShowWarning();
-            
+        
                 _pageManager.Navigate<SupplierManagementViewModel>();
             }
         }
@@ -465,7 +483,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 .WithContent($"An unexpected error occurred: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
-        
+    
             Debug.WriteLine($"[SendToInventoryConfirmed] Error: {ex.Message}");
         }
     }
@@ -525,6 +543,19 @@ public partial class PurchaseOrderProductItem : ObservableValidator
     
     [ObservableProperty] 
     private int? _quantityReceived = 0;
+
+    // ⭐ ADD THESE FIELDS for inventory
+    [ObservableProperty]
+    private string? _batchCode;
+    
+    [ObservableProperty]
+    private string? _category;
+    
+    [ObservableProperty]
+    private string? _description;
+    
+    [ObservableProperty]
+    private DateTime? _expiryDate;
 
     public decimal LineTotal => (SuppliersPrice ?? 0) * (Quantity ?? 0);
 }
