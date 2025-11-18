@@ -400,9 +400,22 @@ namespace AHON_TRACK.Services
         private async Task<List<PurchaseOrderItemModel>> GetPurchaseOrderItemsAsync(SqlConnection conn, int poId)
         {
             const string query = @"
-                SELECT POItemID, PurchaseOrderID, ItemName, Unit, Quantity, Price
-                FROM PurchaseOrderItems
-                WHERE PurchaseOrderID = @poId";
+        SELECT 
+            POItemID, 
+            PurchaseOrderID, 
+            ItemID,
+            ItemName, 
+            Unit, 
+            Quantity, 
+            Price,
+            Category,
+            BatchCode,
+            SupplierPrice,
+            MarkupPrice,
+            SellingPrice,
+            QuantityReceived
+        FROM PurchaseOrderItems
+        WHERE PurchaseOrderID = @poId";
 
             using var cmd = new SqlCommand(query, conn);
             cmd.Parameters.AddWithValue("@poId", poId);
@@ -414,12 +427,41 @@ namespace AHON_TRACK.Services
             {
                 items.Add(new PurchaseOrderItemModel
                 {
-                    POItemID = reader.GetInt32(0),
-                    PurchaseOrderID = reader.GetInt32(1),
-                    ItemName = reader.GetString(2),
-                    Unit = reader.GetString(3),
-                    Quantity = reader.GetInt32(4),
-                    Price = reader.GetDecimal(5)
+                    POItemID = reader.GetInt32(reader.GetOrdinal("POItemID")),
+                    PurchaseOrderID = reader.GetInt32(reader.GetOrdinal("PurchaseOrderID")),
+            
+                    ItemID = reader.IsDBNull(reader.GetOrdinal("ItemID")) 
+                        ? null 
+                        : reader.GetString(reader.GetOrdinal("ItemID")),
+            
+                    ItemName = reader.GetString(reader.GetOrdinal("ItemName")),
+                    Unit = reader.GetString(reader.GetOrdinal("Unit")),
+                    Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                    Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+            
+                    Category = reader.IsDBNull(reader.GetOrdinal("Category")) 
+                        ? null 
+                        : reader.GetString(reader.GetOrdinal("Category")),
+            
+                    BatchCode = reader.IsDBNull(reader.GetOrdinal("BatchCode")) 
+                        ? null 
+                        : reader.GetString(reader.GetOrdinal("BatchCode")),
+            
+                    SupplierPrice = reader.IsDBNull(reader.GetOrdinal("SupplierPrice")) 
+                        ? 0 
+                        : reader.GetDecimal(reader.GetOrdinal("SupplierPrice")),
+            
+                    MarkupPrice = reader.IsDBNull(reader.GetOrdinal("MarkupPrice")) 
+                        ? 0 
+                        : reader.GetDecimal(reader.GetOrdinal("MarkupPrice")),
+            
+                    SellingPrice = reader.IsDBNull(reader.GetOrdinal("SellingPrice")) 
+                        ? 0 
+                        : reader.GetDecimal(reader.GetOrdinal("SellingPrice")),
+            
+                    QuantityReceived = reader.IsDBNull(reader.GetOrdinal("QuantityReceived")) 
+                        ? 0 
+                        : reader.GetInt32(reader.GetOrdinal("QuantityReceived"))
                 });
             }
 

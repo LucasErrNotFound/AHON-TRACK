@@ -617,7 +617,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
         {
             // Fetch full purchase order details from database
             var result = await _purchaseOrderService.GetPurchaseOrderByIdAsync(purchaseOrder.ID.Value);
-        
+    
             if (!result.Success || result.PurchaseOrder == null)
             {
                 _toastManager.CreateToast("Failed to Load Purchase Order")
@@ -629,27 +629,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
 
             var fullPO = result.PurchaseOrder;
 
-            // Determine if this is a product or equipment purchase order
-            // Check if items have MarkupPrice and SellingPrice (products) or Category and BatchCode (equipment)
-            bool isProductPO = false;
-            bool isEquipmentPO = false;
-
-            if (fullPO.Items != null && fullPO.Items.Count > 0)
-            {
-                // Check first item to determine type
-                var firstItem = fullPO.Items[0];
-            
-                // If item has markup/selling price fields, it's a product
-                // This logic depends on your database schema - adjust as needed
-                if (!string.IsNullOrEmpty(firstItem.Category) || !string.IsNullOrEmpty(firstItem.BatchCode))
-                {
-                    isEquipmentPO = true;
-                }
-                else
-                {
-                    isProductPO = true;
-                }
-            }
+            // Use the Category field from PurchaseOrders table to determine type
+            bool isEquipmentPO = fullPO.Category?.Equals("Equipment", StringComparison.OrdinalIgnoreCase) == true;
+            bool isProductPO = fullPO.Category?.Equals("Product", StringComparison.OrdinalIgnoreCase) == true;
 
             if (isProductPO)
             {
@@ -675,7 +657,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                         QuantityReceived = item.QuantityReceived
                     }).ToList() ?? new List<PurchaseOrderProductItemData>(),
                     Subtotal = fullPO.Subtotal,
-                    Vat = fullPO.TaxRate,
+                    Vat = fullPO.TaxAmount,
                     Total = fullPO.Total,
                     OrderDate = fullPO.OrderDate,
                     ExpectedDeliveryDate = fullPO.ExpectedDeliveryDate,
@@ -712,7 +694,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                         QuantityReceived = item.QuantityReceived
                     }).ToList() ?? new List<PurchaseOrderEquipmentItemData>(),
                     Subtotal = fullPO.Subtotal,
-                    Vat = fullPO.TaxRate,
+                    Vat = fullPO.TaxAmount,
                     Total = fullPO.Total,
                     OrderDate = fullPO.OrderDate,
                     ExpectedDeliveryDate = fullPO.ExpectedDeliveryDate,
@@ -728,7 +710,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
             else
             {
                 _toastManager.CreateToast("Unknown Purchase Order Type")
-                    .WithContent("Could not determine if this is a product or equipment purchase order.")
+                    .WithContent($"Could not determine purchase order type. Category: '{fullPO.Category ?? "null"}'")
                     .DismissOnClick()
                     .ShowWarning();
             }
