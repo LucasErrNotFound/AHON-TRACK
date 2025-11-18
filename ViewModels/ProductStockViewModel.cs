@@ -669,6 +669,7 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
         ApplyProductFilter();
     }
 
+    // Around line 672-706, verify the MapToProductStock method includes Description:
     private ProductStock MapToProductStock(ProductModel model)
     {
         // ✅ Handle Base64 image properly
@@ -687,12 +688,12 @@ public sealed partial class ProductStockViewModel : ViewModelBase, INavigable, I
             Category = model.Category ?? "",
             CurrentStock = model.CurrentStock,
             Price = model.Price,
-            PurchasedPrice = model.PurchasedPrice,    // ⭐ ADD THIS
-            MarkupPrice = model.MarkupPrice,          // ⭐ ADD THIS
+            PurchasedPrice = model.PurchasedPrice,
+            MarkupPrice = model.MarkupPrice,
             Supplier = model.SupplierName ?? "None",
             Expiry = model.ExpiryDate,
             Status = model.Status ?? "",
-            Description = model.Description ?? "",
+            Description = model.Description ?? "",  // ⭐ Ensure this line exists
             DiscountedPrice = model.DiscountedPrice,
             Poster = posterPath
         };
@@ -762,7 +763,6 @@ public partial class ProductStock : ObservableObject
     [ObservableProperty]
     private string? _supplier;
 
-    [ObservableProperty]
     private DateTime? _expiry;
 
     [ObservableProperty]
@@ -773,6 +773,18 @@ public partial class ProductStock : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected;
+    
+    public DateTime? Expiry
+    {
+        get => _expiry;
+        set
+        {
+            if (SetProperty(ref _expiry, value))
+            {
+                OnPropertyChanged(nameof(FormattedExpiry));
+            }
+        }
+    }
 
     public decimal FinalPrice
     {

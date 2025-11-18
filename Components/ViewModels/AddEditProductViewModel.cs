@@ -303,9 +303,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         }
     }
 
+    // Around line 306-309, update OnSelectedProductSupplierChanged:
     partial void OnSelectedProductSupplierChanged(string? value)
     {
-        UpdateProductItems(value);
+        // ⭐ FIX: Don't update product items when in edit mode
+        // In edit mode, we manually set the ProductItems to show the current product
+        if (ViewContext != ProductViewContext.EditProduct)
+        {
+            UpdateProductItems(value);
+        }
     }
 
     private void UpdateProductItems(string? selectedSupplier)
@@ -685,6 +691,7 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         _pageManager.Navigate<ProductStockViewModel>();
     }
 
+    // Replace the entire PopulateFormWithProductDataAsync method (around line 688-753)
     private async Task PopulateFormWithProductDataAsync(ProductStock product)
     {
         ProductID = product.ID;
@@ -697,13 +704,9 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         ProductDiscountedPrice = product.DiscountedPrice;
         BatchCode = product.BatchCode;
         CurrentStock = product.CurrentStock;
-
-        // Populate ProductItems with current product name for edit mode
-        if (!string.IsNullOrEmpty(product.Name))
-        {
-            ProductItems = new[] { product.Name };
-            SelectedProductItem = product.Name;
-        }
+        
+        Console.WriteLine($"📝 Setting Description: '{product.Description}'"); // ⭐ ADD DEBUG
+        Console.WriteLine($"📅 Setting Expiry: {product.Expiry}"); // ⭐ ADD DEBUG
 
         // Handle Supplier selection - ensure it's in the list
         if (!string.IsNullOrEmpty(product.Supplier))
@@ -726,6 +729,14 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
         }
 
         SelectedProductCategory = product.Category;
+
+        // ⭐ FIX: Populate ProductItems and SelectedProductItem AFTER setting supplier
+        // This prevents them from being overwritten by OnSelectedProductSupplierChanged
+        if (!string.IsNullOrEmpty(product.Name))
+        {
+            ProductItems = new[] { product.Name };
+            SelectedProductItem = product.Name;
+        }
 
         int maxAttempts = 20;
         int attempts = 0;
@@ -941,6 +952,15 @@ public partial class AddEditProductViewModel : ViewModelBase, INavigableWithPara
                 SetProperty(ref _productExpiry, value, true);
                 OnPropertyChanged(nameof(CanEditExpiry));
             }
+        }
+    }
+    
+    public DateTimeOffset? ProductExpiryOffset
+    {
+        get => ProductExpiry.HasValue ? new DateTimeOffset(ProductExpiry.Value) : null;
+        set
+        {
+            ProductExpiry = value?.DateTime;
         }
     }
 

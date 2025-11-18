@@ -273,7 +273,7 @@
 									Margin="0,20,0,0"
 									IsEnabled="False"
 									DisplayDateStart="{CompiledBinding MinimumExpiryDate}"
-									SelectedDate="{CompiledBinding ProductExpiry}">
+									SelectedDate="{CompiledBinding ProductExpiryOffset, Mode=TwoWay}">
 								</CalendarDatePicker>
 							</StackPanel>
 						</shadui:Card>
