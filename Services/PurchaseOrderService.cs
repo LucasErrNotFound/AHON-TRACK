@@ -160,11 +160,13 @@ namespace AHON_TRACK.Services
             const string query = @"
         INSERT INTO PurchaseOrderItems (
             PurchaseOrderID, ItemID, ItemName, Unit, Quantity, Price, 
-            Category, BatchCode, SupplierPrice, MarkupPrice, SellingPrice, QuantityReceived
+            Category, BatchCode, SupplierPrice, MarkupPrice, SellingPrice, QuantityReceived,
+            Condition, WarrantyExpiry
         )
         VALUES (
             @poId, @itemId, @itemName, @unit, @quantity, @price, 
-            @category, @batchCode, @supplierPrice, @markupPrice, @sellingPrice, @quantityReceived
+            @category, @batchCode, @supplierPrice, @markupPrice, @sellingPrice, @quantityReceived,
+            @condition, @warrantyExpiry
         )";
 
             foreach (var item in items)
@@ -182,6 +184,9 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@markupPrice", item.MarkupPrice);
                 cmd.Parameters.AddWithValue("@sellingPrice", item.SellingPrice);
                 cmd.Parameters.AddWithValue("@quantityReceived", item.QuantityReceived);
+                // ⭐ ADD THESE
+                cmd.Parameters.AddWithValue("@condition", item.Condition ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@warrantyExpiry", item.WarrantyExpiry ?? (object)DBNull.Value);
 
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -413,7 +418,9 @@ namespace AHON_TRACK.Services
             SupplierPrice,
             MarkupPrice,
             SellingPrice,
-            QuantityReceived
+            QuantityReceived,
+            Condition,
+            WarrantyExpiry
         FROM PurchaseOrderItems
         WHERE PurchaseOrderID = @poId";
 
@@ -461,7 +468,16 @@ namespace AHON_TRACK.Services
             
                     QuantityReceived = reader.IsDBNull(reader.GetOrdinal("QuantityReceived")) 
                         ? 0 
-                        : reader.GetInt32(reader.GetOrdinal("QuantityReceived"))
+                        : reader.GetInt32(reader.GetOrdinal("QuantityReceived")),
+            
+                    // ⭐ ADD THESE
+                    Condition = reader.IsDBNull(reader.GetOrdinal("Condition")) 
+                        ? null 
+                        : reader.GetString(reader.GetOrdinal("Condition")),
+            
+                    WarrantyExpiry = reader.IsDBNull(reader.GetOrdinal("WarrantyExpiry")) 
+                        ? null 
+                        : reader.GetDateTime(reader.GetOrdinal("WarrantyExpiry"))
                 });
             }
 

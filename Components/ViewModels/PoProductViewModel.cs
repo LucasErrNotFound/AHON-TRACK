@@ -435,7 +435,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                     var productModel = new ProductModel
                     {
                         ProductName = item.ItemName,
-                        BatchCode = item.BatchCode ?? $"BATCH-{DateTime.Now:yyyyMMdd}-{item.ItemId}", // ⭐ ADD BatchCode
+                        BatchCode = item.BatchCode ?? $"BATCH-{DateTime.Now:yyyyMMdd}",
                         SupplierID = SupplierId, // ⭐ ADD SupplierID
                         Description = item.Description, // ⭐ ADD Description
                         Category = item.Category ?? "Products", // ⭐ ADD Category

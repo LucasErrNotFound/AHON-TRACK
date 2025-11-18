@@ -163,7 +163,9 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
                 BatchCode = item.BatchCode,
                 SuppliersPrice = item.Price,
                 Quantity = 1,
-                QuantityReceived = 0
+                QuantityReceived = 0,
+                Condition = item.SelectedCondition,
+                WarrantyExpiry = item.WarrantExpiry?.DateTime
             };
 
             poItem.PropertyChanged += OnItemPropertyChanged;
@@ -181,7 +183,7 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
     public void LoadRetrievalData(PurchaseOrderEquipmentRetrievalData data)
     {
         Debug.WriteLine($"[PoEquipmentViewModel] Loading retrieval data: PO {data.PoNumber}");
-        
+    
         PurchaseOrderId = data.PurchaseOrderId;
         PoNumber = data.PoNumber;
         SupplierName = data.SupplierName;
@@ -210,12 +212,15 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
                 BatchCode = item.BatchCode,
                 SuppliersPrice = item.Price,
                 Quantity = item.Quantity,
-                QuantityReceived = item.QuantityReceived
+                QuantityReceived = item.QuantityReceived,
+                // ⭐ ADD THESE MAPPINGS
+                Condition = item.Condition,
+                WarrantyExpiry = item.WarrantyExpiry
             };
 
             poItem.PropertyChanged += OnItemPropertyChanged;
             Items.Add(poItem);
-            
+        
             Debug.WriteLine($"  Loaded equipment: {item.ItemName} - Qty: {item.Quantity}, Received: {item.QuantityReceived}");
         }
 
@@ -301,9 +306,9 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
                 SupplierID = SupplierId.Value, 
                 OrderDate = DateTime.Now,
                 ExpectedDeliveryDate = DateTime.Now.AddDays(7),
-                ShippingStatus = "Pending", // ⭐ Default to Pending
+                ShippingStatus = "Pending",
                 PaymentStatus = "Unpaid",
-                Category = "Equipment", // ⭐ Mark as Equipment PO
+                Category = "Equipment",
                 Subtotal = Subtotal,
                 TaxRate = 0.12m,
                 TaxAmount = Vat,
@@ -315,16 +320,19 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
                     Unit = item.UnitsOfMeasures,
                     Category = item.Category,
                     BatchCode = item.BatchCode,
-                    Price = item.SuppliersPrice ?? 0,  // ⭐ Use Price field
+                    Price = item.SuppliersPrice ?? 0,
                     SupplierPrice = item.SuppliersPrice ?? 0,
                     Quantity = item.Quantity ?? 1,
-                    QuantityReceived = 0
+                    QuantityReceived = 0,
+                    // ⭐ ADD THESE
+                    Condition = item.Condition,
+                    WarrantyExpiry = item.WarrantyExpiry
                 }).ToList()
             };
 
             // Save to database
             var result = await _purchaseOrderService.CreatePurchaseOrderAsync(purchaseOrder);
-        
+    
             if (result.Success)
             {
                 _toastManager.CreateToast("Success")
@@ -334,7 +342,7 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
 
                 // Trigger refresh event
                 DashboardEventService.Instance.NotifyPurchaseOrderAdded();
-            
+        
                 // Navigate back
                 _pageManager.Navigate<SupplierManagementViewModel>();
             }
@@ -352,7 +360,7 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
                 .WithContent($"An unexpected error occurred: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
-        
+    
             Debug.WriteLine($"[CreatePurchaseOrderConfirmed] Error: {ex.Message}");
             Debug.WriteLine($"[CreatePurchaseOrderConfirmed] Stack: {ex.StackTrace}");
         }
@@ -423,22 +431,24 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
                     var equipmentModel = new EquipmentModel
                     {
                         EquipmentName = item.ItemName,
-                        Category = item.Category,
+                        Category = item.Category ?? "Accessories",
                         Quantity = item.QuantityReceived ?? 0,
                         PurchaseDate = DateTime.Now,
                         PurchasePrice = item.SuppliersPrice,
                         BatchCode = item.BatchCode,
-                        Status = "Available",
-                        Condition = "New"
+                        SupplierID = SupplierId, // ⭐ ADD SupplierID
+                        Condition = item.Condition ?? "Excellent", // ⭐ USE actual Condition
+                        WarrantyExpiry = item.WarrantyExpiry, // ⭐ USE actual WarrantyExpiry
+                        Status = "Available"
                     };
 
                     await _inventoryService.AddEquipmentAsync(equipmentModel);
                 }
             }
 
-            // Mark PO as delivered and sent to inventory ⭐
+            // Mark PO as delivered and sent to inventory
             var deliveryResult = await _purchaseOrderService.MarkAsDeliveredAsync(PurchaseOrderId.Value);
-        
+    
             if (deliveryResult.Success)
             {
                 _toastManager.CreateToast("Success")
@@ -448,7 +458,7 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
 
                 // Trigger refresh event
                 DashboardEventService.Instance.NotifyPurchaseOrderUpdated();
-            
+        
                 // Navigate back
                 _pageManager.Navigate<SupplierManagementViewModel>();
             }
@@ -458,7 +468,7 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
                     .WithContent("Equipment added but status update failed.")
                     .DismissOnClick()
                     .ShowWarning();
-            
+        
                 _pageManager.Navigate<SupplierManagementViewModel>();
             }
         }
@@ -468,7 +478,7 @@ public partial class PoEquipmentViewModel : ViewModelBase, INavigableWithParamet
                 .WithContent($"An unexpected error occurred: {ex.Message}")
                 .DismissOnClick()
                 .ShowError();
-        
+    
             Debug.WriteLine($"[SendToInventoryConfirmed] Error: {ex.Message}");
         }
     }
@@ -528,6 +538,12 @@ public partial class PurchaseOrderEquipmentItem : ObservableValidator
     
     [ObservableProperty] 
     private int? _quantityReceived = 0;
+    
+    [ObservableProperty]
+    private string? _condition;
+    
+    [ObservableProperty]
+    private DateTime? _warrantyExpiry;
 
     public decimal LineTotal => (SuppliersPrice ?? 0) * (Quantity ?? 0);
 }

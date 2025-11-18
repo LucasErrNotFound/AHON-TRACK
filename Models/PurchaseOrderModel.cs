@@ -52,22 +52,26 @@ namespace AHON_TRACK.Models
         // Primary fields
         public int POItemID { get; set; }
         public int PurchaseOrderID { get; set; }
-        public string? ItemID { get; set; }  // ⭐ Make nullable
+        public string? ItemID { get; set; }
         public string ItemName { get; set; }
         public string Unit { get; set; }
         public int Quantity { get; set; }
         public decimal Price { get; set; }
-        public string? Category { get; set; }  // ⭐ Make nullable
-        public string? BatchCode { get; set; }  // ⭐ Make nullable
-        
+        public string? Category { get; set; }
+        public string? BatchCode { get; set; }
+    
         // Additional fields for products
         public decimal SupplierPrice { get; set; }
         public decimal MarkupPrice { get; set; }
         public decimal SellingPrice { get; set; }
-        
+    
+        // ⭐ ADD THESE FIELDS for equipment
+        public string? Condition { get; set; }
+        public DateTime? WarrantyExpiry { get; set; }
+    
         // Receiving tracking
         public int QuantityReceived { get; set; }
-        
+    
         // Computed property
         public decimal LineTotal => Quantity * Price;
     }

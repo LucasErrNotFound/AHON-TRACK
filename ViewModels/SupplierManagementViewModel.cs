@@ -659,7 +659,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                         BatchCode = item.BatchCode,
                         Category = item.Category,
                         Description = null, // Not stored in PO items currently
-                        ExpiryDate = null   // Not stored in PO items currently
+                        ExpiryDate = null,   // Not stored in PO items currently
                     }).ToList() ?? new List<PurchaseOrderProductItemData>(),
                     Subtotal = fullPO.Subtotal,
                     Vat = fullPO.TaxAmount,
@@ -696,7 +696,9 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
                         BatchCode = item.BatchCode ?? string.Empty,
                         Price = item.SupplierPrice,
                         Quantity = item.Quantity,
-                        QuantityReceived = item.QuantityReceived
+                        QuantityReceived = item.QuantityReceived,
+                        Condition = item.Condition,
+                        WarrantyExpiry = item.WarrantyExpiry
                     }).ToList() ?? new List<PurchaseOrderEquipmentItemData>(),
                     Subtotal = fullPO.Subtotal,
                     Vat = fullPO.TaxAmount,
@@ -1635,4 +1637,6 @@ public class PurchaseOrderEquipmentItemData
     public decimal Price { get; set; }
     public int Quantity { get; set; }
     public int QuantityReceived { get; set; }
+    public string? Condition { get; set; }
+    public DateTime? WarrantyExpiry { get; set; }
 }
