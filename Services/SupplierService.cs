@@ -56,13 +56,6 @@ namespace AHON_TRACK.Services
                 using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                // Check for existing active supplier
-                if (await SupplierExistsAsync(conn, supplier.SupplierName, isDeleted: false))
-                {
-                    ShowToast("Duplicate Supplier", $"Supplier '{supplier.SupplierName}' already exists.", ToastType.Warning);
-                    return (false, "Supplier already exists.", null);
-                }
-
                 // Check if soft deleted supplier exists (restore)
                 var deletedSupplierId = await GetDeletedSupplierIdAsync(conn, supplier.SupplierName);
                 if (deletedSupplierId.HasValue)
@@ -88,16 +81,6 @@ namespace AHON_TRACK.Services
                 ShowToast("Error", $"An unexpected error occurred: {ex.Message}", ToastType.Error);
                 return (false, $"Error: {ex.Message}", null);
             }
-        }
-
-        private async Task<bool> SupplierExistsAsync(SqlConnection conn, string supplierName, bool isDeleted)
-        {
-            using var cmd = new SqlCommand(
-                "SELECT COUNT(*) FROM Suppliers WHERE SupplierName = @supplierName AND IsDeleted = @isDeleted", conn);
-            cmd.Parameters.AddWithValue("@supplierName", supplierName ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@isDeleted", isDeleted);
-
-            return (int)await cmd.ExecuteScalarAsync() > 0;
         }
 
         private async Task<int?> GetDeletedSupplierIdAsync(SqlConnection conn, string supplierName)
@@ -325,13 +308,6 @@ namespace AHON_TRACK.Services
                     return (false, "Supplier not found.");
                 }
 
-                // Check for duplicate name (excluding current supplier)
-                if (await IsDuplicateSupplierNameAsync(conn, supplier.SupplierName, supplier.SupplierID))
-                {
-                    ShowToast("Duplicate Supplier", $"Another supplier with name '{supplier.SupplierName}' already exists.", ToastType.Warning);
-                    return (false, "Supplier name already exists.");
-                }
-
                 // Update supplier
                 await ExecuteUpdateSupplierAsync(conn, supplier);
                 await LogActionAsync(conn, "Updated supplier data.", $"Updated supplier: {supplier.SupplierName}", true);
@@ -355,16 +331,6 @@ namespace AHON_TRACK.Services
             using var cmd = new SqlCommand(
                 "SELECT COUNT(*) FROM Suppliers WHERE SupplierID = @supplierId", conn);
             cmd.Parameters.AddWithValue("@supplierId", supplierId);
-
-            return (int)await cmd.ExecuteScalarAsync() > 0;
-        }
-
-        private async Task<bool> IsDuplicateSupplierNameAsync(SqlConnection conn, string supplierName, int excludeSupplierId)
-        {
-            using var cmd = new SqlCommand(
-                "SELECT COUNT(*) FROM Suppliers WHERE SupplierName = @supplierName AND SupplierID != @supplierId", conn);
-            cmd.Parameters.AddWithValue("@supplierName", supplierName ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@supplierId", excludeSupplierId);
 
             return (int)await cmd.ExecuteScalarAsync() > 0;
         }

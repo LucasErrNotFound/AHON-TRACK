@@ -330,7 +330,11 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                     MarkupPrice = item.MarkupPrice ?? 0,
                     SellingPrice = item.SellingPrice ?? 0,
                     Quantity = item.Quantity ?? 1,
-                    QuantityReceived = 0
+                    QuantityReceived = 0,
+                    BatchCode = item.BatchCode,
+                    Category = item.Category,
+                    Description = item.Description,
+                    ExpiryDate = item.ExpiryDate?.Date
                 }).ToList()
             };
 
@@ -435,7 +439,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                     var productModel = new ProductModel
                     {
                         ProductName = item.ItemName,
-                        BatchCode = item.BatchCode ?? $"BATCH-{DateTime.Now:yyyyMMdd}",
+                        BatchCode = item.BatchCode ?? $"BATCH-{DateTime.Now.Year}-{System.Random.Shared.Next(100000, 999999)}",
                         SupplierID = SupplierId, // ⭐ ADD SupplierID
                         Description = item.Description, // ⭐ ADD Description
                         Category = item.Category ?? "Products", // ⭐ ADD Category

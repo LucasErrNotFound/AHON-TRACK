@@ -68,10 +68,13 @@ namespace AHON_TRACK.Models
         // ⭐ ADD THESE FIELDS for equipment
         public string? Condition { get; set; }
         public DateTime? WarrantyExpiry { get; set; }
+        
+        public string? Description { get; set; }
+        public DateTime? ExpiryDate { get; set; }
     
         // Receiving tracking
         public int QuantityReceived { get; set; }
-    
+        
         // Computed property
         public decimal LineTotal => Quantity * Price;
     }

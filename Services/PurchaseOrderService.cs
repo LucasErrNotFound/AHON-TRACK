@@ -160,12 +160,12 @@ namespace AHON_TRACK.Services
             const string query = @"
         INSERT INTO PurchaseOrderItems (
             PurchaseOrderID, ItemID, ItemName, Unit, Quantity, Price, 
-            Category, BatchCode, SupplierPrice, MarkupPrice, SellingPrice, QuantityReceived,
+            Category, BatchCode, SupplierPrice, MarkupPrice, SellingPrice, QuantityReceived, Description, ExpiryDate,
             Condition, WarrantyExpiry
         )
         VALUES (
             @poId, @itemId, @itemName, @unit, @quantity, @price, 
-            @category, @batchCode, @supplierPrice, @markupPrice, @sellingPrice, @quantityReceived,
+            @category, @batchCode, @supplierPrice, @markupPrice, @sellingPrice, @quantityReceived, @description, @expiryDate,
             @condition, @warrantyExpiry
         )";
 
@@ -184,7 +184,8 @@ namespace AHON_TRACK.Services
                 cmd.Parameters.AddWithValue("@markupPrice", item.MarkupPrice);
                 cmd.Parameters.AddWithValue("@sellingPrice", item.SellingPrice);
                 cmd.Parameters.AddWithValue("@quantityReceived", item.QuantityReceived);
-                // ⭐ ADD THESE
+                cmd.Parameters.AddWithValue("@description", item.Description ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@expiryDate", item.ExpiryDate ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@condition", item.Condition ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@warrantyExpiry", item.WarrantyExpiry ?? (object)DBNull.Value);
 
@@ -419,6 +420,8 @@ namespace AHON_TRACK.Services
             MarkupPrice,
             SellingPrice,
             QuantityReceived,
+            Description,
+            ExpiryDate,
             Condition,
             WarrantyExpiry
         FROM PurchaseOrderItems
@@ -453,7 +456,15 @@ namespace AHON_TRACK.Services
                     BatchCode = reader.IsDBNull(reader.GetOrdinal("BatchCode")) 
                         ? null 
                         : reader.GetString(reader.GetOrdinal("BatchCode")),
-            
+                    
+                    Description = reader.IsDBNull(reader.GetOrdinal("Description"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("Description")),
+
+                    ExpiryDate = reader.IsDBNull(reader.GetOrdinal("ExpiryDate"))
+                        ? null
+                        : reader.GetDateTime(reader.GetOrdinal("ExpiryDate")),
+                    
                     SupplierPrice = reader.IsDBNull(reader.GetOrdinal("SupplierPrice")) 
                         ? 0 
                         : reader.GetDecimal(reader.GetOrdinal("SupplierPrice")),
