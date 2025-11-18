@@ -454,6 +454,7 @@ public partial class ProductItems : ObservableValidator
 
 public class SupplierProductData
 {
+    public int SupplierID { get; set; }  // ⭐ Add this
     public string? SupplierName { get; set; }
     public string? ContactPerson { get; set; }
     public string? Email { get; set; }

@@ -31,7 +31,7 @@ public sealed partial class SupplierManagementViewModel : ViewModelBase, INaviga
     private string _selectedStatusFilterItem = "All";
 
     [ObservableProperty]
-    private string[] _deliveryFilterItems = ["All", "Pending", "Processing", "Shipped/In-Transit", "Delivered", "Cancelled"];
+    private string[] _deliveryFilterItems = ["All", "Pending", "Delivered"];
 
     [ObservableProperty]
     private string _selectedDeliveryFilterItem = "All";
@@ -1475,6 +1475,12 @@ public partial class Supplier : ObservableObject
 public partial class PurchaseOrder : ObservableObject
 {
     [ObservableProperty]
+    private int? _supplierId;
+
+    [ObservableProperty]
+    private string? _category;
+    
+    [ObservableProperty]
     private int? _iD;
 
     [ObservableProperty]
@@ -1519,30 +1525,21 @@ public partial class PurchaseOrder : ObservableObject
     public IBrush DeliveryForeground => DeliveryStatus?.ToLowerInvariant() switch
     {
         "pending" => new SolidColorBrush(Color.FromRgb(234, 179, 8)),
-        "processing" => new SolidColorBrush(Color.FromRgb(59, 130, 246)),
-        "shipped/in-transit" => new SolidColorBrush(Color.FromRgb(168, 85, 247)),
         "delivered" => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
-        "cancelled" => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
         _ => new SolidColorBrush(Color.FromRgb(100, 116, 139))
     };
 
     public IBrush DeliveryBackground => DeliveryStatus?.ToLowerInvariant() switch
     {
         "pending" => new SolidColorBrush(Color.FromArgb(25, 234, 179, 8)),
-        "processing" => new SolidColorBrush(Color.FromArgb(25, 59, 130, 246)),
-        "shipped/in-transit" => new SolidColorBrush(Color.FromArgb(25, 168, 85, 247)),
         "delivered" => new SolidColorBrush(Color.FromArgb(25, 34, 197, 94)),
-        "cancelled" => new SolidColorBrush(Color.FromArgb(25, 239, 68, 68)),
         _ => new SolidColorBrush(Color.FromArgb(25, 100, 116, 139))
     };
 
     public string? DeliveryDisplayText => DeliveryStatus?.ToLowerInvariant() switch
     {
         "pending" => "● Pending",
-        "processing" => "● Processing",
-        "shipped/in-transit" => "● Shipped",
         "delivered" => "● Delivered",
-        "cancelled" => "● Cancelled",
         _ => DeliveryStatus
     };
 

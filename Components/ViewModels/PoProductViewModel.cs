@@ -3,6 +3,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
+using AHON_TRACK.Models;
+using AHON_TRACK.Services.Events;
+using AHON_TRACK.Services.Interface;
 using AHON_TRACK.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,6 +21,12 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     private readonly DialogManager _dialogManager;
     private readonly ToastManager _toastManager;
     private readonly PageManager _pageManager;
+    private readonly IPurchaseOrderService _purchaseOrderService;
+    private readonly ISupplierService _supplierService;
+    private readonly IProductService _productService;
+    
+    [ObservableProperty]
+    private int? _supplierId;
 
     [ObservableProperty]
     private int? _purchaseOrderId;
@@ -69,11 +79,24 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     [ObservableProperty]
     private string? _paymentStatus;
 
-    public PoProductViewModel(DialogManager dialogManager, ToastManager toastManager, PageManager pageManager)
+    public PoProductViewModel(
+        DialogManager dialogManager, 
+        ToastManager toastManager, 
+        PageManager pageManager,
+        IPurchaseOrderService purchaseOrderService,
+        ISupplierService supplierService,
+        IProductService productService)
     {
         _dialogManager = dialogManager;
         _toastManager = toastManager;
         _pageManager = pageManager;
+        _purchaseOrderService = purchaseOrderService;
+        _supplierService = supplierService;
+        _productService = productService;
+    
+        // Subscribe to events
+        DashboardEventService.Instance.PurchaseOrderAdded += OnPurchaseOrderChanged;
+        DashboardEventService.Instance.PurchaseOrderUpdated += OnPurchaseOrderChanged;
     }
 
     public PoProductViewModel()
@@ -81,6 +104,11 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
         _dialogManager = new DialogManager();
         _toastManager = new ToastManager();
         _pageManager = new PageManager(new ServiceProvider());
+    }
+    
+    private async void OnPurchaseOrderChanged(object? sender, EventArgs e)
+    {
+        // Refresh can be handled at SupplierManagementViewModel level
     }
 
     [AvaloniaHotReload]
@@ -117,7 +145,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     public void LoadSupplierData(SupplierProductData data)
     {
         Debug.WriteLine($"[PoProductViewModel] Loading supplier: {data.SupplierName}");
-        
+        SupplierId = data.SupplierID;
         SupplierName = data.SupplierName;
         SupplierEmail = data.Email;
         ContactPerson = data.ContactPerson;
@@ -213,27 +241,122 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     }
 
     [RelayCommand]
-    private void CreatePurchaseOrder()
+    private async Task CreatePurchaseOrder()
     {
-        _dialogManager
-            .CreateDialog("Confirm Purchase Order", "Are you sure you want to create this purchase order?")
-            .WithPrimaryButton("Yes, create", () =>
+        try
+        {
+            // Validate
+            if (string.IsNullOrWhiteSpace(SupplierName))
+            {
+                _toastManager.CreateToast("Validation Error")
+                    .WithContent("Supplier name is required.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            if (Items.Count == 0)
+            {
+                _toastManager.CreateToast("Validation Error")
+                    .WithContent("At least one product item is required.")
+                    .DismissOnClick()
+                    .ShowWarning();
+                return;
+            }
+
+            _dialogManager
+                .CreateDialog("Confirm Purchase Order", "Are you sure you want to create this purchase order?")
+                .WithPrimaryButton("Yes, create", async () =>
+                {
+                    await CreatePurchaseOrderConfirmed();
+                })
+                .WithCancelButton("No")
+                .Show();
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Error")
+                .WithContent($"An error occurred: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        }
+    }
+
+    private async Task CreatePurchaseOrderConfirmed()
+    {
+        try
+        {
+            // Get supplier ID
+            if (!SupplierId.HasValue || SupplierId.Value <= 0)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent("Invalid supplier information.")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            // Create purchase order model
+            var purchaseOrder = new PurchaseOrderModel
+            {
+                PONumber = PoNumber,
+                SupplierID = SupplierId.Value, 
+                OrderDate = DateTime.Now,
+                ExpectedDeliveryDate = DateTime.Now.AddDays(7),
+                ShippingStatus = "Pending", // ⭐ Default to Pending
+                PaymentStatus = "Unpaid",
+                Category = "Product", // ⭐ Mark as Product PO
+                Subtotal = Subtotal,
+                TaxRate = 0.12m,
+                TaxAmount = Vat,
+                Total = Total,
+                Items = Items.Select(item => new PurchaseOrderItemModel
+                {
+                    ItemID = item.ItemId,
+                    ItemName = item.ItemName,
+                    Unit = item.UnitsOfMeasures,
+                    SupplierPrice = item.SuppliersPrice ?? 0,
+                    MarkupPrice = item.MarkupPrice ?? 0,
+                    SellingPrice = item.SellingPrice ?? 0,
+                    Quantity = item.Quantity ?? 1,
+                    QuantityReceived = 0
+                }).ToList()
+            };
+
+            // Save to database
+            var result = await _purchaseOrderService.CreatePurchaseOrderAsync(purchaseOrder);
+        
+            if (result.Success)
             {
                 _toastManager.CreateToast("Success")
                     .WithContent($"Purchase Order {PoNumber} created successfully!")
                     .DismissOnClick()
                     .ShowSuccess();
 
-                // TODO: Save to database
-                Debug.WriteLine($"[PoProductViewModel] Creating PO: {PoNumber}");
-                Debug.WriteLine($"[PoProductViewModel] Supplier: {SupplierName}");
-                Debug.WriteLine($"[PoProductViewModel] Items: {Items.Count}");
-                Debug.WriteLine($"[PoProductViewModel] Total: ₱{Total:N2}");
-                
+                // Trigger refresh event
+                DashboardEventService.Instance.NotifyPurchaseOrderAdded();
+            
+                // Navigate back
                 _pageManager.Navigate<SupplierManagementViewModel>();
-            })
-            .WithCancelButton("No")
-            .Show();
+            }
+            else
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent($"Failed to create purchase order: {result.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Error")
+                .WithContent($"An unexpected error occurred: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        
+            Debug.WriteLine($"[CreatePurchaseOrderConfirmed] Error: {ex.Message}");
+            Debug.WriteLine($"[CreatePurchaseOrderConfirmed] Stack: {ex.StackTrace}");
+        }
     }
 
     [RelayCommand]
@@ -241,43 +364,110 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
     {
         // Validate that all items have quantities received
         var itemsWithoutReceived = Items.Where(i => (i.QuantityReceived ?? 0) == 0).ToList();
-        
+    
         if (itemsWithoutReceived.Count > 0)
         {
             _dialogManager
                 .CreateDialog("Incomplete Quantities", 
                     $"{itemsWithoutReceived.Count} item(s) have no quantity received. Do you want to continue anyway?")
-                .WithPrimaryButton("Yes, continue", SendToInventoryConfirmed)
+                .WithPrimaryButton("Yes, continue", async () => await SendToInventoryConfirmed())
                 .WithCancelButton("No, go back")
                 .Show();
             return;
         }
 
-        SendToInventoryConfirmed();
-    }
-
-    private void SendToInventoryConfirmed()
-    {
         _dialogManager
             .CreateDialog("Send to Inventory", "Send received items to inventory?")
-            .WithPrimaryButton("Yes, send", () =>
+            .WithPrimaryButton("Yes, send", async () => await SendToInventoryConfirmed())
+            .WithCancelButton("No")
+            .Show();
+    }
+
+    private async Task SendToInventoryConfirmed()
+    {
+        try
+        {
+            if (!PurchaseOrderId.HasValue)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent("Purchase Order ID not found.")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            // Update quantities received in database
+            var updateResult = await _purchaseOrderService.UpdatePurchaseOrderQuantitiesAsync(
+                PurchaseOrderId.Value, 
+                Items.Select(i => new PurchaseOrderItemModel
+                {
+                    ItemID = i.ItemId,
+                    ItemName = i.ItemName,
+                    QuantityReceived = i.QuantityReceived ?? 0,
+                    Quantity = i.Quantity ?? 0
+                }).ToList());
+
+            if (!updateResult.Success)
+            {
+                _toastManager.CreateToast("Error")
+                    .WithContent($"Failed to update quantities: {updateResult.Message}")
+                    .DismissOnClick()
+                    .ShowError();
+                return;
+            }
+
+            // Add products to inventory
+            foreach (var item in Items)
+            {
+                if ((item.QuantityReceived ?? 0) > 0)
+                {
+                    var productModel = new ProductModel
+                    {
+                        ProductName = item.ItemName,
+                        Price = item.SellingPrice ?? 0,
+                        CurrentStock = item.QuantityReceived ?? 0,
+                        Status = "In Stock"
+                    };
+
+                    await _productService.AddProductAsync(productModel);
+                }
+            }
+
+            // Mark PO as delivered and sent to inventory ⭐
+            var deliveryResult = await _purchaseOrderService.MarkAsDeliveredAsync(PurchaseOrderId.Value);
+        
+            if (deliveryResult.Success)
             {
                 _toastManager.CreateToast("Success")
-                    .WithContent("Items sent to inventory successfully!")
+                    .WithContent("Items sent to inventory successfully! Status updated to Delivered.")
                     .DismissOnClick()
                     .ShowSuccess();
 
-                // TODO: Update inventory and mark PO as completed
-                Debug.WriteLine($"[PoProductViewModel] Sending {Items.Count} items to inventory");
-                foreach (var item in Items)
-                {
-                    Debug.WriteLine($"  - {item.ItemName}: Received {item.QuantityReceived} of {item.Quantity}");
-                }
-                
+                // Trigger refresh event
+                DashboardEventService.Instance.NotifyPurchaseOrderUpdated();
+            
+                // Navigate back
                 _pageManager.Navigate<SupplierManagementViewModel>();
-            })
-            .WithCancelButton("No")
-            .Show();
+            }
+            else
+            {
+                _toastManager.CreateToast("Warning")
+                    .WithContent("Items added but status update failed.")
+                    .DismissOnClick()
+                    .ShowWarning();
+            
+                _pageManager.Navigate<SupplierManagementViewModel>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast("Error")
+                .WithContent($"An unexpected error occurred: {ex.Message}")
+                .DismissOnClick()
+                .ShowError();
+        
+            Debug.WriteLine($"[SendToInventoryConfirmed] Error: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -289,9 +479,12 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
 
     // Remove this command - it's no longer needed
     // The toggle button will directly bind to IsInEditMode property
-
     protected override void DisposeManagedResources()
     {
+        // Unsubscribe from events
+        DashboardEventService.Instance.PurchaseOrderAdded -= OnPurchaseOrderChanged;
+        DashboardEventService.Instance.PurchaseOrderUpdated -= OnPurchaseOrderChanged;
+    
         foreach (var item in Items)
         {
             item.PropertyChanged -= OnItemPropertyChanged;

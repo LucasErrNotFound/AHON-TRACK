@@ -345,7 +345,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                             ItemName = item.ItemName,
                             SelectedUnit = item.Unit,
                             Quantity = item.Quantity,
-                            Price = item.Price
                         });
                     }
                 }
@@ -462,7 +461,6 @@ public partial class PurchaseOrderViewModel : ViewModelBase, INavigableWithParam
                     ItemName = i.ItemName ?? string.Empty,
                     Unit = i.SelectedUnit ?? "pcs",
                     Quantity = i.Quantity,
-                    Price = i.Price,
                     Category = SelectedCategory
 
                 }).ToList()

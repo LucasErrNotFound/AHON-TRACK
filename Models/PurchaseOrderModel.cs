@@ -49,23 +49,26 @@ namespace AHON_TRACK.Models
 
     public class PurchaseOrderItemModel
     {
+        // Primary fields
         public int POItemID { get; set; }
         public int PurchaseOrderID { get; set; }
+        public string? ItemID { get; set; }  // ⭐ Make nullable
         public string ItemName { get; set; }
         public string Unit { get; set; }
-        public int Quantity { get; set; } // Change: from decimal to int
+        public int Quantity { get; set; }
         public decimal Price { get; set; }
-
-        public string Category { get; set; }
-
-        public decimal LineTotal => Quantity * Price;
+        public string? Category { get; set; }  // ⭐ Make nullable
+        public string? BatchCode { get; set; }  // ⭐ Make nullable
         
-        // NEW
-        public string ItemID { get; set; }
+        // Additional fields for products
         public decimal SupplierPrice { get; set; }
         public decimal MarkupPrice { get; set; }
         public decimal SellingPrice { get; set; }
-        public string BatchCode { get; set; }
-        public int QuantityReceived { get; set; } // Change: from decimal to int
+        
+        // Receiving tracking
+        public int QuantityReceived { get; set; }
+        
+        // Computed property
+        public decimal LineTotal => Quantity * Price;
     }
 }

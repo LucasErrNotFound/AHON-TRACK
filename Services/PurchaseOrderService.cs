@@ -158,18 +158,30 @@ namespace AHON_TRACK.Services
             int poId, List<PurchaseOrderItemModel> items)
         {
             const string query = @"
-                INSERT INTO PurchaseOrderItems (PurchaseOrderID, ItemName, Unit, Quantity, Price, Category)
-                VALUES (@poId, @itemName, @unit, @quantity, @price, @category)";
+        INSERT INTO PurchaseOrderItems (
+            PurchaseOrderID, ItemID, ItemName, Unit, Quantity, Price, 
+            Category, BatchCode, SupplierPrice, MarkupPrice, SellingPrice, QuantityReceived
+        )
+        VALUES (
+            @poId, @itemId, @itemName, @unit, @quantity, @price, 
+            @category, @batchCode, @supplierPrice, @markupPrice, @sellingPrice, @quantityReceived
+        )";
 
             foreach (var item in items)
             {
                 using var cmd = new SqlCommand(query, conn, transaction);
                 cmd.Parameters.AddWithValue("@poId", poId);
+                cmd.Parameters.AddWithValue("@itemId", item.ItemID ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@itemName", item.ItemName);
                 cmd.Parameters.AddWithValue("@unit", item.Unit);
                 cmd.Parameters.AddWithValue("@quantity", item.Quantity);
                 cmd.Parameters.AddWithValue("@price", item.Price);
-                cmd.Parameters.AddWithValue("@category", item.Category);
+                cmd.Parameters.AddWithValue("@category", item.Category ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@batchCode", item.BatchCode ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@supplierPrice", item.SupplierPrice);
+                cmd.Parameters.AddWithValue("@markupPrice", item.MarkupPrice);
+                cmd.Parameters.AddWithValue("@sellingPrice", item.SellingPrice);
+                cmd.Parameters.AddWithValue("@quantityReceived", item.QuantityReceived);
 
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -1126,10 +1138,10 @@ WHERE EquipmentID = @id";
             }
         }
 
-        public async Task<(bool Success, int TotalPOs, int PendingPOs, int DeliveredPOs, int CancelledPOs)> GetPurchaseOrderStatisticsAsync()
+        public async Task<(bool Success, int TotalPOs, int PendingPOs, int DeliveredPOs)> GetPurchaseOrderStatisticsAsync()
         {
             if (!CanView())
-                return (false, 0, 0, 0, 0);
+                return (false, 0, 0, 0);
 
             try
             {
@@ -1138,12 +1150,11 @@ WHERE EquipmentID = @id";
 
                 using var cmd = new SqlCommand(
                     @"SELECT 
-                        COUNT(*) as TotalPOs,
-                        SUM(CASE WHEN ShippingStatus = 'Pending' THEN 1 ELSE 0 END) as PendingPOs,
-                        SUM(CASE WHEN ShippingStatus = 'Delivered' THEN 1 ELSE 0 END) as DeliveredPOs,
-                        SUM(CASE WHEN ShippingStatus = 'Cancelled' THEN 1 ELSE 0 END) as CancelledPOs
-                      FROM PurchaseOrders
-                      WHERE IsDeleted = 0", conn);
+                COUNT(*) as TotalPOs,
+                SUM(CASE WHEN ShippingStatus = 'Pending' THEN 1 ELSE 0 END) as PendingPOs,
+                SUM(CASE WHEN ShippingStatus = 'Delivered' THEN 1 ELSE 0 END) as DeliveredPOs
+              FROM PurchaseOrders
+              WHERE IsDeleted = 0", conn);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
@@ -1151,16 +1162,15 @@ WHERE EquipmentID = @id";
                     return (true,
                         reader.GetInt32(0),
                         reader.GetInt32(1),
-                        reader.GetInt32(2),
-                        reader.GetInt32(3));
+                        reader.GetInt32(2));
                 }
 
-                return (false, 0, 0, 0, 0);
+                return (false, 0, 0, 0);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[GetPurchaseOrderStatisticsAsync] {ex.Message}");
-                return (false, 0, 0, 0, 0);
+                return (false, 0, 0, 0);
             }
         }
 
@@ -1309,5 +1319,112 @@ WHERE EquipmentID = @id";
         }
 
         #endregion
+        
+        public async Task<(bool Success, string Message)> UpdatePurchaseOrderQuantitiesAsync(
+            int purchaseOrderId, 
+            List<PurchaseOrderItemModel> items)
+        {
+            if (!CanUpdate())
+            {
+                ShowToast("Access Denied", "You don't have permission to update purchase orders.", ToastType.Error);
+                return (false, "Insufficient permissions to update purchase orders.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var transaction = conn.BeginTransaction();
+                try
+                {
+                    foreach (var item in items)
+                    {
+                        const string query = @"
+                    UPDATE PurchaseOrderItems 
+                    SET QuantityReceived = @quantityReceived
+                    WHERE PurchaseOrderID = @poId 
+                    AND ItemName = @itemName";
+
+                        using var cmd = new SqlCommand(query, conn, transaction);
+                        cmd.Parameters.AddWithValue("@poId", purchaseOrderId);
+                        cmd.Parameters.AddWithValue("@itemName", item.ItemName ?? "");
+                        cmd.Parameters.AddWithValue("@quantityReceived", item.QuantityReceived);
+
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+
+                    await LogActionAsync(conn, transaction, "UPDATE",
+                        $"Updated quantities for Purchase Order ID: {purchaseOrderId}", true);
+
+                    transaction.Commit();
+                    DashboardEventService.Instance.NotifyPurchaseOrderUpdated();
+            
+                    return (true, "Quantities updated successfully.");
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowToast("Database Error", $"Failed to update quantities: {ex.Message}", ToastType.Error);
+                return (false, $"Database error: {ex.Message}");
+            }
+        }
+        
+        public async Task<(bool Success, string Message)> MarkAsDeliveredAsync(int purchaseOrderId)
+        {
+            if (!CanUpdate())
+            {
+                ShowToast("Access Denied", "You don't have permission to update purchase orders.", ToastType.Error);
+                return (false, "Insufficient permissions to update purchase orders.");
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                using var transaction = conn.BeginTransaction();
+                try
+                {
+                    const string query = @"
+                UPDATE PurchaseOrders 
+                SET ShippingStatus = 'Delivered',
+                    SentToInventory = 1,
+                    SentToInventoryDate = GETDATE(),
+                    SentToInventoryBy = @employeeId,
+                    UpdatedAt = GETDATE()
+                WHERE PurchaseOrderID = @poId";
+
+                    using var cmd = new SqlCommand(query, conn, transaction);
+                    cmd.Parameters.AddWithValue("@poId", purchaseOrderId);
+                    cmd.Parameters.AddWithValue("@employeeId", CurrentUserModel.UserId ?? (object)DBNull.Value);
+
+                    await cmd.ExecuteNonQueryAsync();
+
+                    await LogActionAsync(conn, transaction, "UPDATE",
+                        $"Marked Purchase Order ID {purchaseOrderId} as Delivered and sent to inventory", true);
+
+                    transaction.Commit();
+                    DashboardEventService.Instance.NotifyPurchaseOrderUpdated();
+            
+                    return (true, "Purchase order marked as delivered successfully.");
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowToast("Database Error", $"Failed to mark as delivered: {ex.Message}", ToastType.Error);
+                return (false, $"Database error: {ex.Message}");
+            }
+        }
     }
 }

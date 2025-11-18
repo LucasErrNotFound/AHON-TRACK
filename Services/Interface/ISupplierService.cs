@@ -17,5 +17,6 @@ namespace AHON_TRACK.Services.Interface
         Task<(bool Success, string Message)> UpdateSupplierStatusAsync(int supplierId, string newStatus);
         Task<(bool Success, string Message)> DeleteSupplierAsync(int supplierId);
         Task<(bool Success, string Message, int DeletedCount)> DeleteMultipleSuppliersAsync(List<int> supplierIds);
+        Task<(bool Success, string Message, SupplierManagementModel Supplier)> GetSupplierByNameAsync(string supplierName);
     }
 }

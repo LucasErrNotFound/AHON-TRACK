@@ -8,6 +8,7 @@ public class EquipmentModel
     public int Quantity { get; set; }
     public DateTime? PurchaseDate { get; set; }
     public decimal? PurchasePrice { get; set; }
+    public string? BatchCode { get; set; }
 
     // Supplier Reference - stores the ID
     public int? SupplierID { get; set; }

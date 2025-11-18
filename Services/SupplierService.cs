@@ -647,5 +647,74 @@ namespace AHON_TRACK.Services
         }
 
         #endregion
+        
+        public async Task<(bool Success, string Message, SupplierManagementModel Supplier)> GetSupplierByNameAsync(string supplierName)
+        {
+            if (!CanView())
+            {
+                ShowToast("Access Denied", "You don't have permission to view suppliers.", ToastType.Error);
+                return (false, "Insufficient permissions to view suppliers.", null);
+            }
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                const string query = @"
+            SELECT 
+                SupplierID,
+                SupplierName,
+                ContactPerson,
+                Email,
+                PhoneNumber,
+                Address,
+                Products,
+                Status,
+                DeliverySchedule,
+                ContractTerms,
+                CreatedAt,
+                UpdatedAt
+            FROM Suppliers
+            WHERE SupplierName = @supplierName
+            AND IsDeleted = 0";
+
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@supplierName", supplierName);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    var supplier = new SupplierManagementModel
+                    {
+                        SupplierID = reader.GetInt32(reader.GetOrdinal("SupplierID")),
+                        SupplierName = reader.GetString(reader.GetOrdinal("SupplierName")),
+                        ContactPerson = reader.GetString(reader.GetOrdinal("ContactPerson")),
+                        Email = reader.GetString(reader.GetOrdinal("Email")),
+                        PhoneNumber = reader.GetString(reader.GetOrdinal("PhoneNumber")),
+                        Address = reader.IsDBNull(reader.GetOrdinal("Address")) 
+                            ? null 
+                            : reader.GetString(reader.GetOrdinal("Address")),
+                        Products = reader.GetString(reader.GetOrdinal("Products")),
+                        Status = reader.GetString(reader.GetOrdinal("Status")),
+                        DeliverySchedule = reader.IsDBNull(reader.GetOrdinal("DeliverySchedule"))
+                            ? null
+                            : reader.GetString(reader.GetOrdinal("DeliverySchedule")),
+                        ContractTerms = reader.IsDBNull(reader.GetOrdinal("ContractTerms"))
+                            ? null
+                            : reader.GetDateTime(reader.GetOrdinal("ContractTerms"))
+                    };
+
+                    return (true, "Supplier found.", supplier);
+                }
+
+                return (false, "Supplier not found.", null);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetSupplierByNameAsync] {ex.Message}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
     }
 }

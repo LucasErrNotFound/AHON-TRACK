@@ -29,6 +29,10 @@ namespace AHON_TRACK.Services.Interface
             string? shippingStatus,
             string? paymentStatus,
             string? invoiceNumber);
+        
+        Task<(bool Success, string Message)> UpdatePurchaseOrderQuantitiesAsync(
+            int purchaseOrderId, 
+            List<PurchaseOrderItemModel> items);
 
         // DELETE
         Task<(bool Success, string Message)> DeletePurchaseOrderAsync(int poId);
@@ -38,6 +42,8 @@ namespace AHON_TRACK.Services.Interface
         Task<string> GeneratePONumberAsync();
 
         // STATISTICS
-        Task<(bool Success, int TotalPOs, int PendingPOs, int DeliveredPOs, int CancelledPOs)> GetPurchaseOrderStatisticsAsync();
+        Task<(bool Success, int TotalPOs, int PendingPOs, int DeliveredPOs)> GetPurchaseOrderStatisticsAsync();
+        Task<(bool Success, string Message)> MarkAsDeliveredAsync(int purchaseOrderId);
+
     }
 }
