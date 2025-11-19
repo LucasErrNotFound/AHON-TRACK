@@ -256,7 +256,7 @@
 											Margin="0,0,0,10">
 											<StackPanel Orientation="Horizontal" Spacing="10">
 												<TextBlock
-													Text="Consent letter required for members aged 3-14 years"
+													Text="Consent letter required for members aged 6-14 years"
 													FontSize="14"
 													FontWeight="Medium"
 													Foreground="{DynamicResource WarningColor}"

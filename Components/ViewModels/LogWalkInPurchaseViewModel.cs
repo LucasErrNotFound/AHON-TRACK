@@ -84,7 +84,7 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
     private DateTimeOffset? _walkInBirthDate;
 
     [ObservableProperty]
-    private DateTimeOffset _maxSelectableYear = new DateTimeOffset(DateTime.Now.Year - 3, 12, 31, 0, 0, 0, TimeSpan.Zero);
+    private DateTimeOffset _maxSelectableYear = new DateTimeOffset(DateTime.Now.Year - 6, 12, 31, 0, 0, 0, TimeSpan.Zero);
 
     [ObservableProperty]
     private DateTimeOffset _minSelectableYear = new DateTimeOffset(DateTime.Now.Year - 100, 1, 1, 0, 0, 0, TimeSpan.Zero);

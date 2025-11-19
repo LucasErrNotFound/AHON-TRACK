@@ -110,7 +110,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     public bool IsReferenceNumberVisibleInReceipt =>
         (IsGCashSelected || IsMayaSelected) && !string.IsNullOrWhiteSpace(ReferenceNumber);
     
-    public bool IsMinor => MemberAge.HasValue && MemberAge >= 3 && MemberAge <= 14;
+    public bool IsMinor => MemberAge.HasValue && MemberAge >= 6 && MemberAge <= 14;
     public bool IsConsentLetterRequired => IsMinor && string.IsNullOrWhiteSpace(ConsentFilePath);
     public bool IsConsentFileSelected => !string.IsNullOrWhiteSpace(ConsentFilePath);
     
@@ -622,7 +622,7 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
     }
     
     [ObservableProperty]
-    private DateTimeOffset _maxSelectableYear = new DateTimeOffset(2022, 12, 31, 0, 0, 0, TimeSpan.Zero);
+    private DateTimeOffset _maxSelectableYear = new DateTimeOffset(2019, 12, 31, 0, 0, 0, TimeSpan.Zero);
 
     [ObservableProperty]
     private DateTimeOffset _minSelectableYear = new DateTimeOffset(1925, 1, 1, 0, 0, 0, TimeSpan.Zero);
