@@ -1388,6 +1388,11 @@ public partial class AddNewMemberViewModel : ViewModelBase, INavigableWithParame
                 new FilePickerFileType("Image Files")
                 {
                     Patterns = ["*.png", "*.jpg", "*.jpeg" ]
+                },
+                
+                new FilePickerFileType("Documents")
+                {
+                Patterns = ["*.pdf", "*.docx" ]
                 }
             ]
         });

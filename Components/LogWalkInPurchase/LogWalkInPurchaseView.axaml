@@ -233,7 +233,7 @@
 												VerticalAlignment="Bottom"/>
 											<Button 
 												Classes="Secondary"
-												Content="View Uploaded Image"
+												Content="View Uploaded File"
 												Command="{CompiledBinding ViewConsentFileCommand}"
 												IsVisible="{CompiledBinding IsConsentFileSelected}"
 												VerticalAlignment="Bottom"/>
@@ -932,7 +932,7 @@
 											Margin="0,0,0,10">
 											<StackPanel Orientation="Horizontal" Spacing="10">
 												<TextBlock
-													Text="Consent letter required for walk-in customers aged 3-14 years"
+													Text="Consent letter required for walk-in customers aged 6-14 years"
 													FontSize="14"
 													FontWeight="Medium"
 													Foreground="{DynamicResource WarningColor}"
@@ -954,7 +954,7 @@
 												VerticalAlignment="Bottom"/>
 											<Button 
 												Classes="Secondary"
-												Content="View Uploaded Image"
+												Content="View Uploaded File"
 												Command="{CompiledBinding ViewConsentFileCommand}"
 												IsVisible="{CompiledBinding IsConsentFileSelected}"
 												VerticalAlignment="Bottom"/>

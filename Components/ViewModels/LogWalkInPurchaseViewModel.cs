@@ -1076,6 +1076,11 @@ public partial class LogWalkInPurchaseViewModel : ViewModelBase, INavigable
                 new FilePickerFileType("Image Files")
                 {
                     Patterns = ["*.png", "*.jpg", "*.jpeg"]
+                },
+                
+                new FilePickerFileType("Documents")
+                {
+                    Patterns = ["*.pdf", "*.docx" ]
                 }
             ]
         });
