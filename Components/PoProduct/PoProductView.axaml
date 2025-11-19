@@ -60,39 +60,74 @@
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Margin="0,-10,0,0">
                     <!-- Supplier Name -->
-                    <TextBlock 
-                        Text="{CompiledBinding SupplierName}"
-                        Classes="h4"
-                        FontSize="17"
-                        FontWeight="Medium"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock
+                            Text="Supplier Name: "
+                            Classes="h4"
+                            FontSize="17"
+                            Foreground="{DynamicResource InfoColor}"/>
+                        <TextBlock 
+                            Text="{CompiledBinding SupplierName}"
+                            Classes="h4"
+                            FontSize="17"
+                            FontWeight="Medium"/>
+                    </StackPanel>
     
                     <!-- Supplier Email -->
-                    <TextBlock 
-                        Text="{CompiledBinding SupplierEmail}"
-                        Classes="h4"
-                        FontSize="17"
-                        FontWeight="Medium"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock
+                            Text="Email: "
+                            Classes="h4"
+                            FontSize="17"
+                            Foreground="{DynamicResource InfoColor}"/>
+                        <TextBlock 
+                            Text="{CompiledBinding SupplierEmail}"
+                            Classes="h4"
+                            FontSize="17"
+                            FontWeight="Medium"/>
+                    </StackPanel>
     
                     <!-- Contact Person -->
-                    <TextBlock 
-                        Text="{CompiledBinding ContactPerson}"
-                        Classes="h4"
-                        FontSize="17"
-                        FontWeight="Medium"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock
+                            Text="Contact Person: "
+                            Classes="h4"
+                            FontSize="17"
+                            Foreground="{DynamicResource InfoColor}"/>
+                        <TextBlock 
+                            Text="{CompiledBinding ContactPerson}"
+                            Classes="h4"
+                            FontSize="17"
+                            FontWeight="Medium"/>
+                    </StackPanel>
     
                     <!-- Phone Number -->
-                    <TextBlock 
-                        Text="{CompiledBinding PhoneNumber}"
-                        Classes="h4"
-                        FontSize="17"
-                        FontWeight="Medium"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock
+                            Text="Phone Number: "
+                            Classes="h4"
+                            FontSize="17"
+                            Foreground="{DynamicResource InfoColor}"/>
+                        <TextBlock 
+                            Text="{CompiledBinding PhoneNumber}"
+                            Classes="h4"
+                            FontSize="17"
+                            FontWeight="Medium"/>
+                    </StackPanel>
     
                     <!-- Address -->
-                    <TextBlock 
-                        Text="{CompiledBinding Address}"
-                        Classes="h4"
-                        FontSize="17"
-                        FontWeight="Medium"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock
+                            Text="Address: "
+                            Classes="h4"
+                            FontSize="17"
+                            Foreground="{DynamicResource InfoColor}"/>
+                        <TextBlock 
+                            Text="{CompiledBinding Address}"
+                            Classes="h4"
+                            FontSize="17"
+                            FontWeight="Medium"/>
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Orientation="Vertical" Spacing="10">
                     <Grid ColumnDefinitions="* *">

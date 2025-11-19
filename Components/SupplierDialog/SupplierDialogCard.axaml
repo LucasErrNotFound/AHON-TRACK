@@ -215,7 +215,7 @@
                                                         ShowButtonSpinner="False"
                                                         Watermark="20"
                                                         Minimum="20"
-                                                        Maximum="100"
+                                                        Maximum="50"
                                                         Value="{CompiledBinding MarkupPrice, Mode=TwoWay}">
                                                         <NumericUpDown.InnerLeftContent>
                                                             <TextBlock Margin="8,0,-8,0" Text="%" />

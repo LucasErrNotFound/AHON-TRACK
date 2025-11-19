@@ -437,7 +437,7 @@ public partial class ProductItems : ObservableValidator
     private decimal? _supplierPrice;
     
     [ObservableProperty]
-    [Range(20, 1000000, ErrorMessage = "Markup price must be between 20% and 100%")]
+    [Range(20, 50, ErrorMessage = "Markup price must be between 20% and 50%")]
     private decimal? _markupPrice;
     
     [ObservableProperty]
