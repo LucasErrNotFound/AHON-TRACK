@@ -110,11 +110,11 @@ public partial class ServiceProvider
     {
         // ⚠️ IMPORTANT: Replace these with your actual HttpSMS credentials
         // Get your API key from https://httpsms.com/settings
-        const string apiKey = "uk_a0sh3JfokZPdEA3tSGD1UGizW3JCetUHIAEKAcaHLLrMRC_NDnQnbtbacOhh_Mx6";
+        const string apiKey = "[YOUR APIKEY]";
         
         // Your sending phone number (must be registered with HttpSMS)
         // Format: +639XXXXXXXXX (Philippine number)
-        const string fromPhoneNumber = "+639157055726";
+        const string fromPhoneNumber = "[YOUR PHONE NUMBER]";
 
         return new SmsService(apiKey, fromPhoneNumber);
     }
