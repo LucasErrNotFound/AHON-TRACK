@@ -201,12 +201,13 @@
 									Margin="0,30,0,0"
 									shadui:ControlAssist.Label="Markup Price"
 									Classes="Clearable"
-									FormatString="N2"
+									FormatString="N0"
 									ShowButtonSpinner="False"
 									Watermark="0.00"
+									IsEnabled="False"
 									Value="{CompiledBinding ProductMarkupPrice, Mode=TwoWay}">
 									<NumericUpDown.InnerLeftContent>
-										<TextBlock Margin="8,0,-8,0" Text="₱" />
+										<TextBlock Margin="8,0,-8,0" Text="%" />
 									</NumericUpDown.InnerLeftContent>
 								</NumericUpDown>
 								

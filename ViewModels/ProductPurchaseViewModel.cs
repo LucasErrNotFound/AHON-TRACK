@@ -348,7 +348,7 @@ public sealed partial class ProductPurchaseViewModel : ViewModelBase, INavigable
             Title = selling.Title ?? string.Empty,
             Description = selling.Description ?? string.Empty,
             Category = selling.Category ?? string.Empty,
-            Price = (int)selling.Price,
+            Price = selling.Price,
             StockCount = selling.Stock,
             Poster = poster,
             DiscountedPrice = selling.DiscountedPrice,
@@ -1400,7 +1400,7 @@ public partial class Product : ObservableObject
     private string _category = string.Empty;
 
     [ObservableProperty]
-    private int _price;
+    private decimal _price;  // ✅ Changed from int to decimal
 
     [ObservableProperty]
     private int _stockCount;
@@ -1458,11 +1458,11 @@ public partial class Product : ObservableObject
         }
     }
 
-    public string FormattedPrice => $"₱{FinalPrice:N2}";
+    public string FormattedPrice => $"₱{FinalPrice:N2}";  // ✅ Changed from N to N2 for 2 decimal places
 
     // NEW: Show original price with strikethrough if discounted
     public string? OriginalPriceFormatted => HasDiscount
-        ? $"₱{Price:N2}"
+        ? $"₱{Price:N2}"  // ✅ Changed from N to N2
         : null;
 
     public string FormattedStockCount => $"{StockCount} Left";
@@ -1496,7 +1496,7 @@ public partial class Product : ObservableObject
         OnPropertyChanged(nameof(FormattedStockCount));
     }
 
-    partial void OnPriceChanged(int value)
+    partial void OnPriceChanged(decimal value)  // ✅ Changed from int to decimal
     {
         OnPropertyChanged(nameof(FormattedPrice));
         OnPropertyChanged(nameof(OriginalPriceFormatted));
@@ -1526,11 +1526,11 @@ public partial class PurchasePackage : ObservableObject
     public string Duration { get; set; } = string.Empty;
 
     // ✅ Store original prices from database
-    private int _basePrice;
-    private int _baseDiscountedPrice;
+    private decimal _basePrice;  // ✅ Changed from int to decimal
+    private decimal _baseDiscountedPrice;  // ✅ Changed from int to decimal
     private string? _discountFor;
 
-    public int BasePrice
+    public decimal BasePrice  // ✅ Changed from int to decimal
     {
         get => _basePrice;
         set
@@ -1541,7 +1541,7 @@ public partial class PurchasePackage : ObservableObject
         }
     }
 
-    public int BaseDiscountedPrice
+    public decimal BaseDiscountedPrice  // ✅ Changed from int to decimal
     {
         get => _baseDiscountedPrice;
         set
@@ -1567,10 +1567,10 @@ public partial class PurchasePackage : ObservableObject
     private string? _currentCustomerType;
 
     [ObservableProperty]
-    private int _price;
+    private decimal _price;  // ✅ Changed from int to decimal
 
     [ObservableProperty]
-    private int _discountedPrice;
+    private decimal _discountedPrice;  // ✅ Changed from int to decimal
 
     // ✅ ADD THESE for XAML compatibility
     public bool IsDiscountChecked { get; set; }
@@ -1677,14 +1677,14 @@ public partial class PurchasePackage : ObservableObject
         return false;
     }
 
-    partial void OnPriceChanged(int value)
+    partial void OnPriceChanged(decimal value)  // ✅ Changed from int to decimal
     {
         OnPropertyChanged(nameof(FormattedPrice));
         OnPropertyChanged(nameof(OriginalPriceFormatted));
         OnPropertyChanged(nameof(HasDiscount));
     }
 
-    partial void OnDiscountedPriceChanged(int value)
+    partial void OnDiscountedPriceChanged(decimal value)  // ✅ Changed from int to decimal
     {
         OnPropertyChanged(nameof(FormattedPrice));
         OnPropertyChanged(nameof(OriginalPriceFormatted));

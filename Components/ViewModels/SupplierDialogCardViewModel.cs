@@ -255,7 +255,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
             string.IsNullOrWhiteSpace(i.SelectedUnit) ||
             string.IsNullOrWhiteSpace(i.SelectedCategory) ||
             string.IsNullOrWhiteSpace(i.BatchCode) ||
-            i.MarkupPrice <= 0 ||
+            i.MarkupPrice < 20 ||  // Changed from <= 0 to < 20
             !i.SellingPrice.HasValue ||
             i.SupplierPrice <= 0 ||
             !i.Expiration.HasValue ||
@@ -293,7 +293,7 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
             !string.IsNullOrWhiteSpace(i.SelectedUnit) && 
             !string.IsNullOrWhiteSpace(i.SelectedCategory) && 
             !string.IsNullOrWhiteSpace(i.BatchCode) && 
-            i.MarkupPrice > 0 && 
+            i.MarkupPrice >= 20 &&  // Changed from > 0 to >= 20
             i.SupplierPrice > 0 && 
             i.SellingPrice.HasValue && 
             i.Expiration.HasValue && i.Expiration.Value.Date > DateTimeOffset.Now.Date);
@@ -437,7 +437,7 @@ public partial class ProductItems : ObservableValidator
     private decimal? _supplierPrice;
     
     [ObservableProperty]
-    [Range(1, 1000000, ErrorMessage = "Markup price must be between 1 and 1,000,000")]
+    [Range(20, 1000000, ErrorMessage = "Markup price must be between 20% and 100%")]
     private decimal? _markupPrice;
     
     [ObservableProperty]
@@ -455,7 +455,8 @@ public partial class ProductItems : ObservableValidator
         {
             if (SupplierPrice.HasValue && MarkupPrice.HasValue)
             {
-                return SupplierPrice.Value + MarkupPrice.Value;
+                // Change from addition to percentage calculation
+                return SupplierPrice.Value * (1 + (MarkupPrice.Value / 100));
             }
             return null;
         }

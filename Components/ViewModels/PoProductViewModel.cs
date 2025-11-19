@@ -164,7 +164,7 @@ public partial class PoProductViewModel : ViewModelBase, INavigableWithParameter
                 SuppliersPrice = item.SupplierPrice,
                 MarkupPrice = item.MarkupPrice,
                 SellingPrice = item.SellingPrice,
-                Quantity = 1,
+                Quantity = 10,
                 QuantityReceived = 0,
                 BatchCode = item.BatchCode,
                 Category = item.SelectedCategory,
@@ -542,7 +542,7 @@ public partial class PurchaseOrderProductItem : ObservableValidator
     
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LineTotal))]
-    private int? _quantity = 1;
+    private int? _quantity = 10;
     
     [ObservableProperty] 
     private int? _quantityReceived = 0;

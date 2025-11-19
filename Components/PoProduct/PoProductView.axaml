@@ -52,6 +52,12 @@
                 <scroll:VerticalScrollViewerAnimatedBehavior ScrollStepSize="150"/>
             </Interaction.Behaviors>
             <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Margin="90,30,90,0" Spacing="16">
+                <StackPanel>
+                    <TextBlock
+                        Text="Supplier Information"
+                        Classes="h3"
+                        Foreground="{DynamicResource DestructiveColor}"/>
+                </StackPanel>
                 <StackPanel Orientation="Vertical" Margin="0,-10,0,0">
                     <!-- Supplier Name -->
                     <TextBlock 
@@ -215,11 +221,13 @@
                                                 HorizontalAlignment="Left"
                                                 IsEnabled="False"
                                                 Value="{CompiledBinding MarkupPrice}"
-                                                FormatString="N2"
+                                                FormatString="N0"
                                                 ShowButtonSpinner="False"
-                                                Watermark="0.00">
+                                                Minimum="20"
+                                                Maximum="100"
+                                                Watermark="20">
                                                 <NumericUpDown.InnerLeftContent>
-                                                    <TextBlock Margin="8,0,-8,0" Text="₱" />
+                                                    <TextBlock Margin="8,0,-8,0" Text="%" />
                                                 </NumericUpDown.InnerLeftContent>
                                             </NumericUpDown>
 
@@ -245,9 +253,9 @@
                                                 Width="160"
                                                 HorizontalAlignment="Left"
                                                 Value="{CompiledBinding Quantity}"
-                                                Minimum="1"
+                                                Minimum="10"
                                                 FormatString="N0"
-                                                Watermark="1">
+                                                Watermark="10">
                                                 <!-- Enabled only in creation mode, disabled in retrieval mode -->
                                                 <NumericUpDown.IsEnabled>
                                                     <MultiBinding Converter="{x:Static BoolConverters.Or}">
@@ -264,7 +272,7 @@
                                                 IsEnabled="{CompiledBinding $parent[UserControl].((viewModel:PoProductViewModel)DataContext).IsInEditMode}"
                                                 IsVisible="{CompiledBinding $parent[UserControl].((viewModel:PoProductViewModel)DataContext).IsInEditMode}"
                                                 Value="{CompiledBinding QuantityReceived}"
-                                                Minimum="0"
+                                                Minimum="1"
                                                 Maximum="{CompiledBinding Quantity}"
                                                 FormatString="N0"
                                                 Watermark="0">

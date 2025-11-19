@@ -211,13 +211,14 @@
                                                         shadui:ControlAssist.Label="Markup Price"
                                                         Classes="Clearable"
                                                         Width="200"
-                                                        FormatString="N2"
+                                                        FormatString="N0"
                                                         ShowButtonSpinner="False"
-                                                        Watermark="0.00"
-                                                        Minimum="0.00"
+                                                        Watermark="20"
+                                                        Minimum="20"
+                                                        Maximum="100"
                                                         Value="{CompiledBinding MarkupPrice, Mode=TwoWay}">
                                                         <NumericUpDown.InnerLeftContent>
-                                                            <TextBlock Margin="8,0,-8,0" Text="₱" />
+                                                            <TextBlock Margin="8,0,-8,0" Text="%" />
                                                         </NumericUpDown.InnerLeftContent>
                                                     </NumericUpDown>
                                                     <NumericUpDown 

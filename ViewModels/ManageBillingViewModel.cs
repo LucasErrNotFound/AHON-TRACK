@@ -264,9 +264,9 @@ public sealed partial class ManageBillingViewModel : ViewModelBase, INavigable
                 Quantity = i.Quantity,
                 PaymentMethod = i.PaymentMethod,
                 ReferenceNumber = i.ReferenceNumber,
-                Amount = (int)Math.Round(i.Amount),
-                TenderedPrice = i.TenderedPrice.HasValue ? (int?)Math.Round(i.TenderedPrice.Value) : null,
-                Change = i.Change.HasValue ? (int?)Math.Round(i.Change.Value) : null,
+                Amount = i.Amount,  // ✅ Remove (int)Math.Round() - keep as decimal
+                TenderedPrice = i.TenderedPrice,  // ✅ Remove casting - keep as decimal?
+                Change = i.Change,
                 DatePurchased = i.DatePurchased
             }).ToList();
 
@@ -797,13 +797,13 @@ public partial class Invoices : ObservableObject
     private int? _quantity;
 
     [ObservableProperty]
-    private int? _amount;
-    
+    private decimal? _amount;  // ✅ Changed from int? to decimal?
+        
     [ObservableProperty]
-    private int? _tenderedPrice;
-    
+    private decimal? _tenderedPrice;  // ✅ Changed from int? to decimal?
+        
     [ObservableProperty]
-    private int? _change;
+    private decimal? _change;  // ✅ Changed from int? to decimal?
 
     [ObservableProperty]
     private string _paymentMethod = string.Empty;
