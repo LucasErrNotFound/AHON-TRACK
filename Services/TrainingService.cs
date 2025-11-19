@@ -754,7 +754,7 @@ WHERE TrainingID = @TrainingID";
             Debug.WriteLine($"[ValidateWalkInScheduleAsync] CustomerType: '{training.customerType}' | Normalized: '{normalizedCustomerType}'");
 
             // Only validate for Walk-In customers (handle multiple variations)
-            bool isWalkIn = normalizedCustomerType == "WALKIN" ||
+            bool isWalkIn = normalizedCustomerType == "MEMBER" ||
                            normalizedCustomerType == "WALK-IN" ||
                            normalizedCustomerType == "WALK IN";
 
