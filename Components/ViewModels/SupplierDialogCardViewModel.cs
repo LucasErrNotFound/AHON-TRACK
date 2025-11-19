@@ -251,7 +251,6 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
 
         var invalidItems = SupplierItems.Where(i =>
             string.IsNullOrWhiteSpace(i.ItemName) ||
-            string.IsNullOrWhiteSpace(i.ItemId) ||
             string.IsNullOrWhiteSpace(i.Description) ||
             string.IsNullOrWhiteSpace(i.SelectedUnit) ||
             string.IsNullOrWhiteSpace(i.SelectedCategory) ||
@@ -290,7 +289,6 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
         SupplierItems.Count > 0 &&
         SupplierItems.Any(i => 
             !string.IsNullOrWhiteSpace(i.ItemName) && 
-            !string.IsNullOrWhiteSpace(i.ItemId) && 
             !string.IsNullOrWhiteSpace(i.Description) && 
             !string.IsNullOrWhiteSpace(i.SelectedUnit) && 
             !string.IsNullOrWhiteSpace(i.SelectedCategory) && 
@@ -380,7 +378,6 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
     private void OnSupplierItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ProductItems.ItemName) || 
-            e.PropertyName == nameof(ProductItems.ItemId) || 
             e.PropertyName == nameof(ProductItems.SelectedCategory) || 
             e.PropertyName == nameof(ProductItems.Description) || 
             e.PropertyName == nameof(ProductItems.BatchCode) || 
@@ -415,8 +412,6 @@ public partial class SupplierDialogCardViewModel : ViewModelBase, INavigable, IN
 public partial class ProductItems : ObservableValidator
 {
     [ObservableProperty]
-    [Required(ErrorMessage = "Item ID is required")]
-    [MaxLength(50, ErrorMessage = "Item ID cannot exceed 50 characters")]
     private string? _itemId;
     
     [ObservableProperty]

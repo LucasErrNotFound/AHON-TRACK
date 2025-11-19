@@ -250,7 +250,6 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
         }
 
         var invalidItems = EquipmentItems.Where(i =>
-            string.IsNullOrWhiteSpace(i.ItemId) ||
             string.IsNullOrWhiteSpace(i.ItemName) ||
             string.IsNullOrWhiteSpace(i.BatchCode) ||
             string.IsNullOrWhiteSpace(i.SelectedUnit) ||
@@ -298,7 +297,6 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
         !string.IsNullOrWhiteSpace(Address) &&
         EquipmentItems.Count > 0 &&
         EquipmentItems.Any(i => 
-            !string.IsNullOrWhiteSpace(i.ItemId) && 
             !string.IsNullOrWhiteSpace(i.ItemName) && 
             !string.IsNullOrWhiteSpace(i.BatchCode) && 
             !string.IsNullOrWhiteSpace(i.SelectedUnit) && 
@@ -420,8 +418,6 @@ public partial class SupplierEquipmentDialogCardViewModel : ViewModelBase, INavi
 public partial class EquipmentItems : ObservableValidator
 {
     [ObservableProperty]
-    [Required(ErrorMessage = "Item ID is required")]
-    [MaxLength(50, ErrorMessage = "Item ID cannot exceed 50 characters")]
     private string? _itemId;
 
     [ObservableProperty]

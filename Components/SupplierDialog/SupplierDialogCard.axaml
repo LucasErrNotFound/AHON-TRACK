@@ -133,13 +133,14 @@
                                                             <TextBox
                                                                 Width="200"
                                                                 Classes="Clearable"
-                                                                shadui:ControlAssist.Label="Item ID"
-                                                                Text="{CompiledBinding ItemId, Mode=TwoWay}" />
-                                                            <TextBox
-                                                                Width="200"
-                                                                Classes="Clearable"
                                                                 shadui:ControlAssist.Label="Item Name"
                                                                 Text="{CompiledBinding ItemName, Mode=TwoWay}"/>
+                                                            <ComboBox
+                                                                shadui:ControlAssist.Label="Unit of Measures"
+                                                                ItemsSource="{CompiledBinding UnitList}"
+                                                                SelectedItem="{CompiledBinding SelectedUnit, Mode=TwoWay}"
+                                                                Width="200"
+                                                                Margin="0,-2,0,0"/>
                                                         </StackPanel>
                                                     </StackPanel>
                                                     <StackPanel Grid.Row="1">
@@ -179,14 +180,8 @@
                                                 </Grid>
                                                 <Grid RowDefinitions="* * * *" RowSpacing="20">
                                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,0">
-                                                        <ComboBox
-                                                            shadui:ControlAssist.Label="Unit of Measures"
-                                                            ItemsSource="{CompiledBinding UnitList}"
-                                                            SelectedItem="{CompiledBinding SelectedUnit, Mode=TwoWay}"
-                                                            Width="200"
-                                                            Margin="0,-5,0,0"/>
                                                         <Button
-                                                            Margin="30,0,0,0"
+                                                            Margin="150,0,0,0"
                                                             Classes="Destructive"
                                                             VerticalAlignment="Bottom"
                                                             Command="{CompiledBinding $parent[ItemsControl].((viewModel:SupplierDialogCardViewModel)DataContext).RemoveItemCommand, FallbackValue={x:Null}}"

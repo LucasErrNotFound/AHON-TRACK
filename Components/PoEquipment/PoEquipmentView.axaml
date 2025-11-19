@@ -112,61 +112,55 @@
                         <StackPanel Orientation="Vertical">
                             
                             <!-- Column Headers -->
-                            <Grid ColumnDefinitions="* * * * * * * *" Margin="0,0,0,10">
-                                
-                                <!-- Item ID -->
-                                <TextBlock 
-                                    Grid.Column="0"
-                                    Text="Item ID"
-                                    FontSize="16"
-                                    FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="* * * * * * *" Margin="0,0,0,10">
                                 
                                 <!-- Item Name -->
                                 <TextBlock 
-                                    Grid.Column="1"
+                                    Grid.Column="0"
                                     Text="Item Name"
                                     FontSize="16"
                                     FontWeight="SemiBold"/>
                                 
                                 <!-- Units Of Measures -->
                                 <TextBlock 
-                                    Grid.Column="2"
+                                    Grid.Column="1"
                                     Text="Units of Measures"
                                     FontSize="16"
                                     FontWeight="SemiBold"/>
                                 
                                 <!-- Category -->
                                 <TextBlock 
-                                    Grid.Column="3"
+                                    Grid.Column="2"
                                     Text="Category"
                                     FontSize="16"
                                     FontWeight="SemiBold"/>
                                 
                                 <!-- Batch Code -->
                                 <TextBlock 
-                                    Grid.Column="4"
+                                    Grid.Column="3"
                                     Text="Batch Code"
                                     FontSize="16"
                                     FontWeight="SemiBold"/>
                                 
                                 <!-- Supplier's Price -->
                                 <TextBlock 
-                                    Grid.Column="5"
+                                    Grid.Column="4"
                                     Text="Supplier's Price"
                                     FontSize="16"
                                     FontWeight="SemiBold"/>
                                 
                                 <!-- Quantity -->
                                 <TextBlock 
-                                    Grid.Column="6"
+                                    Grid.Column="5"
                                     Text="Quantity"
                                     FontSize="16"
                                     FontWeight="SemiBold"/>
                                 
                                 <!-- Quantity Received -->
                                 <TextBlock 
-                                    Grid.Column="7"
+                                    Grid.Column="6"
                                     Text="Quantity Received"
+                                    IsVisible="{CompiledBinding $parent[UserControl].((viewModel:PoEquipmentViewModel)DataContext).IsInEditMode}"
                                     FontSize="16"
                                     FontWeight="SemiBold"/>
                             </Grid>
@@ -175,21 +169,11 @@
                             <ItemsControl ItemsSource="{CompiledBinding Items}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid ColumnDefinitions="* * * * * * * *" Margin="0,5">
-
-                                            <!-- Item ID -->
-                                            <TextBox
-                                                Grid.Column="0"
-                                                Width="160"
-                                                IsEnabled="False"
-                                                HorizontalAlignment="Left"
-                                                Text="{CompiledBinding ItemId}"
-                                                FontSize="14"
-                                                FontWeight="SemiBold" />
+                                        <Grid ColumnDefinitions="* * * * * * *" Margin="0,5">
 
                                             <!-- Item Name -->
                                             <TextBox
-                                                Grid.Column="1"
+                                                Grid.Column="0"
                                                 Width="160"
                                                 IsEnabled="False"
                                                 HorizontalAlignment="Left"
@@ -199,7 +183,7 @@
 
                                             <!-- Units Of Measures -->
                                             <TextBox
-                                                Grid.Column="2"
+                                                Grid.Column="1"
                                                 Width="160"
                                                 IsEnabled="False"
                                                 HorizontalAlignment="Left"
@@ -209,7 +193,7 @@
 
                                             <!-- Category -->
                                             <TextBox
-                                                Grid.Column="3"
+                                                Grid.Column="2"
                                                 Width="160"
                                                 IsEnabled="False"
                                                 HorizontalAlignment="Left"
@@ -219,7 +203,7 @@
 
                                             <!-- Batch Code -->
                                             <TextBox
-                                                Grid.Column="4"
+                                                Grid.Column="3"
                                                 Width="160"
                                                 IsEnabled="False"
                                                 HorizontalAlignment="Left"
@@ -229,7 +213,7 @@
 
                                             <!-- Supplier's Price -->
                                             <NumericUpDown
-                                                Grid.Column="5"
+                                                Grid.Column="4"
                                                 Classes="Clearable"
                                                 Width="160"
                                                 IsEnabled="False"
@@ -245,7 +229,7 @@
 
                                             <!-- Quantity: Enabled in creation mode OR when in edit mode -->
                                             <NumericUpDown
-                                                Grid.Column="6"
+                                                Grid.Column="5"
                                                 Width="160"
                                                 HorizontalAlignment="Left"
                                                 Value="{CompiledBinding Quantity}"
@@ -262,10 +246,11 @@
 
                                             <!-- Quantity Received: Only enabled in edit mode (IsInEditMode = true) -->
                                             <NumericUpDown
-                                                Grid.Column="7"
+                                                Grid.Column="6"
                                                 Width="160"
                                                 HorizontalAlignment="Left"
                                                 IsEnabled="{CompiledBinding $parent[UserControl].((viewModel:PoEquipmentViewModel)DataContext).IsInEditMode}"
+                                                IsVisible="{CompiledBinding $parent[UserControl].((viewModel:PoEquipmentViewModel)DataContext).IsInEditMode}"
                                                 Value="{CompiledBinding QuantityReceived}"
                                                 Minimum="0"
                                                 Maximum="{CompiledBinding Quantity}"

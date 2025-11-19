@@ -129,11 +129,6 @@
                                             <Grid RowDefinitions="* * *" RowSpacing="15">
                                                 <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
                                                     <TextBox
-                                                        shadui:ControlAssist.Label="Item ID"
-                                                        Classes="Clearable"
-                                                        Width="200"
-                                                        Text="{CompiledBinding ItemId, Mode=TwoWay}"/>
-                                                    <TextBox
                                                         shadui:ControlAssist.Label="Item Name"
                                                         Classes="Clearable"
                                                         Width="200"
