@@ -1,5 +1,5 @@
 # AHON Track :star2:
-AHON Track is an **Avalonia-based Desktop Gym Management System** that handles **membership management**, **scheduling**, **billing**, **inventory**, and **analytics**. It aims to replace traditional pen-and-paper tracking with a **modern, offline digitized solution**—designed to simplify operations and empower gyms with efficient management tools.
+AHON Track is an **Avalonia-based Desktop Gym Management System** that handles **employee management**, **membership management**, **scheduling**, **billing**, **inventory**, **analytics**, and **backup**. It aims to replace traditional pen-and-paper tracking with a **modern, offline digitized solution**—designed to simplify operations and empower gyms with efficient management tools.
 
 ## Features :jigsaw:
 ### :closed_lock_with_key: Authentication Window
@@ -20,11 +20,15 @@ AHON Track wouldn't be possible without the inspiration and contributions of the
 - [Avalonia](https://avaloniaui.net/): Cross-platform XAML-based UI framework with a robust styling system.
 - [Hot Avalonia](https://github.com/Kira-NT/HotAvalonia): Hot reload plugin for Avalonia that enables UI changes in real time as you edit AXAML files.
 - [ShadUI](https://github.com/accntech/shad-ui): Avalonia-based UI Library inspired by shadcn and Suki UI Library.
+- [sharprinter](https://github.com/accntech/sharprinter): A modern, fluent C# wrapper for thermal printer SDK operations for Windows, designed for POS (Point of Sale) systems and receipt printing.
+- [httpsms](https://github.com/NdoleStudio/httpsms): A service that lets you use your Android phone as an SMS Gateway to send and receive SMS messages.
 - [Lucide Icons](https://lucide.dev/): Beautifully curated collection of icons that provides consistent, scalable vector icons for modern applications.
 - [Svg.Skia](https://github.com/wieslawsoltes/Svg.Skia): An SVG rendering library.
 - [LiveCharts](https://livecharts.dev/): A library for creating visually stunning charts.
 - [MvvmToolkit](https://github.com/CommunityToolkit): A framework for implementing the MVVM pattern efficiently.
-- [Serilog](https://github.com/serilog/serilog):  Diagnostic logging library for .NET applications, a .NET logging with fully-structured events. 
+- [QuestPDF](https://github.com/QuestPDF/QuestPDF): Generate and manipulate PDF documents using the open-source QuestPDF library and its C# Fluent API.
+- [Serilog](https://github.com/serilog/serilog):  Diagnostic logging library for .NET applications, a .NET logging with fully-structured events.
+- [Dapper](https://github.com/DapperLib/Dapper): A simple object mapper for .Net
 - [Jab](https://github.com/pakrym/jab): Fast compile-time dependency injection container without runtime dependencies.
 
 ## License :page_with_curl:
