@@ -1,5 +1,5 @@
 # AHON Track :star2:
-AHON Track is an **Avalonia-based Desktop Gym Management System** that handles **employee management**, **membership management**, **scheduling**, **billing**, **inventory**, **analytics**, and **backup**. It aims to replace traditional pen-and-paper tracking with a **modern, offline digitized solution**—designed to simplify operations and empower gyms with efficient management tools.
+AHON Track is an **Avalonia-based Desktop Gym Management System** that handles **employee management**, **membership management**, **scheduling**, **billing**, **inventory**, **analytics**, and **backup**. It aims to replace traditional pen-and-paper tracking with a **modern, digitized solution**—designed to simplify operations and empower gyms with efficient management tools.
 
 ## Features :jigsaw:
 ### :closed_lock_with_key: Authentication Window
