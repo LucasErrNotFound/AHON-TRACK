@@ -10,7 +10,7 @@ A custom-styled authentication interface for staff and admin, featuring username
 ---
 
 ### :computer: Shell Window
-The Shell Window serves as the central workspace of the gym management system, providing unified access to modules for managing employees, walk-ins, gym members, scheduling, billing, and analytics. It also adapts based on the current user’s role: admins receive full access to all modules and sidebar items, while staff see a limited interface to their permissions, ensuring focused and secure management workflows.
+The Shell Window serves as the central workspace of the gym management system, providing unified access to modules for managing employees, walk-ins, gym members, scheduling, billing, and analytics. It also adapts based on the current user’s role: admins receive full access to all modules and sidebar items, while staff see a limited interface to their permissions, ensuring focused and secure management workflows. (outdated)
 
 > [WIP] :building_construction:
 
