@@ -20,7 +20,7 @@ AHON Track wouldn't be possible without the inspiration and contributions of the
 - [Avalonia](https://avaloniaui.net/): Cross-platform XAML-based UI framework with a robust styling system.
 - [Hot Avalonia](https://github.com/Kira-NT/HotAvalonia): Hot reload plugin for Avalonia that enables UI changes in real time as you edit AXAML files.
 - [ShadUI](https://github.com/accntech/shad-ui): Avalonia-based UI Library inspired by shadcn and Suki UI Library.
-- [sharprinter](https://github.com/accntech/sharprinter): A modern, fluent C# wrapper for thermal printer SDK operations for Windows, designed for POS (Point of Sale) systems and receipt printing.
+- [sharprinter](https://github.com/accntech/sharprinter): A modern, fluent C# wrapper for thermal printer SDK operations for Windows.
 - [httpsms](https://github.com/NdoleStudio/httpsms): A service that lets you use your Android phone as an SMS Gateway to send and receive SMS messages.
 - [Lucide Icons](https://lucide.dev/): Beautifully curated collection of icons that provides consistent, scalable vector icons for modern applications.
 - [Svg.Skia](https://github.com/wieslawsoltes/Svg.Skia): An SVG rendering library.
