@@ -27,7 +27,6 @@ AHON Track wouldn't be possible without the inspiration and contributions of the
 - [LiveCharts](https://livecharts.dev/): A library for creating visually stunning charts.
 - [MvvmToolkit](https://github.com/CommunityToolkit): A framework for implementing the MVVM pattern efficiently.
 - [QuestPDF](https://github.com/QuestPDF/QuestPDF): Generate and manipulate PDF documents using the open-source QuestPDF library and its C# Fluent API.
-- [Serilog](https://github.com/serilog/serilog):  Diagnostic logging library for .NET applications, a .NET logging with fully-structured events.
 - [Dapper](https://github.com/DapperLib/Dapper): A simple object mapper for .Net
 - [Jab](https://github.com/pakrym/jab): Fast compile-time dependency injection container without runtime dependencies.
 
